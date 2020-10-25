@@ -1,0 +1,35 @@
+[package]
+name = "node-rpc"
+version = "2.0.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+license = "Apache-2.0"
+homepage = "https://substrate.dev"
+repository = "https://github.com/paritytech/substrate/"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+jsonrpc-core = "15.0.0"
+node-primitives = { version = "2.0.0", path = "../primitives" }
+node-runtime = { version = "2.0.0", path = "../runtime" }
+pallet-contracts-rpc = '0.8.0'
+pallet-transaction-payment-rpc = '2.0.0'
+sc-client-api = '2.0.0'
+sc-consensus-babe = '0.8.0'
+sc-consensus-babe-rpc = '0.8.0'
+sc-consensus-epochs = '0.8.0'
+sc-finality-grandpa = '0.8.0'
+sc-finality-grandpa-rpc = '0.8.0'
+sc-keystore = '2.0.0'
+sc-rpc-api = '0.8.0'
+sc-rpc = '2.0.0'
+sp-api = '2.0.0'
+sp-block-builder = '2.0.0'
+sp-blockchain = '2.0.0'
+sp-consensus = '0.8.0'
+sp-consensus-babe = '0.8.0'
+sp-runtime = '2.0.0'
+sp-transaction-pool = '2.0.0'
+substrate-frame-rpc-system = '2.0.0'

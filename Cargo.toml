@@ -1,0 +1,16 @@
+[profile.release]
+panic = 'unwind'
+
+[workspace]
+members = [
+    'bench',
+    'browser-testing',
+    'cli',
+    'executor',
+    'inspect',
+    'primitives',
+    'rpc',
+    'rpc-client',
+    'runtime',
+    'testing',
+]
