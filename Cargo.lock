@@ -4005,6 +4005,7 @@ dependencies = [
  "pallet-contracts",
  "pallet-contracts-primitives",
  "pallet-contracts-rpc-runtime-api",
+ "pallet-deeper-node",
  "pallet-democracy",
  "pallet-elections-phragmen",
  "pallet-finality-tracker",
@@ -4013,6 +4014,7 @@ dependencies = [
  "pallet-im-online",
  "pallet-indices",
  "pallet-membership",
+ "pallet-micropayment",
  "pallet-multisig",
  "pallet-offences",
  "pallet-offences-benchmarking",
@@ -4466,6 +4468,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-deeper-node"
+version = "2.0.0"
+dependencies = [
+ "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "pallet-democracy"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4606,6 +4618,19 @@ dependencies = [
  "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "pallet-micropayment"
+version = "2.0.0"
+dependencies = [
+ "blake2-rfc",
+ "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
