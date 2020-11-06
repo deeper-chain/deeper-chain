@@ -1,11 +1,10 @@
 [package]
-name = "node-runtime"
+name = "e2-chain-runtime"
 version = "2.0.0"
 authors = ["deeper.network dev"]
 edition = "2018"
 build = "build.rs"
 license = "Apache-2.0"
-homepage = "https://substrate.dev"
 repository = 'https://github.com/e2chain-dev/e2-chain-v2.0.0'
 
 [package.metadata.docs.rs]

@@ -31,12 +31,12 @@ use std::{
 use crate::client::{Backend, Client};
 use crate::keyring::*;
 use codec::{Decode, Encode};
-use futures::executor;
-use node_primitives::Block;
-use node_runtime::{
+use e2_chain_runtime::{
     constants::currency::DOLLARS, AccountId, BalancesCall, Call, CheckedExtrinsic, MinimumPeriod,
     Signature, SystemCall, UncheckedExtrinsic,
 };
+use futures::executor;
+use node_primitives::Block;
 use sc_block_builder::BlockBuilderProvider;
 use sc_client_api::{
     execution_extensions::{ExecutionExtensions, ExecutionStrategies},
@@ -256,13 +256,13 @@ impl<'a> Iterator for BlockContentIterator<'a> {
             CheckedExtrinsic {
                 signed: Some((
                     sender,
-                    signed_extra(0, node_runtime::ExistentialDeposit::get() + 1),
+                    signed_extra(0, e2_chain_runtime::ExistentialDeposit::get() + 1),
                 )),
                 function: match self.content.block_type {
                     BlockType::RandomTransfersKeepAlive => {
                         Call::Balances(BalancesCall::transfer_keep_alive(
                             pallet_indices::address::Address::Id(receiver),
-                            node_runtime::ExistentialDeposit::get() + 1,
+                            e2_chain_runtime::ExistentialDeposit::get() + 1,
                         ))
                     }
                     BlockType::RandomTransfersReaping => {
@@ -270,7 +270,7 @@ impl<'a> Iterator for BlockContentIterator<'a> {
                             pallet_indices::address::Address::Id(receiver),
                             // Transfer so that ending balance would be 1 less than existential deposit
                             // so that we kill the sender account.
-                            100 * DOLLARS - (node_runtime::ExistentialDeposit::get() - 1),
+                            100 * DOLLARS - (e2_chain_runtime::ExistentialDeposit::get() - 1),
                         ))
                     }
                     BlockType::Noop => Call::System(SystemCall::remark(Vec::new())),
@@ -564,10 +564,10 @@ impl BenchKeyring {
     }
 
     /// Generate genesis with accounts from this keyring endowed with some balance.
-    pub fn generate_genesis(&self) -> node_runtime::GenesisConfig {
+    pub fn generate_genesis(&self) -> e2_chain_runtime::GenesisConfig {
         crate::genesis::config_endowed(
             false,
-            Some(node_runtime::wasm_binary_unwrap()),
+            Some(e2_chain_runtime::wasm_binary_unwrap()),
             self.collect_account_ids(),
         )
     }
