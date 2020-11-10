@@ -43,6 +43,22 @@ async function test1() {
     const wsProvider = new WsProvider("ws://127.0.0.1:9944");
     const api = await ApiPromise.create({
         provider: wsProvider,
+        types: {
+            TokenBalance: "u64",
+            Timestamp: "Moment",
+            Node: {
+                account_id: "AccountId",
+                ipv4: "Vec<u8>",
+                country: "u16",
+            },
+            ChannelOf: {
+                sender: "AccountId",
+                receiver: "AccountId",
+                nonce: "u64",
+                opened: "Timestamp",
+                expiration: "Timestamp",
+            },
+        },
     });
 
     let bal = await api.query.balances.totalIssuance();

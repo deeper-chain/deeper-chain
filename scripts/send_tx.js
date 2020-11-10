@@ -8,7 +8,20 @@ async function test() {
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
-            Balances: "u128",
+            TokenBalance: "u64",
+            Timestamp: "Moment",
+            Node: {
+                account_id: "AccountId",
+                ipv4: "Vec<u8>",
+                country: "u16",
+            },
+            ChannelOf: {
+                sender: "AccountId",
+                receiver: "AccountId",
+                nonce: "u64",
+                opened: "Timestamp",
+                expiration: "Timestamp",
+            },
         },
     });
     const keyring = new Keyring({ type: "sr25519" });
