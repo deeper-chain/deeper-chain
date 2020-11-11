@@ -24,7 +24,7 @@
 use frame_support::weights::{Weight, constants::RocksDbWeight as DbWeight};
 
 pub struct WeightInfo;
-impl pallet_staking::WeightInfo for WeightInfo {
+impl pallet_staking_with_credit::WeightInfo for WeightInfo {
 	fn bond() -> Weight {
 		(144278000 as Weight)
 			.saturating_add(DbWeight::get().reads(5 as Weight))

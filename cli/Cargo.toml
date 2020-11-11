@@ -85,7 +85,7 @@ pallet-transaction-payment =  '2.0.0'
 frame-support = { version = "2.0.0", default-features = false}
 pallet-im-online = { version = "2.0.0", default-features = false}
 pallet-authority-discovery = '2.0.0' 
-pallet-staking = '2.0.0'
+pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
 pallet-grandpa = '2.0.0'
 
 # node-specific dependencies

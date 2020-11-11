@@ -66,7 +66,6 @@ pallet-randomness-collective-flip = { version = "2.0.0", default-features = fals
 pallet-recovery = { version = "2.0.0", default-features = false}
 pallet-session = { version = "2.0.0", features = ["historical"], default-features = false }
 pallet-session-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-pallet-staking = { version = "2.0.0", default-features = false}
 pallet-staking-reward-curve = { version = "2.0.0", default-features = false}
 pallet-scheduler = { version = "2.0.0", default-features = false}
 pallet-society = { version = "2.0.0", default-features = false}
@@ -82,8 +81,9 @@ pallet-vesting = { version = "2.0.0", default-features = false}
 # local pallet dependencies
 deeper-node = {package = "pallet-deeper-node", default-features = false, path = "../pallets/deeper-node", version = "2.0.0"}
 micropayment = {package = "pallet-micropayment", default-features = false, path = "../pallets/micropayment", version = "2.0.0"}
-
-
+pallet-credit = {package = "pallet-credit", default-features = false, path = "../pallets/credit", version = "2.0.0"}
+pallet-delegating = {package = "pallet-delegating", default-features = false, path = "../pallets/delegating", version = "2.0.0"}
+pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.5", package = "substrate-wasm-builder-runner"}
@@ -131,7 +131,6 @@ std = [
 	"sp-api/std",
 	"sp-runtime/std",
 	"sp-staking/std",
-	"pallet-staking/std",
 	"sp-keyring",
 	"sp-session/std",
 	"pallet-sudo/std",
@@ -149,6 +148,9 @@ std = [
 	"pallet-society/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
+	"pallet-credit/std",
+	"pallet-delegating/std",
+	"pallet-staking_with_credit/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
@@ -169,7 +171,7 @@ runtime-benchmarks = [
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-society/runtime-benchmarks",
-	"pallet-staking/runtime-benchmarks",
+	"pallet-staking_with_credit/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
