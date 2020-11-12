@@ -102,7 +102,7 @@ decl_module! {
 
         // init credit score
         #[weight = 10_000]
-        pub fn initilize_credit(origin) -> dispatch::DispatchResult{
+        pub fn initialize_credit(origin) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
             ensure!(!UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  already Initilized");
             UserCredit::<T>::insert(sender.clone(), CREDIT_INIT_SCORE);
@@ -130,7 +130,7 @@ decl_module! {
 }
 
 pub trait CreditInterface<AccountId> {
-    fn initilize_credit(account_id: AccountId, score: u64) -> bool;
+    fn initialize_credit(account_id: AccountId, score: u64) -> bool;
     fn update_credit(account_id: AccountId, score: u64) -> bool;
     fn pass_threshold(account_id: AccountId, ttype: u8) -> bool;
     fn credit_attenuation(account_id: AccountId, attenuate_score: u64) -> bool;
@@ -140,7 +140,7 @@ pub trait CreditInterface<AccountId> {
 
 impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     /// init credit score
-    fn initilize_credit(account_id: T::AccountId, score: u64) -> bool {
+    fn  initialize_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             false
         } else {
