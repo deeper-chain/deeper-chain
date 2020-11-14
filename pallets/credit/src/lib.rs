@@ -4,7 +4,7 @@ use frame_support::traits::Get;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
-use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
 
 #[cfg(test)]

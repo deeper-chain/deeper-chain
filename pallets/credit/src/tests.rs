@@ -3,27 +3,41 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::ensure_signed;
 use sp_runtime::DispatchError;
 
-#[test]
-fn account_id_init_one_time() {
-    new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 50));
-        // Read pallet storage and assert an expected result.
-        assert_eq!(Credit::get_user_credit(1), Some(50));
-    });
-}
 
 #[test]
-fn the_same_accountid_init_two_times() {
+fn fn_initialize_credit_extrinsic() {
     new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
+        // initialize credit [30-100]
         assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 50));
-        // Read pallet storage and assert an expected result.
         assert_eq!(Credit::get_user_credit(1), Some(50));
 
-        // reinit the same account_id credit
+        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(2), 30));
+        assert_eq!(Credit::get_user_credit(2), Some(30));
+
+        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(3), 100));
+        assert_eq!(Credit::get_user_credit(3), Some(100));
+
+        // initialize credit 20
         assert_eq!(
-            Credit::initialize_credit_extrinsic(Origin::signed(1), 50),
+            Credit::initialize_credit_extrinsic(Origin::signed(4), 20),
+            Err(DispatchError::Other(
+                "CreditInitFailed",
+            ))
+        );
+
+        // initialize credit 101
+        assert_eq!(
+            Credit::initialize_credit_extrinsic(Origin::signed(5), 101),
+            Err(DispatchError::Other(
+                "CreditInitFailed",
+            ))
+        );
+
+        // initialize credit twice
+        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(6), 50));
+        assert_eq!(Credit::get_user_credit(6), Some(50));
+        assert_eq!(
+            Credit::initialize_credit_extrinsic(Origin::signed(6), 50),
             Err(DispatchError::Other(
                 "CreditInitFailed",
             ))
@@ -31,47 +45,54 @@ fn the_same_accountid_init_two_times() {
     });
 }
 
-#[test]
-fn update_acccount_id_credit_score() {
-    new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 50));
-        // update_credit
-        assert_ok!(Credit::update_credit_extrinsic(Origin::signed(1), 60));
-    });
-}
 
 #[test]
-fn update_uninit_acccount_id_credit_score() {
+fn fn_update_credit_extrinsic() {
     new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
+        // update after initialize
         assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 50));
-        // update_credit
+        assert_ok!(Credit::update_credit_extrinsic(Origin::signed(1), 30));
+        assert_ok!(Credit::update_credit_extrinsic(Origin::signed(1), 70));
+        assert_ok!(Credit::update_credit_extrinsic(Origin::signed(1), 100));
+
+        // update uninitialize
         assert_eq!(
             Credit::update_credit_extrinsic(Origin::signed(2), 60),
             Err(DispatchError::Other(
                 "CreditUpdateFailed",
             ))
         );
+
+        // < 30
+        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(3), 50));
+        assert_eq!(
+            Credit::update_credit_extrinsic(Origin::signed(3), 29),
+            Err(DispatchError::Other(
+                "CreditUpdateFailed",
+            ))
+        );
+
+        // >101
+        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(4), 50));
+        assert_eq!(
+            Credit::update_credit_extrinsic(Origin::signed(4), 105),
+            Err(DispatchError::Other(
+                "CreditUpdateFailed",
+            ))
+        );
+
     });
 }
 
+
 #[test]
-fn delete_acccount_id_credit_score() {
+fn fn_kill_credit_extrinsic() {
     new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
+        // kill credit normal
         assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 50));
-        // kill_credit
         assert_ok!(Credit::kill_credit_extrinsic(Origin::signed(1)));
-    });
-}
 
-#[test]
-fn delete_unexisted_account_id_credit_score() {
-    new_test_ext().execute_with(|| {
-        // Dispatch a signed extrinsic.
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 50));
-        // kill_credit
+        // uninitialized account
         assert_eq!(
             Credit::kill_credit_extrinsic(Origin::signed(2)),
             Err(DispatchError::Other("KillCreditFailed",))
@@ -79,33 +100,74 @@ fn delete_unexisted_account_id_credit_score() {
     });
 }
 
-// CreditInterface Test
 #[test]
-fn attenuate_credit_test() {
+fn fn_initialize_credit() {
+    new_test_ext().execute_with(|| {
+        // [30,100]
+        assert_eq!(Credit::initialize_credit(1, 30), true);
+        assert_eq!(Credit::initialize_credit(2, 50), true);
+        assert_eq!(Credit::initialize_credit(3, 100), true);
+        
+        // < 30
+        assert_eq!(Credit::initialize_credit(4, 20), false);
+
+        // > 100
+        assert_eq!(Credit::initialize_credit(5, 101), false);
+
+        // initialize twice
+        assert_eq!(Credit::initialize_credit(6, 88), true);
+        assert_eq!(Credit::initialize_credit(6, 88), false);
+    });
+}
+
+#[test]
+fn fn_update_credit() {
+    new_test_ext().execute_with(|| {
+        // [30,100]
+        assert_eq!(Credit::initialize_credit(1, 50), true);
+        assert_eq!(Credit::update_credit(1, 30), true);
+        assert_eq!(Credit::update_credit(1, 100), true);
+        
+        // < 30
+        assert_eq!(Credit::update_credit(1, 20), false);
+
+        // > 100
+        assert_eq!(Credit::update_credit(1, 101), false);
+
+        // update uninitialize accout
+        assert_eq!(Credit::update_credit(2, 88), false);
+    });
+}
+
+
+#[test]
+fn fn_attenuate_credit() {
     new_test_ext().execute_with(|| {
         // attenuate_credit successful
-        let origin = Origin::signed(1);
-        assert_ok!(Credit::initialize_credit_extrinsic(origin.clone(), 60));
-        let account_id = ensure_signed(origin).unwrap_or_default();
-        assert_eq!(Credit::attenuate_credit(account_id), true);
+        assert_eq!(Credit::initialize_credit(1, 50), true);
+        assert_eq!(Credit::attenuate_credit(1), true);
+        assert_eq!(Credit::get_user_credit(1), Some(45));
+        assert_eq!(Credit::attenuate_credit(1), true);
+        assert_eq!(Credit::get_user_credit(1), Some(40));
+        assert_eq!(Credit::attenuate_credit(1), false);
 
         // attenuate_credit failed
-        let origin2 = Origin::signed(2);
-        assert_ok!(Credit::initialize_credit_extrinsic(origin2.clone(), 30));
-        let account_id = ensure_signed(origin2).unwrap_or_default();
-        assert_eq!(Credit::attenuate_credit(account_id), false);
+        assert_eq!(Credit::initialize_credit(2, 30), true);
+        assert_eq!(Credit::attenuate_credit(2), false);
+        assert_eq!(Credit::get_user_credit(2), Some(30));
     });
 }
 
-/*
+
 #[test]
-fn correct_error_for_none_value() {
+fn fn_kill_credit() {
     new_test_ext().execute_with(|| {
-        // Ensure the expected error is thrown when no value is present.
-        assert_noop!(
-           Credit::cause_error(Origin::signed(1)),
-          Error::<Test>::NoneValue
-        );
+        // kill successfully
+        assert_eq!(Credit::initialize_credit(1, 50), true);
+        assert_eq!(Credit::kill_credit(1), true);
+
+        // uninitialized account
+        assert_eq!(Credit::kill_credit(2), false);
     });
 }
-*/
+
