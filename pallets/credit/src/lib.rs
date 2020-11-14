@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::Get;
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
@@ -28,6 +29,8 @@ pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
 pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
+pub type BlockNumber = u32;
+
 pub(crate) const LOG_TARGET: &'static str = "credit";
 
 // syntactic sugar for logging.
@@ -45,6 +48,8 @@ macro_rules! log {
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    /// Number of sessions per era.
+    type BlocksPerEra: Get<<Self as frame_system::Trait>::BlockNumber>;
 }
 
 // The pallet's runtime storage items.
@@ -69,7 +74,11 @@ decl_event!(
         /// Event documentation should end with an array that provides descriptive names for event
         /// parameters. [something, who]
         CreditInitSuccess(AccountId, u64),
+        CreditInitFailed(AccountId, u64),
+        CreditUpdateSuccess(AccountId, u64),
+        CreditUpdateFailed(AccountId, u64),
         KillCreditSuccess(AccountId),
+        KillCreditFailed(AccountId),
     }
 );
 
@@ -92,82 +101,139 @@ decl_module! {
         // Errors must be initialized if they are used by the pallet.
         type Error = Error<T>;
 
+                /// Blocks  per era.
+                const BlocksPerEra: T::BlockNumber = T::BlocksPerEra::get();
+
+
         // Events must be initialized if they are used by the pallet.
         fn deposit_event() = default;
 
-        // An example dispatchable that takes a singles value as a parameter, writes the value to
-        // storage and emits an event. This function must be dispatched by a signed extrinsic.
-
-        // Check that the extrinsic was signed and get the signer.
-        // This function will return an error if the extrinsic is not signed.
-        // https://substrate.dev/docs/en/knowledgebase/runtime/origin
-
         // init credit score
         #[weight = 10_000]
-        pub fn initialize_credit(origin, credit:u64) -> dispatch::DispatchResult{ //todo
+        pub fn initialize_credit_extrinsic(origin, credit:u64) -> dispatch::DispatchResult{ //todo
             let sender = ensure_signed(origin)?;
-            ensure!(!UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  already Initilized");
-            UserCredit::<T>::insert(sender.clone(), credit);
-            Self::deposit_event(RawEvent::CreditInitSuccess(sender, credit));
-
-            Ok(())
+            let res = Self::initialize_credit(sender.clone(), credit);
+            if res == true{
+                Self::deposit_event(RawEvent::CreditInitSuccess(sender, credit));
+                Ok(())
+            }else{
+                Self::deposit_event(RawEvent::CreditInitFailed(sender, credit));
+                Err(dispatch::DispatchError::Other(
+                    "CreditInitFailed",
+                ))
+            }
+            
         }
 
         // clear credit score
         #[weight = 10_000]
-        pub fn kill_credit(origin) -> dispatch::DispatchResult{
+        pub fn kill_credit_extrinsic(origin) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
-            ensure!(UserCredit::<T>::contains_key(sender.clone()), "AccountId is not existed");
-            UserCredit::<T>::remove(sender.clone());
-            Self::deposit_event(RawEvent::KillCreditSuccess(sender));
-            Ok(())
+            let res = Self::kill_credit(sender.clone());
+            if res == true {
+                Self::deposit_event(RawEvent::KillCreditSuccess(sender));
+                Ok(())
+            }else{
+                Self::deposit_event(RawEvent::KillCreditFailed(sender));
+                Err(dispatch::DispatchError::Other(
+                    "KillCreditFailed",
+                ))
+            }
+
+
         }
 
-        // update credit score 
+        // update credit score
         #[weight = 10_000]
-        pub fn update_credit(origin, credit:u64) -> dispatch::DispatchResult{ //todo
+        pub fn update_credit_extrinsic(origin, credit:u64) -> dispatch::DispatchResult{ //todo
             let sender = ensure_signed(origin)?;
-            ensure!(UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  isn't Initilized");
-            UserCredit::<T>::insert(sender.clone(), credit);
-            Ok(())
+            let res = Self::update_credit(sender.clone(), credit);
+            if res == true {
+                Self::deposit_event(RawEvent::CreditUpdateSuccess(sender, credit));
+                Ok(())
+            }else{
+                Self::deposit_event(RawEvent::CreditUpdateFailed(sender, credit));
+                Err(dispatch::DispatchError::Other(
+                    "CreditUpdateFailed",
+                ))
+            }
+            
         }
 
         // Anything that needs to be done at the end of the block.
         fn on_finalize(_n: T::BlockNumber) {
-            // We update credit score here.
             log!(info, "update credit score in block number {:?}", _n);
+
+            // We update credit score per block
+
+            // call attenuate_credit per era
+            if _n % T::BlocksPerEra::get() == T::BlockNumber::default(){
+                // to call attenuate_credit()
+
+            }
+        }
+    }
+}
+
+impl<T: Trait> Module<T> {
+    /// init credit score
+    fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
+        if !UserCredit::<T>::contains_key(account_id.clone())
+            && score >= CREDIT_INIT_SCORE
+            && score <= CREDIT_SCORE_THRESHOLD
+        {
+            UserCredit::<T>::insert(account_id.clone(), score);
+            true
+        } else {
+            false
+        }
+    }
+    /// update credit score
+    fn update_credit(account_id: T::AccountId, score: u64) -> bool {
+        if UserCredit::<T>::contains_key(account_id.clone())
+            && score >= CREDIT_INIT_SCORE
+            && score <= CREDIT_SCORE_THRESHOLD
+        {
+            UserCredit::<T>::insert(account_id, score);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn attenuate_credit(account_id: T::AccountId) -> bool {
+        let score = Self::get_user_credit(account_id.clone()).unwrap_or(0);
+        if score > CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
+            if score - CREDIT_SCORE_ATTENUATION_STEP >= CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
+                UserCredit::<T>::insert(account_id, score - CREDIT_SCORE_ATTENUATION_STEP);
+            } else {
+                UserCredit::<T>::insert(account_id, CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// clear credit
+    fn kill_credit(account_id: T::AccountId) -> bool {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
+            UserCredit::<T>::remove(account_id);
+            true
+        } else {
+            false
         }
     }
 }
 
 pub trait CreditInterface<AccountId> {
-    fn initialize_credit(account_id: AccountId, score: u64) -> bool;
-    fn update_credit(account_id: AccountId, score: u64) -> bool;
-    fn pass_threshold(account_id: AccountId, ttype: u8) -> bool;
-    fn credit_attenuation(account_id: AccountId, attenuate_score: u64) -> bool;
-    fn kill_credit(account_id: AccountId) -> bool;
     fn get_credit_score(account_id: AccountId) -> Option<u64>;
+    fn pass_threshold(account_id: AccountId, _ttype: u8) -> bool;
 }
 
 impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
-    /// init credit score
-    fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
-        if UserCredit::<T>::contains_key(account_id.clone()) {
-            false
-        } else {
-            UserCredit::<T>::insert(account_id, score);
-            true
-        }
-    }
-
-    /// update credit score
-    fn update_credit(account_id: T::AccountId, score: u64) -> bool {
-        if UserCredit::<T>::contains_key(account_id.clone()) {
-            UserCredit::<T>::insert(account_id, score);
-            true
-        } else {
-            false
-        }
+    fn get_credit_score(account_id: T::AccountId) -> Option<u64> {
+        Self::get_user_credit(account_id)
     }
 
     /// check if account_id's credit score is pass threshold ttype
@@ -180,44 +246,5 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
             }
         }
         false
-    }
-
-    /// credit score attenuation
-    /// Return:
-    /// true : success
-    /// false: failed
-    fn credit_attenuation(account_id: T::AccountId, attenuate_score: u64) -> bool {
-        if attenuate_score > 10 {
-            return false;
-        }
-        if !UserCredit::<T>::contains_key(account_id.clone()) {
-            return false;
-        }
-        if let Some(score) = UserCredit::<T>::get(account_id.clone()) {
-            if score <= CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
-                return false;
-            }
-            if score - attenuate_score > CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
-                UserCredit::<T>::insert(account_id, score - attenuate_score);
-                return true;
-            } else {
-                UserCredit::<T>::insert(account_id, CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD);
-                return true;
-            }
-        }
-        false
-    }
-
-    /// clear credit info
-    fn kill_credit(account_id: T::AccountId) -> bool {
-        if UserCredit::<T>::contains_key(account_id.clone()) {
-            UserCredit::<T>::remove(account_id);
-            return true;
-        }
-        false
-    }
-
-    fn get_credit_score(account_id: T::AccountId) -> Option<u64> {
-        Self::get_user_credit(account_id)
     }
 }

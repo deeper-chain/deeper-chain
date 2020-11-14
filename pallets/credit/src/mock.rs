@@ -8,6 +8,8 @@ use sp_runtime::{
     Perbill,
 };
 
+use node_primitives::{BlockNumber, Moment};
+
 impl_outer_origin! {
     pub enum Origin for Test {}
 }
@@ -44,15 +46,21 @@ impl system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
-    type SystemWeightInfo = ();
+	type SystemWeightInfo = ();
 }
-
+pub const MILLISECS_PER_BLOCK: Moment = 3000;
+pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+parameter_types! {
+    pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+}
 impl Trait for Test {
-    type Event = ();
+	type Event = ();
+	type BlocksPerEra = BlocksPerEra;
 }
 
 pub type Credit = Module<Test>;

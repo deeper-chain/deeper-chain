@@ -30,8 +30,6 @@ pub trait Trait: frame_system::Trait {
 
 pub type EraIndex = u32;
 
-
-
 #[derive(Default, Clone, Encode, Decode)]
 pub struct CreditScoreLedger<AccountId> {
     delegated_account: AccountId,

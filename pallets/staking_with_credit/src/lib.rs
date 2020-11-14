@@ -2193,7 +2193,7 @@ impl<T: Trait> Module<T> {
         let score = T::CreditDelegate::delegated_score_of_validator(validator).unwrap_or(0);
         let total_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
         let factor = (total_score / u64::max_value()).max(1);
-        let vote_weight = CREDIT_TO_TOKEN_FACTOR *(score / factor) as u64;
+        let vote_weight = CREDIT_TO_TOKEN_FACTOR * (score / factor) as u64;
         log!(
             info,
             "💸 PoC (validator {:?}  with: PoC vote weight {} and score {}).",

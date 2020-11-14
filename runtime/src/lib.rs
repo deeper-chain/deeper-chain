@@ -430,8 +430,12 @@ impl micropayment::Trait for Runtime {
     type Timestamp = Timestamp;
 }
 
+parameter_types! {
+    pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+}
 impl pallet_credit::Trait for Runtime {
     type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
 }
 
 impl pallet_delegating::Trait for Runtime {
