@@ -94,8 +94,6 @@ pub use deeper_node;
 /// Import the micropayment pallet
 pub use micropayment;
 
-
-
 /// Weights for pallets used in the runtime.
 mod weights;
 
@@ -432,12 +430,11 @@ impl micropayment::Trait for Runtime {
     type Timestamp = Timestamp;
 }
 
-
-impl pallet_credit::Trait for Runtime{
+impl pallet_credit::Trait for Runtime {
     type Event = Event;
 }
 
-impl pallet_delegating::Trait for Runtime{
+impl pallet_delegating::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
     type CreditInterface = Credit;

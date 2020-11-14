@@ -19,7 +19,9 @@ pub const CREDIT_SCORE_THRESHOLD: u64 = 100;
 /// Credit init score
 pub const CREDIT_INIT_SCORE: u64 = 30;
 /// credit score attenuation low threshold
-pub const CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD: u64 = 50;
+pub const CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD: u64 = 40;
+/// credit score attenuation step
+pub const CREDIT_SCORE_ATTENUATION_STEP: u64 = 5;
 
 // Credit score delegated threshold
 pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
@@ -102,11 +104,11 @@ decl_module! {
 
         // init credit score
         #[weight = 10_000]
-        pub fn initialize_credit(origin) -> dispatch::DispatchResult{
+        pub fn initialize_credit(origin, credit:u64) -> dispatch::DispatchResult{ //todo
             let sender = ensure_signed(origin)?;
             ensure!(!UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  already Initilized");
-            UserCredit::<T>::insert(sender.clone(), CREDIT_INIT_SCORE);
-            Self::deposit_event(RawEvent::CreditInitSuccess(sender, CREDIT_INIT_SCORE));
+            UserCredit::<T>::insert(sender.clone(), credit);
+            Self::deposit_event(RawEvent::CreditInitSuccess(sender, credit));
 
             Ok(())
         }
@@ -121,11 +123,20 @@ decl_module! {
             Ok(())
         }
 
+        // update credit score 
+        #[weight = 10_000]
+        pub fn update_credit(origin, credit:u64) -> dispatch::DispatchResult{ //todo
+            let sender = ensure_signed(origin)?;
+            ensure!(UserCredit::<T>::contains_key(sender.clone()), "Credit Score of AccountId  isn't Initilized");
+            UserCredit::<T>::insert(sender.clone(), credit);
+            Ok(())
+        }
+
         // Anything that needs to be done at the end of the block.
-		fn on_finalize(_n: T::BlockNumber) {
-			// We update credit score here.
-			log!(info, "update credit score in block number {:?}", _n);
-		}
+        fn on_finalize(_n: T::BlockNumber) {
+            // We update credit score here.
+            log!(info, "update credit score in block number {:?}", _n);
+        }
     }
 }
 
@@ -140,7 +151,7 @@ pub trait CreditInterface<AccountId> {
 
 impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     /// init credit score
-    fn  initialize_credit(account_id: T::AccountId, score: u64) -> bool {
+    fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             false
         } else {
@@ -206,7 +217,7 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
         false
     }
 
-    fn get_credit_score(account_id: T::AccountId) -> Option<u64>{
+    fn get_credit_score(account_id: T::AccountId) -> Option<u64> {
         Self::get_user_credit(account_id)
     }
 }

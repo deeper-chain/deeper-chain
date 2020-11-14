@@ -42,7 +42,7 @@ def gen_keys(key_file: str) -> (str, str, str):
     output_lines = output.splitlines()
     secret = output_lines[0].split('`')[1]
     print(secret)
-    nominate_word = secret;
+    nominate_word = secret
 
     sr_key1 = output_lines[4].split()[2]
     print(sr_key1)

@@ -21,7 +21,7 @@ use sp_std::vec;
 use sp_std::vec::Vec;
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait{
+pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
@@ -29,6 +29,8 @@ pub trait Trait: frame_system::Trait{
 }
 
 pub type EraIndex = u32;
+
+
 
 #[derive(Default, Clone, Encode, Decode)]
 pub struct CreditScoreLedger<AccountId> {
@@ -339,14 +341,14 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
 
     fn delegated_score_of_validator(validator: &T::AccountId) -> Option<u64> {
         let era_index = <CurrentEra>::get().unwrap_or(0);
-        if <Delegators<T>>::contains_key(era_index, validator.clone()){
+        if <Delegators<T>>::contains_key(era_index, validator.clone()) {
             let delegators = <Delegators<T>>::get(era_index, validator);
             let mut score: u64 = 0;
             for (_, s) in delegators {
                 score += s;
             }
             Some(score)
-        }else{
+        } else {
             Some(0)
         }
     }

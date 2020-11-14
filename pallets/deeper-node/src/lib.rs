@@ -21,7 +21,7 @@ type BalanceOf<T> =
 #[derive(Decode, Encode, Default)]
 pub struct Node<AccountId> {
     account_id: AccountId,
-    ipv4: Vec<u8>,            // IP will not be exposed in future version
+    ipv4: Vec<u8>, // IP will not be exposed in future version
     country: u16,
 }
 
