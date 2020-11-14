@@ -263,11 +263,36 @@ decl_module! {
         ///	用户重新委托信誉分（针对： 已经发起 undelegate，信誉分还处于锁定状态的情况）
         #[weight = 10_000]
         pub fn redelegate(origin) -> dispatch::DispatchResult {
-            info!("[FLQ] redelegate credit score ");
             let controller = ensure_signed(origin)?;
             ensure!(CreditLedger::<T>::contains_key(controller.clone()), Error::<T>::NotDelegate);
+            ensure!(T::CreditInterface::pass_threshold(controller.clone(), 0), Error::<T>::CreditScoreTooLow);
+            let score = T::CreditInterface::get_credit_score(controller.clone()).unwrap();
 
-            CreditLedger::<T>::mutate(controller.clone(),|ledger| (*ledger).withdraw_era = 0);
+            CreditLedger::<T>::mutate(controller.clone(),|ledger| {
+                (*ledger).withdraw_era = 0;
+                (*ledger).delegated_score = score;
+            });
+
+            // update Delegators for that the era has changed between "undelegate" and "redelegate"
+            let current_era = CurrentEra::get().unwrap_or(0);
+            let ledger = CreditLedger::<T>::get(controller.clone());
+            let validator = ledger.validator_account;
+
+            if Delegators::<T>::contains_key(current_era, validator.clone()){
+                let delegators = Delegators::<T>::take(current_era, validator.clone());
+                let mut next_delegators: Vec<_> = delegators
+                    .iter()
+                    .filter(|(delegator, _)|{
+                        delegator != &controller
+                    })
+                    .collect();
+                let new_delegator = (controller.clone(), score);
+                next_delegators.push(&new_delegator);
+                Delegators::<T>::insert(current_era, validator.clone(), next_delegators);
+            }else{
+                let delegators = vec![(controller.clone(),score)];
+                Delegators::<T>::insert(current_era, validator.clone(), delegators);
+            }
 
             Ok(())
         }
@@ -316,7 +341,10 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
                         .iter()
                         .filter(|(delegator, _)| {
                             let ledger = <CreditLedger<T>>::get(delegator);
-                            ledger.withdraw_era == 0 // ==0 正常质押credit
+                            ledger.withdraw_era == 0 && T::CreditInterface::pass_threshold((*delegator).clone(), 0)
+                        })
+                        .map(|(delegator, _)|{
+                            (delegator, T::CreditInterface::get_credit_score((*delegator).clone()).unwrap())
                         })
                         .collect();
                     <Delegators<T>>::insert(
