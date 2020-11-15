@@ -177,7 +177,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     /// init credit score
-    fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
+    pub fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
         if !UserCredit::<T>::contains_key(account_id.clone())
             && score >= CREDIT_INIT_SCORE
             && score <= CREDIT_SCORE_THRESHOLD

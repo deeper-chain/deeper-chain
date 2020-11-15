@@ -4499,6 +4499,7 @@ dependencies = [
  "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
+ "node-primitives",
  "pallet-credit",
  "pallet-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",

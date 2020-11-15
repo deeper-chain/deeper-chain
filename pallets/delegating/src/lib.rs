@@ -13,7 +13,7 @@ use log::{error, info};
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure, traits::Currency,
+    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
 };
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
@@ -24,7 +24,7 @@ use sp_std::vec::Vec;
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-    type Currency: Currency<Self::AccountId>;
+
     type CreditInterface: CreditInterface<Self::AccountId>;
 }
 
@@ -37,6 +37,8 @@ pub struct CreditScoreLedger<AccountId> {
     validator_account: AccountId,
     withdraw_era: EraIndex,
 }
+
+pub const CREDIT_LOCK_DURATION: u32 = 84;
 
 // The pallet's runtime storage items.
 // https://substrate.dev/docs/en/knowledgebase/runtime/storage
@@ -208,16 +210,14 @@ decl_module! {
 
         #[weight = 10_000]
         pub fn undelegate(origin) -> dispatch::DispatchResult {
-            info!("[FLQ] will undelegate credit score ");
+            info!("will undelegate credit score ");
 
             // 合法性检查
             let controller = ensure_signed(origin)?;
             ensure!(CreditLedger::<T>::contains_key(controller.clone()), Error::<T>::NotDelegate);
 
             let current_era = CurrentEra::get().unwrap_or(0);
-            // TODO 赎回锁定周期为 当前ERA_index + 信誉分锁定周期数（不要使用固定值 2）
-            info!("[FLQ] current era index : {:?}", current_era);
-            let withdraw_era = current_era + 2;
+            let withdraw_era = current_era + CREDIT_LOCK_DURATION;
 
             // 更新 withdraw_era 字段
             CreditLedger::<T>::mutate(controller.clone(),|ledger| (*ledger).withdraw_era = withdraw_era);
@@ -234,13 +234,13 @@ decl_module! {
         ///
         #[weight = 10_000]
         pub fn withdraw_credit_score(origin) -> dispatch::DispatchResult{
-            info!("[FLQ] withdraw credit score");
+            info!("withdraw credit score");
 
             let controller = ensure_signed(origin)?;
 
             // 检查该账户是否存在 待赎回的 credit score
             if !CreditLedger::<T>::contains_key(controller.clone()) {
-                error!("[FLQ] can't found credit ledger for your account ");
+                error!("can't found credit ledger for your account ");
                 Err(Error::<T>::NoCreditLedgerData)?
             }
 
@@ -248,7 +248,7 @@ decl_module! {
             let ledger = CreditLedger::<T>::get(controller.clone());
             let current_era = CurrentEra::get().unwrap_or(0);
             if ledger.withdraw_era > current_era {
-                error!("[FLQ] can't withdraw credit score because it's not the right time yet ");
+                error!("can't withdraw credit score because it's not the right time yet ");
                 Err(Error::<T>::NotRightEra)?
             }
 
@@ -299,7 +299,7 @@ decl_module! {
 
         #[weight = 10_000]
         pub fn getdelegators(origin, era_index: u32, validator: T::AccountId) -> dispatch::DispatchResult{
-            info!("[FLQ] get delegators for era_index : {:?}", era_index);
+            info!("get delegators for era_index : {:?}", era_index);
             // 查看指定 era 周期内对应的 delegators
             // TODO 待实现
 

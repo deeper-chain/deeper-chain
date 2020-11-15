@@ -29,7 +29,7 @@ version = '2.0.0'
 default-features = false
 version = '2.0.0'
 
-[dev-dependencies.sp-core]
+[dependencies.sp-core]
 default-features = false
 version = '2.0.0'
 
@@ -37,7 +37,7 @@ version = '2.0.0'
 default-features = false
 version = '2.0.0'
 
-[dependencies.sp-runtime]
+[dev-dependencies.sp-runtime]
 default-features = false
 version = '2.0.0'
 
@@ -48,6 +48,11 @@ version = '2.0.0'
 [dependencies.pallet-credit]
 default-features = false
 path = "../credit"
+version = '2.0.0'
+
+[dev-dependencies.node-primitives]
+default-features = false
+path = "../../primitives"
 version = '2.0.0'
 
 [dependencies.pallet-session]
@@ -62,4 +67,6 @@ std = [
     'frame-system/std',
     'sp-std/std',
     'pallet-credit/std',
+    'sp-core/std',
+    'pallet-session/std',
 ]

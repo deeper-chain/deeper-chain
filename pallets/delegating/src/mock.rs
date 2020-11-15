@@ -8,6 +8,12 @@ use sp_runtime::{
     Perbill,
 };
 
+use node_primitives::{BlockNumber, Moment};
+
+pub type Credit = pallet_credit::Module<Test>;
+
+pub(crate) type AccountId = u64;
+
 impl_outer_origin! {
     pub enum Origin for Test {}
 }
@@ -31,7 +37,7 @@ impl system::Trait for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = ();
@@ -44,18 +50,30 @@ impl system::Trait for Test {
     type MaximumBlockLength = MaximumBlockLength;
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
-    type ModuleToIndex = ();
+    type PalletInfo = ();
     type AccountData = ();
     type OnNewAccount = ();
     type OnKilledAccount = ();
-    type SystemWeightInfo = ();
+	type SystemWeightInfo = ();
+}
+
+pub const MILLISECS_PER_BLOCK: Moment = 3000;
+pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+parameter_types! {
+    pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+}
+impl pallet_credit::Trait for Test {
+    type Event = ();
+    type BlocksPerEra = BlocksPerEra;
 }
 
 impl Trait for Test {
     type Event = ();
+    type CreditInterface = Credit;
 }
 
-pub type TemplateModule = Module<Test>;
+pub type Delegating = Module<Test>;
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
