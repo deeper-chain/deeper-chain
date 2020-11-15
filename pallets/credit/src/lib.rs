@@ -13,7 +13,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// mircropayment number to credit factor: /
+/// mircropayment size to credit factor: /
 pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1000;
 /// Credit score threshold
 pub const CREDIT_SCORE_THRESHOLD: u64 = 100;
@@ -45,7 +45,7 @@ macro_rules! log {
 }
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait {
+pub trait Trait: frame_system::Trait + pallet_micropayment::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     /// Number of sessions per era.
@@ -101,8 +101,8 @@ decl_module! {
         // Errors must be initialized if they are used by the pallet.
         type Error = Error<T>;
 
-                /// Blocks  per era.
-                const BlocksPerEra: T::BlockNumber = T::BlocksPerEra::get();
+        /// Blocks  per era.
+        const BlocksPerEra: T::BlockNumber = T::BlocksPerEra::get();
 
 
         // Events must be initialized if they are used by the pallet.
@@ -122,7 +122,7 @@ decl_module! {
                     "CreditInitFailed",
                 ))
             }
-            
+
         }
 
         // clear credit score
@@ -157,19 +157,25 @@ decl_module! {
                     "CreditUpdateFailed",
                 ))
             }
-            
+
         }
 
         // Anything that needs to be done at the end of the block.
         fn on_finalize(_n: T::BlockNumber) {
             log!(info, "update credit score in block number {:?}", _n);
-
-            // We update credit score per block
-
+            // We update credit score of account in last block number
+            let mircropayment_size_vec
+                = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n); // BlockNumber -1 ?? todo
+            for (server_id, (_, size)) in mircropayment_size_vec{
+                let score_delta: u64 = size as u64 / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
+                Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
+            }
             // call attenuate_credit per era
-            if _n % T::BlocksPerEra::get() == T::BlockNumber::default(){
-                // to call attenuate_credit()
-
+            // need vec<server_id> ?? todo
+            let server_id = T::AccountId::default();
+            let last_update_block = pallet_micropayment::Module::<T>::last_update_block(server_id.clone());
+            if _n - last_update_block > T::BlocksPerEra::get(){
+                Self::attenuate_credit(server_id);
             }
         }
     }
@@ -191,13 +197,21 @@ impl<T: Trait> Module<T> {
     /// update credit score
     fn update_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone())
-            && score >= CREDIT_INIT_SCORE
-            && score <= CREDIT_SCORE_THRESHOLD
         {
-            UserCredit::<T>::insert(account_id, score);
-            true
+            match score {
+                score if score < CREDIT_INIT_SCORE => false,
+                score if score > CREDIT_SCORE_THRESHOLD => {
+                    UserCredit::<T>::insert(account_id, CREDIT_SCORE_THRESHOLD);
+                    true
+                }
+                _ => {
+                    UserCredit::<T>::insert(account_id, score);
+                    true
+                }
+            }
         } else {
-            false
+            // uninitialize case
+            Self::initialize_credit(account_id, score)
         }
     }
 

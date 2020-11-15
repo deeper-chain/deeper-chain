@@ -3,7 +3,6 @@ use frame_support::{assert_noop, assert_ok};
 use frame_system::ensure_signed;
 use sp_runtime::DispatchError;
 
-
 #[test]
 fn fn_initialize_credit_extrinsic() {
     new_test_ext().execute_with(|| {
@@ -20,17 +19,13 @@ fn fn_initialize_credit_extrinsic() {
         // initialize credit 20
         assert_eq!(
             Credit::initialize_credit_extrinsic(Origin::signed(4), 20),
-            Err(DispatchError::Other(
-                "CreditInitFailed",
-            ))
+            Err(DispatchError::Other("CreditInitFailed",))
         );
 
         // initialize credit 101
         assert_eq!(
             Credit::initialize_credit_extrinsic(Origin::signed(5), 101),
-            Err(DispatchError::Other(
-                "CreditInitFailed",
-            ))
+            Err(DispatchError::Other("CreditInitFailed",))
         );
 
         // initialize credit twice
@@ -38,13 +33,10 @@ fn fn_initialize_credit_extrinsic() {
         assert_eq!(Credit::get_user_credit(6), Some(50));
         assert_eq!(
             Credit::initialize_credit_extrinsic(Origin::signed(6), 50),
-            Err(DispatchError::Other(
-                "CreditInitFailed",
-            ))
+            Err(DispatchError::Other("CreditInitFailed",))
         );
     });
 }
-
 
 #[test]
 fn fn_update_credit_extrinsic() {
@@ -56,34 +48,20 @@ fn fn_update_credit_extrinsic() {
         assert_ok!(Credit::update_credit_extrinsic(Origin::signed(1), 100));
 
         // update uninitialize
-        assert_eq!(
-            Credit::update_credit_extrinsic(Origin::signed(2), 60),
-            Err(DispatchError::Other(
-                "CreditUpdateFailed",
-            ))
-        );
+        assert_ok!(Credit::update_credit_extrinsic(Origin::signed(2), 60));
 
         // < 30
         assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(3), 50));
         assert_eq!(
             Credit::update_credit_extrinsic(Origin::signed(3), 29),
-            Err(DispatchError::Other(
-                "CreditUpdateFailed",
-            ))
+            Err(DispatchError::Other("CreditUpdateFailed",))
         );
 
-        // >101
+        // >100
         assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(4), 50));
-        assert_eq!(
-            Credit::update_credit_extrinsic(Origin::signed(4), 105),
-            Err(DispatchError::Other(
-                "CreditUpdateFailed",
-            ))
-        );
-
+        assert_ok!(Credit::update_credit_extrinsic(Origin::signed(4), 105));
     });
 }
-
 
 #[test]
 fn fn_kill_credit_extrinsic() {
@@ -107,7 +85,7 @@ fn fn_initialize_credit() {
         assert_eq!(Credit::initialize_credit(1, 30), true);
         assert_eq!(Credit::initialize_credit(2, 50), true);
         assert_eq!(Credit::initialize_credit(3, 100), true);
-        
+
         // < 30
         assert_eq!(Credit::initialize_credit(4, 20), false);
 
@@ -127,18 +105,17 @@ fn fn_update_credit() {
         assert_eq!(Credit::initialize_credit(1, 50), true);
         assert_eq!(Credit::update_credit(1, 30), true);
         assert_eq!(Credit::update_credit(1, 100), true);
-        
+
         // < 30
         assert_eq!(Credit::update_credit(1, 20), false);
 
         // > 100
-        assert_eq!(Credit::update_credit(1, 101), false);
+        assert_eq!(Credit::update_credit(1, 101), true);
 
         // update uninitialize accout
-        assert_eq!(Credit::update_credit(2, 88), false);
+        assert_eq!(Credit::update_credit(2, 88), true);
     });
 }
-
 
 #[test]
 fn fn_attenuate_credit() {
@@ -158,7 +135,6 @@ fn fn_attenuate_credit() {
     });
 }
 
-
 #[test]
 fn fn_kill_credit() {
     new_test_ext().execute_with(|| {
@@ -170,4 +146,3 @@ fn fn_kill_credit() {
         assert_eq!(Credit::kill_credit(2), false);
     });
 }
-

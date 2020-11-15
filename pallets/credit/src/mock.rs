@@ -1,5 +1,5 @@
 use crate::{Module, Trait};
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+use frame_support::{impl_outer_origin, parameter_types, weights::Weight, weights::constants::RocksDbWeight as DbWeight};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -8,7 +8,7 @@ use sp_runtime::{
     Perbill,
 };
 
-use node_primitives::{BlockNumber, Moment};
+use node_primitives::{BlockNumber, Moment, Balance};
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -47,21 +47,108 @@ impl system::Trait for Test {
     type AvailableBlockRatio = AvailableBlockRatio;
     type Version = ();
     type PalletInfo = ();
-    type AccountData = ();
+    type AccountData = pallet_balances::AccountData<Balance>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
-	type SystemWeightInfo = ();
+    type SystemWeightInfo = ();
 }
 pub const MILLISECS_PER_BLOCK: Moment = 3000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+
+
+pub type Balances = pallet_balances::Module<Test>;
+pub type Timestamp = pallet_timestamp::Module<Test>;
+
+pub struct BalancesWeightInfo;
+impl pallet_balances::WeightInfo for BalancesWeightInfo {
+    fn transfer() -> Weight {
+        (65949000 as Weight)
+            .saturating_add(DbWeight::get().reads(1 as Weight))
+            .saturating_add(DbWeight::get().writes(1 as Weight))
+    }
+    fn transfer_keep_alive() -> Weight {
+        (46665000 as Weight)
+            .saturating_add(DbWeight::get().reads(1 as Weight))
+            .saturating_add(DbWeight::get().writes(1 as Weight))
+    }
+    fn set_balance_creating() -> Weight {
+        (27086000 as Weight)
+            .saturating_add(DbWeight::get().reads(1 as Weight))
+            .saturating_add(DbWeight::get().writes(1 as Weight))
+    }
+    fn set_balance_killing() -> Weight {
+        (33424000 as Weight)
+            .saturating_add(DbWeight::get().reads(1 as Weight))
+            .saturating_add(DbWeight::get().writes(1 as Weight))
+    }
+    fn force_transfer() -> Weight {
+        (65343000 as Weight)
+            .saturating_add(DbWeight::get().reads(2 as Weight))
+            .saturating_add(DbWeight::get().writes(2 as Weight))
+    }
+}
+
+
+parameter_types! {
+    pub const ExistentialDeposit: Balance = 100_000_000_000;
+    // For weight estimation, we assume that the most locks on an individual account will be 50.
+    // This number may need to be adjusted in the future if this assumption no longer holds true.
+    pub const MaxLocks: u32 = 50;
+}
+
+impl pallet_balances::Trait for Test {
+    type MaxLocks = MaxLocks;
+    type Balance = Balance;
+    type DustRemoval = ();
+    type Event = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = frame_system::Module<Test>;
+    type WeightInfo = BalancesWeightInfo;
+}
+
+
+
+pub struct TimestampWeightInfo;
+impl pallet_timestamp::WeightInfo for TimestampWeightInfo {
+    // WARNING! Some components were not used: ["t"]
+    fn set() -> Weight {
+        (9133000 as Weight)
+            .saturating_add(DbWeight::get().reads(2 as Weight))
+            .saturating_add(DbWeight::get().writes(1 as Weight))
+    }
+    // WARNING! Some components were not used: ["t"]
+    fn on_finalize() -> Weight {
+        (5915000 as Weight)
+    }
+}
+
+parameter_types! {
+    pub const MinimumPeriod: Moment = 1500;
+}
+
+impl pallet_timestamp::Trait for Test {
+    type Moment = Moment;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = TimestampWeightInfo;
+}
+
+impl pallet_micropayment::Trait for Test {
+    type Event = ();
+    type Currency = Balances;
+    type Timestamp = Timestamp;
+}
+
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 }
+
 impl Trait for Test {
-	type Event = ();
-	type BlocksPerEra = BlocksPerEra;
+    type Event = ();
+    type BlocksPerEra = BlocksPerEra;
 }
+
 
 pub type Credit = Module<Test>;
 
