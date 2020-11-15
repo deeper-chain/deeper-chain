@@ -38,7 +38,6 @@ async function test() {
     console.log(`nonce: ${nonce}, session_id: ${session_id}, amt: ${amount}, signature: ${hexsig}`);
 }
 
-//test();
 async function test1() {
     const wsProvider = new WsProvider("ws://127.0.0.1:9944");
     const api = await ApiPromise.create({
@@ -72,4 +71,5 @@ async function test1() {
     console.log(`total issuance is: ${bal}, account at ${acc1} has balance ${free1}, at ${acc2} has balance ${free2}`);
 }
 
+test();
 test1();

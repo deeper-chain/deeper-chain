@@ -8,6 +8,18 @@ use sp_core::sr25519;
 use sp_io::crypto::sr25519_verify;
 use sp_runtime::traits::Saturating;
 
+pub(crate) const LOG_TARGET: &'static str = "credit";
+// syntactic sugar for logging.
+#[macro_export]
+macro_rules! log {
+	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
+		frame_support::debug::$level!(
+			target: crate::LOG_TARGET,
+			$patter $(, $values)*
+		)
+	};
+}
+
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
@@ -55,6 +67,10 @@ decl_storage! {
       // nonce indicates the next available value; increase by one whenever open a new channel for an account pair
       Nonce get(fn get_nonce): map hasher(blake2_128_concat) (T::AccountId, T::AccountId)  => u64;
       SessionId get(fn get_session_id): double_map hasher(blake2_128_concat) (T::AccountId, T::AccountId), hasher(blake2_128_concat) u32 => bool;
+      // the last block that an ccount has micropayment transaction involved
+      LastUpdated get(fn last_updated): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
+      // accumulated micropayment and number of clients an server account served and received during one block period
+      MicropaymentInfo get(fn micropayment_info): double_map hasher(blake2_128_concat) T::BlockNumber, hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, u32);
   }
 
 }
@@ -127,6 +143,16 @@ decl_module! {
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
       }
+
+      // Anything that needs to be done at the end of the block.
+        fn on_finalize(_n: T::BlockNumber) {
+            log!(info, "update micropayment information in block number {:?}", _n);
+
+            // update last_update for each micropayment account
+
+            // update micropayment information
+
+        }
   }
 }
 
@@ -179,6 +205,18 @@ impl<T: Trait> Module<T> {
         data.extend_from_slice(&amount.encode());
         let hash = sp_io::hashing::blake2_256(&data);
         hash
+    }
+
+    // return the collection of micropayment information in given blocknumber
+    pub fn new_micropayment_size_in_block(
+        n: T::BlockNumber,
+    ) -> Vec<(T::AccountId, (BalanceOf<T>, u32))> {
+        MicropaymentInfo::<T>::iter_prefix(n).collect::<Vec<_>>()
+    }
+
+    // return the last blocknumber for an account join micropayment activity
+    pub fn last_update_block(acc: T::AccountId) -> T::BlockNumber {
+        LastUpdated::<T>::get(acc)
     }
 }
 
