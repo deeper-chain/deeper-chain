@@ -4476,10 +4476,15 @@ dependencies = [
  "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives",
+ "pallet-balances",
+ "pallet-micropayment",
+ "pallet-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-timestamp 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4500,8 +4505,11 @@ dependencies = [
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "node-primitives",
+ "pallet-balances",
  "pallet-credit",
+ "pallet-micropayment",
  "pallet-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-timestamp 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -59,6 +59,13 @@ version = '2.0.0'
 default-features = false
 version = '2.0.0'
 
+[dependencies]
+pallet-micropayment = {version = '2.0.0', default-features =false, path = "../micropayment"}
+
+[dev-dependencies]
+pallet-balances = { version = "2.0.0", default-features = false}
+pallet-timestamp = { version = "2.0.0", default-features = false}
+
 [features]
 default = ['std']
 std = [
@@ -69,4 +76,5 @@ std = [
     'pallet-credit/std',
     'sp-core/std',
     'pallet-session/std',
+    'pallet-micropayment/std',
 ]

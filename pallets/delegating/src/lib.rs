@@ -12,9 +12,7 @@ mod tests;
 use log::{error, info};
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
-};
+use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
 use sp_std::vec;
@@ -342,10 +340,14 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
                         .iter()
                         .filter(|(delegator, _)| {
                             let ledger = <CreditLedger<T>>::get(delegator);
-                            ledger.withdraw_era == 0 && T::CreditInterface::pass_threshold((*delegator).clone(), 0)
+                            ledger.withdraw_era == 0
+                                && T::CreditInterface::pass_threshold((*delegator).clone(), 0)
                         })
-                        .map(|(delegator, _)|{
-                            (delegator, T::CreditInterface::get_credit_score((*delegator).clone()).unwrap())
+                        .map(|(delegator, _)| {
+                            (
+                                delegator,
+                                T::CreditInterface::get_credit_score((*delegator).clone()).unwrap(),
+                            )
                         })
                         .collect();
                     <Delegators<T>>::insert(
@@ -426,9 +428,8 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
                 }
             }
             true
-        }else {
+        } else {
             false
         }
-
     }
 }

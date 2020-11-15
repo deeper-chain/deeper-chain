@@ -16,7 +16,7 @@ sp-io = { version = "2.0.0", default-features = false}
 sp-runtime = { version = "2.0.0", default-features = false}
 pallet-balances = { version = "2.0.0", default-features = false}
 pallet-timestamp = { version = "2.0.0", default-features = false}
-node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
+
 
 [dependencies]
 codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '1.3.4'}
@@ -26,6 +26,7 @@ sp-core = { version = "2.0.0", default-features = false}
 pallet-micropayment = {version = '2.0.0', default-features =false, path = "../micropayment"}
 sp-std = {version = "2.0.0", default-features = false}
 pallet-session = {version = "2.0.0", default-features = false}
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 
 [features]
 default = ['std']
