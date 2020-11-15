@@ -85,10 +85,20 @@ fn test_undelegate() {
 
         assert_ok!(Delegating::delegate(Origin::signed(1), 8));
 
+        let delegators = Delegating::delegators(5,8);
+        println!(" delegators : {:?}", delegators);
+        assert_eq!(delegators.contains(&(1,95)), true);
+
         assert_ok!(Delegating::undelegate(Origin::signed(1)));
 
         let ledger = Delegating::credit_ledger(1);
         assert_eq!(ledger.withdraw_era, 5 + CREDIT_LOCK_DURATION);
+
+        // remove from validator's delegator list in next era
+        Delegating::set_current_era(6);
+        let new_delegators = Delegating::delegators(6,8);
+        println!(" new delegators : {:?}", new_delegators);
+        assert_eq!(new_delegators.contains(&(1,95)), false);
     })
 }
 
