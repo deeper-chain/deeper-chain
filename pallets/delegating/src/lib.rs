@@ -329,9 +329,10 @@ pub trait CreditDelegateInterface<AccountId> {
 impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
     /// 每个era开始调用一次
     fn set_current_era(current_era: EraIndex) {
-        <CurrentEra>::put(current_era);
+        let old_era = Self::current_era().unwrap_or(0);
 
-        if current_era > 0 {
+        if current_era > 0 && old_era < current_era {
+            <CurrentEra>::put(current_era);
             // 更新潜在validator背后质押credit的账户、及era_index
             if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
                 for candidate_validator in candidate_validators {
@@ -408,6 +409,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
             let validator = ledger.validator_account;
 
             let current_era = Self::current_era().unwrap_or(0);
+
             let mut start_index = 0;
             if current_era > 84 {
                 start_index = current_era - 84;
@@ -423,7 +425,10 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
                     <Delegators<T>>::insert(era, validator.clone(), next_delegators)
                 }
             }
+            true
+        }else {
+            false
         }
-        false
+
     }
 }

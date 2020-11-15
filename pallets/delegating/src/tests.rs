@@ -3,7 +3,7 @@ use frame_support::{assert_noop, assert_ok};
 use pallet_credit::CreditInterface;
 
 #[test]
-fn delegate_credit_score(){
+fn test_delegate_credit_score(){
     new_test_ext().execute_with(|| {
 
         // initialize candidate list
@@ -42,7 +42,7 @@ fn delegate_credit_score(){
 // }
 
 #[test]
-fn delegate_use_weak_credit(){
+fn test_delegate_use_weak_credit(){
     new_test_ext().execute_with(|| {
 
         Delegating::set_candidate_validators(vec![4,6,8,10]);
@@ -55,7 +55,7 @@ fn delegate_use_weak_credit(){
 }
 
 #[test]
-fn delegate_change_validator() {
+fn test_delegate_change_validator() {
     new_test_ext().execute_with(|| {
         Delegating::set_candidate_validators(vec![4,6,8,10]);
         Credit::initialize_credit(1,95);
@@ -74,7 +74,7 @@ fn delegate_change_validator() {
 }
 
 #[test]
-fn undelegate(){
+fn test_undelegate(){
     new_test_ext().execute_with(|| {
         Delegating::set_current_era(5);
         Delegating::set_candidate_validators(vec![4,6,8,10]);
@@ -91,7 +91,7 @@ fn undelegate(){
 }
 
 #[test]
-fn undelegate_before_delegate() {
+fn test_undelegate_before_delegate() {
     new_test_ext().execute_with(|| {
 
         Delegating::set_current_era(5);
@@ -105,7 +105,7 @@ fn undelegate_before_delegate() {
 }
 
 #[test]
-fn withdraw_credit_score(){
+fn test_withdraw_credit_score(){
     new_test_ext().execute_with(|| {
         Delegating::set_current_era(5);
         Delegating::set_candidate_validators(vec![4,6,8,10]);
@@ -124,7 +124,7 @@ fn withdraw_credit_score(){
 }
 
 #[test]
-fn withdraw_without_delegate(){
+fn test_withdraw_without_delegate(){
     new_test_ext().execute_with(|| {
 
         assert_noop!(Delegating::withdraw_credit_score(Origin::signed(1)),
@@ -133,7 +133,7 @@ fn withdraw_without_delegate(){
 }
 
 #[test]
-fn redelegate(){
+fn test_redelegate(){
     new_test_ext().execute_with(|| {
         Delegating::set_current_era(5);
         Delegating::set_candidate_validators(vec![4,6,8,10]);
@@ -149,10 +149,90 @@ fn redelegate(){
 }
 
 #[test]
-fn current_era_validators() {
+fn test_set_current_era_validators() {
+    new_test_ext().execute_with(|| {
+        Delegating::set_current_era_validators(vec![4,6,8,10]);
+        assert_eq!(Delegating::current_era_validators(), Some(vec![4,6,8,10]));
+    });
+}
+
+#[test]
+fn test_set_candidates(){
+    new_test_ext().execute_with(|| {
+        Delegating::set_candidate_validators(vec![4,6,8,10]);
+        assert_eq!(Delegating::candidate_validators(), Some(vec![4,6,8,10]));
+    });
+}
+
+#[test]
+fn test_get_delegated_score(){
     new_test_ext().execute_with(|| {
 
-        assert_eq!(Delegating::set_candidate_validators(vec![4,6,8,10]));
+        Delegating::set_candidate_validators(vec![4,6,8,10]);
+        assert_eq!(Credit::initialize_credit(1,95),true);
+        assert_ok!(Delegating::delegate(Origin::signed(1),8));
 
+        assert_eq!(Credit::initialize_credit(2,65),true);
+        assert_ok!(Delegating::delegate(Origin::signed(2),8));
+
+        // check delegator's score
+        assert_eq!(Delegating::get_delegated_score(1),Some(95));
+        assert_eq!(Delegating::get_delegated_score(2),Some(65));
+
+        // check total score
+        assert_eq!(Delegating::total_delegated_score(), Some(95 + 65));
+
+        // check total delegated score for validator
+        assert_eq!(Delegating::delegated_score_of_validator(&8), Some(95 + 65));
+
+        assert_eq!(Delegating::delegated_score_of_validator(&6), Some(0));
+
+        assert_eq!(Delegating::delegated_score_of_validator(&1), Some(0));
+
+    });
+}
+
+#[test]
+fn test_set_current_era() {
+    new_test_ext().execute_with(|| {
+
+        Delegating::set_current_era(5);
+
+        assert_eq!(Delegating::current_era(), Some(5));
+
+        Delegating::set_current_era(0);
+        assert_eq!(Delegating::current_era(), Some(5));
+
+        Delegating::set_current_era(3);
+        assert_eq!(Delegating::current_era(), Some(5));
+
+        Delegating::set_current_era(10);
+        assert_eq!(Delegating::current_era(), Some(10));
+    });
+}
+
+#[test]
+fn test_kill_credit() {
+    new_test_ext().execute_with(|| {
+        Delegating::set_candidate_validators(vec![4,6,8,10]);
+
+        Delegating::set_current_era(2);
+
+        assert_eq!(Credit::initialize_credit(1,95),true);
+
+        assert_ok!(Delegating::delegate(Origin::signed(1),6));
+        let ledger = Delegating::credit_ledger(1);
+
+        // kill a not existed account
+        assert_eq!(Delegating::kill_credit(2), false);
+
+        let old_delegators = Delegating::delegators(2,6);
+        assert_eq!(old_delegators.contains(&(1,95)), true);
+
+        assert_eq!(Delegating::kill_credit(1),true);
+
+        // delete account from delegator list
+        let new_delegators = Delegating::delegators(2,6);
+        assert_eq!(new_delegators.contains(&(1,95)), false);
     });
 }
