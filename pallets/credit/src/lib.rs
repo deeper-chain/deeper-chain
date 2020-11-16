@@ -165,11 +165,13 @@ decl_module! {
         fn on_finalize(_n: T::BlockNumber) {
             log!(info, "update credit score in block number {:?}", _n);
             // We update credit score of account in last block number
-            let mircropayment_size_vec
-                = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n); // BlockNumber -1 ?? todo
-            for (server_id, (_, size)) in mircropayment_size_vec{
-                let score_delta: u64 = size as u64 / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
-                Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
+            if _n > T::BlockNumber::from(1) {
+                let mircropayment_size_vec
+                = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1)); 
+                for (server_id, (_, size)) in mircropayment_size_vec{
+                    let score_delta: u64 = size as u64 / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
+                    Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
+                }
             }
 
             // call attenuate_credit per era
