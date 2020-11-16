@@ -25,15 +25,17 @@ async function test() {
     const alice = keyring.addFromUri("//Alice");
     const bob = keyring.addFromUri("//Bob");
 
-    let nonce = new BN("1", 10);
-    let session_id = new BN("42", 10);
+    let nonce = new BN("0", 10);
+    let session_id = new BN("7", 10);
     let base = new BN("1000000000000000", 10); // base = 1e15
-    let amount = new BN("99", 10);
+    let amount = new BN("1", 10);
     let amt = amount.mul(base);
-    let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
+    //let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
+    let res = construct_byte_array(alice.publicKey, nonce, session_id, amt);
     let msg = blake2AsU8a(res);
 
-    let signature = alice.sign(msg);
+    //let signature = alice.sign(msg);
+    let signature = bob.sign(msg);
     let hexsig = toHexString(signature);
     console.log(`nonce: ${nonce}, session_id: ${session_id}, amt: ${amount}, signature: ${hexsig}`);
 }
