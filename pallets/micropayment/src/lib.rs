@@ -140,19 +140,22 @@ decl_module! {
 
           T::Currency::transfer(&sender, &receiver, amount, AllowDeath)?; // TODO: check what is AllowDeath
           SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
+
+          // update last block
+          let block_number = <frame_system::Module<T>>::block_number();
+          LastUpdated::<T>::insert(sender.clone(),block_number);
+          LastUpdated::<T>::insert(receiver.clone(),block_number);
+          log!(info, "lastupdated block is {:?} for accounts: {:?}, {:?}", block_number, &sender, &receiver);
+          // update micropaymentinfo
+          let (balance, num_served) = MicropaymentInfo::<T>::get(&block_number,&receiver);
+          MicropaymentInfo::<T>::insert(block_number,receiver.clone(), (balance+amount, num_served+1));
+          log!(info, "micropayment info updated at block {:?} for account {:?}, with (balance, num_served)= ({:?},{:?})",
+                 block_number, &receiver, balance+amount,num_served+1);
+
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
       }
 
-      // Anything that needs to be done at the end of the block.
-        fn on_finalize(_n: T::BlockNumber) {
-            log!(info, "update micropayment information in block number {:?}", _n);
-
-            // update last_update for each micropayment account
-
-            // update micropayment information
-
-        }
   }
 }
 

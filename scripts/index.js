@@ -24,21 +24,23 @@ async function test() {
     const keyring = new Keyring({ type: "sr25519" });
     const alice = keyring.addFromUri("//Alice");
     const bob = keyring.addFromUri("//Bob");
+    console.log(` alice: ${alice.address}, bob: ${bob.address}`);
 
-    let nonce = new BN("1", 10);
-    let session_id = new BN("42", 10);
+    let nonce = new BN("0", 10);
+    let session_id = new BN("7", 10);
     let base = new BN("1000000000000000", 10); // base = 1e15
-    let amount = new BN("99", 10);
+    let amount = new BN("1", 10);
     let amt = amount.mul(base);
-    let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
+    //let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
+    let res = construct_byte_array(alice.publicKey, nonce, session_id, amt);
     let msg = blake2AsU8a(res);
 
-    let signature = alice.sign(msg);
+    //let signature = alice.sign(msg);
+    let signature = bob.sign(msg);
     let hexsig = toHexString(signature);
     console.log(`nonce: ${nonce}, session_id: ${session_id}, amt: ${amount}, signature: ${hexsig}`);
 }
 
-//test();
 async function test1() {
     const wsProvider = new WsProvider("ws://127.0.0.1:9944");
     const api = await ApiPromise.create({
@@ -72,4 +74,5 @@ async function test1() {
     console.log(`total issuance is: ${bal}, account at ${acc1} has balance ${free1}, at ${acc2} has balance ${free2}`);
 }
 
-test1();
+test();
+//test1();
