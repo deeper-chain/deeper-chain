@@ -21,7 +21,7 @@ type BalanceOf<T> =
 #[derive(Decode, Encode, Default)]
 pub struct Node<AccountId> {
     account_id: AccountId,
-    ipv4: Vec<u8>,            // IP will not be exposed in future version
+    ipv4: Vec<u8>, // IP will not be exposed in future version
     country: u16,
 }
 
@@ -143,5 +143,9 @@ impl<T: Trait> Module<T> {
         <DeviceInfo<T>>::insert(sender.clone(), node);
 
         Ok(())
+    }
+
+    pub fn registered_devices() -> Vec<Node<T::AccountId>> {
+        DeviceInfo::<T>::iter_values().collect::<Vec<_>>()
     }
 }
