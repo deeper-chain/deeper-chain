@@ -7,6 +7,7 @@ use frame_support::traits::Get;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
 
+
 #[cfg(test)]
 mod mock;
 
@@ -29,7 +30,7 @@ pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
 pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
-pub type BlockNumber = u32;
+//pub type BlockNumber = u32;
 
 pub(crate) const LOG_TARGET: &'static str = "credit";
 
@@ -45,7 +46,7 @@ macro_rules! log {
 }
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait + pallet_micropayment::Trait {
+pub trait Trait: frame_system::Trait + pallet_micropayment::Trait + pallet_deeper_node::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     /// Number of sessions per era.
@@ -170,12 +171,17 @@ decl_module! {
                 let score_delta: u64 = size as u64 / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
                 Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
             }
+
             // call attenuate_credit per era
-            // need vec<server_id> ?? todo
-            let server_id = T::AccountId::default();
-            let last_update_block = pallet_micropayment::Module::<T>::last_update_block(server_id.clone());
-            if _n - last_update_block > T::BlocksPerEra::get(){
-                Self::attenuate_credit(server_id);
+            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
+                let devices = pallet_deeper_node::Module::<T>::registered_devices();
+                for device in devices {
+                    let server_id = device.account_id;
+                    let last_update_block = pallet_micropayment::Module::<T>::last_update_block(server_id.clone());
+                    if _n - last_update_block > T::BlocksPerEra::get(){
+                        Self::attenuate_credit(server_id);
+                    }
+                }
             }
         }
     }

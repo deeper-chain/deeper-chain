@@ -4477,6 +4477,7 @@ dependencies = [
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives",
  "pallet-balances",
+ "pallet-deeper-node",
  "pallet-micropayment",
  "pallet-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-timestamp 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
