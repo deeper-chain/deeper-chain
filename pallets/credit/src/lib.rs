@@ -30,7 +30,7 @@ pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
 /// mircropayment size to credit factor:
-pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1_000_000_000_000_000_000;
+pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1_000_000_000_000_000;
 
 //pub type BlockNumber = u32;
 

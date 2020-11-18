@@ -81,7 +81,7 @@ pub use sp_runtime::BuildStorage;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-use impls::{Author, CurrencyToVoteHandler};
+use impls::{Author, CurrencyToVoteHandler, CurrencyToNumberHandler};
 
 /// Constant values used within the runtime.
 pub mod constants;

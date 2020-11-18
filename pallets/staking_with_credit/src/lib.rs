@@ -2189,7 +2189,7 @@ impl<T: Trait> Module<T> {
         log!(
             info,
             "💸 PoS (validator {:?}  with: PoS vote weight {} ).",
-            validator,
+            stash,
             pos_vote / 2,
         );
         pos_vote
