@@ -341,7 +341,7 @@ pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_NOMINATIONS: usize = <CompactAssignments as VotingLimit>::LIMIT;
 
 /// credit socre to token factor
-pub const CREDIT_TO_TOKEN_FACTOR: u64 = 10_000;
+pub const CREDIT_TO_TOKEN_FACTOR: u64 = 615006150061;
 
 pub(crate) const LOG_TARGET: &'static str = "staking";
 
@@ -2183,9 +2183,16 @@ impl<T: Trait> Module<T> {
 
     /// internal impl of [`slashable_balance_of`] that returns [`VoteWeight`].
     fn slashable_balance_of_vote_weight(stash: &T::AccountId) -> VoteWeight {
-        <T::CurrencyToVote as Convert<BalanceOf<T>, VoteWeight>>::convert(
+       let pos_vote =  <T::CurrencyToVote as Convert<BalanceOf<T>, VoteWeight>>::convert(
             Self::slashable_balance_of(stash),
-        )
+        );
+        log!(
+            info,
+            "💸 PoS (validator {:?}  with: PoS vote weight {} ).",
+            validator,
+            pos_vote / 2,
+        );
+        pos_vote
     }
 
     /// internal impl of delegated_credit_score
