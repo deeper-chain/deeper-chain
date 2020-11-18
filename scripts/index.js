@@ -82,8 +82,8 @@ async function test() {
     const chao2_stash = keyring.addFromUri("discover despair state general virtual method ten someone rookie learn damage artefact//stash");
     console.log(`Chao2: ${chao2.address}, Chao2_stash: ${chao2_stash.address}`);
 
-    let nonce = new BN("2", 10);
-    let s = 2000;
+    let nonce = new BN("0", 10);
+    let s = 4000;
 
         let session_id = new BN((s++).toString(), 10);
         let base = new BN("1000000000000000", 10); // base = 1e15
@@ -94,11 +94,11 @@ async function test() {
         let msg = blake2AsU8a(res);
 
         //let signature = alice.sign(msg);
-        let signature = eve.sign(msg);
+        let signature = dave.sign(msg);
         let hexsig = toHexString(signature);
         console.log(`nonce: ${nonce}, session_id: ${session_id}, amt: ${amount}, signature: ${hexsig}`);
         let flag = true;
-        api.tx.micropayment.claimPayment(eve.address, session_id, amt, '0x' + hexsig)
+        api.tx.micropayment.claimPayment(dave.address, session_id, amt, '0x' + hexsig)
             .signAndSend(ferdie, ({ events = [], status }) => {
                 console.log('Transaction status:', status.type);
                 if (status.isInBlock) {

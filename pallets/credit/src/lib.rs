@@ -175,9 +175,10 @@ decl_module! {
                 let mircropayment_size_vec
                 = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
                 for (server_id, (balance, size)) in mircropayment_size_vec{
-                    if size > 1{
+                    if size >= 1{
                         let balance_num = <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
                         let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
+                        log!(info,"server_id: {:?}, balance_num: {},score_delta:{}",server_id.clone(),balance_num,score_delta);
                         Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
                     }
                 }

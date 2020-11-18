@@ -51,6 +51,22 @@ impl Convert<u128, Balance> for CurrencyToVoteHandler {
     }
 }
 
+/// Struct that handles the conversion of Balance -> `u64`. This is used for staking's election
+/// calculation.
+pub struct CurrencyToNumberHandler;
+
+impl Convert<Balance, u64> for CurrencyToNumberHandler {
+    fn convert(x: Balance) -> u64 {
+        x as u64
+    }
+}
+
+impl Convert<u128, Balance> for CurrencyToNumberHandler {
+    fn convert(x: u128) -> Balance {
+        x
+    }
+}
+
 #[cfg(test)]
 mod multiplier_tests {
     use super::*;
