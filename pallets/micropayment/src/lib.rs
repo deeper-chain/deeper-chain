@@ -28,7 +28,7 @@ pub trait Trait: frame_system::Trait {
     type Timestamp: Time;
 }
 
-type BalanceOf<T> =
+pub type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 type Moment<T> = <<T as Trait>::Timestamp as Time>::Moment;

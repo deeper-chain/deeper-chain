@@ -6,7 +6,8 @@ use frame_support::traits::Get;
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
-
+use pallet_micropayment::BalanceOf;
+use sp_runtime::traits::Convert;
 
 #[cfg(test)]
 mod mock;
@@ -14,8 +15,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// mircropayment size to credit factor: /
-pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1000;
 /// Credit score threshold
 pub const CREDIT_SCORE_THRESHOLD: u64 = 100;
 /// Credit init score
@@ -29,6 +28,9 @@ pub const CREDIT_SCORE_ATTENUATION_STEP: u64 = 5;
 pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
 pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
+
+/// mircropayment size to credit factor:
+pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1_000_000_000_000_000_000;
 
 //pub type BlockNumber = u32;
 
@@ -46,11 +48,15 @@ macro_rules! log {
 }
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
-pub trait Trait: frame_system::Trait + pallet_micropayment::Trait + pallet_deeper_node::Trait {
+pub trait Trait:
+    frame_system::Trait + pallet_micropayment::Trait + pallet_deeper_node::Trait
+{
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     /// Number of sessions per era.
     type BlocksPerEra: Get<<Self as frame_system::Trait>::BlockNumber>;
+    //type Currency: Currency<Self::AccountId>;
+    type CurrencyToVote: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
 }
 
 // The pallet's runtime storage items.
@@ -167,10 +173,13 @@ decl_module! {
             // We update credit score of account in last block number
             if _n > T::BlockNumber::from(1) {
                 let mircropayment_size_vec
-                = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1)); 
-                for (server_id, (_, size)) in mircropayment_size_vec{
-                    let score_delta: u64 = size as u64 / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
-                    Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
+                = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
+                for (server_id, (balance, size)) in mircropayment_size_vec{
+                    if size > 1{
+                        let balance_num = <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
+                        let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
+                        Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
+                    }
                 }
             }
 
@@ -204,8 +213,7 @@ impl<T: Trait> Module<T> {
     }
     /// update credit score
     fn update_credit(account_id: T::AccountId, score: u64) -> bool {
-        if UserCredit::<T>::contains_key(account_id.clone())
-        {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
             match score {
                 score if score < CREDIT_INIT_SCORE => false,
                 score if score > CREDIT_SCORE_THRESHOLD => {

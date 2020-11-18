@@ -6,7 +6,7 @@ import json
 
 from subprocess import Popen, PIPE
 
-def write_chao_and_chao_gran_json_file(nominate_word, babe_account_id, grandpa_account_id, i):
+def write_chao_and_chao_gran_json_file(mnemonic_word, babe_account_id, grandpa_account_id, i):
     babe_json = "chao"+str(i)+".json"
     gran_json = "chao_gran"+str(i)+".json"
 
@@ -14,7 +14,7 @@ def write_chao_and_chao_gran_json_file(nominate_word, babe_account_id, grandpa_a
     "jsonrpc": "2.0",
     "id": 1,
     "method": "author_insertKey",
-    "params": ["babe", nominate_word, babe_account_id]
+    "params": ["babe", mnemonic_word, babe_account_id]
     }
     with open(babe_json,"w") as f:
         json.dump(babe_dict, f)
@@ -23,7 +23,7 @@ def write_chao_and_chao_gran_json_file(nominate_word, babe_account_id, grandpa_a
     "jsonrpc": "2.0",
     "id": 1,
     "method": "author_insertKey",
-    "params": ["gran", nominate_word, grandpa_account_id]
+    "params": ["gran", mnemonic_word, grandpa_account_id]
     }
     with open(gran_json, "w") as f:
         json.dump(gran_dict, f)
@@ -32,22 +32,45 @@ def gen_keys(key_file: str, i) -> (str, str, str):
     sr_key1 = ''
     sr_key2 = ''
     ed_key = ''
+    mnemonic_chaos = [
+        "wet wait more hammer glass drastic reform detect corn resource lake bomb",
+        "license trigger sight gallery trophy before rough village clean become blur blast",
+        "discover despair state general virtual method ten someone rookie learn damage artefact"
+    ]
+    secret = ''
+    mnemonic = ''
+    bebe_account_id = ''
+   
+    if i < 3:
+        secret = mnemonic_chaos[i]
+        mnemonic = secret
+        print(secret)
+        
+        output = Popen(["subkey", "inspect", secret], stdout=PIPE).communicate()[0]
+        output = str(output, 'utf-8')
+        with open(key_file+str(i), 'w') as fp:
+            print(output, file=fp)
+        output_lines = output.splitlines()
+        
+        sr_key1 = output_lines[4].split()[2]
+        print(sr_key1)
+        bebe_account_id = output_lines[3].split()[2]
+    else:
+        output = Popen("subkey generate".split(), stdout=PIPE).communicate()[0]
+        output = str(output, 'utf-8')
+        with open(key_file+str(i), 'w') as fp:
+            print(output, file=fp)
 
-    output = Popen("subkey generate".split(), stdout=PIPE).communicate()[0]
-    output = str(output, 'utf-8')
+        output_lines = output.splitlines()
+        secret = output_lines[0].split('`')[1]
+        print(secret)
+        mnemonic = secret
 
-    with open(key_file+str(i), 'w') as fp:
-        print(output, file=fp)
+        sr_key1 = output_lines[4].split()[2]
+        print(sr_key1)
 
-    output_lines = output.splitlines()
-    secret = output_lines[0].split('`')[1]
-    print(secret)
-    nominate_word = secret
+        bebe_account_id = output_lines[3].split()[2]
 
-    sr_key1 = output_lines[4].split()[2]
-    print(sr_key1)
-
-    bebe_account_id = output_lines[3].split()[2]
 
     ed_key_args = ["subkey", "inspect"]
     ed_key_args.append(secret + "//stash")
@@ -66,7 +89,7 @@ def gen_keys(key_file: str, i) -> (str, str, str):
     print(ed_key)
 
     grandpa_account_id = output_lines[3].split()[2]
-    write_chao_and_chao_gran_json_file(nominate_word, bebe_account_id, grandpa_account_id, i)
+    write_chao_and_chao_gran_json_file(mnemonic, bebe_account_id, grandpa_account_id, i)
 
     return (sr_key1, sr_key2, ed_key)
 

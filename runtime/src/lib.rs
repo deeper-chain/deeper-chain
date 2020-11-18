@@ -436,6 +436,7 @@ parameter_types! {
 impl pallet_credit::Trait for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
+    type CurrencyToVote = CurrencyToVoteHandler;
 }
 
 impl pallet_delegating::Trait for Runtime {

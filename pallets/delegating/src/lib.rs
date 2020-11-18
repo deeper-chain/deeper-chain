@@ -340,16 +340,18 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
                         .iter()
                         .filter(|(delegator, _)| {
                             let ledger = <CreditLedger<T>>::get(delegator);
-                            let can_delegate = T::CreditInterface::pass_threshold((*delegator).clone(), 0);
+                            let can_delegate =
+                                T::CreditInterface::pass_threshold((*delegator).clone(), 0);
                             if can_delegate {
-                                <CreditLedger<T>>::mutate(delegator, |ledger|{
-                                    (*ledger).delegated_score = T::CreditInterface::get_credit_score((*delegator).clone()).unwrap()
+                                <CreditLedger<T>>::mutate(delegator, |ledger| {
+                                    (*ledger).delegated_score =
+                                        T::CreditInterface::get_credit_score((*delegator).clone())
+                                            .unwrap()
                                 });
-                            }else{
+                            } else {
                                 <CreditLedger<T>>::remove(delegator);
                             }
-                            ledger.withdraw_era == 0
-                                && can_delegate
+                            ledger.withdraw_era == 0 && can_delegate
                         })
                         .map(|(delegator, _)| {
                             (

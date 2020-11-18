@@ -85,9 +85,9 @@ fn test_undelegate() {
 
         assert_ok!(Delegating::delegate(Origin::signed(1), 8));
 
-        let delegators = Delegating::delegators(5,8);
+        let delegators = Delegating::delegators(5, 8);
         println!(" delegators : {:?}", delegators);
-        assert_eq!(delegators.contains(&(1,95)), true);
+        assert_eq!(delegators.contains(&(1, 95)), true);
 
         assert_ok!(Delegating::undelegate(Origin::signed(1)));
 
@@ -96,9 +96,9 @@ fn test_undelegate() {
 
         // remove from validator's delegator list in next era
         Delegating::set_current_era(6);
-        let new_delegators = Delegating::delegators(6,8);
+        let new_delegators = Delegating::delegators(6, 8);
         println!(" new delegators : {:?}", new_delegators);
-        assert_eq!(new_delegators.contains(&(1,95)), false);
+        assert_eq!(new_delegators.contains(&(1, 95)), false);
     })
 }
 

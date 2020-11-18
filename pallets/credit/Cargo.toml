@@ -28,6 +28,7 @@ pallet-deeper-node = {version = '2.0.0', default-features =false, path = "../dee
 sp-std = {version = "2.0.0", default-features = false}
 pallet-session = {version = "2.0.0", default-features = false}
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
+sp-runtime = { version = "2.0.0", default-features = false}
 
 [features]
 default = ['std']
@@ -39,6 +40,7 @@ std = [
     'pallet-deeper-node/std',
     'sp-std/std',  
     'sp-core/std',
+    'sp-runtime/std',
     'node-primitives/std',
     'pallet-session/std',
 ]

@@ -1,5 +1,8 @@
 use crate::{Module, Trait};
-use frame_support::{impl_outer_origin, parameter_types, weights::Weight, weights::constants::RocksDbWeight as DbWeight};
+use frame_support::{
+    impl_outer_origin, parameter_types, weights::constants::RocksDbWeight as DbWeight,
+    weights::Weight,
+};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -8,7 +11,7 @@ use sp_runtime::{
     Perbill,
 };
 
-use node_primitives::{BlockNumber, Moment, Balance};
+use node_primitives::{Balance, BlockNumber, Moment};
 
 pub type Credit = pallet_credit::Module<Test>;
 
@@ -61,9 +64,6 @@ pub const MILLISECS_PER_BLOCK: Moment = 3000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 
-
-
-
 pub type Balances = pallet_balances::Module<Test>;
 pub type Timestamp = pallet_timestamp::Module<Test>;
 
@@ -96,7 +96,6 @@ impl pallet_balances::WeightInfo for BalancesWeightInfo {
     }
 }
 
-
 parameter_types! {
     pub const ExistentialDeposit: Balance = 100_000_000_000;
     // For weight estimation, we assume that the most locks on an individual account will be 50.
@@ -113,8 +112,6 @@ impl pallet_balances::Trait for Test {
     type AccountStore = frame_system::Module<Test>;
     type WeightInfo = BalancesWeightInfo;
 }
-
-
 
 pub struct TimestampWeightInfo;
 impl pallet_timestamp::WeightInfo for TimestampWeightInfo {
