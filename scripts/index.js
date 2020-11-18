@@ -20,7 +20,7 @@ function construct_byte_array(addr, nonce, session_id, amount) {
 }
 
 async function test() {
-    const wsProvider = new WsProvider("wss://10.168.98.1:443");
+    const wsProvider = new WsProvider("wss://138.68.229.14:443");
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -83,8 +83,8 @@ async function test() {
     console.log(`Chao2: ${chao2.address}, Chao2_stash: ${chao2_stash.address}`);
 
     let nonce = new BN("0", 10);
-    let s = 5;
-    
+    let s = 6;
+
         let session_id = new BN((s++).toString(), 10);
         let base = new BN("1000000000000000", 10); // base = 1e15
         let amount = new BN("10", 10);
@@ -146,7 +146,7 @@ async function test1() {
     console.log(`total issuance is: ${bal}, account at ${acc1} has balance ${free1}, at ${acc2} has balance ${free2}`);
 }
 
-test();
+//test();
 //-------------------------------------------------------------------------------------
 
 
@@ -606,8 +606,8 @@ async function functionalTest_credit_attenuate_set() {
 
 
 // credit pallet test
-//functionalTest_credit();
-//setTimeout(functionalTest_credit_check, 30000);
+functionalTest_credit();
+setTimeout(functionalTest_credit_check, 30000);
 
 // credit attenuate test
 //functionalTest_credit_attenuate_set();

@@ -88,6 +88,7 @@ decl_error! {
         StorageOverflow,
         AlreadyDelegated,
         NotDelegate,
+        CreditLocked,
         NoCreditLedgerData,
         NotRightEra,
         CreditScoreTooLow,
@@ -213,6 +214,9 @@ decl_module! {
             // 合法性检查
             let controller = ensure_signed(origin)?;
             ensure!(CreditLedger::<T>::contains_key(controller.clone()), Error::<T>::NotDelegate);
+
+            let ledger = CreditLedger::<T>::get(controller.clone());
+            ensure!(ledger.withdraw_era == 0, Error::<T>::CreditLocked);
 
             let current_era = CurrentEra::get().unwrap_or(0);
             let withdraw_era = current_era + CREDIT_LOCK_DURATION;
