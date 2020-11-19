@@ -3,6 +3,8 @@ const { blake2AsU8a, secp256k1KeypairFromSeed, cryptoWaitReady } = require("@pol
 const stringToU8a = require("@polkadot/util/string/toU8a").default;
 const BN = require("bn.js");
 
+const serverHost = "wss://138.68.229.14:443"; // local "wss://10.168.98.1:443"
+
 function toHexString(byteArray) {
     return Array.from(byteArray, function (byte) {
         return ("0" + (byte & 0xff).toString(16)).slice(-2);
@@ -19,8 +21,8 @@ function construct_byte_array(addr, nonce, session_id, amount) {
     return arr;
 }
 
-async function test() {
-    const wsProvider = new WsProvider("wss://138.68.229.14:443");
+async function claimPayment_test() {
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -114,7 +116,7 @@ async function test() {
     
 }
 async function test1() {
-    const wsProvider = new WsProvider("wss://138.68.229.14:443");
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -146,14 +148,14 @@ async function test1() {
     console.log(`total issuance is: ${bal}, account at ${acc1} has balance ${free1}, at ${acc2} has balance ${free2}`);
 }
 
-//test();
+
 //-------------------------------------------------------------------------------------
 
 
 
 async function functionalTest_credit() {
     // connect to chain
-    const wsProvider = new WsProvider("wss://138.68.229.14:443");
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -239,7 +241,7 @@ async function functionalTest_credit() {
 
 async function functionalTest_credit_check() {
     // connect to chain
-    const wsProvider = new WsProvider("wss://138.68.229.14:443");
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -535,7 +537,7 @@ async function functionalTest_delegate_check() {
 
 async function functionalTest_credit_attenuate_set() {
     // connect to chain
-    const wsProvider = new WsProvider("wss:// 138.68.229.14:443");
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -604,6 +606,11 @@ async function functionalTest_credit_attenuate_set() {
 
 }
 
+// to run this js
+// NODE_TLS_REJECT_UNAUTHORIZED=0 node index.js
+
+// micropayment test
+//claimPayment_test();
 
 // credit pallet test
 functionalTest_credit();

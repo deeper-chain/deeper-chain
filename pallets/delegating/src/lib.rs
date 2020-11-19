@@ -36,7 +36,7 @@ pub struct CreditScoreLedger<AccountId> {
     withdraw_era: EraIndex,
 }
 
-pub const CREDIT_LOCK_DURATION: u32 = 84;
+pub const CREDIT_LOCK_DURATION: u32 = 10; //todo
 
 // The pallet's runtime storage items.
 // https://substrate.dev/docs/en/knowledgebase/runtime/storage
