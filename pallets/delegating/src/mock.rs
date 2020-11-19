@@ -7,7 +7,7 @@ use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup, Convert},
     Perbill,
 };
 
@@ -143,6 +143,23 @@ impl pallet_micropayment::Trait for Test {
     type Currency = Balances;
     type Timestamp = Timestamp;
 }
+impl pallet_deeper_node::Trait for Test {
+    type Event = ();
+    type Currency = Balances;
+}
+
+pub struct CurrencyToNumberHandler;
+impl Convert<Balance, u64> for CurrencyToNumberHandler {
+    fn convert(x: Balance) -> u64 {
+        x as u64
+    }
+}
+
+impl Convert<u128, Balance> for CurrencyToNumberHandler {
+    fn convert(x: u128) -> Balance {
+        x
+    }
+}
 
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
@@ -150,6 +167,7 @@ parameter_types! {
 impl pallet_credit::Trait for Test {
     type Event = ();
     type BlocksPerEra = BlocksPerEra;
+    type CurrencyToVote = CurrencyToNumberHandler;
 }
 
 impl Trait for Test {

@@ -236,7 +236,7 @@ fn test_kill_credit() {
         assert_eq!(Credit::initialize_credit(1, 95), true);
 
         assert_ok!(Delegating::delegate(Origin::signed(1), 6));
-        let ledger = Delegating::credit_ledger(1);
+        let _ledger = Delegating::credit_ledger(1);
 
         // kill a not existed account
         assert_eq!(Delegating::kill_credit(2), false);

@@ -65,6 +65,7 @@ pallet-micropayment = {version = '2.0.0', default-features =false, path = "../mi
 [dev-dependencies]
 pallet-balances = { version = "2.0.0", default-features = false}
 pallet-timestamp = { version = "2.0.0", default-features = false}
+pallet-deeper-node = {version = '2.0.0', default-features =false, path = "../deeper-node"}
 
 [features]
 default = ['std']
