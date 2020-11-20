@@ -60,6 +60,8 @@ decl_module! {
         #[weight = 10_000]
         pub fn register_device(origin, ip: Vec<u8>, country: u16) -> DispatchResult {
             let sender = ensure_signed(origin)?;
+            ensure!(ip.len() < 256, "invalid ip address");
+            ensure!(country < 1024, "invalid country code");
             let node = Node {
                 account_id: sender.clone(),
                 ipv4: ip.clone(),
@@ -88,6 +90,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn register_server(origin, country: u16) -> DispatchResult {
             let sender = ensure_signed(origin)?;
+            ensure!(country < 1024, "invalid country code");
             ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
                 "sender device needs register first");
 
@@ -99,6 +102,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn unregister_server(origin, country: u16) -> DispatchResult {
             let sender = ensure_signed(origin)?;
+            ensure!(country < 1024, "invalid country code");
             ensure!(<DeviceInfo<T>>::contains_key(sender.clone()),
                 "sender device needs register first");
             let _ = Self::try_remove_server(&sender, country);
