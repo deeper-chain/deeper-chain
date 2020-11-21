@@ -810,7 +810,7 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     /// Delegating Interface
-    type CreditDelegate: CreditDelegateInterface<Self::AccountId>;
+    type CreditDelegate: CreditDelegateInterface<Self::AccountId, BalanceOf<Self>>;
 
     /// Time used for computing era duration.
     ///

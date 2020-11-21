@@ -12,10 +12,10 @@ mod tests;
 use log::{error, info};
 
 use frame_support::codec::{Decode, Encode};
+use frame_support::traits::{Currency};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
-use pallet_micropayment::BalanceOf;
 use sp_std::vec;
 use sp_std::vec::Vec;
 
@@ -25,7 +25,12 @@ pub trait Trait: frame_system::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
     type CreditInterface: CreditInterface<Self::AccountId>;
+
+    type Currency: Currency<Self::AccountId>;
 }
+
+pub type BalanceOf<T> =
+<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 pub type EraIndex = u32;
 
@@ -314,7 +319,7 @@ decl_module! {
     }
 }
 
-pub trait CreditDelegateInterface<AccountId> {
+pub trait CreditDelegateInterface<AccountId, B> {
     fn set_current_era(current_era: EraIndex);
     fn set_current_era_validators(validators: Vec<AccountId>);
     fn set_candidate_validators(candidate_validators: Vec<AccountId>);
@@ -330,13 +335,13 @@ pub trait CreditDelegateInterface<AccountId> {
     /// kill delegator's credit score
     fn kill_credit(account_id: AccountId) -> bool;
 
-    fn setErasReward(era_index: EraIndex, total_reward:BalanceOf<T>);
+    fn setErasReward(era_index: EraIndex, total_reward:B);
 
     fn payout_delegators(era_index: EraIndex, commission: u32, validator: AccountId);
 }
 //定义公共和私有函数
 
-impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
+impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>> for Module<T> {
     /// 每个era开始调用一次
     fn set_current_era(current_era: EraIndex) {
         let old_era = Self::current_era().unwrap_or(0);

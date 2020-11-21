@@ -442,6 +442,7 @@ impl pallet_credit::Trait for Runtime {
 impl pallet_delegating::Trait for Runtime {
     type Event = Event;
     type CreditInterface = Credit;
+    type Currency = Balances;
 }
 
 impl pallet_session::Trait for Runtime {
