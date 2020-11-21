@@ -16,11 +16,11 @@ mod mock;
 mod tests;
 
 /// Credit score threshold
-pub const CREDIT_SCORE_THRESHOLD: u64 = 100;
+pub const MAX_CREDIT_SCORE: u64 = 100;
 /// Credit init score
 pub const CREDIT_INIT_SCORE: u64 = 30;
 /// credit score attenuation low threshold
-pub const CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD: u64 = 40;
+pub const CREDIT_SCORE_ATTENUATION_LOWER_BOUND: u64 = 40;
 /// credit score attenuation step
 pub const CREDIT_SCORE_ATTENUATION_STEP: u64 = 5;
 
@@ -150,28 +150,15 @@ decl_module! {
 
         }
 
-        // update credit score
-        #[weight = 10_000]
-        pub fn update_credit_extrinsic(origin, credit:u64) -> dispatch::DispatchResult{ //todo
-            let sender = ensure_signed(origin)?;
-            let res = Self::update_credit(sender.clone(), credit);
-            if res == true {
-                Self::deposit_event(RawEvent::CreditUpdateSuccess(sender, credit));
-                Ok(())
-            }else{
-                Self::deposit_event(RawEvent::CreditUpdateFailed(sender, credit));
-                Err(dispatch::DispatchError::Other(
-                    "CreditUpdateFailed",
-                ))
-            }
-
-        }
-
         // Anything that needs to be done at the end of the block.
         fn on_finalize(_n: T::BlockNumber) {
             log!(info, "update credit score in block number {:?}", _n);
-            // We update credit score of account in last block number
-            if _n > T::BlockNumber::from(1) {
+            // We update credit score of account per era
+            // TODO: move this logic into update_credit, i.e. update_credit has micropayment vec as
+            // input
+            // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
+            // to aggregate total payment and number of clients first before pass it into update_credit's input
+            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
                 let mircropayment_size_vec
                 = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
                 for (server_id, (balance, size)) in mircropayment_size_vec{
@@ -185,6 +172,7 @@ decl_module! {
             }
 
             // call attenuate_credit per era
+            // TODO: move this logic into attenuate_credit
             if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
                 let devices = pallet_deeper_node::Module::<T>::registered_devices();
                 for device in devices {
@@ -202,11 +190,11 @@ decl_module! {
 impl<T: Trait> Module<T> {
     /// init credit score
     pub fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
-        if !UserCredit::<T>::contains_key(account_id.clone())
-            && score >= CREDIT_INIT_SCORE
-            && score <= CREDIT_SCORE_THRESHOLD
-        {
-            UserCredit::<T>::insert(account_id.clone(), score);
+        // in general, a user start from initial score = 0; with coupon, a user can
+        // start from initial score at most CREDIT_INIT_SCORE
+        // TODO: i.e. add coupon verification for non-zero init credit score
+        if !UserCredit::<T>::contains_key(account_id.clone()) && score < CREDIT_INIT_SCORE {
+            UserCredit::<T>::insert(account_id.clone(), 0);
             true
         } else {
             false
@@ -216,9 +204,8 @@ impl<T: Trait> Module<T> {
     fn update_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             match score {
-                score if score < CREDIT_INIT_SCORE => false,
-                score if score > CREDIT_SCORE_THRESHOLD => {
-                    UserCredit::<T>::insert(account_id, CREDIT_SCORE_THRESHOLD);
+                score if score > MAX_CREDIT_SCORE => {
+                    UserCredit::<T>::insert(account_id, MAX_CREDIT_SCORE);
                     true
                 }
                 _ => {
@@ -234,11 +221,11 @@ impl<T: Trait> Module<T> {
 
     fn attenuate_credit(account_id: T::AccountId) -> bool {
         let score = Self::get_user_credit(account_id.clone()).unwrap_or(0);
-        if score > CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
-            if score - CREDIT_SCORE_ATTENUATION_STEP >= CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD {
+        if score > CREDIT_SCORE_ATTENUATION_LOWER_BOUND {
+            if score - CREDIT_SCORE_ATTENUATION_STEP >= CREDIT_SCORE_ATTENUATION_LOWER_BOUND {
                 UserCredit::<T>::insert(account_id, score - CREDIT_SCORE_ATTENUATION_STEP);
             } else {
-                UserCredit::<T>::insert(account_id, CREDIT_SCORE_ATTENUATION_LOW_THRESHOLD);
+                UserCredit::<T>::insert(account_id, CREDIT_SCORE_ATTENUATION_LOWER_BOUND);
             }
             true
         } else {
