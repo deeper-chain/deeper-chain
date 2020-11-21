@@ -15,6 +15,7 @@ use frame_support::codec::{Decode, Encode};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
+use pallet_micropayment::BalanceOf;
 use sp_std::vec;
 use sp_std::vec::Vec;
 
@@ -49,6 +50,9 @@ decl_storage! {
         // 存质押的credit 及 delegater id
         CreditLedger get(fn credit_ledger): map hasher(blake2_128_concat) T::AccountId
             => CreditScoreLedger<T::AccountId>;
+
+        ErasValidatorReward get(fn eras_validator_reward):
+            map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
 
         // 存PoC生效的Era, validator id
         Delegators get(fn delegators): double_map hasher(blake2_128_concat) EraIndex,
@@ -325,6 +329,10 @@ pub trait CreditDelegateInterface<AccountId> {
 
     /// kill delegator's credit score
     fn kill_credit(account_id: AccountId) -> bool;
+
+    fn setErasReward(era_index: EraIndex, total_reward:BalanceOf<T>);
+
+    fn payout_delegators(era_index: EraIndex, commission: u32, validator: AccountId);
 }
 //定义公共和私有函数
 
@@ -445,5 +453,13 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId> for Module<T> {
         } else {
             false
         }
+    }
+
+    fn setErasReward(era_index: EraIndex, total_reward:BalanceOf<T>) {
+        // TODO 写入数据库
+    }
+
+    fn payout_delegators(era_index: EraIndex, commission: u32, validator: T::AccountId) {
+        // TODO 分配奖励（参考： staking 的奖励分配）
     }
 }

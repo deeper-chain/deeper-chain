@@ -333,7 +333,7 @@ async function functionalTest_credit_check() {
 
 async function functionalTest_delegate() {
     // connect to chain
-    const wsProvider = new WsProvider("wss:// 138.68.229.14:443");
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
@@ -420,7 +420,7 @@ async function functionalTest_delegate() {
 
 async function functionalTest_delegate_check() {
     // connect to chain
-    const wsProvider = new WsProvider("wss:// 138.68.229.14:443");
+    const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
