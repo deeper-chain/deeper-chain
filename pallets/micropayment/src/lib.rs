@@ -148,6 +148,7 @@ decl_module! {
           log!(info, "lastupdated block is {:?} for accounts: {:?}, {:?}", block_number, &sender, &receiver);
           // update micropaymentinfo
           let (balance, num_served) = MicropaymentInfo::<T>::get(&block_number,&receiver);
+          // TODO: need to compare the sender is different before increase num_served
           MicropaymentInfo::<T>::insert(block_number,receiver.clone(), (balance+amount, num_served+1));
           log!(info, "micropayment info updated at block {:?} for account {:?}, with (balance, num_served)= ({:?},{:?})",
                  block_number, &receiver, balance+amount,num_served+1);
