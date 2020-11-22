@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::traits::Get;
+use frame_support::traits::{Get,Vec};
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
@@ -68,6 +68,9 @@ decl_storage! {
     trait Store for Module<T: Trait> as Credit {
         //store credit score using map
         pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
+        
+        // accumulated micropayment and number of clients an server account served and received during one era window
+        MicropaymentInfo get(fn micropayment_info): map hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, u32);
     }
 }
 
@@ -158,17 +161,22 @@ decl_module! {
             // input
             // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
             // to aggregate total payment and number of clients first before pass it into update_credit's input
-            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
-                let mircropayment_size_vec
-                = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
-                for (server_id, (balance, size)) in mircropayment_size_vec{
-                    if size >= 1{
-                        let balance_num = <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
-                        let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
-                        log!(info,"server_id: {:?}, balance_num: {},score_delta:{}",server_id.clone(),balance_num,score_delta);
-                        Self::update_credit(server_id.clone(),Self::get_user_credit(server_id).unwrap_or(0) + score_delta);
-                    }
+            
+            let mircropayment_size_vec
+            = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
+            for (server_id, (balance, size)) in mircropayment_size_vec{
+                if MicropaymentInfo::<T>::contains_key(server_id.clone()){
+                    MicropaymentInfo::<T>::mutate(server_id.clone(),|(b,s)|{
+                    *b += balance;
+                    *s += size;
+                    });
+                }else{
+                    MicropaymentInfo::<T>::insert(server_id, (balance, size));
                 }
+            }
+            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
+                let micropayment_vec = MicropaymentInfo::<T>::iter().collect::<Vec<_>>();
+                Self::update_credit(micropayment_vec);
             }
 
             // call attenuate_credit per era
@@ -200,8 +208,22 @@ impl<T: Trait> Module<T> {
             false
         }
     }
+
+    /// update credit using micropayment vec
+    fn update_credit(micropayment_vec: Vec<(T::AccountId, (BalanceOf<T>, u32))>){
+        for (server_id, (balance, size)) in micropayment_vec{
+            if size > 1 {
+                let balance_num = <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
+                let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
+                log!(info,"server_id: {:?}, balance_num: {},score_delta:{}",server_id.clone(),balance_num,score_delta);
+                Self::_update_credit(server_id.clone(), Self::get_user_credit(server_id.clone()).unwrap_or(0) + score_delta);
+            }
+            MicropaymentInfo::<T>::remove(server_id);
+        }
+    }
+
     /// update credit score
-    fn update_credit(account_id: T::AccountId, score: u64) -> bool {
+    fn _update_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             match score {
                 score if score > MAX_CREDIT_SCORE => {
