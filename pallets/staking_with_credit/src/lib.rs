@@ -810,7 +810,7 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     /// Delegating Interface
-    type CreditDelegate: CreditDelegateInterface<Self::AccountId, BalanceOf<Self>>;
+    type CreditDelegate: CreditDelegateInterface<Self::AccountId, BalanceOf<Self>, Perbill, PositiveImbalanceOf<Self>>;
 
     /// Time used for computing era duration.
     ///
@@ -2765,6 +2765,7 @@ impl<T: Trait> Module<T> {
 
             // Set ending era reward.
             <ErasValidatorReward<T>>::insert(&active_era.index, validator_payout);
+            //CreditDelegateInterface::set_eras_reward(active_era.index, validator_payout);
             T::RewardRemainder::on_unbalanced(T::Currency::issue(rest));
         }
     }

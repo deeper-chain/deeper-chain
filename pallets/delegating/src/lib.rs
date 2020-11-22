@@ -12,7 +12,8 @@ mod tests;
 use log::{error, info};
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::Currency;
+use frame_support::traits::{Currency};
+use frame_support::sp_runtime::{Perbill, DispatchResult};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
@@ -30,7 +31,9 @@ pub trait Trait: frame_system::Trait {
 }
 
 pub type BalanceOf<T> =
-    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+type PositiveImbalanceOf<T> =
+<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
 
 pub type EraIndex = u32;
 
@@ -48,22 +51,19 @@ pub const CREDIT_LOCK_DURATION: u32 = 10; //todo
 // https://substrate.dev/docs/en/knowledgebase/runtime/storage
 decl_storage! {
     trait Store for Module<T: Trait> as Delegating  {
-        Something get(fn something): Option<u32>;
-
         //DelegatedScore get(fn delegated): map hasher(blake2_128_concat) T::AccountId  => u64;
 
         // 存质押的credit 及 delegater id
         CreditLedger get(fn credit_ledger): map hasher(blake2_128_concat) T::AccountId
             => CreditScoreLedger<T::AccountId>;
 
-        ErasValidatorReward get(fn eras_validator_reward):
+        pub ErasValidatorReward get(fn eras_validator_reward):
             map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
 
         // 存PoC生效的Era, validator id
         Delegators get(fn delegators): double_map hasher(blake2_128_concat) EraIndex,
         hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
 
-        //	TODO should be update when era change
         pub CurrentEra get(fn current_era): Option<EraIndex>;
         pub CurrentEraValidators get(fn current_era_validators): Option<Vec<T::AccountId>>;
 
@@ -79,12 +79,15 @@ decl_event!(
     pub enum Event<T>
     where
         AccountId = <T as frame_system::Trait>::AccountId,
+         Balance = BalanceOf<T>,
     {
         /// Event documentation should end with an array that provides descriptive names for event
         /// parameters. [something, who]
         Delegated(AccountId, AccountId, u64),
         UnDelegated(AccountId),
         WithdrawCredit(AccountId, u64),
+        /// The staker has been rewarded by this amount. \[stash, amount\]
+        Reward(AccountId, Balance),
     }
 );
 
@@ -102,6 +105,7 @@ decl_error! {
         NotRightEra,
         CreditScoreTooLow,
         NonCandidateValidator,
+        InvalidEraToReward,
     }
 }
 
@@ -319,7 +323,7 @@ decl_module! {
     }
 }
 
-pub trait CreditDelegateInterface<AccountId, B> {
+pub trait CreditDelegateInterface<AccountId, B, P, PositiveImbalance> {
     fn set_current_era(current_era: EraIndex);
     fn set_current_era_validators(validators: Vec<AccountId>);
     fn set_candidate_validators(candidate_validators: Vec<AccountId>);
@@ -335,13 +339,17 @@ pub trait CreditDelegateInterface<AccountId, B> {
     /// kill delegator's credit score
     fn kill_credit(account_id: AccountId) -> bool;
 
-    fn setErasReward(era_index: EraIndex, total_reward: B);
+    fn get_total_validator_score(era_index: EraIndex, validator: AccountId) -> Option<u64>;
 
-    fn payout_delegators(era_index: EraIndex, commission: u32, validator: AccountId);
+    fn set_eras_reward(era_index: EraIndex, total_reward:B);
+
+    fn payout_delegators(era_index: EraIndex, commission: Perbill, validator: AccountId,
+                         validator_weight: P)  -> DispatchResult;
+    fn make_payout(stash: AccountId, amount: B) -> Option<PositiveImbalance>;
 }
 //定义公共和私有函数
 
-impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>> for Module<T> {
+impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, Perbill, PositiveImbalanceOf<T>> for Module<T> {
     /// 每个era开始调用一次
     fn set_current_era(current_era: EraIndex) {
         let old_era = Self::current_era().unwrap_or(0);
@@ -350,6 +358,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>> for Module<T>
             <CurrentEra>::put(current_era);
             // 更新潜在validator背后质押credit的账户、及era_index
             if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
+                let mut  total_score:u64 = 0;
                 for candidate_validator in candidate_validators {
                     let delegators =
                         <Delegators<T>>::get(current_era - 1, candidate_validator.clone());
@@ -371,12 +380,16 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>> for Module<T>
                             ledger.withdraw_era == 0 && can_delegate
                         })
                         .map(|(delegator, _)| {
+
+                            let score = T::CreditInterface::get_credit_score((*delegator).clone()).unwrap();
+                            total_score = total_score + score;
                             (
                                 delegator,
-                                T::CreditInterface::get_credit_score((*delegator).clone()).unwrap(),
+                                score,
                             )
                         })
                         .collect();
+
                     <Delegators<T>>::insert(
                         current_era,
                         candidate_validator,
@@ -460,11 +473,63 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>> for Module<T>
         }
     }
 
-    fn setErasReward(era_index: EraIndex, total_reward: BalanceOf<T>) {
-        // TODO 写入数据库
+    fn get_total_validator_score(era_index: EraIndex, validator: T::AccountId) -> Option<u64> {
+        if <Delegators<T>>::contains_key(era_index, validator.clone()) {
+            let delegators = <Delegators<T>>::get(era_index, validator);
+            let mut total_score: u64 = 0;
+            for (_, s) in delegators {
+                total_score += s;
+            }
+            Some(total_score)
+        } else {
+            Some(0)
+        }
     }
 
-    fn payout_delegators(era_index: EraIndex, commission: u32, validator: T::AccountId) {
-        // TODO 分配奖励（参考： staking 的奖励分配）
+    fn set_eras_reward(era_index: EraIndex, total_reward:BalanceOf<T>) {
+        <ErasValidatorReward<T>>::insert(era_index, total_reward);
+    }
+
+    fn payout_delegators(era_index: EraIndex, commission: Perbill, validator: T::AccountId,
+                         validator_weight: Perbill)  -> DispatchResult {
+        let era_payout = <ErasValidatorReward<T>>::get(&era_index).ok_or_else(|| Error::<T>::InvalidEraToReward)?;
+
+        // This is how much validator + nominators are entitled to.
+        let validator_total_payout = validator_weight * era_payout;
+        let validator_commission_payout = commission * validator_total_payout;
+
+        let validator_leftover_payout = validator_total_payout - validator_commission_payout;
+
+        // We can now make total validator payout:
+        // if let Some(imbalance) = Self::make_payout(
+        //     validator.clone(),
+        //     validator_commission_payout,
+        // ) {
+        //     Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
+        // }
+        Self::deposit_event(RawEvent::Reward(validator.clone(), validator_leftover_payout));
+
+        // Lets now calculate how this is split to the nominators.
+        // Reward only the clipped exposures. Note this is not necessarily sorted.
+        let era_total_score =
+            Self::get_total_validator_score(era_index,validator.clone()).unwrap();
+        let delegators = <Delegators<T>>::get(era_index, validator.clone());
+        for (who, s) in delegators {
+            let delegator_exposure_part =
+                Perbill::from_rational_approximation(s, era_total_score);
+
+            let delegator_reward: BalanceOf<T> =
+                delegator_exposure_part * validator_leftover_payout;
+            // We can now make nominator payout:
+            // if let Some(imbalance) = Self::make_payout(who, delegator_reward) {
+            //     Self::deposit_event(RawEvent::Reward(who.clone(), imbalance.peek()));
+            // }
+            Self::deposit_event(RawEvent::Reward(who.clone(), delegator_reward));
+        }
+        Ok(())
+    }
+
+    fn make_payout(receiver: T::AccountId, amount: BalanceOf<T>) -> Option<PositiveImbalanceOf<T>> {
+        Some(T::Currency::deposit_creating(&receiver, amount))
     }
 }
