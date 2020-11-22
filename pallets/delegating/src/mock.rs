@@ -7,7 +7,7 @@ use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Convert},
+    traits::{BlakeTwo256, Convert, IdentityLookup},
     Perbill,
 };
 

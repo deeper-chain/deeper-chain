@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::traits::{Get,Vec};
+use frame_support::traits::{Get, Vec};
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
@@ -68,7 +68,7 @@ decl_storage! {
     trait Store for Module<T: Trait> as Credit {
         //store credit score using map
         pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
-        
+
         // accumulated micropayment and number of clients an server account served and received during one era window
         MicropaymentInfo get(fn micropayment_info): map hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, u32);
     }
@@ -157,11 +157,9 @@ decl_module! {
         fn on_finalize(_n: T::BlockNumber) {
             log!(info, "update credit score in block number {:?}", _n);
             // We update credit score of account per era
-            // TODO: move this logic into update_credit, i.e. update_credit has micropayment vec as
-            // input
             // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
             // to aggregate total payment and number of clients first before pass it into update_credit's input
-            
+
             let mircropayment_size_vec
             = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
             for (server_id, (balance, size)) in mircropayment_size_vec{
@@ -175,21 +173,12 @@ decl_module! {
                 }
             }
             if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
+                // update credit score per era
                 let micropayment_vec = MicropaymentInfo::<T>::iter().collect::<Vec<_>>();
                 Self::update_credit(micropayment_vec);
-            }
 
-            // call attenuate_credit per era
-            // TODO: move this logic into attenuate_credit
-            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
-                let devices = pallet_deeper_node::Module::<T>::registered_devices();
-                for device in devices {
-                    let server_id = device.account_id;
-                    let last_update_block = pallet_micropayment::Module::<T>::last_update_block(server_id.clone());
-                    if _n - last_update_block > T::BlocksPerEra::get(){
-                        Self::attenuate_credit(server_id);
-                    }
-                }
+                // attenuate credit score per era
+                Self::attenuate_credit(_n);
             }
         }
     }
@@ -209,20 +198,30 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    /// update credit using micropayment vec
-    fn update_credit(micropayment_vec: Vec<(T::AccountId, (BalanceOf<T>, u32))>){
-        for (server_id, (balance, size)) in micropayment_vec{
+    /// update credit score per era using micropayment vec
+    fn update_credit(micropayment_vec: Vec<(T::AccountId, (BalanceOf<T>, u32))>) {
+        for (server_id, (balance, size)) in micropayment_vec {
             if size > 1 {
-                let balance_num = <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
+                let balance_num =
+                    <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
                 let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
-                log!(info,"server_id: {:?}, balance_num: {},score_delta:{}",server_id.clone(),balance_num,score_delta);
-                Self::_update_credit(server_id.clone(), Self::get_user_credit(server_id.clone()).unwrap_or(0) + score_delta);
+                log!(
+                    info,
+                    "server_id: {:?}, balance_num: {},score_delta:{}",
+                    server_id.clone(),
+                    balance_num,
+                    score_delta
+                );
+                Self::_update_credit(
+                    server_id.clone(),
+                    Self::get_user_credit(server_id.clone()).unwrap_or(0) + score_delta,
+                );
             }
             MicropaymentInfo::<T>::remove(server_id);
         }
     }
 
-    /// update credit score
+    /// innner: update credit score
     fn _update_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             match score {
@@ -241,7 +240,21 @@ impl<T: Trait> Module<T> {
         }
     }
 
-    fn attenuate_credit(account_id: T::AccountId) -> bool {
+    /// attenuate credit score per era
+    fn attenuate_credit(current_blocknumber: T::BlockNumber) {
+        let devices = pallet_deeper_node::Module::<T>::registered_devices();
+        for device in devices {
+            let server_id = device.account_id;
+            let last_update_block =
+                pallet_micropayment::Module::<T>::last_update_block(server_id.clone());
+            if current_blocknumber - last_update_block > T::BlocksPerEra::get() {
+                Self::_attenuate_credit(server_id);
+            }
+        }
+    }
+
+    /// inner: attenuate credit score
+    fn _attenuate_credit(account_id: T::AccountId) -> bool {
         let score = Self::get_user_credit(account_id.clone()).unwrap_or(0);
         if score > CREDIT_SCORE_ATTENUATION_LOWER_BOUND {
             if score - CREDIT_SCORE_ATTENUATION_STEP >= CREDIT_SCORE_ATTENUATION_LOWER_BOUND {

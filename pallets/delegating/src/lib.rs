@@ -12,7 +12,7 @@ mod tests;
 use log::{error, info};
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency};
+use frame_support::traits::Currency;
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
@@ -30,7 +30,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 pub type BalanceOf<T> =
-<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 pub type EraIndex = u32;
 
@@ -335,7 +335,7 @@ pub trait CreditDelegateInterface<AccountId, B> {
     /// kill delegator's credit score
     fn kill_credit(account_id: AccountId) -> bool;
 
-    fn setErasReward(era_index: EraIndex, total_reward:B);
+    fn setErasReward(era_index: EraIndex, total_reward: B);
 
     fn payout_delegators(era_index: EraIndex, commission: u32, validator: AccountId);
 }
@@ -460,7 +460,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>> for Module<T>
         }
     }
 
-    fn setErasReward(era_index: EraIndex, total_reward:BalanceOf<T>) {
+    fn setErasReward(era_index: EraIndex, total_reward: BalanceOf<T>) {
         // TODO 写入数据库
     }
 
