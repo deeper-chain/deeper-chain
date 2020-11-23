@@ -273,8 +273,11 @@ decl_module! {
             let controller = ensure_signed(origin)?;
             ensure!(CreditLedger::<T>::contains_key(controller.clone()), Error::<T>::NotDelegate);
             ensure!(T::CreditInterface::pass_threshold(controller.clone(), 0), Error::<T>::CreditScoreTooLow);
-            let score = T::CreditInterface::get_credit_score(controller.clone()).unwrap();
 
+            let ledger = CreditLedger::<T>::get(controller.clone());
+            ensure!(ledger.withdraw_era > 0, Error::<T>::AlreadyDelegated); // Avoid multiple call redelegate()
+            
+            let score = T::CreditInterface::get_credit_score(controller.clone()).unwrap();
             CreditLedger::<T>::mutate(controller.clone(),|ledger| {
                 (*ledger).withdraw_era = 0;
                 (*ledger).delegated_score = score;
