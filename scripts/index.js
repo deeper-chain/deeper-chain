@@ -3,7 +3,8 @@ const { blake2AsU8a, secp256k1KeypairFromSeed, cryptoWaitReady } = require("@pol
 const stringToU8a = require("@polkadot/util/string/toU8a").default;
 const BN = require("bn.js");
 
-const serverHost = "wss://138.68.229.14:443"; // local "wss://10.168.98.1:443"
+//const serverHost = "wss://138.68.229.14:443"; 
+const serverHost = "wss://10.168.98.1:443";
 
 function toHexString(byteArray) {
     return Array.from(byteArray, function (byte) {
@@ -85,35 +86,24 @@ async function claimPayment_test() {
     console.log(`Chao2: ${chao2.address}, Chao2_stash: ${chao2_stash.address}`);
 
     let nonce = new BN("0", 10);
-    let s = 6;
-
+    let s = 990;
+        
         let session_id = new BN((s++).toString(), 10);
         let base = new BN("1000000000000000", 10); // base = 1e15
-        let amount = new BN("10", 10);
+        let amount = new BN("100", 10);
         let amt = amount.mul(base);
         //let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
-        let res = construct_byte_array(ferdie.publicKey, nonce, session_id, amt);
+        let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
         let msg = blake2AsU8a(res);
 
         //let signature = alice.sign(msg);
-        let signature = eve.sign(msg);
+        let signature = alice.sign(msg);
         let hexsig = toHexString(signature);
         console.log(`nonce: ${nonce}, session_id: ${session_id}, amt: ${amount}, signature: ${hexsig}`);
         let flag = true;
-        api.tx.micropayment.claimPayment(eve.address, session_id, amt, '0x' + hexsig)
-            .signAndSend(ferdie, ({ events = [], status }) => {
-                console.log('Transaction status:', status.type);
-                if (status.isInBlock) {
-                    console.log('Included at block hash', status.asInBlock.toHex());
-                    console.log('Events:');
-                    events.forEach(({ event: { data, method, section }, phase }) => {
-                        console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
-                    });
-                } else if (status.isFinalized) {
-                    console.log('Finalized block hash', status.asFinalized.toHex());
-                }
-            });
-    
+        api.tx.micropayment.claimPayment(alice.address, session_id, amt, '0x' + hexsig)
+            .signAndSend(bob);
+        
 }
 async function test1() {
     const wsProvider = new WsProvider(serverHost);
@@ -610,11 +600,11 @@ async function functionalTest_credit_attenuate_set() {
 // NODE_TLS_REJECT_UNAUTHORIZED=0 node index.js
 
 // micropayment test
-//claimPayment_test();
+claimPayment_test();
 
 // credit pallet test
-functionalTest_credit();
-setTimeout(functionalTest_credit_check, 30000);
+//functionalTest_credit();
+//setTimeout(functionalTest_credit_check, 30000);
 
 // credit attenuate test
 //functionalTest_credit_attenuate_set();

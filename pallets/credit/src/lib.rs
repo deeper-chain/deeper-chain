@@ -201,7 +201,7 @@ impl<T: Trait> Module<T> {
     /// update credit score per era using micropayment vec
     fn update_credit(micropayment_vec: Vec<(T::AccountId, (BalanceOf<T>, u32))>) {
         for (server_id, (balance, size)) in micropayment_vec {
-            if size > 1 {
+            if size >= 1 {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
                 let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;

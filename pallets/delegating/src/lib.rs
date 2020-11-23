@@ -12,8 +12,8 @@ mod tests;
 use log::{error, info};
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency};
-use frame_support::sp_runtime::{Perbill, DispatchResult};
+use frame_support::traits::{Currency, LockableCurrency, Imbalance};
+use frame_support::sp_runtime::{Perbill};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
@@ -27,13 +27,14 @@ pub trait Trait: frame_system::Trait {
 
     type CreditInterface: CreditInterface<Self::AccountId>;
 
-    type Currency: Currency<Self::AccountId>;
+    type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 }
 
 pub type BalanceOf<T> =
-<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+
 type PositiveImbalanceOf<T> =
-<<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
+    <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
 
 pub type EraIndex = u32;
 
@@ -323,7 +324,7 @@ decl_module! {
     }
 }
 
-pub trait CreditDelegateInterface<AccountId, B, P, PositiveImbalance> {
+pub trait CreditDelegateInterface<AccountId, B, PB> {
     fn set_current_era(current_era: EraIndex);
     fn set_current_era_validators(validators: Vec<AccountId>);
     fn set_candidate_validators(candidate_validators: Vec<AccountId>);
@@ -344,12 +345,12 @@ pub trait CreditDelegateInterface<AccountId, B, P, PositiveImbalance> {
     fn set_eras_reward(era_index: EraIndex, total_reward:B);
 
     fn payout_delegators(era_index: EraIndex, commission: Perbill, validator: AccountId,
-                         validator_weight: P)  -> DispatchResult;
-    fn make_payout(stash: AccountId, amount: B) -> Option<PositiveImbalance>;
+                         validator_payee: AccountId)  -> bool;
+    fn make_payout(stash: AccountId, amount: B) -> Option<PB>;
 }
 //定义公共和私有函数
 
-impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, Perbill, PositiveImbalanceOf<T>> for Module<T> {
+impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbalanceOf<T>> for Module<T> {
     /// 每个era开始调用一次
     fn set_current_era(current_era: EraIndex) {
         let old_era = Self::current_era().unwrap_or(0);
@@ -491,23 +492,22 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, Perbill, Posi
     }
 
     fn payout_delegators(era_index: EraIndex, commission: Perbill, validator: T::AccountId,
-                         validator_weight: Perbill)  -> DispatchResult {
-        let era_payout = <ErasValidatorReward<T>>::get(&era_index).ok_or_else(|| Error::<T>::InvalidEraToReward)?;
+                         validator_payee: T::AccountId)  -> bool {
+        if !<ErasValidatorReward<T>>::contains_key(&era_index) {
+            return false;
+        }
+        let era_payout = <ErasValidatorReward<T>>::get(&era_index).unwrap();
 
-        // This is how much validator + nominators are entitled to.
-        let validator_total_payout = validator_weight * era_payout;
-        let validator_commission_payout = commission * validator_total_payout;
-
-        let validator_leftover_payout = validator_total_payout - validator_commission_payout;
+        let validator_commission_payout = commission * era_payout;
+        let validator_leftover_payout = era_payout - validator_commission_payout;
 
         // We can now make total validator payout:
-        // if let Some(imbalance) = Self::make_payout(
-        //     validator.clone(),
-        //     validator_commission_payout,
-        // ) {
-        //     Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
-        // }
-        Self::deposit_event(RawEvent::Reward(validator.clone(), validator_leftover_payout));
+        if let Some(imbalance) = Self::make_payout(
+            validator_payee.clone(),
+            validator_commission_payout,
+         ) {
+             Self::deposit_event(RawEvent::Reward(validator_payee, imbalance.peek()));
+        }
 
         // Lets now calculate how this is split to the nominators.
         // Reward only the clipped exposures. Note this is not necessarily sorted.
@@ -521,12 +521,11 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, Perbill, Posi
             let delegator_reward: BalanceOf<T> =
                 delegator_exposure_part * validator_leftover_payout;
             // We can now make nominator payout:
-            // if let Some(imbalance) = Self::make_payout(who, delegator_reward) {
-            //     Self::deposit_event(RawEvent::Reward(who.clone(), imbalance.peek()));
-            // }
-            Self::deposit_event(RawEvent::Reward(who.clone(), delegator_reward));
+            if let Some(imbalance) = Self::make_payout(who.clone(), delegator_reward) {
+                Self::deposit_event(RawEvent::Reward(who, imbalance.peek()));
+            }
         }
-        Ok(())
+        true
     }
 
     fn make_payout(receiver: T::AccountId, amount: BalanceOf<T>) -> Option<PositiveImbalanceOf<T>> {
