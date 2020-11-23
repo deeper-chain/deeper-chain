@@ -7,7 +7,7 @@ use frame_support::traits::{Get, Vec};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
 use pallet_micropayment::BalanceOf;
-use sp_runtime::traits::Convert;
+use sp_runtime::traits::{Saturating, Convert};
 
 #[cfg(test)]
 mod mock;
@@ -155,26 +155,15 @@ decl_module! {
 
         // Anything that needs to be done at the end of the block.
         fn on_finalize(_n: T::BlockNumber) {
-            log!(info, "update credit score in block number {:?}", _n);
             // We update credit score of account per era
             // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
             // to aggregate total payment and number of clients first before pass it into update_credit's input
-
-            let mircropayment_size_vec
-            = pallet_micropayment::Module::<T>::new_micropayment_size_in_block(_n - T::BlockNumber::from(1));
-            for (server_id, (balance, size)) in mircropayment_size_vec{
-                if MicropaymentInfo::<T>::contains_key(server_id.clone()){
-                    MicropaymentInfo::<T>::mutate(server_id.clone(),|(b,s)|{
-                    *b += balance;
-                    *s += size;
-                    });
-                }else{
-                    MicropaymentInfo::<T>::insert(server_id, (balance, size));
-                }
-            }
             if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
                 // update credit score per era
-                let micropayment_vec = MicropaymentInfo::<T>::iter().collect::<Vec<_>>();
+                let from = _n.saturating_sub(T::BlocksPerEra::get());
+                let to = _n.saturating_sub(T::BlockNumber::from(1));
+                log!(info, "micropayment_statistics block number from {:?} - to {:?}", from, to);
+                let micropayment_vec = pallet_micropayment::Module::<T>::micropayment_statistics(from, to);
                 Self::update_credit(micropayment_vec);
 
                 // attenuate credit score per era
@@ -199,8 +188,8 @@ impl<T: Trait> Module<T> {
     }
 
     /// update credit score per era using micropayment vec
-    fn update_credit(micropayment_vec: Vec<(T::AccountId, (BalanceOf<T>, u32))>) {
-        for (server_id, (balance, size)) in micropayment_vec {
+    fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
+        for (server_id, balance, size) in micropayment_vec {
             if size >= 1 {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
