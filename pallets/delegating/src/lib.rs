@@ -54,14 +54,18 @@ decl_storage! {
         CreditLedger get(fn credit_ledger): map hasher(blake2_128_concat) T::AccountId
             => CreditScoreLedger<T::AccountId>;
         
-        // current delegators info
-        CurrentDelegators get(fn current_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<T::AccountId>;
+        // Candidate delegators info
+        CandidateDelegators get(fn candidate_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<T::AccountId>;
 
         pub ErasValidatorReward get(fn eras_validator_reward):
             map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
 
         // 存PoC生效的Era, validator id
         Delegators get(fn delegators): double_map hasher(blake2_128_concat) EraIndex,
+        hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
+
+        // 存PoC生效的Era, validator id
+        SelectedDelegators get(fn selected_delegators): double_map hasher(blake2_128_concat) EraIndex,
         hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
 
         pub CurrentEra get(fn current_era): Option<EraIndex>;
@@ -148,25 +152,25 @@ decl_module! {
                         let last_validator = _ledger.validator_account;
 
                         // remove controller from old validator
-                        if CurrentDelegators::<T>::contains_key(last_validator.clone()){
-                            let delegators = CurrentDelegators::<T>::take(last_validator.clone());
+                        if CandidateDelegators::<T>::contains_key(last_validator.clone()){
+                            let delegators = CandidateDelegators::<T>::take(last_validator.clone());
                             let next_delegators: Vec<_> = delegators
                                 .iter()
                                 .filter(|delegator|{
                                     *delegator != &controller
                                 })
                                 .collect();
-                            CurrentDelegators::<T>::insert(last_validator.clone(), next_delegators);
+                            CandidateDelegators::<T>::insert(last_validator.clone(), next_delegators);
                         }
 
                         // add controller to new validator
-                        if CurrentDelegators::<T>::contains_key(validator.clone()){
-                            let mut delegators = CurrentDelegators::<T>::take(validator.clone());
+                        if CandidateDelegators::<T>::contains_key(validator.clone()){
+                            let mut delegators = CandidateDelegators::<T>::take(validator.clone());
                             delegators.push(controller.clone());
-                            CurrentDelegators::<T>::insert(validator.clone(), delegators);
+                            CandidateDelegators::<T>::insert(validator.clone(), delegators);
                         }else{
                             let delegators = vec![controller.clone()];
-                            CurrentDelegators::<T>::insert(validator.clone(), delegators);
+                            CandidateDelegators::<T>::insert(validator.clone(), delegators);
                         }
 
                     }else{ // target is same
@@ -185,13 +189,13 @@ decl_module! {
                     };
                     CreditLedger::<T>::insert(controller.clone(), ledger.clone());
 
-                    if CurrentDelegators::<T>::contains_key(validator.clone()){
-                        let mut delegators = CurrentDelegators::<T>::take(validator.clone());
+                    if CandidateDelegators::<T>::contains_key(validator.clone()){
+                        let mut delegators = CandidateDelegators::<T>::take(validator.clone());
                         delegators.push(controller.clone());
-                        CurrentDelegators::<T>::insert(validator.clone(), delegators);
+                        CandidateDelegators::<T>::insert(validator.clone(), delegators);
                     }else{
                         let delegators = vec![controller.clone()];
-                        CurrentDelegators::<T>::insert(validator.clone(), delegators);
+                        CandidateDelegators::<T>::insert(validator.clone(), delegators);
                     }
 
                     Self::deposit_event(RawEvent::Delegated(controller, validator));
@@ -213,17 +217,17 @@ decl_module! {
             let current_era = CurrentEra::get().unwrap_or(0);
             let withdraw_era = current_era + CREDIT_LOCK_DURATION;
 
-            // delete delegator account id from CurrentDelegators
+            // delete delegator account id from CandidateDelegators
             let validator = ledger.validator_account;
-            if CurrentDelegators::<T>::contains_key(&validator){
-                let delegators = CurrentDelegators::<T>::take(&validator);
+            if CandidateDelegators::<T>::contains_key(&validator){
+                let delegators = CandidateDelegators::<T>::take(&validator);
                 let next_delegators:Vec<_> = delegators
                     .iter()
                     .filter(|delegator|{
                         *delegator != &controller
                     })
                     .collect();
-                CurrentDelegators::<T>::insert(&validator, next_delegators);
+                CandidateDelegators::<T>::insert(&validator, next_delegators);
             }
 
             // update withdraw_era 
@@ -287,13 +291,13 @@ decl_module! {
             let ledger = CreditLedger::<T>::get(controller.clone());
             let validator = ledger.validator_account;
 
-            if CurrentDelegators::<T>::contains_key(validator.clone()){
-                let mut delegators = CurrentDelegators::<T>::take(validator.clone());
+            if CandidateDelegators::<T>::contains_key(validator.clone()){
+                let mut delegators = CandidateDelegators::<T>::take(validator.clone());
                 delegators.push(controller.clone());
-                CurrentDelegators::<T>::insert(validator.clone(), delegators);
+                CandidateDelegators::<T>::insert(validator.clone(), delegators);
             }else{
                 let delegators = vec![controller.clone()];
-                CurrentDelegators::<T>::insert(validator.clone(), delegators);
+                CandidateDelegators::<T>::insert(validator.clone(), delegators);
             }
 
             Ok(())
@@ -322,8 +326,7 @@ pub trait CreditDelegateInterface<AccountId, B, PB> {
 
     fn set_eras_reward(era_index: EraIndex, total_reward:B);
 
-    fn payout_delegators(era_index: EraIndex, commission: Perbill, validator: AccountId,
-                         validator_payee: AccountId)  -> bool;
+    fn payout_delegators(era_index: EraIndex, commission: Perbill, validator_reward_part: Perbill, validator: AccountId,validator_payee: AccountId)  -> bool;
     fn make_payout(stash: AccountId, amount: B) -> Option<PB>;
 }
 
@@ -339,7 +342,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
             if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
                 //let mut  total_score:u64 = 0;
                 for candidate_validator in candidate_validators {
-                    let delegators = <CurrentDelegators<T>>::get(candidate_validator.clone());
+                    let delegators = <CandidateDelegators<T>>::get(candidate_validator.clone());
                     let next_delegators: Vec<_> = delegators
                         .iter()
                         .filter(|delegator| {
@@ -366,7 +369,13 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
     }
 
     fn set_current_era_validators(validators: Vec<T::AccountId>) {
-        <CurrentEraValidators<T>>::put(validators);
+        <CurrentEraValidators<T>>::put(validators.clone());
+        let current_era = Self::current_era().unwrap_or(0);
+
+        for validator in validators {
+            let delegators = Delegators::<T>::get(current_era,validator.clone());
+            SelectedDelegators::<T>::insert(current_era,validator,delegators);
+        }
     }
 
     fn set_candidate_validators(candidate_validators: Vec<T::AccountId>) {
@@ -439,8 +448,8 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
     }
 
     fn get_total_validator_score(era_index: EraIndex, validator: T::AccountId) -> Option<u64> {
-        if <Delegators<T>>::contains_key(era_index, validator.clone()) {
-            let delegators = <Delegators<T>>::get(era_index, validator);
+        if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
+            let delegators = <SelectedDelegators<T>>::get(era_index, validator);
             let mut total_score: u64 = 0;
             for (_, s) in delegators {
                 total_score += s;
@@ -455,12 +464,13 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         <ErasValidatorReward<T>>::insert(era_index, total_reward);
     }
 
-    fn payout_delegators(era_index: EraIndex, commission: Perbill, validator: T::AccountId,
+    fn payout_delegators(era_index: EraIndex, commission: Perbill, validator_reward_part: Perbill, validator: T::AccountId,
                          validator_payee: T::AccountId)  -> bool {
         if !<ErasValidatorReward<T>>::contains_key(&era_index) {
             return false;
         }
-        let era_payout = <ErasValidatorReward<T>>::get(&era_index).unwrap();
+        let total_payout = <ErasValidatorReward<T>>::get(&era_index).unwrap();
+        let era_payout = validator_reward_part * total_payout;
 
         let validator_commission_payout = commission * era_payout;
         let validator_leftover_payout = era_payout - validator_commission_payout;

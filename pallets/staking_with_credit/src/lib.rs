@@ -2328,7 +2328,7 @@ impl<T: Trait> Module<T> {
         let validator_staking_payout = validator_exposure_part * validator_leftover_payout;
 
         // call poc payout_delegators
-        T::CreditDelegate::payout_delegators(era.clone(), validator_commission, validator_stash.clone(), ledger.stash.clone());
+        T::CreditDelegate::payout_delegators(era.clone(), validator_commission,validator_total_reward_part, validator_stash.clone(), ledger.stash.clone());
 
         // We can now make total validator payout:
         if let Some(imbalance) = Self::make_payout(
@@ -2768,9 +2768,10 @@ impl<T: Trait> Module<T> {
 
             // Set ending era reward. todo
             // PoS
-            <ErasValidatorReward<T>>::insert(&active_era.index, validator_payout / BalanceOf::<T>::from(2));
+            let weight_part = Perbill::from_rational_approximation(1u32, 2u32);
+            <ErasValidatorReward<T>>::insert(&active_era.index, weight_part * validator_payout);
             // PoC
-            T::CreditDelegate::set_eras_reward(active_era.index, validator_payout / BalanceOf::<T>::from(2));
+            T::CreditDelegate::set_eras_reward(active_era.index, weight_part * validator_payout);
             
             T::RewardRemainder::on_unbalanced(T::Currency::issue(rest));
         }
