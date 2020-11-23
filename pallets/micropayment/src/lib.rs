@@ -1,4 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+extern crate alloc;
+use alloc::collections::btree_map::BTreeMap;
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Time, Vec};
@@ -6,9 +8,16 @@ use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchRes
 use frame_system::{self, ensure_signed};
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_verify;
-use sp_runtime::traits::Saturating;
+use sp_runtime::traits::{Saturating, Zero};
+use sp_runtime::SaturatedConversion;
 
-pub(crate) const LOG_TARGET: &'static str = "credit";
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
+pub(crate) const LOG_TARGET: &'static str = "micropayment";
 // syntactic sugar for logging.
 #[macro_export]
 macro_rules! log {
@@ -69,8 +78,10 @@ decl_storage! {
       SessionId get(fn get_session_id): double_map hasher(blake2_128_concat) (T::AccountId, T::AccountId), hasher(blake2_128_concat) u32 => bool;
       // the last block that an ccount has micropayment transaction involved
       LastUpdated get(fn last_updated): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
-      // accumulated micropayment and number of clients an server account served and received during one block period
-      MicropaymentInfo get(fn micropayment_info): double_map hasher(blake2_128_concat) T::BlockNumber, hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, u32);
+      // record server accounts who has claimed micropayment during a given block
+      ServerByBlock get(fn get_server_by_block): double_map hasher(blake2_128_concat) T::BlockNumber, hasher(blake2_128_concat) T::AccountId => bool;
+      // record client accumulated payments to a given server account during a given block
+      ClientPaymentByBlockServer get(fn get_clientpayment_by_block_server): double_map hasher(blake2_128_concat) (T::BlockNumber, T::AccountId), hasher(blake2_128_concat) T::AccountId => BalanceOf<T>;
   }
 
 }
@@ -141,18 +152,7 @@ decl_module! {
           T::Currency::transfer(&sender, &receiver, amount, AllowDeath)?; // TODO: check what is AllowDeath
           SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
 
-          // update last block
-          let block_number = <frame_system::Module<T>>::block_number();
-          LastUpdated::<T>::insert(sender.clone(),block_number);
-          LastUpdated::<T>::insert(receiver.clone(),block_number);
-          log!(info, "lastupdated block is {:?} for accounts: {:?}, {:?}", block_number, &sender, &receiver);
-          // update micropaymentinfo
-          let (balance, num_served) = MicropaymentInfo::<T>::get(&block_number,&receiver);
-          // TODO: need to compare the sender is different before increase num_served
-          MicropaymentInfo::<T>::insert(block_number,receiver.clone(), (balance+amount, num_served+1));
-          log!(info, "micropayment info updated at block {:?} for account {:?}, with (balance, num_served)= ({:?},{:?})",
-                 block_number, &receiver, balance+amount,num_served+1);
-
+          Self::update_micropayment_information(&sender, &receiver, amount);
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
       }
@@ -211,71 +211,75 @@ impl<T: Trait> Module<T> {
         hash
     }
 
-    // return the collection of micropayment information in given blocknumber
-    pub fn new_micropayment_size_in_block(
-        n: T::BlockNumber,
-    ) -> Vec<(T::AccountId, (BalanceOf<T>, u32))> {
-        MicropaymentInfo::<T>::iter_prefix(n).collect::<Vec<_>>()
+    fn update_micropayment_information(
+        sender: &T::AccountId,
+        receiver: &T::AccountId,
+        amount: BalanceOf<T>,
+    ) {
+        // update last block
+        let block_number = <frame_system::Module<T>>::block_number();
+        LastUpdated::<T>::insert(sender.clone(), block_number);
+        LastUpdated::<T>::insert(receiver.clone(), block_number);
+        log!(
+            info,
+            "lastupdated block is {:?} for accounts: {:?}, {:?}",
+            block_number,
+            &sender,
+            &receiver
+        );
+        // update micropaymentinfo
+        ServerByBlock::<T>::insert(block_number, receiver.clone(), true);
+        let balance = ClientPaymentByBlockServer::<T>::get((&block_number, &receiver), &sender);
+        ClientPaymentByBlockServer::<T>::insert(
+            (block_number, receiver.clone()),
+            sender.clone(),
+            balance + amount,
+        );
+
+        log!(info, "micropayment info updated at block {:?} for receiver:{:?}, sender:{:?}, with old balance {:?}, new balance {:?}",
+                 block_number, &receiver, &sender, balance, balance+amount);
+    }
+
+    // calculate accumulated micropayments statitics between block number "from" and "to" inclusively
+    // return is a list of (server_account, accumulated_micropayments,
+    // num_of_clients) between block "from" and "to" (inclusive)
+    pub fn micropayment_statistics(
+        from: T::BlockNumber,
+        to: T::BlockNumber,
+    ) -> Vec<(T::AccountId, BalanceOf<T>, u32)> {
+        let mut stats: BTreeMap<T::AccountId, BTreeMap<T::AccountId, BalanceOf<T>>> =
+            BTreeMap::new();
+        for n in from.saturated_into::<u32>()..(to.saturated_into::<u32>() + 1u32) {
+            for (server, _) in ServerByBlock::<T>::iter_prefix(T::BlockNumber::from(n)) {
+                for (client, bal) in
+                    ClientPaymentByBlockServer::<T>::iter_prefix((T::BlockNumber::from(n), &server))
+                {
+                    let mut empty: BTreeMap<T::AccountId, BalanceOf<T>> = BTreeMap::new();
+                    let client_balance = stats.get_mut(&server).unwrap_or(&mut empty);
+                    if let Some(b) = client_balance.get_mut(&client) {
+                        *b = *b + bal;
+                    } else {
+                        client_balance.insert(client, bal);
+                    }
+                }
+            }
+        }
+
+        let mut res: Vec<(T::AccountId, BalanceOf<T>, u32)> = Vec::new();
+        for (k, v) in stats.iter() {
+            let mut counter: u32 = 0;
+            let mut total_bal = BalanceOf::<T>::zero();
+            for (_, bal) in v.iter() {
+                total_bal = total_bal + *bal;
+                counter += 1;
+            }
+            res.push((k.clone(), total_bal, counter));
+        }
+        res
     }
 
     // return the last blocknumber for an account join micropayment activity
     pub fn last_update_block(acc: T::AccountId) -> T::BlockNumber {
         LastUpdated::<T>::get(acc)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_blake2_hash() {
-        let bob: [u8; 32] = [
-            142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37, 252, 82, 135, 97, 54,
-            147, 201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,
-        ];
-        let session_id: u32 = 22;
-        let nonce: u64 = 5;
-        let amount: u128 = 100;
-        let mut data = Vec::new();
-
-        let should_be: [u8; 32] = [
-            204, 32, 30, 136, 139, 38, 43, 64, 99, 194, 191, 149, 97, 108, 87, 173, 224, 25, 104,
-            100, 0, 179, 72, 91, 202, 84, 34, 190, 178, 119, 59, 41,
-        ];
-
-        data.extend_from_slice(&bob);
-        data.extend_from_slice(&session_id.to_be_bytes());
-        data.extend_from_slice(&amount.to_be_bytes());
-        let hash = sp_io::hashing::blake2_256(&data);
-        assert_eq!(&hash, &should_be);
-    }
-
-    #[test]
-    fn test_signature() {
-        let sig: [u8; 64] = [
-            68, 47, 70, 69, 17, 14, 9, 253, 233, 25, 253, 31, 54, 87, 196, 88, 192, 81, 241, 235,
-            51, 175, 232, 189, 181, 176, 89, 123, 223, 237, 162, 39, 79, 234, 237, 116, 157, 88,
-            19, 64, 224, 90, 66, 80, 4, 202, 207, 153, 220, 159, 142, 118, 210, 8, 25, 102, 159,
-            44, 229, 1, 58, 237, 243, 135,
-        ];
-        assert_eq!(sig.len(), 64);
-        let pk: [u8; 32] = [
-            212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133,
-            88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125,
-        ];
-        assert_eq!(pk.len(), 32);
-        let msg: [u8; 32] = [
-            204, 32, 30, 136, 139, 38, 43, 64, 99, 194, 191, 149, 97, 108, 87, 173, 224, 25, 104,
-            100, 0, 179, 72, 91, 202, 84, 34, 190, 178, 119, 59, 41,
-        ];
-
-        let pk = sr25519::Public::from_raw(pk);
-        let sig = sr25519::Signature::from_slice(&sig);
-        println!("pk:{:?}", pk);
-        println!("sig:{:?}", sig);
-        println!("msg:{:?}", msg);
-        let verified = sr25519_verify(&sig, &msg, &pk);
-        assert_eq!(verified, true);
     }
 }
