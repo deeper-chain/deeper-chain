@@ -1,9 +1,7 @@
 use crate::mock::*;
-use frame_support::assert_ok;
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_verify;
 //use frame_system::ensure_signed;
-use sp_runtime::DispatchError;
 
 #[test]
 fn test_blake2_hash() {
@@ -12,7 +10,6 @@ fn test_blake2_hash() {
         201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,
     ];
     let session_id: u32 = 22;
-    let nonce: u64 = 5;
     let amount: u128 = 100;
     let mut data = Vec::new();
 
@@ -54,4 +51,40 @@ fn test_signature() {
     println!("msg:{:?}", msg);
     let verified = sr25519_verify(&sig, &msg, &pk);
     assert_eq!(verified, true);
+}
+
+#[test]
+fn fn_update_micropayment_information() {
+    new_test_ext().execute_with(|| {
+        Micropayment::update_micropayment_information(&2, &1, 5);
+        let balance =
+            Micropayment::get_clientpayment_by_block_server((&System::block_number(), 1), 2);
+        Micropayment::update_micropayment_information(&2, &1, 5);
+        assert_eq!(balance, 5);
+        let balance1 =
+            Micropayment::get_clientpayment_by_block_server((&System::block_number(), 1), 2);
+        assert_eq!(balance1, 10);
+        let server_flag = Micropayment::get_server_by_block(&System::block_number(), &1);
+        let client_flag = Micropayment::get_server_by_block(&System::block_number(), &2);
+        assert_eq!(server_flag, true);
+        assert_eq!(client_flag, false);
+    });
+}
+
+#[test]
+fn fn_micropayment_statistics() {
+    new_test_ext().execute_with(|| {
+        Micropayment::update_micropayment_information(&2, &1, 7);
+        Micropayment::update_micropayment_information(&4, &1, 3);
+        run_to_block(3);
+        Micropayment::update_micropayment_information(&1, &2, 1);
+        Micropayment::update_micropayment_information(&3, &1, 8);
+        run_to_block(6);
+        Micropayment::update_micropayment_information(&3, &2, 9);
+        run_to_block(9);
+        let mut res = Micropayment::micropayment_statistics(0, 9);
+        res.sort_by(|a, b| (*a).0.cmp(&(*b).0));
+        assert_eq!(res[0], (1, 18, 3));
+        assert_eq!(res[1], (2, 10, 2));
+    });
 }

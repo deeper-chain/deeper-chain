@@ -37,7 +37,7 @@ pub trait Trait: frame_system::Trait {
     type Timestamp: Time;
 }
 
-pub type BalanceOf<T> =
+type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 type Moment<T> = <<T as Trait>::Timestamp as Time>::Moment;
@@ -254,17 +254,19 @@ impl<T: Trait> Module<T> {
                 for (client, bal) in
                     ClientPaymentByBlockServer::<T>::iter_prefix((T::BlockNumber::from(n), &server))
                 {
-                    let mut empty: BTreeMap<T::AccountId, BalanceOf<T>> = BTreeMap::new();
-                    let client_balance = stats.get_mut(&server).unwrap_or(&mut empty);
+                    if !stats.contains_key(&server) {
+                        let empty: BTreeMap<T::AccountId, BalanceOf<T>> = BTreeMap::new();
+                        stats.insert(server.clone(), empty);
+                    }
+                    let client_balance = stats.get_mut(&server).unwrap();
                     if let Some(b) = client_balance.get_mut(&client) {
                         *b = *b + bal;
                     } else {
-                        client_balance.insert(client, bal);
+                        client_balance.insert(client.clone(), bal);
                     }
                 }
             }
         }
-
         let mut res: Vec<(T::AccountId, BalanceOf<T>, u32)> = Vec::new();
         for (k, v) in stats.iter() {
             let mut counter: u32 = 0;

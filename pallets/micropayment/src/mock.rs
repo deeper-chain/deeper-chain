@@ -1,4 +1,5 @@
 use crate::{Module, Trait};
+use frame_support::traits::{OnFinalize, OnInitialize};
 use frame_support::{
     impl_outer_origin, parameter_types, weights::constants::RocksDbWeight as DbWeight,
     weights::Weight,
@@ -11,7 +12,9 @@ use sp_runtime::{
     Perbill,
 };
 
-use node_primitives::{Balance, BlockNumber, Moment};
+use node_primitives::{Balance, Moment};
+
+pub type System = frame_system::Module<Test>;
 
 impl_outer_origin! {
     pub enum Origin for Test {}
@@ -115,7 +118,7 @@ impl pallet_timestamp::WeightInfo for TimestampWeightInfo {
     }
     // WARNING! Some components were not used: ["t"]
     fn on_finalize() -> Weight {
-        (5915000 as Weight)
+        5915000 as Weight
     }
 }
 
@@ -144,4 +147,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap()
         .into()
+}
+
+pub fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+    }
 }
