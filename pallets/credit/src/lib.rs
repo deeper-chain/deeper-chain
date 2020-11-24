@@ -6,8 +6,8 @@ use frame_support::traits::{Get, Vec};
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
-use pallet_micropayment::BalanceOf;
 use sp_runtime::traits::{Saturating, Convert};
+use frame_support::traits::Currency;
 
 #[cfg(test)]
 mod mock;
@@ -59,6 +59,8 @@ pub trait Trait:
     type CurrencyToVote: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
 }
 
+pub type BalanceOf<T> =
+    <<T as pallet_micropayment::Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 // The pallet's runtime storage items.
 // https://substrate.dev/docs/en/knowledgebase/runtime/storage
 decl_storage! {
