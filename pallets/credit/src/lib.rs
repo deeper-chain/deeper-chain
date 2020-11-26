@@ -27,7 +27,7 @@ pub const CREDIT_SCORE_ATTENUATION_STEP: u64 = 5;
 // Credit score delegated threshold
 pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
 /// per credit score vote weight
-pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
+//pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
 /// mircropayment size to credit factor:
 pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1_000_000_000_000_000;
@@ -61,30 +61,19 @@ pub trait Trait:
 
 pub type BalanceOf<T> =
     <<T as pallet_micropayment::Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
-// The pallet's runtime storage items.
-// https://substrate.dev/docs/en/knowledgebase/runtime/storage
+
 decl_storage! {
-    // A unique name is used to ensure that the pallet's storage items are isolated.
-    // This name may be updated, but each pallet in the runtime must use a unique name.
-    // ---------------------------------vvvvvvvvvvvvvv
     trait Store for Module<T: Trait> as Credit {
         //store credit score using map
         pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
-
-        // accumulated micropayment and number of clients an server account served and received during one era window
-        MicropaymentInfo get(fn micropayment_info): map hasher(blake2_128_concat) T::AccountId => (BalanceOf<T>, u32);
     }
 }
 
-// Pallets use events to inform users when important changes are made.
-// https://substrate.dev/docs/en/knowledgebase/runtime/events
 decl_event!(
     pub enum Event<T>
     where
         AccountId = <T as frame_system::Trait>::AccountId,
     {
-        /// Event documentation should end with an array that provides descriptive names for event
-        /// parameters. [something, who]
         CreditInitSuccess(AccountId, u64),
         CreditInitFailed(AccountId, u64),
         CreditUpdateSuccess(AccountId, u64),
@@ -208,7 +197,6 @@ impl<T: Trait> Module<T> {
                     Self::get_user_credit(server_id.clone()).unwrap_or(0) + score_delta,
                 );
             }
-            MicropaymentInfo::<T>::remove(server_id);
         }
     }
 
@@ -225,9 +213,9 @@ impl<T: Trait> Module<T> {
                     true
                 }
             }
-        } else {
-            // uninitialize case
-            Self::initialize_credit(account_id, score)
+        } else { // uninitialize case
+            Self::initialize_credit(account_id.clone(), 0);
+            Self::_update_credit(account_id, score)
         }
     }
 

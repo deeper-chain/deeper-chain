@@ -6,6 +6,7 @@ const BN = require("bn.js");
 //const serverHost = "wss://138.68.229.14:443"; 
 const serverHost = "wss://10.168.98.1:443";
 
+
 function toHexString(byteArray) {
     return Array.from(byteArray, function (byte) {
         return ("0" + (byte & 0xff).toString(16)).slice(-2);
@@ -20,6 +21,70 @@ function construct_byte_array(addr, nonce, session_id, amount) {
     amount = amount.toArray("le", 16); // amount is le encoded
     arr.push(...addr, ...nonce, ...session_id, ...amount);
     return arr;
+}
+function openChannel(api, sender, receiver, duration){
+    return new Promise(function(resolve, reject){
+        api.tx.micropayment.openChannel(receiver.address, duration)
+        .signAndSend(sender,({ events = [], status }) => {
+            console.log('Transaction status:', status.type);
+            if (status.isInBlock) {
+                console.log('Included at block hash', status.asInBlock.toHex());
+                console.log('Events:');
+                events.forEach(({ event: { data, method, section }, phase }) => {
+                    console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+                });
+            } else if (status.isFinalized) {
+                console.log('Finalized block hash', status.asFinalized.toHex());
+                resolve()
+            }
+        });
+    });
+}
+function closeChannel(api, sender, receiver){
+    return new Promise(function(resolve, reject){
+        api.tx.micropayment.closeChannel(sender.address)
+        .signAndSend(receiver, ({ events = [], status }) => {
+            console.log('Transaction status:', status.type);
+            if (status.isInBlock) {
+                console.log('Included at block hash', status.asInBlock.toHex());
+                console.log('Events:');
+                events.forEach(({ event: { data, method, section }, phase }) => {
+                    console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+                });
+            } else if (status.isFinalized) {
+                console.log('Finalized block hash', status.asFinalized.toHex());
+                resolve()
+            }
+        });
+    });
+}
+function claimPayment(api, sender, receiver, nonceNum, sessionIdNum, amtNum) {
+    return new Promise(function (resolve, reject) {
+        let nonce = new BN(nonceNum.toString(), 10);
+        let sessionId = new BN(sessionIdNum.toString(), 10);
+        let base = new BN("1000000000000000", 10); // base = 1e15
+        let amount = new BN(amtNum.toString(), 10);
+        let amt = amount.mul(base);
+        let res = construct_byte_array(receiver.publicKey, nonce, sessionId, amt);
+        let msg = blake2AsU8a(res);
+        let signature = sender.sign(msg);
+        let hexsig = toHexString(signature);
+        console.log(`nonce: ${nonce}, session_id: ${sessionId}, amt: ${amount}, signature: ${hexsig}`);
+        api.tx.micropayment.claimPayment(sender.address, sessionId, amt, '0x' + hexsig)
+            .signAndSend(receiver, ({ events = [], status }) => {
+                console.log('Transaction status:', status.type);
+                if (status.isInBlock) {
+                    console.log('Included at block hash', status.asInBlock.toHex());
+                    console.log('Events:');
+                    events.forEach(({ event: { data, method, section }, phase }) => {
+                        console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+                    });
+                } else if (status.isFinalized) {
+                    console.log('Finalized block hash', status.asFinalized.toHex());
+                    resolve()
+                }
+            });
+    });
 }
 
 async function claimPayment_test() {
@@ -46,7 +111,7 @@ async function claimPayment_test() {
                 delegatedAcore: "u64",
                 validatorAccount: "AccountId",
                 withdrawEra: "u32"
-            }
+            },
         },
     });
 
@@ -85,26 +150,25 @@ async function claimPayment_test() {
     const chao2_stash = keyring.addFromUri("discover despair state general virtual method ten someone rookie learn damage artefact//stash");
     console.log(`Chao2: ${chao2.address}, Chao2_stash: ${chao2_stash.address}`);
 
-    let nonce = new BN("0", 10);
-    let s = 990;
-        
-        let session_id = new BN((s++).toString(), 10);
-        let base = new BN("1000000000000000", 10); // base = 1e15
-        let amount = new BN("100", 10);
-        let amt = amount.mul(base);
-        //let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
-        let res = construct_byte_array(bob.publicKey, nonce, session_id, amt);
-        let msg = blake2AsU8a(res);
+    await openChannel(api, alice, bob, 3600); // 10 era
+    await openChannel(api, charlie, bob, 3600); // 10 era
 
-        //let signature = alice.sign(msg);
-        let signature = alice.sign(msg);
-        let hexsig = toHexString(signature);
-        console.log(`nonce: ${nonce}, session_id: ${session_id}, amt: ${amount}, signature: ${hexsig}`);
-        let flag = true;
-        api.tx.micropayment.claimPayment(alice.address, session_id, amt, '0x' + hexsig)
-            .signAndSend(bob);
-        
+    let nonce = 0;
+    let sessionId = 1;
+    let amt = 10;
+    await claimPayment(api, alice, bob, nonce, sessionId, amt);
+    await claimPayment(api, charlie, bob, nonce, sessionId, amt);
+    await claimPayment(api, alice, bob, nonce, sessionId + 1, amt);
+    await claimPayment(api, charlie, bob, nonce, sessionId + 1, amt);
+    await claimPayment(api, alice, bob, nonce, sessionId + 2, amt);
+    await claimPayment(api, charlie, bob, nonce, sessionId + 2, amt);
+    await claimPayment(api, alice, bob, nonce, sessionId + 3, amt);
+    await claimPayment(api, charlie, bob, nonce, sessionId + 3, amt);
+    
+    await closeChannel(api, alice, bob);
+    await closeChannel(api, charlie, bob);
 }
+
 async function test1() {
     const wsProvider = new WsProvider(serverHost);
     const api = await ApiPromise.create({
@@ -600,7 +664,7 @@ async function functionalTest_credit_attenuate_set() {
 // NODE_TLS_REJECT_UNAUTHORIZED=0 node index.js
 
 // micropayment test
-claimPayment_test();
+claimPayment_test().catch(console.error).finally(() => process.exit());
 
 // credit pallet test
 //functionalTest_credit();
