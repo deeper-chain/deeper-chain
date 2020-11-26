@@ -24,10 +24,8 @@ pub const CREDIT_SCORE_ATTENUATION_LOWER_BOUND: u64 = 40;
 /// credit score attenuation step
 pub const CREDIT_SCORE_ATTENUATION_STEP: u64 = 5;
 
-// Credit score delegated threshold
+/// Credit score delegated threshold
 pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
-/// per credit score vote weight
-//pub const TOKEN_PER_CREDIT_SCORE: u64 = 10_000_000;
 
 /// mircropayment size to credit factor:
 pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1_000_000_000_000_000;
@@ -179,7 +177,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// update credit score per era using micropayment vec
-    fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
+    fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>){
         for (server_id, balance, size) in micropayment_vec {
             if size >= 1 {
                 let balance_num =

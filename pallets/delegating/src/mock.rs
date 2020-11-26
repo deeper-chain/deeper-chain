@@ -123,7 +123,7 @@ impl pallet_timestamp::WeightInfo for TimestampWeightInfo {
     }
     // WARNING! Some components were not used: ["t"]
     fn on_finalize() -> Weight {
-        (5915000 as Weight)
+        5915000 as Weight
     }
 }
 
@@ -173,6 +173,7 @@ impl pallet_credit::Trait for Test {
 impl Trait for Test {
     type Event = ();
     type CreditInterface = Credit;
+    type Currency = Balances;
 }
 
 pub type Delegating = Module<Test>;
