@@ -1,13 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use frame_support::traits::Currency;
 use frame_support::traits::{Get, Vec};
 /// Edit this file to define custom logic or remove it if it is not needed.
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
-use sp_runtime::traits::{Saturating, Convert};
-use frame_support::traits::Currency;
+use sp_runtime::traits::{Convert, Saturating};
 
 #[cfg(test)]
 mod mock;
@@ -57,8 +57,9 @@ pub trait Trait:
     type CurrencyToVote: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
 }
 
-pub type BalanceOf<T> =
-    <<T as pallet_micropayment::Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
+pub type BalanceOf<T> = <<T as pallet_micropayment::Trait>::Currency as Currency<
+    <T as frame_system::Trait>::AccountId,
+>>::Balance;
 
 decl_storage! {
     trait Store for Module<T: Trait> as Credit {
@@ -177,7 +178,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// update credit score per era using micropayment vec
-    fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>){
+    fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
         for (server_id, balance, size) in micropayment_vec {
             if size >= 1 {
                 let balance_num =
@@ -211,7 +212,8 @@ impl<T: Trait> Module<T> {
                     true
                 }
             }
-        } else { // uninitialize case
+        } else {
+            // uninitialize case
             Self::initialize_credit(account_id.clone(), 0);
             Self::_update_credit(account_id, score)
         }

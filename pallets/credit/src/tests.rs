@@ -19,7 +19,6 @@ fn fn_initialize_credit_extrinsic() {
             Err(DispatchError::Other("CreditInitFailed",))
         );
 
-
         // initialize credit twice
         assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(6), 29));
         assert_eq!(Credit::get_user_credit(6), Some(0));
@@ -66,7 +65,7 @@ fn fn_update_credit() {
     new_test_ext().execute_with(|| {
         // [30,100]
         //assert_eq!(Credit::initialize_credit(1, 29), true);
-        let micropayment_vec = vec![(1, 5*1_000_000_000_000_000, 5)];
+        let micropayment_vec = vec![(1, 5 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
         assert_eq!(Credit::get_user_credit(1), Some(5));
     });
@@ -76,7 +75,7 @@ fn fn_update_credit() {
 fn fn_attenuate_credit() {
     new_test_ext().execute_with(|| {
         // attenuate_credit successful
-        let micropayment_vec = vec![(1, 50*1_000_000_000_000_000, 5)];
+        let micropayment_vec = vec![(1, 50 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
         assert_eq!(Credit::get_user_credit(1), Some(50));
         assert_eq!(Credit::_attenuate_credit(1), true);
@@ -86,7 +85,7 @@ fn fn_attenuate_credit() {
         assert_eq!(Credit::_attenuate_credit(1), false);
 
         // attenuate_credit failed
-        let micropayment_vec2 = vec![(2, 30*1_000_000_000_000_000, 5)];
+        let micropayment_vec2 = vec![(2, 30 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec2);
         assert_eq!(Credit::get_user_credit(2), Some(30));
         assert_eq!(Credit::_attenuate_credit(2), false);

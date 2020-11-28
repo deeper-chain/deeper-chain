@@ -810,7 +810,11 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     /// Delegating Interface
-    type CreditDelegate: CreditDelegateInterface<Self::AccountId, BalanceOf<Self>, PositiveImbalanceOf<Self>>;
+    type CreditDelegate: CreditDelegateInterface<
+        Self::AccountId,
+        BalanceOf<Self>,
+        PositiveImbalanceOf<Self>,
+    >;
 
     /// Time used for computing era duration.
     ///
@@ -2328,7 +2332,13 @@ impl<T: Trait> Module<T> {
         let validator_staking_payout = validator_exposure_part * validator_leftover_payout;
 
         // call poc payout_delegators
-        T::CreditDelegate::payout_delegators(era.clone(), validator_commission,validator_total_reward_part, validator_stash.clone(), ledger.stash.clone());
+        T::CreditDelegate::payout_delegators(
+            era.clone(),
+            validator_commission,
+            validator_total_reward_part,
+            validator_stash.clone(),
+            ledger.stash.clone(),
+        );
 
         // We can now make total validator payout:
         if let Some(imbalance) = Self::make_payout(
@@ -2772,7 +2782,7 @@ impl<T: Trait> Module<T> {
             <ErasValidatorReward<T>>::insert(&active_era.index, weight_part * validator_payout);
             // PoC
             T::CreditDelegate::set_eras_reward(active_era.index, weight_part * validator_payout);
-            
+
             T::RewardRemainder::on_unbalanced(T::Currency::issue(rest));
         }
     }
