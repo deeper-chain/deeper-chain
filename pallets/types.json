@@ -12,10 +12,9 @@
       "opened": "Timestamp",
       "expiration": "Timestamp"
     },
-    "CreditScoreLedger": {
-      "delegatedAccount": "AccountId",
-      "delegatedScore": "u64",
-      "validatorAccount": "AccountId",
-      "withdrawEra": "u32"
+    "CreditDelegateInfo": {
+      "delegator": "AccountId",
+      "score": "u64",
+      "validators": "Vec<AccountId>"
     }
   }

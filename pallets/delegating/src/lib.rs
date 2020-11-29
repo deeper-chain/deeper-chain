@@ -9,9 +9,9 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-use log::{error, info};
+use log::{error};
 
-//use frame_support::codec::{Decode, Encode};
+use frame_support::codec::{Decode, Encode};
 use frame_support::sp_runtime::Perbill;
 use frame_support::traits::{Currency, Imbalance, LockableCurrency};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
@@ -19,6 +19,19 @@ use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
 use sp_std::vec;
 use sp_std::vec::Vec;
+
+pub(crate) const LOG_TARGET: &'static str = "credit";
+
+// syntactic sugar for logging.
+#[macro_export]
+macro_rules! log {
+	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
+		frame_support::debug::$level!(
+			target: crate::LOG_TARGET,
+			$patter $(, $values)*
+		)
+	};
+}
 
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
@@ -41,10 +54,17 @@ pub type EraIndex = u32;
 pub const CREDIT_LOCK_DURATION: u32 = 10; //todo
 pub const MAX_VALIDATORS_CAN_SELECTED: usize = 10;
 
+#[derive(Decode, Encode, Default)]
+pub struct CreditDelegateInfo<AccountId> {
+    delegator: AccountId,
+    score: u64,
+    validators: Vec<AccountId>,
+}
+
 decl_storage! {
     trait Store for Module<T: Trait> as Delegating  {
-        // (delegator) -> bool
-        HasDelegated get(fn has_delegated): map hasher(blake2_128_concat) T::AccountId => Option<bool>;
+        // (delegator) -> CreditDelegateInfo{}
+        DelegatedToValidators get(fn delegated_to_validators): map hasher(blake2_128_concat) T::AccountId => CreditDelegateInfo<T::AccountId>;
         // (delegator, validator) -> bool
         HasDelegatedToValidator get(fn has_delegated_to_validator): double_map hasher(blake2_128_concat) T::AccountId
         , hasher(blake2_128_concat) T::AccountId => Option<bool>;
@@ -122,7 +142,7 @@ decl_module! {
 
         /// delegate credit score to validators in vec equally
         #[weight = 10_000]
-        pub fn delegate(origin, validators: Vec<(T::AccountId, u64)>) -> dispatch::DispatchResult {
+        pub fn delegate(origin, validators: Vec<T::AccountId>) -> dispatch::DispatchResult {
             // check signature
             let controller = ensure_signed(origin)?;
 
@@ -140,36 +160,31 @@ decl_module! {
                 Err(Error::<T>::SelectNoValidator)?
             }
 
-            // check dalegated total score
-            let mut total_score: u64 = 0;
-            for (_, score) in validators.clone(){
-                total_score += score;
-            }
-            if total_score > T::CreditInterface::get_credit_score(controller.clone()).unwrap() {
-                Err(Error::<T>::DelegateMoreCreditScoreThanOwn)?
-            }
-
             // check if controller has call delegated
-            let has_delegated = <HasDelegated<T>>::get(controller.clone()).unwrap_or(false);
-            if has_delegated == true {
+            if <DelegatedToValidators<T>>::contains_key(controller.clone()){
                 Err(Error::<T>::AlreadyDelegated)?
             }
 
             // check target validators in candidate_validators
             let candidate_validators = <CandidateValidators<T>>::get().unwrap();//_or(Err(Error::<T>::NonCandidateValidator)?);
-            for (validator, _) in validators.clone() {
+            for validator in validators.clone() {
                 if !candidate_validators.contains(&validator){
                     error!("Validator AccountId  isn't in candidateValidators");
                     Err(Error::<T>::NotInCandidateValidator)?
                 }
             }
 
-            // do delegate
-            for (validator, score) in validators{
-                Self::_delegate(controller.clone(), validator.clone(), score);
-                <HasDelegatedToValidator<T>>::insert(controller.clone(), validator.clone(), true);
-            }
-            <HasDelegated<T>>::insert(controller.clone(), true);
+            // get avg score to validators
+            let validators_vec = Self::cut_credit_score(controller.clone(), validators.clone());
+            Self::_delegate(controller.clone(), validators_vec);
+
+            let credit_delegate_info = CreditDelegateInfo{
+                delegator: controller.clone(),
+                score: T::CreditInterface::get_credit_score(controller.clone()).unwrap(),
+                validators: validators.clone(),
+            };
+            <DelegatedToValidators<T>>::insert(controller.clone(), credit_delegate_info);
+
             Self::deposit_event(RawEvent::Delegated(controller));
             Ok(())
         }
@@ -178,11 +193,12 @@ decl_module! {
         pub fn undelegate(origin) -> dispatch::DispatchResult {
             let controller = ensure_signed(origin)?;
 
-            let has_delegated = <HasDelegated<T>>::get(controller.clone()).unwrap_or(false);
-            if has_delegated == false {
+            if !<DelegatedToValidators<T>>::contains_key(controller.clone()){
                 Err(Error::<T>::NotDelegate)?
             }
             Self::_undelegate(controller.clone());
+            <DelegatedToValidators<T>>::remove(controller.clone());
+
             Self::deposit_event(RawEvent::UnDelegated(controller));
             Ok(())
         }
@@ -190,48 +206,93 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    fn _delegate(delegator: T::AccountId, validator: T::AccountId, score: u64) {
-        let has_delegated = <HasDelegatedToValidator<T>>::get(delegator.clone(), validator.clone())
-            .unwrap_or(false);
-        if has_delegated == false {
-            // delegate first times
-            if CandidateDelegators::<T>::contains_key(validator.clone()) {
-                let mut delegators = CandidateDelegators::<T>::take(validator.clone());
-                delegators.push((delegator.clone(), score));
-                CandidateDelegators::<T>::insert(validator.clone(), delegators);
+    fn _delegate(delegator: T::AccountId, validators_vec: Vec<(T::AccountId, u64)>) {
+        for (validator, score) in validators_vec {
+            let has_delegated =
+                <HasDelegatedToValidator<T>>::get(delegator.clone(), validator.clone())
+                    .unwrap_or(false);
+            if has_delegated == false {
+                // delegate first times
+                if CandidateDelegators::<T>::contains_key(validator.clone()) {
+                    let mut delegators = CandidateDelegators::<T>::take(validator.clone());
+                    delegators.push((delegator.clone(), score));
+                    CandidateDelegators::<T>::insert(validator.clone(), delegators);
+                } else {
+                    let delegators = vec![(delegator.clone(), score)];
+                    CandidateDelegators::<T>::insert(validator.clone(), delegators);
+                }
             } else {
-                let delegators = vec![(delegator.clone(), score)];
-                CandidateDelegators::<T>::insert(validator.clone(), delegators);
+                // delegated, update score
+                let delegators = CandidateDelegators::<T>::take(validator.clone());
+                let next_delegators: Vec<_> = delegators
+                    .iter()
+                    .map(|(d, s)| if *d != delegator.clone() { ((*d).clone(), score) } else { ((*d).clone(), *s) })
+                    .collect();
+                CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
             }
-        } else {
-            // delegated, update score
-            let delegators = CandidateDelegators::<T>::take(validator.clone());
-            let next_delegators: Vec<_> = delegators
-                .iter()
-                .map(|(d, s)| if d != &delegator { (d, score) } else { (d, *s) })
-                .collect();
-            CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
+            <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), true);
         }
     }
 
     fn _undelegate(delegator: T::AccountId) {
-        for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(&delegator) {
-            if CandidateDelegators::<T>::contains_key(&validator) {
-                let delegators = CandidateDelegators::<T>::take(&validator);
+        for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(delegator.clone()) {
+            if CandidateDelegators::<T>::contains_key(validator.clone()) {
+                let delegators = CandidateDelegators::<T>::take(validator.clone());
                 let next_delegators: Vec<_> =
-                    delegators.iter().filter(|(d, _)| d != &delegator).collect();
-                CandidateDelegators::<T>::insert(&validator, next_delegators);
+                    delegators.iter().filter(|(d, _)| *d != delegator.clone()).collect();
+                CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
                 <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), false);
             }
         }
-        <HasDelegated<T>>::insert(delegator.clone(), false);
+    }
+
+    // partion credit score of delegator
+    fn cut_credit_score(
+        delegator: T::AccountId,
+        target_validators: Vec<T::AccountId>,
+    ) -> Vec<(T::AccountId, u64)> {
+        let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
+        let len = target_validators.len();
+        let answer: u64 = total_score / len as u64;
+        let mut remainder: u64 = total_score % len as u64;
+        let mut validators: Vec<(T::AccountId, u64)> = vec![];
+        for v in target_validators{
+            if remainder != 0 {
+                validators.push((v, answer + 1));
+                remainder -= 1;
+            }else{
+                validators.push((v, answer));
+            }
+        }
+        log!(
+            info,
+            "score of: {:?} is {}, delegate to validaors{:?}",
+            delegator,
+            total_score,
+            validators.clone()
+        );
+        validators
     }
 
     fn check_and_adjust_delegated_score() {
-        for (delegator, is_delegated) in HasDelegated::<T>::iter(){
-            if is_delegated == true{
-                if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false{
+        for (delegator, _) in DelegatedToValidators::<T>::iter() {
+            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false {
+                Self::_undelegate(delegator.clone());
+                <DelegatedToValidators<T>>::remove(delegator.clone());
+            } else {
+                let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
+                let credit_delegate_info =
+                    <DelegatedToValidators<T>>::get(delegator.clone());
+                if total_score != credit_delegate_info.score {
                     Self::_undelegate(delegator.clone());
+
+                    let validators_vec =
+                        Self::cut_credit_score(delegator.clone(), credit_delegate_info.validators);
+                    Self::_delegate(delegator.clone(), validators_vec);
+
+                    let mut info = <DelegatedToValidators<T>>::take(delegator.clone());
+                    info.score = total_score;
+                    <DelegatedToValidators<T>>::insert(delegator.clone(), info);
                 }
             }
         }
@@ -305,7 +366,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
     fn total_delegated_score() -> Option<u64> {
         // check delegators credit score
         Self::check_and_adjust_delegated_score();
-        
+
         let mut total_score: u64 = 0;
         if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
             for candidate_validator in candidate_validators {
