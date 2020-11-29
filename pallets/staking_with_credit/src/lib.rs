@@ -2777,35 +2777,26 @@ impl<T: Trait> Module<T> {
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
         if let Some(_active_era_start) = active_era.start {
-            let now_as_millis_u64 = T::UnixTime::now().as_millis().saturated_into::<u64>();
 
             let (validator_payout, max_payout) = Self::calculate_era_payout(active_era.index);
-
             log!(info, "☯ EndEra: current_era: {:?}, validator payout: {:?}", active_era.index, validator_payout);
-
             let rest = max_payout.saturating_sub(validator_payout);
-
             Self::deposit_event(RawEvent::EraPayout(
                 active_era.index,
                 validator_payout,
                 rest,
             ));
 
-            // Set ending era reward. todo
+            // Set ending era reward.
             let credit_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
             let credit_weight = credit_score * CREDIT_TO_TOKEN_FACTOR ;
-
             let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
                 credit_weight as u128,
             );
-            log!(info," ☯ PoCWeight : {}, PoSWeight: {}", credit_weight, Self::eras_total_stake(&active_era.index));
-
             let credit_part =
                 Perbill::from_rational_approximation(credit_to_balance, Self::eras_total_stake(&active_era.index) + credit_to_balance);
-
             let credit_payout = credit_part * validator_payout;
             let staking_payout = validator_payout - credit_payout;
-
             log!(info, " ☯  PoC payout : {:?} , PoS payout: {:?}", credit_payout, staking_payout);
             // PoS
             <ErasValidatorReward<T>>::insert(&active_era.index, staking_payout);
