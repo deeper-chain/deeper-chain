@@ -482,6 +482,11 @@ parameter_types! {
     pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
     pub const MaxIterations: u32 = 10;
+    pub const RewardAdjustFactor: u128 = REWARD_ADJUST_FACTOR;
+    pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD;
+    pub const RewardAdjustPeriod: u32 = REWARD_ADJUST_PERIOD;
+    pub const BlockNumberPerEra: BlockNumber = BLOCKS_PER_ERA;
+    pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     // 0.05%. The higher the value, the more strict solution acceptance becomes.
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
@@ -491,6 +496,7 @@ impl pallet_staking_with_credit::Trait for Runtime {
     type CreditDelegate = Delegating;
     type UnixTime = Timestamp;
     type CurrencyToVote = CurrencyToVoteHandler;
+    type CurrencyToNumber = CurrencyToNumberHandler;
     type RewardRemainder = Treasury;
     type Event = Event;
     type Slash = Treasury; // send the slashed funds to the treasury.
@@ -514,6 +520,11 @@ impl pallet_staking_with_credit::Trait for Runtime {
     type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
     type UnsignedPriority = StakingUnsignedPriority;
     type WeightInfo = weights::pallet_staking_with_credit::WeightInfo;
+    type RewardAdjustFactor = RewardAdjustFactor;
+    type RewardPerBlock = RewardPerBlock;
+    type RewardAdjustPeriod = RewardAdjustPeriod;
+    type BlocksPerEra       = BlockNumberPerEra;
+    type RemainderMiningReward  = MiningReward;
 }
 
 parameter_types! {

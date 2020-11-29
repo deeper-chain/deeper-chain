@@ -341,7 +341,7 @@ pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_NOMINATIONS: usize = <CompactAssignments as VotingLimit>::LIMIT;
 
 /// credit socre to token factor
-pub const CREDIT_TO_TOKEN_FACTOR: u64 = 615006150061;
+pub const CREDIT_TO_TOKEN_FACTOR: u64 = 123_001_230_012;
 
 pub(crate) const LOG_TARGET: &'static str = "staking";
 
@@ -829,6 +829,8 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
     /// [`BalanceOf`].
     type CurrencyToVote: Convert<BalanceOf<Self>, VoteWeight> + Convert<u128, BalanceOf<Self>>;
 
+    type CurrencyToNumber: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
+
     /// Tokens have been minted and are unused for validator-reward.
     /// See [Era payout](./index.html#era-payout).
     type RewardRemainder: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -901,6 +903,16 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
 
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
+
+    type RewardAdjustFactor: Get<u128>;
+
+    type RewardPerBlock: Get<u128>;
+
+    type RewardAdjustPeriod: Get<u32>;
+
+    type BlocksPerEra: Get<u128>;
+
+    type RemainderMiningReward: Get<u128>;
 }
 
 /// Mode of era-forcing.
@@ -1117,6 +1129,10 @@ decl_storage! {
         /// forcing into account.
         pub IsCurrentSessionFinal get(fn is_current_session_final): bool = false;
 
+        pub BlockReward get(fn block_reward): Option<u128>;
+
+        pub RemainderMiningReward get(fn remainder_mining_reward): Option<u128>;
+
         /// True if network has been upgraded to this version.
         /// Storage version of the pallet.
         ///
@@ -1127,6 +1143,9 @@ decl_storage! {
         config(stakers):
             Vec<(T::AccountId, T::AccountId, BalanceOf<T>, StakerStatus<T::AccountId>)>;
         build(|config: &GenesisConfig<T>| {
+            <BlockReward>::put(T::RewardPerBlock::get());
+            <RemainderMiningReward>::put(T::RemainderMiningReward::get());
+
             for &(ref stash, ref controller, balance, ref status) in &config.stakers {
                 assert!(
                     T::Currency::free_balance(&stash) >= balance,
@@ -2757,17 +2776,13 @@ impl<T: Trait> Module<T> {
     /// Compute payout for era.
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
-        if let Some(active_era_start) = active_era.start {
+        if let Some(_active_era_start) = active_era.start {
             let now_as_millis_u64 = T::UnixTime::now().as_millis().saturated_into::<u64>();
 
-            let era_duration = now_as_millis_u64 - active_era_start;
-            let (validator_payout, max_payout) = inflation::compute_total_payout(
-                &T::RewardCurve::get(),
-                Self::eras_total_stake(&active_era.index),
-                T::Currency::total_issuance(),
-                // Duration of era; more than u64::MAX is rewarded as u64::MAX.
-                era_duration.saturated_into::<u64>(),
-            );
+            let (validator_payout, max_payout) = Self::calculate_era_payout(active_era.index);
+
+            log!(info, "☯ EndEra: current_era: {:?}, validator payout: {:?}", active_era.index, validator_payout);
+
             let rest = max_payout.saturating_sub(validator_payout);
 
             Self::deposit_event(RawEvent::EraPayout(
@@ -2777,15 +2792,60 @@ impl<T: Trait> Module<T> {
             ));
 
             // Set ending era reward. todo
-            // PoS
-            let weight_part = Perbill::from_rational_approximation(1u32, 2u32);
-            <ErasValidatorReward<T>>::insert(&active_era.index, weight_part * validator_payout);
-            // PoC
-            T::CreditDelegate::set_eras_reward(active_era.index, weight_part * validator_payout);
+            let credit_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
+            let credit_weight = credit_score * CREDIT_TO_TOKEN_FACTOR ;
 
+            let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
+                credit_weight as u128,
+            );
+            log!(info," ☯ PoCWeight : {}, PoSWeight: {}", credit_weight, Self::eras_total_stake(&active_era.index));
+
+            let credit_part =
+                Perbill::from_rational_approximation(credit_to_balance, Self::eras_total_stake(&active_era.index) + credit_to_balance);
+
+            let credit_payout = credit_part * validator_payout;
+            let staking_payout = validator_payout - credit_payout;
+
+            log!(info, " ☯  PoC payout : {:?} , PoS payout: {:?}", credit_payout, staking_payout);
+            // PoS
+            <ErasValidatorReward<T>>::insert(&active_era.index, staking_payout);
+            // PoC
+            T::CreditDelegate::set_eras_reward(active_era.index, credit_payout);
+            
             T::RewardRemainder::on_unbalanced(T::Currency::issue(rest));
         }
     }
+
+    fn calculate_era_payout(current_era: EraIndex) -> (BalanceOf<T>, BalanceOf<T>)
+    {
+        let mut reward_per_block = <BlockReward>::get().unwrap();
+        let remain = <RemainderMiningReward>::get().unwrap();
+        let blocks_per_era = T::BlocksPerEra::get();
+        let eras_per_period = T::RewardAdjustPeriod::get();
+        if (current_era % eras_per_period) == 0 && current_era != 0{
+
+            let current_period_total_payout = reward_per_block * blocks_per_era * (eras_per_period as u128);
+
+            let current_remain = remain - current_period_total_payout;
+
+            let current_block_reward = current_remain / T::RewardAdjustFactor::get();
+
+            log!(info, " ☯ mining period change, will calculate block reward..., current era {:?}, current_remain: {}, current_block_reward: {}",
+                 current_era, current_remain, current_block_reward);
+
+            <BlockReward>::put(current_block_reward);
+            <RemainderMiningReward>::put(current_remain);
+            reward_per_block = current_block_reward;
+        }
+
+        let payout = reward_per_block * blocks_per_era;
+
+        let balance_payout = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
+            payout as u128,
+        );
+        (balance_payout, balance_payout)
+    }
+
 
     /// Plan a new era. Return the potential new staking set.
     fn new_era(start_session_index: SessionIndex) -> Option<Vec<T::AccountId>> {

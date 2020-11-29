@@ -52,10 +52,15 @@ pub mod time {
     /// `SLOT_DURATION` should have the same value.
     ///
     /// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
-    pub const MILLISECS_PER_BLOCK: Moment = 3000;
+    pub const MILLISECS_PER_BLOCK: Moment = 5000;
     pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
-
     pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
+
+    pub const TOTAL_MINING_REWARD:u128 = 6_000_000_000_000_000_000_000_000;
+    pub const GENESIS_BLOCK_REWARD: u128 = 90_000_000_000_000_000;
+    pub const REWARD_ADJUST_FACTOR: u128 = 77_760_000;
+    pub const REWARD_ADJUST_PERIOD: u32 = 4;
+    pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 
     // 1 in 4 blocks (on average, not counting collisions) will be primary BABE blocks.
     pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
