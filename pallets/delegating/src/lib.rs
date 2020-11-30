@@ -226,7 +226,7 @@ impl<T: Trait> Module<T> {
                 let delegators = CandidateDelegators::<T>::take(validator.clone());
                 let next_delegators: Vec<_> = delegators
                     .iter()
-                    .map(|(d, s)| if *d != delegator.clone() { ((*d).clone(), score) } else { ((*d).clone(), *s) })
+                    .map(|(d, s)| if *d == delegator.clone() { ((*d).clone(), score) } else { ((*d).clone(), *s) })
                     .collect();
                 CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
             }

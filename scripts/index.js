@@ -22,40 +22,40 @@ function construct_byte_array(addr, nonce, session_id, amount) {
     arr.push(...addr, ...nonce, ...session_id, ...amount);
     return arr;
 }
-function openChannel(api, sender, receiver, duration){
-    return new Promise(function(resolve, reject){
+function openChannel(api, sender, receiver, duration) {
+    return new Promise(function (resolve, reject) {
         api.tx.micropayment.openChannel(receiver.address, duration)
-        .signAndSend(sender,({ events = [], status }) => {
-            console.log('Transaction status:', status.type);
-            if (status.isInBlock) {
-                console.log('Included at block hash', status.asInBlock.toHex());
-                console.log('Events:');
-                events.forEach(({ event: { data, method, section }, phase }) => {
-                    console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
-                });
-            } else if (status.isFinalized) {
-                console.log('Finalized block hash', status.asFinalized.toHex());
-                resolve()
-            }
-        });
+            .signAndSend(sender, ({ events = [], status }) => {
+                console.log('Transaction status:', status.type);
+                if (status.isInBlock) {
+                    console.log('Included at block hash', status.asInBlock.toHex());
+                    console.log('Events:');
+                    events.forEach(({ event: { data, method, section }, phase }) => {
+                        console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+                    });
+                } else if (status.isFinalized) {
+                    console.log('Finalized block hash', status.asFinalized.toHex());
+                    resolve()
+                }
+            });
     });
 }
-function closeChannel(api, sender, receiver){
-    return new Promise(function(resolve, reject){
+function closeChannel(api, sender, receiver) {
+    return new Promise(function (resolve, reject) {
         api.tx.micropayment.closeChannel(sender.address)
-        .signAndSend(receiver, ({ events = [], status }) => {
-            console.log('Transaction status:', status.type);
-            if (status.isInBlock) {
-                console.log('Included at block hash', status.asInBlock.toHex());
-                console.log('Events:');
-                events.forEach(({ event: { data, method, section }, phase }) => {
-                    console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
-                });
-            } else if (status.isFinalized) {
-                console.log('Finalized block hash', status.asFinalized.toHex());
-                resolve()
-            }
-        });
+            .signAndSend(receiver, ({ events = [], status }) => {
+                console.log('Transaction status:', status.type);
+                if (status.isInBlock) {
+                    console.log('Included at block hash', status.asInBlock.toHex());
+                    console.log('Events:');
+                    events.forEach(({ event: { data, method, section }, phase }) => {
+                        console.log('\t', phase.toString(), `: ${section}.${method}`, data.toString());
+                    });
+                } else if (status.isFinalized) {
+                    console.log('Finalized block hash', status.asFinalized.toHex());
+                    resolve()
+                }
+            });
     });
 }
 function claimPayment(api, sender, receiver, nonceNum, sessionIdNum, amtNum) {
@@ -106,12 +106,11 @@ async function claimPayment_test() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
-            CreditScoreLedger: {
-                delegatedAccount: "AccountId",
-                delegatedAcore: "u64",
-                validatorAccount: "AccountId",
-                withdrawEra: "u32"
-            },
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
+            }
         },
     });
 
@@ -164,7 +163,7 @@ async function claimPayment_test() {
     await claimPayment(api, charlie, bob, nonce, sessionId + 2, amt);
     await claimPayment(api, alice, bob, nonce, sessionId + 3, amt);
     await claimPayment(api, charlie, bob, nonce, sessionId + 3, amt);
-    
+
     await closeChannel(api, alice, bob);
     await closeChannel(api, charlie, bob);
 }
@@ -188,6 +187,11 @@ async function test1() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
+            }
         },
     });
 
@@ -227,14 +231,14 @@ async function functionalTest_credit() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
-            CreditScoreLedger: {
-                delegatedAccount: "AccountId",
-                delegatedAcore: "u64",
-                validatorAccount: "AccountId",
-                withdrawEra: "u32"
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
             }
         },
     });
+
 
     // accounts 
     const keyring = new Keyring({ type: "sr25519" });
@@ -313,14 +317,14 @@ async function functionalTest_credit_check() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
-            CreditScoreLedger: {
-                delegatedAccount: "AccountId",
-                delegatedAcore: "u64",
-                validatorAccount: "AccountId",
-                withdrawEra: "u32"
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
             }
         },
     });
+
 
 
     // accounts 
@@ -405,14 +409,14 @@ async function functionalTest_delegate() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
-            CreditScoreLedger: {
-                delegatedAccount: "AccountId",
-                delegatedAcore: "u64",
-                validatorAccount: "AccountId",
-                withdrawEra: "u32"
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
             }
         },
     });
+
 
     // accounts 
     const keyring = new Keyring({ type: "sr25519" });
@@ -492,14 +496,14 @@ async function functionalTest_delegate_check() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
-            CreditScoreLedger: {
-                delegatedAccount: "AccountId",
-                delegatedAcore: "u64",
-                validatorAccount: "AccountId",
-                withdrawEra: "u32"
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
             }
         },
     });
+
 
     // accounts 
     const keyring = new Keyring({ type: "sr25519" });
@@ -609,14 +613,14 @@ async function functionalTest_credit_attenuate_set() {
                 opened: "Timestamp",
                 expiration: "Timestamp",
             },
-            CreditScoreLedger: {
-                delegatedAccount: "AccountId",
-                delegatedAcore: "u64",
-                validatorAccount: "AccountId",
-                withdrawEra: "u32"
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>"
             }
         },
     });
+
 
     // accounts 
     const keyring = new Keyring({ type: "sr25519" });
