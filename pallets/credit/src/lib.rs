@@ -261,6 +261,7 @@ impl<T: Trait> Module<T> {
 pub trait CreditInterface<AccountId> {
     fn get_credit_score(account_id: AccountId) -> Option<u64>;
     fn pass_threshold(account_id: AccountId, _ttype: u8) -> bool;
+    fn credit_slash(accouont_id: AccountId);
 }
 
 impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
@@ -279,4 +280,14 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
         }
         false
     }
+
+    /// credit slash
+    fn credit_slash(account_id: T::AccountId){
+        if UserCredit::<T>::contains_key(account_id.clone()){
+            UserCredit::<T>::mutate(account_id,|s|{
+                let score = (*s).unwrap_or(0);
+                score.saturating_sub(CREDIT_SCORE_ATTENUATION_STEP * 2)
+            });
+        }
+    } 
 }

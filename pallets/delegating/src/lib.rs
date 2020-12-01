@@ -321,7 +321,9 @@ pub trait CreditDelegateInterface<AccountId, B, PB> {
         validator: AccountId,
         validator_payee: AccountId,
     ) -> bool;
-    fn make_payout(stash: AccountId, amount: B) -> Option<PB>;
+    fn make_payout(receiver: AccountId, amount: B) -> Option<PB>;
+
+    fn poc_slash(validator: & AccountId, era_index: EraIndex);
 }
 
 impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbalanceOf<T>>
@@ -438,5 +440,19 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
 
     fn make_payout(receiver: T::AccountId, amount: BalanceOf<T>) -> Option<PositiveImbalanceOf<T>> {
         Some(T::Currency::deposit_creating(&receiver, amount))
+    }
+
+    // poc credot stasj
+    fn poc_slash(validator: & T::AccountId, era_index: EraIndex){
+        if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
+            let delegators = <SelectedDelegators<T>>::get(era_index, validator);
+            for (delegator, _) in delegators{
+                T::CreditInterface::credit_slash(delegator.clone());
+
+                // undelegate
+                Self::_undelegate(delegator.clone());
+                <DelegatedToValidators<T>>::remove(delegator);
+            }
+        }
     }
 }

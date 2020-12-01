@@ -154,7 +154,7 @@ async function claimPayment_test() {
 
     let nonce = 0;
     let sessionId = 1;
-    let amt = 10;
+    let amt = 20;
     await claimPayment(api, alice, bob, nonce, sessionId, amt);
     await claimPayment(api, charlie, bob, nonce, sessionId, amt);
     await claimPayment(api, alice, bob, nonce, sessionId + 1, amt);

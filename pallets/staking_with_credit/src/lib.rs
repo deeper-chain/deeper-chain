@@ -3407,6 +3407,9 @@ where
             if invulnerables.contains(stash) {
                 continue;
             }
+            
+            // poc_stash(stash,slash_era): check delegators behind stash 
+            T::CreditDelegate::poc_slash(stash, slash_era);
 
             let unapplied = slashing::compute_slash::<T>(slashing::SlashParams {
                 stash,
