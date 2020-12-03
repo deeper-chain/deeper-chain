@@ -447,11 +447,13 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
             let delegators = <SelectedDelegators<T>>::get(era_index, validator);
             for (delegator, _) in delegators{
-                T::CreditInterface::credit_slash(delegator.clone());
-
-                // undelegate
-                Self::_undelegate(delegator.clone());
-                <DelegatedToValidators<T>>::remove(delegator);
+                let has_delegated = <HasDelegatedToValidator<T>>::get(delegator.clone(),validator).unwrap_or(false);
+                if has_delegated { // avoid to duplicate slash credit score
+                    T::CreditInterface::credit_slash(delegator.clone());
+                    // undelegate
+                    Self::_undelegate(delegator.clone());
+                    <DelegatedToValidators<T>>::remove(delegator);
+                }
             }
         }
     }

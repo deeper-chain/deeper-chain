@@ -110,7 +110,7 @@ def chain_spec_gen(input_file: str, output_file: str, new_validators,  is_sudo: 
 
         # palletStaking
         if "palletStakingWithCredit" in json_object["genesis"]["runtime"]:
-            json_object["genesis"]["runtime"]["palletStakingWithCredit"]["invulnerables"].append(sr_key2)
+            # json_object["genesis"]["runtime"]["palletStakingWithCredit"]["invulnerables"].append(sr_key2)
             json_object["genesis"]["runtime"]["palletStakingWithCredit"]["stakers"].append([sr_key2, sr_key1, 10000000000099999, "Validator"])
 
         # palletSession
