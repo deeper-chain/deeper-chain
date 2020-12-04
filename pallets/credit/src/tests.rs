@@ -2,6 +2,7 @@ use crate::mock::*;
 use frame_support::assert_ok;
 //use frame_system::ensure_signed;
 use sp_runtime::DispatchError;
+use crate::CreditInterface;
 
 #[test]
 fn fn_initialize_credit_extrinsic() {
@@ -64,7 +65,6 @@ fn fn_initialize_credit() {
 fn fn_update_credit() {
     new_test_ext().execute_with(|| {
         // [30,100]
-        //assert_eq!(Credit::initialize_credit(1, 29), true);
         let micropayment_vec = vec![(1, 5 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
         assert_eq!(Credit::get_user_credit(1), Some(5));
@@ -102,5 +102,48 @@ fn fn_kill_credit() {
 
         // uninitialized account
         assert_eq!(Credit::kill_credit(2), false);
+    });
+}
+
+
+// CreditInterface test
+#[test]
+fn fn_get_credit_score() {
+    new_test_ext().execute_with(|| {
+        let micropayment_vec = vec![(1, 15 * 1_000_000_000_000_000, 5)];
+        Credit::update_credit(micropayment_vec);
+
+        assert_eq!(Credit::get_credit_score(1), Some(15));
+    });
+}
+
+#[test]
+fn fn_pass_threshold() {
+    new_test_ext().execute_with(|| {
+        // <60
+        let micropayment_vec = vec![(1, 55 * 1_000_000_000_000_000, 5)];
+        Credit::update_credit(micropayment_vec);
+        assert_eq!(Credit::pass_threshold(1,0), false);
+
+        // =60
+        let micropayment_vec = vec![(2, 60 * 1_000_000_000_000_000, 5)];
+        Credit::update_credit(micropayment_vec);
+        assert_eq!(Credit::pass_threshold(2,0), false);
+
+        // >60
+        let micropayment_vec = vec![(3, 80 * 1_000_000_000_000_000, 5)];
+        Credit::update_credit(micropayment_vec);
+        assert_eq!(Credit::pass_threshold(3,0), true);
+    });
+}
+
+#[test]
+fn fn_credit_slash() {
+    new_test_ext().execute_with(|| {
+        let micropayment_vec = vec![(1, 80 * 1_000_000_000_000_000, 5)];
+        Credit::update_credit(micropayment_vec);
+
+        Credit::credit_slash(1);
+        assert_eq!(Credit::get_credit_score(1), Some(70));
     });
 }

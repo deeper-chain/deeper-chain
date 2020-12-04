@@ -9,7 +9,7 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
-use log::{error};
+use log::error;
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::sp_runtime::Perbill;
@@ -226,7 +226,13 @@ impl<T: Trait> Module<T> {
                 let delegators = CandidateDelegators::<T>::take(validator.clone());
                 let next_delegators: Vec<_> = delegators
                     .iter()
-                    .map(|(d, s)| if *d == delegator.clone() { ((*d).clone(), score) } else { ((*d).clone(), *s) })
+                    .map(|(d, s)| {
+                        if *d == delegator.clone() {
+                            ((*d).clone(), score)
+                        } else {
+                            ((*d).clone(), *s)
+                        }
+                    })
                     .collect();
                 CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
             }
@@ -238,8 +244,10 @@ impl<T: Trait> Module<T> {
         for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(delegator.clone()) {
             if CandidateDelegators::<T>::contains_key(validator.clone()) {
                 let delegators = CandidateDelegators::<T>::take(validator.clone());
-                let next_delegators: Vec<_> =
-                    delegators.iter().filter(|(d, _)| *d != delegator.clone()).collect();
+                let next_delegators: Vec<_> = delegators
+                    .iter()
+                    .filter(|(d, _)| *d != delegator.clone())
+                    .collect();
                 CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
                 <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), false);
             }
@@ -256,11 +264,11 @@ impl<T: Trait> Module<T> {
         let answer: u64 = total_score / len as u64;
         let mut remainder: u64 = total_score % len as u64;
         let mut validators: Vec<(T::AccountId, u64)> = vec![];
-        for v in target_validators{
+        for v in target_validators {
             if remainder != 0 {
                 validators.push((v, answer + 1));
                 remainder -= 1;
-            }else{
+            } else {
                 validators.push((v, answer));
             }
         }
@@ -281,8 +289,7 @@ impl<T: Trait> Module<T> {
                 <DelegatedToValidators<T>>::remove(delegator.clone());
             } else {
                 let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
-                let credit_delegate_info =
-                    <DelegatedToValidators<T>>::get(delegator.clone());
+                let credit_delegate_info = <DelegatedToValidators<T>>::get(delegator.clone());
                 if total_score != credit_delegate_info.score {
                     Self::_undelegate(delegator.clone());
 
@@ -323,7 +330,7 @@ pub trait CreditDelegateInterface<AccountId, B, PB> {
     ) -> bool;
     fn make_payout(receiver: AccountId, amount: B) -> Option<PB>;
 
-    fn poc_slash(validator: & AccountId, era_index: EraIndex);
+    fn poc_slash(validator: &AccountId, era_index: EraIndex);
 }
 
 impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbalanceOf<T>>
@@ -443,12 +450,14 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
     }
 
     // poc credot stasj
-    fn poc_slash(validator: & T::AccountId, era_index: EraIndex){
+    fn poc_slash(validator: &T::AccountId, era_index: EraIndex) {
         if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
             let delegators = <SelectedDelegators<T>>::get(era_index, validator);
-            for (delegator, _) in delegators{
-                let has_delegated = <HasDelegatedToValidator<T>>::get(delegator.clone(),validator).unwrap_or(false);
-                if has_delegated { // avoid to duplicate slash credit score
+            for (delegator, _) in delegators {
+                let has_delegated = <HasDelegatedToValidator<T>>::get(delegator.clone(), validator)
+                    .unwrap_or(false);
+                if has_delegated {
+                    // avoid to duplicate slash credit score
                     T::CreditInterface::credit_slash(delegator.clone());
                     // undelegate
                     Self::_undelegate(delegator.clone());

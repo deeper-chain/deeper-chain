@@ -13,6 +13,8 @@ use sp_runtime::{
 
 use node_primitives::{Balance, BlockNumber, Moment};
 
+
+
 impl_outer_origin! {
     pub enum Origin for Test {}
 }
@@ -168,6 +170,7 @@ impl Trait for Test {
 }
 
 pub type Credit = Module<Test>;
+
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {

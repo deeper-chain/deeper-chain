@@ -178,7 +178,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// update credit score per era using micropayment vec
-    fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
+    pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
         for (server_id, balance, size) in micropayment_vec {
             if size >= 1 {
                 let balance_num =
