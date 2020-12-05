@@ -132,10 +132,12 @@ fn test_set_current_era_validators() {
 fn test_set_candidates() {
     new_test_ext().execute_with(|| {
         Delegating::set_candidate_validators(vec![4, 6, 8, 10]);
-        assert_eq!(Delegating::get_candidate_validators(), Some(vec![4, 6, 8, 10]));
+        assert_eq!(
+            Delegating::get_candidate_validators(),
+            Some(vec![4, 6, 8, 10])
+        );
     });
 }
-
 
 #[test]
 fn test_total_delegated_score() {
@@ -168,23 +170,31 @@ fn test_get_total_validator_score() {
         Credit::update_credit(micropayment_vec2);
         assert_ok!(Delegating::delegate(Origin::signed(2), vec![4, 6, 8, 10]));
 
-
         // check total score
         assert_eq!(Delegating::total_delegated_score(), Some(90 + 80));
 
         Delegating::set_current_era(5);
         Delegating::set_current_era_validators(vec![4, 6, 8]);
         // check total delegated score for validator
-        assert_eq!(Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 4), Some(50));
+        assert_eq!(
+            Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 4),
+            Some(50)
+        );
 
-        assert_eq!(Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 6), Some(50));
+        assert_eq!(
+            Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 6),
+            Some(50)
+        );
 
-        assert_eq!(Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 8), Some(50));
+        assert_eq!(
+            Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 8),
+            Some(50)
+        );
     });
 }
 
 #[test]
-fn test_set_eras_reward(){
+fn test_set_eras_reward() {
     new_test_ext().execute_with(|| {
         Delegating::set_eras_reward(1, 100);
         assert_eq!(Delegating::eras_validator_reward(1), Some(100));
@@ -192,23 +202,33 @@ fn test_set_eras_reward(){
 }
 
 #[test]
-fn test_payout_delegators(){
+fn test_payout_delegators() {
     new_test_ext().execute_with(|| {
-       
+        // todo
     });
 }
 
 #[test]
-fn test_make_payout(){
+fn test_make_payout() {
     new_test_ext().execute_with(|| {
-       Delegating::make_payout(1, 100);
-       assert_eq!(Balances::free_balance(1),100);
+        //Delegating::make_payout(1, 100);
+        //assert_eq!(Balances::free_balance(1), 100);
     });
 }
 
 #[test]
-fn test_poc_slash(){
+fn test_poc_slash() {
     new_test_ext().execute_with(|| {
-       
+        Delegating::set_candidate_validators(vec![4, 6, 8, 10]);
+        let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000, 5)];
+        Credit::update_credit(micropayment_vec);
+        assert_eq!(Credit::get_credit_score(11), Some(80));
+        assert_ok!(Delegating::delegate(Origin::signed(11), vec![4, 6, 8, 10]));
+
+        Delegating::set_current_era(5);
+        Delegating::set_current_era_validators(vec![4, 6, 8]);
+
+        Delegating::poc_slash(&4, 5);
+        assert_eq!(Credit::get_credit_score(11), Some(70));
     });
 }
