@@ -2777,9 +2777,13 @@ impl<T: Trait> Module<T> {
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
         if let Some(_active_era_start) = active_era.start {
-
             let (validator_payout, max_payout) = Self::calculate_era_payout(active_era.index);
-            log!(info, "☯ EndEra: current_era: {:?}, validator payout: {:?}", active_era.index, validator_payout);
+            log!(
+                info,
+                "☯ EndEra: current_era: {:?}, validator payout: {:?}",
+                active_era.index,
+                validator_payout
+            );
             let rest = max_payout.saturating_sub(validator_payout);
             Self::deposit_event(RawEvent::EraPayout(
                 active_era.index,
@@ -2789,33 +2793,39 @@ impl<T: Trait> Module<T> {
 
             // Set ending era reward.
             let credit_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
-            let credit_weight = credit_score * CREDIT_TO_TOKEN_FACTOR ;
+            let credit_weight = credit_score * CREDIT_TO_TOKEN_FACTOR;
             let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
                 credit_weight as u128,
             );
-            let credit_part =
-                Perbill::from_rational_approximation(credit_to_balance, Self::eras_total_stake(&active_era.index) + credit_to_balance);
+            let credit_part = Perbill::from_rational_approximation(
+                credit_to_balance,
+                Self::eras_total_stake(&active_era.index) + credit_to_balance,
+            );
             let credit_payout = credit_part * validator_payout;
             let staking_payout = validator_payout - credit_payout;
-            log!(info, " ☯  PoC payout : {:?} , PoS payout: {:?}", credit_payout, staking_payout);
+            log!(
+                info,
+                " ☯  PoC payout : {:?} , PoS payout: {:?}",
+                credit_payout,
+                staking_payout
+            );
             // PoS
             <ErasValidatorReward<T>>::insert(&active_era.index, staking_payout);
             // PoC
             T::CreditDelegate::set_eras_reward(active_era.index, credit_payout);
-            
+
             T::RewardRemainder::on_unbalanced(T::Currency::issue(rest));
         }
     }
 
-    fn calculate_era_payout(current_era: EraIndex) -> (BalanceOf<T>, BalanceOf<T>)
-    {
+    fn calculate_era_payout(current_era: EraIndex) -> (BalanceOf<T>, BalanceOf<T>) {
         let mut reward_per_block = <BlockReward>::get().unwrap();
         let remain = <RemainderMiningReward>::get().unwrap();
         let blocks_per_era = T::BlocksPerEra::get();
         let eras_per_period = T::RewardAdjustPeriod::get();
-        if (current_era % eras_per_period) == 0 && current_era != 0{
-
-            let current_period_total_payout = reward_per_block * blocks_per_era * (eras_per_period as u128);
+        if (current_era % eras_per_period) == 0 && current_era != 0 {
+            let current_period_total_payout =
+                reward_per_block * blocks_per_era * (eras_per_period as u128);
 
             let current_remain = remain - current_period_total_payout;
 
@@ -2831,12 +2841,10 @@ impl<T: Trait> Module<T> {
 
         let payout = reward_per_block * blocks_per_era;
 
-        let balance_payout = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
-            payout as u128,
-        );
+        let balance_payout =
+            <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(payout as u128);
         (balance_payout, balance_payout)
     }
-
 
     /// Plan a new era. Return the potential new staking set.
     fn new_era(start_session_index: SessionIndex) -> Option<Vec<T::AccountId>> {
@@ -3407,8 +3415,8 @@ where
             if invulnerables.contains(stash) {
                 continue;
             }
-            
-            // poc_stash(stash,slash_era): check delegators behind stash 
+
+            // poc_stash(stash,slash_era): check delegators behind stash
             T::CreditDelegate::poc_slash(stash, slash_era);
 
             let unapplied = slashing::compute_slash::<T>(slashing::SlashParams {

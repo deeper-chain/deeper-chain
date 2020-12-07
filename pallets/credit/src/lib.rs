@@ -282,12 +282,12 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     }
 
     /// credit slash
-    fn credit_slash(account_id: T::AccountId){
-        if UserCredit::<T>::contains_key(account_id.clone()){
-            UserCredit::<T>::mutate(account_id,|s|{
+    fn credit_slash(account_id: T::AccountId) {
+        if UserCredit::<T>::contains_key(account_id.clone()) {
+            UserCredit::<T>::mutate(account_id, |s| {
                 let score = (*s).unwrap_or(0);
                 *s = Some(score.saturating_sub(CREDIT_SCORE_ATTENUATION_STEP * 2))
             });
         }
-    } 
+    }
 }

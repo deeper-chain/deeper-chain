@@ -1,8 +1,8 @@
 use crate::mock::*;
 use frame_support::assert_ok;
 //use frame_system::ensure_signed;
-use sp_runtime::DispatchError;
 use crate::CreditInterface;
+use sp_runtime::DispatchError;
 
 #[test]
 fn fn_initialize_credit_extrinsic() {
@@ -105,7 +105,6 @@ fn fn_kill_credit() {
     });
 }
 
-
 // CreditInterface test
 #[test]
 fn fn_get_credit_score() {
@@ -123,17 +122,17 @@ fn fn_pass_threshold() {
         // <60
         let micropayment_vec = vec![(1, 55 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
-        assert_eq!(Credit::pass_threshold(1,0), false);
+        assert_eq!(Credit::pass_threshold(1, 0), false);
 
         // =60
         let micropayment_vec = vec![(2, 60 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
-        assert_eq!(Credit::pass_threshold(2,0), false);
+        assert_eq!(Credit::pass_threshold(2, 0), false);
 
         // >60
         let micropayment_vec = vec![(3, 80 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
-        assert_eq!(Credit::pass_threshold(3,0), true);
+        assert_eq!(Credit::pass_threshold(3, 0), true);
     });
 }
 

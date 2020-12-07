@@ -523,8 +523,8 @@ impl pallet_staking_with_credit::Trait for Runtime {
     type RewardAdjustFactor = RewardAdjustFactor;
     type RewardPerBlock = RewardPerBlock;
     type RewardAdjustPeriod = RewardAdjustPeriod;
-    type BlocksPerEra       = BlockNumberPerEra;
-    type RemainderMiningReward  = MiningReward;
+    type BlocksPerEra = BlockNumberPerEra;
+    type RemainderMiningReward = MiningReward;
 }
 
 parameter_types! {

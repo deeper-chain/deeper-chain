@@ -76,9 +76,9 @@ decl_storage! {
         pub ErasValidatorReward get(fn eras_validator_reward):
             map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
 
-        // 存PoC生效的Era, validator id
+        // (EraIndex, validatorId) -> Vec<(delegator, score, hasSlashed)>
         SelectedDelegators get(fn selected_delegators): double_map hasher(blake2_128_concat) EraIndex,
-        hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
+        hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64, bool)>;
 
         pub CurrentEra get(fn current_era): Option<EraIndex>;
         pub CurrentEraValidators get(fn current_era_validators): Option<Vec<T::AccountId>>;
@@ -288,13 +288,13 @@ impl<T: Trait> Module<T> {
             let target_validators = credit_delegate_info.validators;
             let mut is_in = true;
             let candidate_validators = <CandidateValidators<T>>::get().unwrap();
-            for v in target_validators.clone(){
+            for v in target_validators.clone() {
                 if !candidate_validators.contains(&v) {
                     is_in = false;
                 }
             }
 
-            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false  || is_in == false{
+            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false || is_in == false {
                 Self::_undelegate(delegator.clone());
                 <DelegatedToValidators<T>>::remove(delegator.clone());
             } else {
@@ -360,7 +360,11 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
 
         for validator in validators {
             let delegators = CandidateDelegators::<T>::get(validator.clone());
-            SelectedDelegators::<T>::insert(current_era, validator, delegators);
+            let selected_delegators: Vec<_> = delegators
+                .iter()
+                .map(|(d, s)| ((*d).clone(), *s, false))
+                .collect();
+            SelectedDelegators::<T>::insert(current_era, validator, selected_delegators);
         }
     }
 
@@ -400,7 +404,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
             let delegators = <SelectedDelegators<T>>::get(era_index, validator);
             let mut total_score: u64 = 0;
-            for (_, s) in delegators {
+            for (_, s, _) in delegators {
                 total_score += s;
             }
             Some(total_score)
@@ -441,7 +445,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         let era_total_score =
             Self::get_total_validator_score(era_index, validator.clone()).unwrap();
         let delegators = <SelectedDelegators<T>>::get(era_index, validator.clone());
-        for (who, s) in delegators {
+        for (who, s, _) in delegators {
             let delegator_exposure_part = Perbill::from_rational_approximation(s, era_total_score);
 
             let delegator_reward: BalanceOf<T> =
@@ -458,21 +462,25 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         Some(T::Currency::deposit_creating(&receiver, amount))
     }
 
-    // poc credot stasj
+    // poc credit slash
     fn poc_slash(validator: &T::AccountId, era_index: EraIndex) {
         if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
-            let delegators = <SelectedDelegators<T>>::get(era_index, validator);
-            for (delegator, _) in delegators {
-                let has_delegated = <HasDelegatedToValidator<T>>::get(delegator.clone(), validator)
-                    .unwrap_or(false);
-                if has_delegated {
-                    // avoid to duplicate slash credit score
-                    T::CreditInterface::credit_slash(delegator.clone());
-                    // undelegate
-                    Self::_undelegate(delegator.clone());
-                    <DelegatedToValidators<T>>::remove(delegator);
-                }
-            }
+            let delegators = <SelectedDelegators<T>>::take(era_index, validator);
+            let update_delegators: Vec<_> = delegators
+                .iter()
+                .map(|(d, s, slashed)| {
+                    if *slashed == false {
+                        T::CreditInterface::credit_slash((*d).clone());
+                        // undelegate
+                        Self::_undelegate((*d).clone());
+                        <DelegatedToValidators<T>>::remove((*d).clone());
+                        ((*d).clone(), *s, true)
+                    } else {
+                        ((*d).clone(), *s, *slashed)
+                    }
+                })
+                .collect();
+            <SelectedDelegators<T>>::insert(era_index, validator, update_delegators);
         }
     }
 }

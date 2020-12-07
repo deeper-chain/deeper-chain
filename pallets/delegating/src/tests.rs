@@ -202,21 +202,6 @@ fn test_set_eras_reward() {
 }
 
 #[test]
-fn test_payout_delegators() {
-    new_test_ext().execute_with(|| {
-        // todo
-    });
-}
-
-#[test]
-fn test_make_payout() {
-    new_test_ext().execute_with(|| {
-        //Delegating::make_payout(1, 100);
-        //assert_eq!(Balances::free_balance(1), 100);
-    });
-}
-
-#[test]
 fn test_poc_slash() {
     new_test_ext().execute_with(|| {
         Delegating::set_candidate_validators(vec![4, 6, 8, 10]);
