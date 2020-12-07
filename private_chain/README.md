@@ -228,5 +228,5 @@ In the key import step, we need import "babe" key instead of import "aura".
         ./insert_key.sh 9934 bob.json bob_gran.json
         ./insert_key.sh 9935 chao0.json chao_gran0.json
         ./insert_key.sh 9936 chao1.json chao_gran1.json
-        ./insert_key.sh 9937 chao2.json chao_gran2.json        
+        ./insert_key.sh 9937 chao2.json chao_gran2.json      
     ```

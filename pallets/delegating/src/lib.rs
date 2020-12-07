@@ -284,26 +284,34 @@ impl<T: Trait> Module<T> {
 
     fn check_and_adjust_delegated_score() {
         for (delegator, credit_delegate_info) in DelegatedToValidators::<T>::iter() {
-            // check validators in CandidateValidators
-            let target_validators = credit_delegate_info.validators;
-            let mut is_in = true;
-            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
-            for v in target_validators.clone() {
-                if !candidate_validators.contains(&v) {
-                    is_in = false;
-                }
-            }
+                // check validators in CandidateValidators
+                let target_validators = credit_delegate_info.validators;
+                let mut target_is_changed = false;
+                let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+                let next_target_validators: Vec<_> = target_validators.iter()
+                    .filter(|v|{
+                        if candidate_validators.contains(v) {
+                            true
+                        }else{
+                            target_is_changed = true;
+                            false
+                        }
+                    })
+                    .map(|v| (*v).clone())
+                    .collect();
 
-            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false || is_in == false {
+            // score to low or target_validators not in <CandidateValidators<T>>
+            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false || next_target_validators.len() == 0 {
                 Self::_undelegate(delegator.clone());
                 <DelegatedToValidators<T>>::remove(delegator.clone());
             } else {
                 let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
-                if total_score != credit_delegate_info.score {
+                // score has update or target_validators changed
+                if total_score != credit_delegate_info.score || target_is_changed == true {
                     Self::_undelegate(delegator.clone());
 
                     let validators_vec =
-                        Self::cut_credit_score(delegator.clone(), target_validators);
+                        Self::cut_credit_score(delegator.clone(), next_target_validators);
                     Self::_delegate(delegator.clone(), validators_vec);
 
                     let mut info = <DelegatedToValidators<T>>::take(delegator.clone());
