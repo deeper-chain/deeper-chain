@@ -166,7 +166,7 @@ decl_module! {
             }
 
             // check target validators in candidate_validators
-            let candidate_validators = <CandidateValidators<T>>::get().unwrap();//_or(Err(Error::<T>::NonCandidateValidator)?);
+            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
             for validator in validators.clone() {
                 if !candidate_validators.contains(&validator){
                     error!("Validator AccountId  isn't in candidateValidators");
@@ -283,18 +283,27 @@ impl<T: Trait> Module<T> {
     }
 
     fn check_and_adjust_delegated_score() {
-        for (delegator, _) in DelegatedToValidators::<T>::iter() {
-            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false {
+        for (delegator, credit_delegate_info) in DelegatedToValidators::<T>::iter() {
+            // check validators in CandidateValidators
+            let target_validators = credit_delegate_info.validators;
+            let mut is_in = true;
+            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+            for v in target_validators.clone(){
+                if !candidate_validators.contains(&v) {
+                    is_in = false;
+                }
+            }
+
+            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false  || is_in == false{
                 Self::_undelegate(delegator.clone());
                 <DelegatedToValidators<T>>::remove(delegator.clone());
             } else {
                 let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
-                let credit_delegate_info = <DelegatedToValidators<T>>::get(delegator.clone());
                 if total_score != credit_delegate_info.score {
                     Self::_undelegate(delegator.clone());
 
                     let validators_vec =
-                        Self::cut_credit_score(delegator.clone(), credit_delegate_info.validators);
+                        Self::cut_credit_score(delegator.clone(), target_validators);
                     Self::_delegate(delegator.clone(), validators_vec);
 
                     let mut info = <DelegatedToValidators<T>>::take(delegator.clone());
