@@ -31,7 +31,7 @@ then
     --rpc-methods=Unsafe \
     --rpc-cors all \
     --name $1 \
-    --bootnodes /ip4/138.68.229.14/tcp/30333/p2p/$3
+    --bootnodes /ip4/10.168.98.1/tcp/30333/p2p/$3
 else
     echo "starting seed node $1 ..."
     $program  --base-path /tmp/$1 \

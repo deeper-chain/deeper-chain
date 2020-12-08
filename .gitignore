@@ -5,3 +5,4 @@ Cargo.lock
 nohup.out
 private_chain/first.json
 private_chain/second.json
+private_chain/customSpecRaw.json
