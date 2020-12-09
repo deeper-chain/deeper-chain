@@ -477,7 +477,7 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
             let update_delegators: Vec<_> = delegators
                 .iter()
                 .map(|(d, s, slashed)| {
-                    if *slashed == false {
+                    if *slashed == false && <DelegatedToValidators<T>>::contains_key((*d).clone()) {
                         T::CreditInterface::credit_slash((*d).clone());
                         // undelegate
                         Self::_undelegate((*d).clone());

@@ -341,7 +341,7 @@ pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_NOMINATIONS: usize = <CompactAssignments as VotingLimit>::LIMIT;
 
 /// credit socre to token factor
-pub const CREDIT_TO_TOKEN_FACTOR: u64 = 123_001_230_012;
+pub const CREDIT_TO_TOKEN_FACTOR: u128 = 500_000_000_000_000;//1unit = e15 todo
 
 pub(crate) const LOG_TARGET: &'static str = "staking";
 
@@ -2221,9 +2221,12 @@ impl<T: Trait> Module<T> {
     /// internal impl of delegated_credit_score
     fn delegated_credit_score_of_vote_weight(validator: &T::AccountId) -> VoteWeight {
         let score = T::CreditDelegate::delegated_score_of_validator(validator).unwrap_or(0);
-        let total_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
-        let factor = (total_score / u64::max_value()).max(1);
-        let vote_weight = CREDIT_TO_TOKEN_FACTOR * (score / factor) as u64;
+        let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
+            score as u128 * CREDIT_TO_TOKEN_FACTOR,
+        );
+        let vote_weight = <T::CurrencyToVote as Convert<BalanceOf<T>, VoteWeight>>::convert(
+            credit_to_balance,
+        );
         log!(
             info,
             "💸 PoC (validator {:?}  with: PoC vote weight {} and score {}).",
@@ -2793,9 +2796,8 @@ impl<T: Trait> Module<T> {
 
             // Set ending era reward.
             let credit_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
-            let credit_weight = credit_score * CREDIT_TO_TOKEN_FACTOR;
             let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
-                credit_weight as u128,
+                credit_score as u128 * CREDIT_TO_TOKEN_FACTOR,
             );
             let credit_part = Perbill::from_rational_approximation(
                 credit_to_balance,
