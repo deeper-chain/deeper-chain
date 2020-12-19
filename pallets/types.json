@@ -4,7 +4,8 @@
     "Node": {
         "account_id": "AccountId",
         "ipv4": "Vec<u8>",
-        "country": "u16"
+        "country": "Vec<u8>",
+        "expire": "BlockNumber"
     },
     "ChannelOf": {
         "sender": "AccountId",
