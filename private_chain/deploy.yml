@@ -1,0 +1,14 @@
+---
+- hosts: jiaolong
+  tasks:
+  - name: delete deeper-node
+    shell: rm -rf deeper-node
+    ignore_errors: True
+  - name: cp deeper-node 
+    copy: src=/home/lzw/deeper-node dest=~ mode=0775
+  - name: cd deeper-node
+    shell: cd deeper-node/script
+  - name: install @polkadot/api
+    shell: npm install @polkadot/api
+  - name: install objects-to-csv
+    shell: npm install objects-to-csv
