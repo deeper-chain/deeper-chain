@@ -1,0 +1,6 @@
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "author_insertKey",
+    "params": ["gran", "sort ranch until roof rain decide member dream wave chuckle gate carry", "0x4bc91e16db1b7d9d7fdc910e79af7e792ac40f6bad17e7c139e34f59c3a6d65c"]
+}

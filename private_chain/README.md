@@ -38,18 +38,18 @@ Account ID: 0x1ece27096ef9d6a1f5908d8dc8fc6c60b446b42d04d20ddcaa4f13a7bfe4223f
 SS58 Address: 5Cm6XutwYAMd3wZvJJPwaXwMD4zT6qKNw4U5zazAd5Q3P9Bb
 ```
 
-
 #### add new keys
+
 Follow the instructions of "Start a private network" at https://learnblockchain.cn/docs/substrate/docs/tutorials/start-a-private-network/customchain/
-   and replace with json configuration file with the keys generated above
+and replace with json configuration file with the keys generated above
 
 Babe:
 
-* Basically follow the instructions of "Start a private network" at https://learnblockchain.cn/docs/substrate/docs/tutorials/start-a-private-network/customchain/
-   But must use substrate instead of node-template.
-   For example, to generate chain spec json file:
-   ./target/release/substrate build-spec --disable-default-bootnode --chain local > customSpec.json
-*  Need to generate two more keys based on the secret phrases as above by concatenating "//stash" in the end.
+-   Basically follow the instructions of "Start a private network" at https://learnblockchain.cn/docs/substrate/docs/tutorials/start-a-private-network/customchain/
+    But must use substrate instead of node-template.
+    For example, to generate chain spec json file:
+    ./target/release/substrate build-spec --disable-default-bootnode --chain local > customSpec.json
+-   Need to generate two more keys based on the secret phrases as above by concatenating "//stash" in the end.
 
 ```
 \$ subkey inspect
@@ -72,7 +72,7 @@ SS58 Address: 5FjCZSa9h4Bv8RXQ49j8xCZaQo6vZqLYomDyaUhmKLmE4B53
 ```
 
 I've committed two json configuration files for your reference: one is customSpec.json which is generated following the logic of "Start a private network",
-    another one "chain_spec.json" is created based on customSpec.json with keys replaced.
+another one "chain_spec.json" is created based on customSpec.json with keys replaced.
 
 The following configurations are updated in the chain spec json file:
 
@@ -106,6 +106,7 @@ The following configurations are updated in the chain spec json file:
 ]
 },
 ```
+
 ```
 "palletStaking": {
 "historyDepth": 84,
@@ -134,6 +135,7 @@ The following configurations are updated in the chain spec json file:
 ]
 },
 ```
+
 ```
 "palletSession": {
 "keys": [
@@ -160,6 +162,7 @@ The following configurations are updated in the chain spec json file:
 ]
 },
 ```
+
 ```
 "palletCollectiveInstance2": {
 "phantom": null,
@@ -191,6 +194,7 @@ The following configurations are updated in the chain spec json file:
 },
 
 ```
+
 ```
 "palletSociety": {
 "pot": 0,
@@ -204,29 +208,33 @@ The following configurations are updated in the chain spec json file:
 ```
 
 In the key import step, we need import "babe" key instead of import "aura".
-   Using Polkadot-JS Apps UI for key import is simple.
+Using Polkadot-JS Apps UI for key import is simple.
 
 ### Start a private testnet
 
-    Config and key generation
+Config and key generation
 
-    ```
-        # In private_chain folder, run chain_spec_key_gen.sh to generate customSpecRaw.json, chao.json and chao_gran.json
-        ./chain_spec_key_gen.sh  
-    ```
+```
+# In private_chain folder:
+# get template from "local" config
+../target/debug/e2-chain build-spec --disable-default-bootnode --chain local > first.json
+# add new key into genesis config
+./chain_spec_gen.py -i first.json -o second.json
+# or import existing key into genesis config
+./chain_spec_gen.py -i first.json -o second.json -k <loc_to_key_file>
+# create raw config
+../target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
+```
 
-    Start a private network
+Start a private network
 
-    ```
-        # In private_chain folder:
-        ./start_node.sh alice 0  # bootstrap node
-        ./start_node.sh bob 1 <peerID> # peerID copied from bootstrap node
-        ./start_node.sh chao 2 <peerID>
-
-        # insert babe and grandpa keys:
-        ./insert_key.sh 9933 alice.json alice_gran.json
-        ./insert_key.sh 9934 bob.json bob_gran.json
-        ./insert_key.sh 9935 chao0.json chao_gran0.json
-        ./insert_key.sh 9936 chao1.json chao_gran1.json
-        ./insert_key.sh 9937 chao2.json chao_gran2.json      
-    ```
+```
+# In private_chain folder:
+./start_node.sh alice 0  # bootstrap node
+./start_node.sh bob 1 <peerID> # peerID copied from bootstrap node
+./start_node.sh chao 2 <peerID>
+# insert babe and grandpa keys:
+./insert_key.sh 9933 alice.json alice_gran.json
+./insert_key.sh 9934 bob.json bob_gran.json
+./insert_key.sh 9935 chao.json chao_gran.json
+```
