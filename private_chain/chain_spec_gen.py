@@ -74,8 +74,9 @@ def chain_spec_gen(input_file: str, output_file: str, sr_key1: str, sr_key2: str
 
     # palletStaking
     if "palletStaking" in json_object["genesis"]["runtime"]:
-        json_object["genesis"]["runtime"]["palletStaking"]["invulnerables"].append(sr_key2)
+       # json_object["genesis"]["runtime"]["palletStaking"]["invulnerables"].append(sr_key2)
         json_object["genesis"]["runtime"]["palletStaking"]["stakers"].append([sr_key2, sr_key1, 10000000000099999, "Validator"])
+
 
     # palletSession
     if "palletSession" in json_object["genesis"]["runtime"]:
