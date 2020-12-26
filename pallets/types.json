@@ -2,9 +2,10 @@
     "TokenBalance": "u128",
     "Timestamp": "Moment",
     "Node": {
-      "account_id": "AccountId",
-      "ipv4": "Vec<u8>",
-      "country": "Option<Vec<u8>>"
+        "account_id": "AccountId",
+        "ipv4": "Vec<u8>",
+        "country": "Vec<u8>",
+        "expire": "BlockNumber"
     },
     "ChannelOf": {
       "sender": "AccountId",
