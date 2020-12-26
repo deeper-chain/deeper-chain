@@ -14,6 +14,10 @@ pub trait Trait: frame_system::Trait {
 
 const MIN_LOCK_AMT: u32 = 100;
 
+const MAX_DURATION_DAYS: u8 = 7;
+// todo: get this number from constants.rs
+const DAY_TO_BLOCKNUM: u32 = 14400;
+
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
@@ -79,14 +83,25 @@ decl_module! {
             ensure!(RegionMap::contains_key(&country), "invalid country code");
             ensure!(ip.len() <= 256, "invalid ip address");
 
-            let node = Node {
-                account_id: sender.clone(),
-                ipv4: ip.clone(),
-                country: country.clone(),
-                expire: <frame_system::Module<T>>::block_number(),
-            };
-            T::Currency::reserve(&sender, BalanceOf::<T>::from(MIN_LOCK_AMT))?;
-            <DeviceInfo<T>>::insert(sender.clone(), node);
+            if !<DeviceInfo<T>>::contains_key(&sender) {
+                let node = Node {
+                    account_id: sender.clone(),
+                    ipv4: ip.clone(),
+                    country: country.clone(),
+                    expire: <frame_system::Module<T>>::block_number(),
+                };
+                T::Currency::reserve(&sender, BalanceOf::<T>::from(MIN_LOCK_AMT))?;
+                <DeviceInfo<T>>::insert(sender.clone(), node);
+            } else {
+                let mut node = <DeviceInfo<T>>::get(&sender);
+                if node.country != country {
+                    let _ = Self::try_remove_server(&sender);
+                    node.country = country.clone();
+                }
+                node.ipv4 = ip.clone();
+                node.expire = <frame_system::Module<T>>::block_number();
+                <DeviceInfo<T>>::insert(sender.clone(), node);
+            }
 
             Self::deposit_event(RawEvent::RegisterNode(sender, ip, country));
             Ok(())
@@ -104,12 +119,26 @@ decl_module! {
         }
 
         #[weight = 10_000]
-        pub fn register_server(origin, duration: T::BlockNumber) -> DispatchResult {
+        pub fn register_server(origin, duration: u8) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender),
                     "sender device needs register first");
-            let _ = Self::try_remove_server(&sender);
-            let _ = Self::try_add_server(&sender, duration);
+            ensure!(duration <= MAX_DURATION_DAYS, "duration is too big");
+            let block_num = (duration as u32) * DAY_TO_BLOCKNUM;
+            let _ = Self::try_add_server(&sender, T::BlockNumber::from(block_num));
+            Ok(())
+        }
+
+        #[weight = 10_000]
+        pub fn update_server(origin, duration: u8) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            ensure!(<DeviceInfo<T>>::contains_key(&sender),
+                    "sender device needs register first");
+            ensure!(duration <= MAX_DURATION_DAYS, "duration is too big");
+            let block_num = (duration as u32) * DAY_TO_BLOCKNUM;
+            let mut node = <DeviceInfo<T>>::get(&sender);
+            node.expire = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(block_num);
+            <DeviceInfo<T>>::insert(sender.clone(), node);
             Ok(())
         }
 
@@ -128,9 +157,7 @@ impl<T: Trait> Module<T> {
     // try to remove an account from country and region server lists if exists
     fn try_remove_server(sender: &T::AccountId) -> DispatchResult {
         let mut node = <DeviceInfo<T>>::get(&sender);
-        ensure!(RegionMap::contains_key(&node.country), "invalid country code");
         let first_region = RegionMap::get(&node.country);
-        ensure!(RegionMap::contains_key(&first_region), "invalid region code" );
         let sec_region = RegionMap::get(&first_region);
 
         // remove from country server list
@@ -167,9 +194,7 @@ impl<T: Trait> Module<T> {
     // try to add an account to a country's server list; no double add
     fn try_add_server(sender: &T::AccountId, duration: T::BlockNumber) -> DispatchResult {
         let mut node = <DeviceInfo<T>>::get(&sender);
-        ensure!(RegionMap::contains_key(&node.country), "invalid country code");
         let first_region = RegionMap::get(&node.country);
-        ensure!(RegionMap::contains_key(&first_region), "invalid region code");
         let sec_region = RegionMap::get(&first_region);
 
         // country registration
