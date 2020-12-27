@@ -4,8 +4,12 @@ use alloc::collections::btree_map::BTreeMap;
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Vec};
-use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
+use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
+};
 use frame_system::{self, ensure_signed};
+use log::error;
+use pallet_balances::MutableCurrency;
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_verify;
 use sp_runtime::traits::Zero;
@@ -33,7 +37,7 @@ macro_rules! log {
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-    type Currency: Currency<Self::AccountId>;
+    type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
 }
 
 // todo: this is import from runtime constant
@@ -43,17 +47,29 @@ const DAY_TO_BLOCKNUM: u32 = 24 * 3600 * 1000 / MILLISECS_PER_BLOCK;
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-type ChannelOf<T> =
-    Chan<<T as frame_system::Trait>::AccountId, <T as frame_system::Trait>::BlockNumber>;
+type ChannelOf<T> = Chan<
+    <T as frame_system::Trait>::AccountId,
+    <T as frame_system::Trait>::BlockNumber,
+    BalanceOf<T>,
+>;
 
 // struct to store the registered Device Informatin
 #[derive(Decode, Encode, Default)]
-pub struct Chan<AccountId, BlockNumber> {
+pub struct Chan<AccountId, BlockNumber, Balance> {
     sender: AccountId,
     receiver: AccountId,
+    balance: Balance,
     nonce: u64,
     opened: BlockNumber,
     expiration: BlockNumber,
+}
+
+// Errors inform users that something went wrong.
+decl_error! {
+    pub enum Error for Module<T: Trait> {
+        /// Error names should be descriptive.
+        NotEnoughBalance,
+    }
 }
 
 // events
@@ -64,7 +80,8 @@ decl_event!(
         BlockNumber = <T as frame_system::Trait>::BlockNumber,
         Balance = BalanceOf<T>,
     {
-        ChannelOpened(AccountId, AccountId, u64, BlockNumber, BlockNumber),
+        // ChannelOpened(sender,receiver,balance,nonce,openblock,expirationblock)
+        ChannelOpened(AccountId, AccountId, Balance, u64, BlockNumber, BlockNumber),
         ChannelClosed(AccountId, AccountId, BlockNumber),
         ClaimPayment(AccountId, AccountId, Balance),
     }
@@ -90,13 +107,15 @@ decl_storage! {
 // public interface for this runtime module
 decl_module! {
   pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+      // Errors must be initialized if they are used by the pallet.
+      type Error = Error<T>;
       // initialize the default event for this module
       fn deposit_event() = default;
 
       #[weight = 10_000]
       // duration is in units of second
       // TODO: reserve enough tokens for micropayment when open the channel
-      pub fn open_channel(origin, receiver: T::AccountId, duration: u32) -> DispatchResult {
+      pub fn open_channel(origin, receiver: T::AccountId, lock_amt: BalanceOf<T>, duration: u32) -> DispatchResult {
           let sender = ensure_signed(origin)?;
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
           ensure!(sender.clone() != receiver.clone(), "Channel should connect two different accounts");
@@ -107,14 +126,30 @@ decl_module! {
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
               receiver: receiver.clone(),
+              balance: lock_amt,
               nonce: nonce.clone(),
               opened: start_block.clone(),
               expiration: expiration.clone(),
           };
+          log!(info, "hehe1 free balance is: {:?}",T::Currency::free_balance(&sender));
+          let actual = T::Currency::mutate_account_balance(&sender,|account| {
+              if lock_amt > account.free {
+                  return Zero::zero();
+              } else {
+                  account.free -= lock_amt;
+              }
+              return lock_amt;
+          });
+          if actual < lock_amt {
+               error!("Not enough free balance");
+               Err(Error::<T>::NotEnoughBalance)?
+          }
+
+          log!(info, "hehe2 free balance is: {:?}",T::Currency::free_balance(&sender));
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
-          Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
-          //Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+1);
-          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,nonce,start_block,expiration));
+          //Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
+          Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+=1);
+          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,lock_amt,nonce,start_block,expiration));
           Ok(())
       }
 

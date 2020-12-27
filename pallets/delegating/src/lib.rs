@@ -284,24 +284,27 @@ impl<T: Trait> Module<T> {
 
     fn check_and_adjust_delegated_score() {
         for (delegator, credit_delegate_info) in DelegatedToValidators::<T>::iter() {
-                // check validators in CandidateValidators
-                let target_validators = credit_delegate_info.validators;
-                let mut target_is_changed = false;
-                let candidate_validators = <CandidateValidators<T>>::get().unwrap();
-                let next_target_validators: Vec<_> = target_validators.iter()
-                    .filter(|v|{
-                        if candidate_validators.contains(v) {
-                            true
-                        }else{
-                            target_is_changed = true;
-                            false
-                        }
-                    })
-                    .map(|v| (*v).clone())
-                    .collect();
+            // check validators in CandidateValidators
+            let target_validators = credit_delegate_info.validators;
+            let mut target_is_changed = false;
+            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+            let next_target_validators: Vec<_> = target_validators
+                .iter()
+                .filter(|v| {
+                    if candidate_validators.contains(v) {
+                        true
+                    } else {
+                        target_is_changed = true;
+                        false
+                    }
+                })
+                .map(|v| (*v).clone())
+                .collect();
 
             // score to low or target_validators not in <CandidateValidators<T>>
-            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false || next_target_validators.len() == 0 {
+            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false
+                || next_target_validators.len() == 0
+            {
                 Self::_undelegate(delegator.clone());
                 <DelegatedToValidators<T>>::remove(delegator.clone());
             } else {

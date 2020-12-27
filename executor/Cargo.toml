@@ -28,7 +28,7 @@ criterion = "0.3.0"
 frame-support = '2.0.0'
 frame-system = '2.0.0'
 node-testing = { version = "2.0.0", path = "../testing" }
-pallet-balances = '2.0.0'
+pallet-balances = { package = "pallet-balances", default-features = false, path = "../pallets/balances", version = "2.0.0" }
 pallet-contracts = '2.0.0'
 pallet-grandpa = '2.0.0'
 pallet-im-online = '2.0.0'

@@ -12,6 +12,7 @@ members = [
     'rpc',
     'rpc-client',
     'runtime',
+    'pallets/balances',
     'pallets/deeper-node',
     'pallets/micropayment',
     'pallets/credit',

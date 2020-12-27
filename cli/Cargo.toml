@@ -80,7 +80,7 @@ pallet-indices =  '2.0.0'
 pallet-timestamp = { version = "2.0.0", default-features = false}
 pallet-contracts =  '2.0.0'
 frame-system =  '2.0.0'
-pallet-balances =  '2.0.0'
+pallet-balances = { package = "pallet-balances", default-features = false, path = "../pallets/balances", version = "2.0.0" }
 pallet-transaction-payment =  '2.0.0'
 frame-support = { version = "2.0.0", default-features = false}
 pallet-im-online = { version = "2.0.0", default-features = false}
