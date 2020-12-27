@@ -940,7 +940,7 @@ impl Default for Forcing {
 // This should match directly with the semantic versions of the Rust crate.
 #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
 enum Releases {
-    V1_0_0Ancient,
+    V1_0_0,
     V2_0_0,
     V3_0_0,
     V4_0_0,
@@ -948,7 +948,7 @@ enum Releases {
 
 impl Default for Releases {
     fn default() -> Self {
-        Releases::V4_0_0
+        Releases::V1_0_0
     }
 }
 
@@ -1137,7 +1137,7 @@ decl_storage! {
         /// Storage version of the pallet.
         ///
         /// This is set to v3.0.0 for new networks.
-        StorageVersion build(|_: &GenesisConfig<T>| Releases::V4_0_0): Releases;
+        StorageVersion build(|_: &GenesisConfig<T>| Releases::V1_0_0): Releases;
     }
     add_extra_genesis {
         config(stakers):

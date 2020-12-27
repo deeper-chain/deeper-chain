@@ -24,7 +24,7 @@ type BalanceOf<T> =
 // struct to store the registered Device Informatin
 #[derive(Decode, Encode, Default)]
 pub struct Node<AccountId, BlockNumber> {
-    account_id: AccountId,
+    pub account_id: AccountId,
     ipv4: Vec<u8>, // IP will not be exposed in future version
     country: Vec<u8>,
     expire: BlockNumber,

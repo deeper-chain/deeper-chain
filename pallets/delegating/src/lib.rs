@@ -328,10 +328,10 @@ pub trait CreditDelegateInterface<AccountId, B, PB> {
     fn set_current_era_validators(validators: Vec<AccountId>);
     fn set_candidate_validators(candidate_validators: Vec<AccountId>);
 
-    /// 获取当前ERA accountid代理的总分
+    /// obtain the total delegated score of accountid in current era
     fn delegated_score_of_validator(validator: &AccountId) -> Option<u64>;
 
-    /// 获取当前ERA代理的总分
+    /// obtain the total delegated score of accountid in current era
     fn total_delegated_score() -> Option<u64>;
 
     fn get_total_validator_score(era_index: EraIndex, validator: AccountId) -> Option<u64>;
