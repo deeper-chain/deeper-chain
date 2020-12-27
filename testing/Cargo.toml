@@ -30,7 +30,7 @@ frame-support = '2.0.0'
 pallet-session = '2.0.0'
 pallet-society = '2.0.0'
 sp-runtime = '2.0.0'
-pallet-staking = '2.0.0'
+pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
 sc-executor = { version = "0.8.0", features = ["wasmtime"] }
 sp-consensus = '0.8.0'
 frame-system = '2.0.0'

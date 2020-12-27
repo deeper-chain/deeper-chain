@@ -27,7 +27,7 @@ pub mod pallet_multisig;
 pub mod pallet_proxy;
 pub mod pallet_scheduler;
 pub mod pallet_session;
-pub mod pallet_staking;
+pub mod pallet_staking_with_credit;
 pub mod pallet_timestamp;
 pub mod pallet_treasury;
 pub mod pallet_utility;

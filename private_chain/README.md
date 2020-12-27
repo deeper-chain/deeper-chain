@@ -212,31 +212,29 @@ Using Polkadot-JS Apps UI for key import is simple.
 
 ### Start a private testnet
 
-    Config and key generation
+Config and key generation
 
-    ```
-        # In private_chain folder:
-        # get template from "local" config
-       ../target/debug/e2-chain build-spec --disable-default-bootnode --chain local > first.json
-        # add new key into genesis config
-       ./chain_spec_gen.py -i first.json -o second.json
-        # or import existing key into genesis config
-       ./chain_spec_gen.py -i first.json -o second.json -k <loc_to_key_file>
-        # create raw config
-       ../target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
-    ```
+```
+# In private_chain folder:
+# get template from "local" config
+../target/debug/e2-chain build-spec --disable-default-bootnode --chain local > first.json
+# add new key into genesis config
+./chain_spec_gen.py -i first.json -o second.json
+# or import existing key into genesis config
+./chain_spec_gen.py -i first.json -o second.json -k <loc_to_key_file>
+# create raw config
+../target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
+```
 
-    Start a private network
+Start a private network
 
-    ```
-        # In e2-chain folder:
-        ./scripts/start_node.sh alice 0  # bootstrap node
-        ./scripts/start_node.sh bob 1 <peerID> # peerID copied from bootstrap node
-        ./scripts/start_node.sh chao 2 <peerID>
-
-        # insert babe and grandpa keys:
-        ./insert_key.sh 9933 alice.json alice_gran.json
-        ./insert_key.sh 9934 bob.json bob_gran.json
-        ./insert_key.sh 9935 chao.json chao_gran.json
-
-    ```
+```
+# In private_chain folder:
+./start_node.sh alice 0  # bootstrap node
+./start_node.sh bob 1 <peerID> # peerID copied from bootstrap node
+./start_node.sh chao 2 <peerID>
+# insert babe and grandpa keys:
+./insert_key.sh 9933 alice.json alice_gran.json
+./insert_key.sh 9934 bob.json bob_gran.json
+./insert_key.sh 9935 chao.json chao_gran.json
+```

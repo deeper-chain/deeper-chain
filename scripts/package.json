@@ -1,9 +1,9 @@
 {
     "dependencies": {
-        "@polkadot/api": "^2.6.1",
+        "@polkadot/api": "^2.9.1",
         "@polkadot/keyring": "^4.0.1",
-        "@polkadot/util": "^4.0.1",
-        "@polkadot/util-crypto": "^4.0.1",
+        "@polkadot/util": "^4.1.1",
+        "@polkadot/util-crypto": "^4.1.1",
         "await-to-js": "^2.1.1",
         "bn": "^1.0.5"
     }

@@ -9,9 +9,8 @@ file_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 cd "$file_path"
 
 #replace it to your program location, e.g. ../target/release/e2-chain
-program=./e2-chain
+program=../target/debug/e2-chain
 
-ip="138.68.229.14"
 port=$((30333+$2))
 ws_port=$((9944+$2))
 rpc_port=$((9933+$2))
@@ -22,23 +21,26 @@ rpc_port=$((9933+$2))
 if [ ! -z "$3" ]
 then 
     echo "starting node $1 ..."
+    echo "boot node :  $3 "
     $program  --base-path /tmp/$1 \
-    --chain ./customSpecRaw.json \
+    --chain customSpecRaw.json \
     --port $port \
     --ws-port $ws_port \
     --rpc-port $rpc_port \
     --validator \
     --rpc-methods=Unsafe \
+    --rpc-cors all \
     --name $1 \
-    --bootnodes /ip4/$ip/tcp/30333/p2p/$3
+    --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/$3
 else
     echo "starting seed node $1 ..."
     $program  --base-path /tmp/$1 \
-    --chain ./customSpecRaw.json \
+    --chain customSpecRaw.json \
     --port $port \
     --ws-port $ws_port \
     --rpc-port $rpc_port \
     --validator \
     --rpc-methods=Unsafe \
+    --rpc-cors all \
     --name $1
 fi

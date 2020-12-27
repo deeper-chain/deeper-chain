@@ -75,13 +75,13 @@ pub use frame_system::Call as SystemCall;
 #[cfg(any(feature = "std", test))]
 pub use pallet_balances::Call as BalancesCall;
 #[cfg(any(feature = "std", test))]
-pub use pallet_staking::StakerStatus;
+pub use pallet_staking_with_credit::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
-use impls::{Author, CurrencyToVoteHandler};
+use impls::{Author, CurrencyToNumberHandler, CurrencyToVoteHandler};
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -430,10 +430,25 @@ impl micropayment::Trait for Runtime {
     type Timestamp = Timestamp;
 }
 
+parameter_types! {
+    pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+}
+impl pallet_credit::Trait for Runtime {
+    type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
+    type CurrencyToVote = CurrencyToNumberHandler;
+}
+
+impl pallet_delegating::Trait for Runtime {
+    type Event = Event;
+    type CreditInterface = Credit;
+    type Currency = Balances;
+}
+
 impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
-    type ValidatorIdOf = pallet_staking::StashOf<Self>;
+    type ValidatorIdOf = pallet_staking_with_credit::StashOf<Self>;
     type ShouldEndSession = Babe;
     type NextSessionRotation = Babe;
     type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, Staking>;
@@ -444,8 +459,8 @@ impl pallet_session::Trait for Runtime {
 }
 
 impl pallet_session::historical::Trait for Runtime {
-    type FullIdentification = pallet_staking::Exposure<AccountId, Balance>;
-    type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
+    type FullIdentification = pallet_staking_with_credit::Exposure<AccountId, Balance>;
+    type FullIdentificationOf = pallet_staking_with_credit::ExposureOf<Runtime>;
 }
 
 pallet_staking_reward_curve::build! {
@@ -461,20 +476,27 @@ pallet_staking_reward_curve::build! {
 
 parameter_types! {
     pub const SessionsPerEra: sp_staking::SessionIndex = 6;
-    pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
-    pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
+    pub const BondingDuration: pallet_staking_with_credit::EraIndex = 24 * 28;
+    pub const SlashDeferDuration: pallet_staking_with_credit::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
     pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
     pub const MaxIterations: u32 = 10;
+    pub const RewardAdjustFactor: u128 = REWARD_ADJUST_FACTOR;
+    pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD;
+    pub const RewardAdjustPeriod: u32 = REWARD_ADJUST_PERIOD;
+    pub const BlockNumberPerEra: BlockNumber = BLOCKS_PER_ERA;
+    pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     // 0.05%. The higher the value, the more strict solution acceptance becomes.
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
 
-impl pallet_staking::Trait for Runtime {
+impl pallet_staking_with_credit::Trait for Runtime {
     type Currency = Balances;
+    type CreditDelegate = Delegating;
     type UnixTime = Timestamp;
     type CurrencyToVote = CurrencyToVoteHandler;
+    type CurrencyToNumber = CurrencyToNumberHandler;
     type RewardRemainder = Treasury;
     type Event = Event;
     type Slash = Treasury; // send the slashed funds to the treasury.
@@ -497,7 +519,12 @@ impl pallet_staking::Trait for Runtime {
     type MinSolutionScoreBump = MinSolutionScoreBump;
     type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
     type UnsignedPriority = StakingUnsignedPriority;
-    type WeightInfo = weights::pallet_staking::WeightInfo;
+    type WeightInfo = weights::pallet_staking_with_credit::WeightInfo;
+    type RewardAdjustFactor = RewardAdjustFactor;
+    type RewardPerBlock = RewardPerBlock;
+    type RewardAdjustPeriod = RewardAdjustPeriod;
+    type BlocksPerEra = BlockNumberPerEra;
+    type RemainderMiningReward = MiningReward;
 }
 
 parameter_types! {
@@ -937,7 +964,7 @@ construct_runtime!(
         Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
-        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
+        Staking: pallet_staking_with_credit::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
@@ -964,6 +991,8 @@ construct_runtime!(
 
         DeeperNode: deeper_node::{Module, Call, Storage, Event<T>},
         Micropayment: micropayment::{Module, Call, Storage, Event<T>},
+        Credit: pallet_credit::{Module, Call, Storage, Event<T>},
+        Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -1260,7 +1289,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_staking, Staking);
+            add_benchmark!(params, batches, pallet_staking_with_credit, Staking);
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_treasury, Treasury);

@@ -14,5 +14,8 @@ members = [
     'runtime',
     'pallets/deeper-node',
     'pallets/micropayment',
+    'pallets/credit',
+    'pallets/delegating',
+    'pallets/staking_with_credit',
     'testing',
 ]

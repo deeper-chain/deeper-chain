@@ -90,7 +90,7 @@ pub fn config_endowed(
                 ),
             ],
         }),
-        pallet_staking: Some(StakingConfig {
+        pallet_staking_with_credit: Some(StakingConfig {
             stakers: vec![
                 (dave(), alice(), 111 * DOLLARS, StakerStatus::Validator),
                 (eve(), bob(), 100 * DOLLARS, StakerStatus::Validator),
