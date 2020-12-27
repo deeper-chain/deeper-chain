@@ -16,7 +16,8 @@ const MIN_LOCK_AMT: u32 = 100;
 
 const MAX_DURATION_DAYS: u8 = 7;
 // todo: get this number from constants.rs
-const DAY_TO_BLOCKNUM: u32 = 14400;
+const MILLISECS_PER_BLOCK: u32 = 5000;
+const DAY_TO_BLOCKNUM: u32 = 24 * 3600 * 1000 / MILLISECS_PER_BLOCK;
 
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -165,7 +166,10 @@ impl<T: Trait> Module<T> {
         if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
             server_list.remove(index);
             <ServersByCountry<T>>::insert(node.country.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerCountryRemoved(sender.clone(), node.country.clone()));
+            Self::deposit_event(RawEvent::ServerCountryRemoved(
+                sender.clone(),
+                node.country.clone(),
+            ));
         }
 
         // remove from level 3 region server list
@@ -173,7 +177,10 @@ impl<T: Trait> Module<T> {
         if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
             server_list.remove(index);
             <ServersByRegion<T>>::insert(first_region.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerRegionRemoved(sender.clone(), first_region.clone()));
+            Self::deposit_event(RawEvent::ServerRegionRemoved(
+                sender.clone(),
+                first_region.clone(),
+            ));
         }
 
         // remove from level 2 region server list
@@ -181,7 +188,10 @@ impl<T: Trait> Module<T> {
         if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
             server_list.remove(index);
             <ServersByRegion<T>>::insert(sec_region.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerRegionRemoved(sender.clone(), sec_region.clone()));
+            Self::deposit_event(RawEvent::ServerRegionRemoved(
+                sender.clone(),
+                sec_region.clone(),
+            ));
         }
 
         // ensure consistency
@@ -200,29 +210,50 @@ impl<T: Trait> Module<T> {
         // country registration
         let mut server_list = <ServersByCountry<T>>::get(&node.country);
         for item in &server_list {
-            ensure!(*item != sender.clone(), "double country registration not allowed!");
+            ensure!(
+                *item != sender.clone(),
+                "double country registration not allowed!"
+            );
         }
         server_list.push(sender.clone());
         <ServersByCountry<T>>::insert(node.country.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerCountryAdded(sender.clone(), node.country.clone(), duration));
+        Self::deposit_event(RawEvent::ServerCountryAdded(
+            sender.clone(),
+            node.country.clone(),
+            duration,
+        ));
 
         // level 3 region registration
         server_list = <ServersByRegion<T>>::get(&first_region);
         for item in &server_list {
-            ensure!(*item != sender.clone(), "double level 3 region registration not allowed!");
+            ensure!(
+                *item != sender.clone(),
+                "double level 3 region registration not allowed!"
+            );
         }
         server_list.push(sender.clone());
         <ServersByRegion<T>>::insert(first_region.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerRegionAdded(sender.clone(), first_region.clone(), duration));
+        Self::deposit_event(RawEvent::ServerRegionAdded(
+            sender.clone(),
+            first_region.clone(),
+            duration,
+        ));
 
         // level 2 region registration
         server_list = <ServersByRegion<T>>::get(&sec_region);
         for item in &server_list {
-            ensure!(*item != sender.clone(), "double level 2 region registration not allowed!");
+            ensure!(
+                *item != sender.clone(),
+                "double level 2 region registration not allowed!"
+            );
         }
         server_list.push(sender.clone());
         <ServersByRegion<T>>::insert(sec_region.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerRegionAdded(sender.clone(), sec_region.clone(), duration));
+        Self::deposit_event(RawEvent::ServerRegionAdded(
+            sender.clone(),
+            sec_region.clone(),
+            duration,
+        ));
 
         // ensure consistency
         node.expire = <frame_system::Module<T>>::block_number() + duration;

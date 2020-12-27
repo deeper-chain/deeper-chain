@@ -3,12 +3,12 @@ extern crate alloc;
 use alloc::collections::btree_map::BTreeMap;
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Time, Vec};
+use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Vec};
 use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
 use frame_system::{self, ensure_signed};
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_verify;
-use sp_runtime::traits::{Saturating, Zero};
+use sp_runtime::traits::Zero;
 use sp_runtime::SaturatedConversion;
 
 #[cfg(test)]
@@ -34,25 +34,26 @@ pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId>;
-    type Timestamp: Time;
 }
+
+// todo: this is import from runtime constant
+const MILLISECS_PER_BLOCK: u32 = 5000;
+const DAY_TO_BLOCKNUM: u32 = 24 * 3600 * 1000 / MILLISECS_PER_BLOCK;
 
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
-type Moment<T> = <<T as Trait>::Timestamp as Time>::Moment;
-
-type ChannelOf<T> = Chan<<T as frame_system::Trait>::AccountId, Moment<T>>;
+type ChannelOf<T> =
+    Chan<<T as frame_system::Trait>::AccountId, <T as frame_system::Trait>::BlockNumber>;
 
 // struct to store the registered Device Informatin
-// TODO: use blockNumber instead of timestamp
 #[derive(Decode, Encode, Default)]
-pub struct Chan<AccountId, Timestamp> {
+pub struct Chan<AccountId, BlockNumber> {
     sender: AccountId,
     receiver: AccountId,
     nonce: u64,
-    opened: Timestamp,
-    expiration: Timestamp,
+    opened: BlockNumber,
+    expiration: BlockNumber,
 }
 
 // events
@@ -60,11 +61,11 @@ decl_event!(
     pub enum Event<T>
     where
         AccountId = <T as frame_system::Trait>::AccountId,
-        Timestamp = Moment<T>,
+        BlockNumber = <T as frame_system::Trait>::BlockNumber,
         Balance = BalanceOf<T>,
     {
-        ChannelOpened(AccountId, AccountId, u64, Timestamp, Timestamp),
-        ChannelClosed(AccountId, AccountId, Timestamp),
+        ChannelOpened(AccountId, AccountId, u64, BlockNumber, BlockNumber),
+        ChannelClosed(AccountId, AccountId, BlockNumber),
         ClaimPayment(AccountId, AccountId, Balance),
     }
 );
@@ -100,20 +101,20 @@ decl_module! {
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
           ensure!(sender.clone() != receiver.clone(), "Channel should connect two different accounts");
           let nonce = Nonce::<T>::get((sender.clone(),receiver.clone()));
-          let time = T::Timestamp::now();
-          let duration_in_mills = duration * 1000;
-          let expiration = time.saturating_add(duration_in_mills.into());
+          let start_block =  <frame_system::Module<T>>::block_number();
+          let duration_block = (duration as u32) * DAY_TO_BLOCKNUM;
+          let expiration = start_block + T::BlockNumber::from(duration_block);
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
               receiver: receiver.clone(),
               nonce: nonce.clone(),
-              opened: time.clone(),
+              opened: start_block.clone(),
               expiration: expiration.clone(),
           };
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
           Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
           //Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+1);
-          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,nonce, time,expiration));
+          Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,nonce,start_block,expiration));
           Ok(())
       }
 
@@ -125,8 +126,8 @@ decl_module! {
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
           Self::_close_channel(&sender, &receiver);
-          let time = T::Timestamp::now();
-          Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, time));
+          let end_block =  <frame_system::Module<T>>::block_number();
+          Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
           Ok(())
       }
 
@@ -139,10 +140,11 @@ decl_module! {
 
           // close channel if it expires
           let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
-          if chan.expiration < T::Timestamp::now() {
+          let current_block = <frame_system::Module<T>>::block_number();
+          if chan.expiration < current_block {
               Self::_close_channel(&sender, &receiver);
-              let time = T::Timestamp::now();
-              Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, time));
+              let end_block = current_block;
+              Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
               return Ok(());
           }
 
