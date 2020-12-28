@@ -1,5 +1,5 @@
 {
-    "TokenBalance": "u128",
+    "Balance": "u64",
     "Timestamp": "Moment",
     "BlockNumber": "u32",
     "Node": {
@@ -11,6 +11,7 @@
     "ChannelOf": {
         "sender": "AccountId",
         "receiver": "AccountId",
+        "balance": "Balance",
         "nonce": "u64",
         "opened": "BlockNumber",
         "expiration": "BlockNumber"

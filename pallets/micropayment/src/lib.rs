@@ -132,19 +132,10 @@ decl_module! {
               expiration: expiration.clone(),
           };
           log!(info, "hehe1 free balance is: {:?}",T::Currency::free_balance(&sender));
-          let actual = T::Currency::mutate_account_balance(&sender,|account| {
-              if lock_amt > account.free {
-                  return Zero::zero();
-              } else {
-                  account.free -= lock_amt;
-              }
-              return lock_amt;
-          });
-          if actual < lock_amt {
-               error!("Not enough free balance");
+          if !Self::take_from_account(&sender, lock_amt) {
+               error!("Not enough free balance to open channel");
                Err(Error::<T>::NotEnoughBalance)?
           }
-
           log!(info, "hehe2 free balance is: {:?}",T::Currency::free_balance(&sender));
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
           //Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
@@ -160,7 +151,11 @@ decl_module! {
           // only receiver can close the channel
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
+          let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
+          log!(info, "hehe3 free balance is: {:?}",T::Currency::free_balance(&sender));
+          Self::deposit_into_account(&sender, chan.balance);
           Self::_close_channel(&sender, &receiver);
+          log!(info, "hehe4 free balance is: {:?}",T::Currency::free_balance(&sender));
           let end_block =  <frame_system::Module<T>>::block_number();
           Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
           Ok(())
@@ -320,5 +315,27 @@ impl<T: Trait> Module<T> {
     // return the last blocknumber for an account join micropayment activity
     pub fn last_update_block(acc: T::AccountId) -> T::BlockNumber {
         LastUpdated::<T>::get(acc)
+    }
+
+    // TODO: take ExistentialDeposit into account
+    fn take_from_account(acc: &T::AccountId, amt: BalanceOf<T>) -> bool {
+        let actual = T::Currency::mutate_account_balance(acc, |account| {
+            if amt > account.free {
+                return Zero::zero();
+            } else {
+                account.free -= amt;
+            }
+            return amt;
+        });
+        if actual < amt {
+            return false;
+        }
+        true
+    }
+
+    fn deposit_into_account(acc: &T::AccountId, amt: BalanceOf<T>) {
+        T::Currency::mutate_account_balance(acc, |account| {
+            account.free += amt;
+        });
     }
 }
