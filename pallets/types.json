@@ -1,5 +1,5 @@
 {
-    "Balance": "u64",
+    "Balance": "u128",
     "Timestamp": "Moment",
     "BlockNumber": "u32",
     "Node": {
