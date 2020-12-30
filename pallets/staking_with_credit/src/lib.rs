@@ -341,7 +341,7 @@ pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_NOMINATIONS: usize = <CompactAssignments as VotingLimit>::LIMIT;
 
 /// credit socre to token factor
-pub const CREDIT_TO_TOKEN_FACTOR: u128 = 500_000_000_000_000;//1unit = e15 todo
+pub const CREDIT_TO_TOKEN_FACTOR: u128 = 500_000_000_000_000; //1unit = e15 todo
 
 pub(crate) const LOG_TARGET: &'static str = "staking";
 
@@ -2224,9 +2224,8 @@ impl<T: Trait> Module<T> {
         let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
             score as u128 * CREDIT_TO_TOKEN_FACTOR,
         );
-        let vote_weight = <T::CurrencyToVote as Convert<BalanceOf<T>, VoteWeight>>::convert(
-            credit_to_balance,
-        );
+        let vote_weight =
+            <T::CurrencyToVote as Convert<BalanceOf<T>, VoteWeight>>::convert(credit_to_balance);
         log!(
             info,
             "💸 PoC (validator {:?}  with: PoC vote weight {} and score {}).",

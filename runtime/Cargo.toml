@@ -45,7 +45,6 @@ frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false}
 pallet-authority-discovery = { version = "2.0.0", default-features = false}
 pallet-authorship = { version = "2.0.0", default-features = false}
 pallet-babe = { version = "2.0.0", default-features = false}
-pallet-balances = { version = "2.0.0", default-features = false}
 pallet-collective = { version = "2.0.0", default-features = false}
 pallet-contracts = { version = "2.0.0", default-features = false}
 pallet-contracts-primitives = { version = "2.0.0", default-features = false}
@@ -81,6 +80,7 @@ pallet-vesting = { version = "2.0.0", default-features = false}
 # local pallet dependencies
 deeper-node = {package = "pallet-deeper-node", default-features = false, path = "../pallets/deeper-node", version = "2.0.0"}
 micropayment = {package = "pallet-micropayment", default-features = false, path = "../pallets/micropayment", version = "2.0.0"}
+pallet-balances = {package = "pallet-balances", default-features = false, path = "../pallets/balances",  version = "2.0.0"}
 pallet-credit = {package = "pallet-credit", default-features = false, path = "../pallets/credit", version = "2.0.0"}
 pallet-delegating = {package = "pallet-delegating", default-features = false, path = "../pallets/delegating", version = "2.0.0"}
 pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
@@ -100,7 +100,6 @@ std = [
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
 	"pallet-babe/std",
-	"pallet-balances/std",
 	"sp-block-builder/std",
 	"codec/std",
 	"pallet-collective/std",
@@ -151,6 +150,7 @@ std = [
 	"pallet-credit/std",
 	"pallet-delegating/std",
 	"pallet-staking_with_credit/std",
+    "pallet-balances/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

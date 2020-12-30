@@ -1,6 +1,7 @@
 {
-    "TokenBalance": "u128",
+    "Balance": "u128",
     "Timestamp": "Moment",
+    "BlockNumber": "u32",
     "Node": {
         "account_id": "AccountId",
         "ipv4": "Vec<u8>",
@@ -8,14 +9,16 @@
         "expire": "BlockNumber"
     },
     "ChannelOf": {
-      "sender": "AccountId",
-      "receiver": "AccountId",
-      "opened": "Timestamp",
-      "expiration": "Timestamp"
+        "sender": "AccountId",
+        "receiver": "AccountId",
+        "balance": "Balance",
+        "nonce": "u64",
+        "opened": "BlockNumber",
+        "expiration": "BlockNumber"
     },
     "CreditDelegateInfo": {
-      "delegator": "AccountId",
-      "score": "u64",
-      "validators": "Vec<AccountId>"
+        "delegator": "AccountId",
+        "score": "u64",
+        "validators": "Vec<AccountId>"
     }
-  }
+}

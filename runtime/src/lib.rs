@@ -427,7 +427,6 @@ impl deeper_node::Trait for Runtime {
 impl micropayment::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type Timestamp = Timestamp;
 }
 
 parameter_types! {

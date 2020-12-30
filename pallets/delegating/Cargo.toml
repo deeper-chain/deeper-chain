@@ -63,7 +63,7 @@ version = '2.0.0'
 pallet-micropayment = {version = '2.0.0', default-features =false, path = "../micropayment"}
 
 [dev-dependencies]
-pallet-balances = { version = "2.0.0", default-features = false}
+pallet-balances = { version = "2.0.0", path = "../balances", default-features = false}
 pallet-timestamp = { version = "2.0.0", default-features = false}
 pallet-deeper-node = {version = '2.0.0', default-features =false, path = "../deeper-node"}
 

@@ -14,7 +14,7 @@ targets = ['x86_64-unknown-linux-gnu']
 [dev-dependencies]
 sp-io = { version = "2.0.0", default-features = false}
 sp-runtime = { version = "2.0.0", default-features = false}
-pallet-balances = { version = "2.0.0", default-features = false}
+pallet-balances = { version = "2.0.0", default-features = false, path = "../balances" }
 pallet-timestamp = { version = "2.0.0", default-features = false}
 
 

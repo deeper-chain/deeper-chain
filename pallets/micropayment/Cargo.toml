@@ -37,9 +37,13 @@ version = '2.0.0'
 default-features = false
 version = '2.0.0'
 
+[dependencies.log]
+default-features = false
+version = "0.4.11"
+
 [dependencies]
 blake2-rfc = { version = "0.2.18", default-features = false }
-pallet-balances = { version = "2.0.0", default-features = false}
+pallet-balances = { version = "2.0.0", default-features = false, path = "../balances"}
 pallet-timestamp = { version = "2.0.0", default-features = false}
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 
@@ -52,6 +56,10 @@ std = [
     'frame-support/std',
     'frame-system/std',
     'pallet-balances/std',
+    'sp-io/std',
+    'sp-runtime/std',
+    'sp-core/std',
+    'log/std',
     'pallet-timestamp/std',
     'node-primitives/std',
 ]
