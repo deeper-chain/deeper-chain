@@ -7,7 +7,7 @@ const BN = require("bn.js");
 //const serverHost = "wss://138.68.229.14:443";
 //const serverHost = "wss://10.168.98.1:443";
 const serverHost = "ws://127.0.0.1:9944";
-const DPR = 100000000000000;
+const DPR = new BN("1000000000000000", 10); // base = 1e15 according to frontend apps, in code it's 1e14, fix it later;
 
 const delay_promise = function (ms) {
     return new Promise(function (resolve, reject) {
@@ -114,9 +114,8 @@ function claimPayment(api, sender, receiver, nonceNum, sessionIdNum, amtNum) {
     return new Promise(function (resolve, reject) {
         let nonce = new BN(nonceNum.toString(), 10);
         let sessionId = new BN(sessionIdNum.toString(), 10);
-        let base = new BN("1000000000000000", 10); // base = 1e15
         let amount = new BN(amtNum.toString(), 10);
-        let amt = amount.mul(base);
+        let amt = amount.mul(DPR);
         let res = construct_byte_array(receiver.publicKey, nonce, sessionId, amt);
         let msg = blake2AsU8a(res);
         let signature = sender.sign(msg);
@@ -150,33 +149,37 @@ async function claimPayment_test(amtStr) {
 
     console.log(`before open channel`);
     await printFreeBalance(api, alice.address);
-    let amt = DPR * parseInt(amtStr);
-    console.log(`amtStr ${amtStr}, amt ${amt}`);
+    let amount = new BN(amtStr, 10);
+    let amt = amount.mul(DPR);
     await openChannel(api, alice, bob, amt, 7); // 7 days
 
     console.log(`after open channel`);
     await printFreeBalance(api, alice.address);
-
-    //    let nonce = 0;
-    //    let sessionId = 1;
-    //    let amt = 20;
-    //    await claimPayment(api, alice, bob, nonce, sessionId, amt);
-    //    await claimPayment(api, charlie, bob, nonce, sessionId, amt);
-    //    await claimPayment(api, alice, bob, nonce, sessionId + 1, amt);
-    //    await claimPayment(api, charlie, bob, nonce, sessionId + 1, amt);
-    //    await claimPayment(api, alice, bob, nonce, sessionId + 2, amt);
-    //    await claimPayment(api, charlie, bob, nonce, sessionId + 2, amt);
-    //    await claimPayment(api, alice, bob, nonce, sessionId + 3, amt);
-    //    await claimPayment(api, charlie, bob, nonce, sessionId + 3, amt);
+    await printFreeBalance(api, bob.address);
+    let nonce = 0;
+    let sessionId = 1;
+    let delta = 20;
+    let times = 7;
+    let i = 0;
+    for (i = 0; i < times; i++) {
+        await claimPayment(api, alice, bob, nonce, sessionId + i, delta);
+    }
+    //await claimPayment(api, charlie, bob, nonce, sessionId, delta);
+    //await claimPayment(api, alice, bob, nonce, sessionId + 2, delta);
+    console.log(`after claim payments ${delta * times}`);
+    await printFreeBalance(api, alice.address);
+    await printFreeBalance(api, bob.address);
 
     await closeChannel(api, alice, bob);
     console.log(`after close channel`);
     await printFreeBalance(api, alice.address);
+    await printFreeBalance(api, bob.address);
 }
 
 async function printFreeBalance(api, address) {
     let bal = await api.query.system.account(address);
-    let free = bal.data.free.toString(10) / DPR;
+    let amt = new BN(bal.data.free.toString(10), 10);
+    let free = amt / DPR;
     console.log(`free balance of ${address} is ${free}`);
 }
 
