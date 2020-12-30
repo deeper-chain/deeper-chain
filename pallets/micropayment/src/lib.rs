@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::collections::btree_map::BTreeMap;
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, ExistenceRequirement::AllowDeath, Vec};
+use frame_support::traits::{Currency, Vec};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 };
@@ -114,7 +114,6 @@ decl_module! {
 
       #[weight = 10_000]
       // duration is in units of second
-      // TODO: reserve enough tokens for micropayment when open the channel
       pub fn open_channel(origin, receiver: T::AccountId, lock_amt: BalanceOf<T>, duration: u32) -> DispatchResult {
           let sender = ensure_signed(origin)?;
           ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
@@ -131,12 +130,10 @@ decl_module! {
               opened: start_block.clone(),
               expiration: expiration.clone(),
           };
-          log!(info, "hehe1 free balance is: {:?}",T::Currency::free_balance(&sender));
           if !Self::take_from_account(&sender, lock_amt) {
                error!("Not enough free balance to open channel");
                Err(Error::<T>::NotEnoughBalance)?
           }
-          log!(info, "hehe2 free balance is: {:?}",T::Currency::free_balance(&sender));
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
           //Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
           Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+=1);
@@ -146,16 +143,13 @@ decl_module! {
 
       #[weight = 10_000]
       // make sure claim your payment before close the channel
-      // TODO: refund the rest of reserved tokens back to sender
       pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
           // only receiver can close the channel
           let receiver = ensure_signed(origin)?;
           ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
           let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
-          log!(info, "hehe3 free balance is: {:?}",T::Currency::free_balance(&sender));
           Self::deposit_into_account(&sender, chan.balance);
           Self::_close_channel(&sender, &receiver);
-          log!(info, "hehe4 free balance is: {:?}",T::Currency::free_balance(&sender));
           let end_block =  <frame_system::Module<T>>::block_number();
           Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
           Ok(())
@@ -169,7 +163,7 @@ decl_module! {
 
 
           // close channel if it expires
-          let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
+          let mut chan = Channel::<T>::get((sender.clone(),receiver.clone()));
           let current_block = <frame_system::Module<T>>::block_number();
           if chan.expiration < current_block {
               Self::_close_channel(&sender, &receiver);
@@ -180,10 +174,21 @@ decl_module! {
 
           ensure!(!SessionId::<T>::contains_key((sender.clone(),receiver.clone()),session_id), "SessionID already consumed");
           Self::verify_signature(&sender, &receiver, chan.nonce, session_id, amount, &signature)?;
-
-          T::Currency::transfer(&sender, &receiver, amount, AllowDeath)?; // TODO: check what is AllowDeath
           SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
 
+          if chan.balance < amount {
+               Self::deposit_into_account(&receiver, chan.balance);
+               // no balance in channel now, just close it
+               Self::_close_channel(&sender, &receiver);
+               let end_block =  <frame_system::Module<T>>::block_number();
+               Self::deposit_event(RawEvent::ChannelClosed(sender.clone(), receiver.clone(), end_block));
+               error!("Channel not enough balance");
+               Err(Error::<T>::NotEnoughBalance)?
+          }
+
+          chan.balance -= amount;
+          Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
+          Self::deposit_into_account(&receiver, amount);
           Self::update_micropayment_information(&sender, &receiver, amount);
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
           Ok(())
