@@ -1,6 +1,6 @@
-# e2 chain node
+# deeper chain node
 
-e2 chain node is built on top of Substrate v2.0.0 full node
+deeper chain node is built on top of Substrate v2.0.0 full node
 
 ## Local Development
 
