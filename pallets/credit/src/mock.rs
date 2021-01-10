@@ -60,7 +60,6 @@ pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 
 pub type Balances = pallet_balances::Module<Test>;
-pub type Timestamp = pallet_timestamp::Module<Test>;
 
 pub struct BalancesWeightInfo;
 impl pallet_balances::WeightInfo for BalancesWeightInfo {
@@ -108,35 +107,9 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = BalancesWeightInfo;
 }
 
-pub struct TimestampWeightInfo;
-impl pallet_timestamp::WeightInfo for TimestampWeightInfo {
-    // WARNING! Some components were not used: ["t"]
-    fn set() -> Weight {
-        (9133000 as Weight)
-            .saturating_add(DbWeight::get().reads(2 as Weight))
-            .saturating_add(DbWeight::get().writes(1 as Weight))
-    }
-    // WARNING! Some components were not used: ["t"]
-    fn on_finalize() -> Weight {
-        5915000 as Weight
-    }
-}
-
-parameter_types! {
-    pub const MinimumPeriod: Moment = 1500;
-}
-
-impl pallet_timestamp::Trait for Test {
-    type Moment = Moment;
-    type OnTimestampSet = ();
-    type MinimumPeriod = MinimumPeriod;
-    type WeightInfo = TimestampWeightInfo;
-}
-
 impl pallet_micropayment::Trait for Test {
     type Event = ();
     type Currency = Balances;
-    type Timestamp = Timestamp;
 }
 
 impl pallet_deeper_node::Trait for Test {
