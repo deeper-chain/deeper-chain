@@ -8,19 +8,27 @@ async function test() {
     const api = await ApiPromise.create({
         provider: wsProvider,
         types: {
-            TokenBalance: "u64",
+            Balance: "u128",
             Timestamp: "Moment",
+            BlockNumber: "u32",
             Node: {
                 account_id: "AccountId",
                 ipv4: "Vec<u8>",
-                country: "u16",
+                country: "Vec<u8>",
+                expire: "BlockNumber",
             },
             ChannelOf: {
                 sender: "AccountId",
                 receiver: "AccountId",
+                balance: "Balance",
                 nonce: "u64",
-                opened: "Timestamp",
-                expiration: "Timestamp",
+                opened: "BlockNumber",
+                expiration: "BlockNumber",
+            },
+            CreditDelegateInfo: {
+                delegator: "AccountId",
+                score: "u64",
+                validators: "Vec<AccountId>",
             },
         },
     });
@@ -32,7 +40,7 @@ async function test() {
     const { nonce } = await api.query.system.account(ALICE);
     //const recipient = "5GNkauE8C4HXo4UnvMCoCrzQKNhixD6oa4eDGYgiJKsDfFWM";
     const recipient = "5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1"; // chao_stash_test
-    const AMT = 11111;
+    const AMT = 111;
 
     console.log(`sending ${AMT} from  ${ALICE} to ${recipient} with nonce ${nonce}`);
 
