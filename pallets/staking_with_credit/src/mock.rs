@@ -48,6 +48,9 @@ pub(crate) type AccountIndex = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 
+pub type Delegating = pallet_delegating::Module<Test>;
+pub type Credit = pallet_credit::Module<Test>;
+
 /// Simple structure that exposes how u64 currency can be represented as... u64.
 pub struct CurrencyToVoteHandler;
 impl Convert<Balance, u64> for CurrencyToVoteHandler {
@@ -182,6 +185,10 @@ impl_outer_event! {
         balances<T>,
         session,
         staking<T>,
+        pallet_delegating<T>,
+        pallet_credit<T>,
+        pallet_micropayment<T>,
+        pallet_deeper_node<T>,
     }
 }
 
@@ -284,6 +291,31 @@ impl pallet_timestamp::Trait for Test {
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
 }
+
+impl pallet_micropayment::Trait for Test {
+    type Event = MetaEvent;
+    type Currency = Balances;
+}
+impl pallet_deeper_node::Trait for Test {
+    type Event = MetaEvent;
+    type Currency = Balances;
+}
+
+parameter_types! {
+    pub const BlocksPerEra: BlockNumber = 6 * 60 / (5 as BlockNumber);
+}
+impl pallet_credit::Trait for Test {
+    type Event = MetaEvent;
+    type BlocksPerEra = BlocksPerEra;
+    type CurrencyToVote = CurrencyToNumberHandler;
+}
+
+impl pallet_delegating::Trait for Test{
+    type Event = MetaEvent;
+    type CreditInterface = Credit;
+    type Currency = Balances;
+}
+
 pallet_staking_reward_curve::build! {
     const I_NPOS: PiecewiseLinear<'static> = curve!(
         min_inflation: 0_025_000,
@@ -300,6 +332,11 @@ parameter_types! {
     pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const UnsignedPriority: u64 = 1 << 20;
     pub const MinSolutionScoreBump: Perbill = Perbill::zero();
+    pub const RewardAdjustFactor: u128 = 77_760_000 / 7200;
+    pub const RewardPerBlock: u128 = 90_000_000_000_000_000;
+    pub const RewardAdjustPeriod: u32 = 4;
+    pub const BlockNumberPerEra: BlockNumber = 6 * 60 / (5 as BlockNumber);
+    pub const MiningReward: u128 = 6_000_000_000_000_000_000_000_000 / 7200;
 }
 
 thread_local! {
@@ -314,6 +351,20 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for RewardRemainderMock {
             *v.borrow_mut() += amount.peek();
         });
         drop(amount);
+    }
+}
+
+pub struct CurrencyToNumberHandler;
+
+impl Convert<Balance, u64> for CurrencyToNumberHandler {
+    fn convert(x: Balance) -> u64 {
+        x as u64
+    }
+}
+
+impl Convert<u128, Balance> for CurrencyToNumberHandler {
+    fn convert(x: u128) -> Balance {
+        x
     }
 }
 
@@ -339,6 +390,13 @@ impl Trait for Test {
     type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
     type UnsignedPriority = UnsignedPriority;
     type WeightInfo = ();
+    type CreditDelegate = Delegating;
+    type CurrencyToNumber = CurrencyToNumberHandler;
+    type RewardAdjustFactor = RewardAdjustFactor;
+    type RewardPerBlock = RewardPerBlock;
+    type RewardAdjustPeriod = RewardAdjustPeriod;
+    type BlocksPerEra = BlockNumberPerEra;
+    type RemainderMiningReward = MiningReward;
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
@@ -751,14 +809,15 @@ pub(crate) fn start_era(era_index: EraIndex) {
     assert_eq!(Staking::active_era().unwrap().index, era_index);
 }
 
-pub(crate) fn current_total_payout_for_duration(duration: u64) -> Balance {
-    inflation::compute_total_payout(
+pub(crate) fn current_total_payout_for_duration(_duration: u64) -> Balance {
+    Staking::calculate_era_payout(Staking::active_era().unwrap().index).0
+    /*inflation::compute_total_payout(
         <Test as Trait>::RewardCurve::get(),
         Staking::eras_total_stake(Staking::active_era().unwrap().index),
         Balances::total_issuance(),
         duration,
     )
-    .0
+    .0*/
 }
 
 pub(crate) fn reward_all_elected() {
