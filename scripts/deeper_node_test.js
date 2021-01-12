@@ -7,25 +7,28 @@ async function getApiInstance() {
   const api = await ApiPromise.create({
     provider: wsProvider,
     types: {
-      TokenBalance: "u64",
-      Timestamp: "Moment",
-      Node: {
-        account_id: "AccountId",
-        ipv4: "Vec<u8>",
-        country: "u16"
+      "Balance": "u128",
+      "Timestamp": "Moment",
+      "BlockNumber": "u32",
+      "Node": {
+        "account_id": "AccountId",
+        "ipv4": "Vec<u8>",
+        "country": "Vec<u8>",
+        "expire": "BlockNumber"
       },
-      ChannelOf: {
-        sender: "AccountId",
-        receiver: "AccountId",
-        nonce: "u64",
-        opened: "Timestamp",
-        expiration: "Timestamp"
+      "ChannelOf": {
+        "sender": "AccountId",
+        "receiver": "AccountId",
+        "balance": "Balance",
+        "nonce": "u64",
+        "opened": "BlockNumber",
+        "expiration": "BlockNumber"
       },
-      Erc20Token: {
-        name: "Vec<u8>",
-        ticker: "Vec<u8>",
-        total_supply: "T",
-      },
+      "CreditDelegateInfo": {
+        "delegator": "AccountId",
+        "score": "u64",
+        "validators": "Vec<AccountId>"
+      }
     },
   });
   return api;
@@ -72,9 +75,9 @@ async function unregisterDevice(api, signer, test, expect) {
     });
 }
 
-async function registerServer(api, signer, country, test, expected) {
+async function registerServer(api, signer, duration, test, expected) {
   const unsub = await api.tx.deeperNode
-    .registerServer(country)
+    .registerServer(duration)
     .signAndSend(signer, ({ events = [], status }) => {
       if (status.isFinalized) {
         events.forEach(({ phase, event: { data, method, section } }) => {
@@ -89,9 +92,9 @@ async function registerServer(api, signer, country, test, expected) {
     });
 }
 
-async function unregisterServer(api, signer, country, test, expected) {
+async function unregisterServer(api, signer, test, expected) {
   const unsub = await api.tx.deeperNode
-    .unregisterServer(country)
+    .unregisterServer()
     .signAndSend(signer, ({ events = [], status }) => {
       if (status.isFinalized) {
         events.forEach(({ phase, event: { data, method, section } }) => {
@@ -132,7 +135,12 @@ async function getServersByCountry(api, country, test, expected) {
 async function getDeviceInfo(api, accountId, test, expected) {
   const info = await api.query.deeperNode
     .deviceInfo(accountId);
-  if (info.country.words[0] == expected)
+  let countryStr = info.country.toString('16');
+  let country_code = '';
+  for (let j = 1; j < countryStr.length / 2; j++) {
+    country_code += String.fromCharCode(parseInt(countryStr.substring(2 * j, 2 * j + 2), 16));
+  }
+  if (country_code == expected)
     console.log("Test #" + test + ": getDeviceInfo, Success");
   else
     console.log("Test #" + test + ": getDeviceInfo didn't return " + expected + ", Failed");
@@ -154,8 +162,10 @@ async function getServerIP(api, accountId, test, expected) {
 }
 
 async function unit_test() {
-  let country = 100;
+  let country = "US";
   let ip = "192.168.100.113";
+  let duration = 1;
+  let invalid_duration = 10;
   const api = await getApiInstance();
   const keyring = new Keyring({ type: 'sr25519' });
   const signer = keyring.addFromUri('//Alice');
@@ -169,19 +179,19 @@ async function unit_test() {
 
   // error: #1, device is not registered
   console.log("Running test #1");
-  await registerServer(api, signer, country, 1, "Failed");
+  await registerServer(api, signer, duration, 1, "Failed");
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // error: #2, device is not registered and country
+  // error: #2, device is not registered with invalid duration
   console.log("Running test #2");
-  await registerServer(api, signer, 2048, 2, "Failed");
+  await registerServer(api, signer, invalid_duration, 2, "Failed");
 
   await new Promise(r => setTimeout(r, 30000));
 
   // error: #3, device is not registered
   console.log("Running test #3");
-  await unregisterServer(api, signer, 2048, 3, "Failed");
+  await unregisterServer(api, signer, 3, "Failed");
 
   await new Promise(r => setTimeout(r, 30000));
 
@@ -193,7 +203,7 @@ async function unit_test() {
 
   // error: #5, invalid country code
   console.log("Running test #5");
-  await registerDevice(api, signer, ip, 2048, 5, "Failed");
+  await registerDevice(api, signer, ip, "ZZ", 5, "Failed");
 
   await new Promise(r => setTimeout(r, 30000));
 
@@ -211,43 +221,49 @@ async function unit_test() {
 
   // success: #8, device is registered
   console.log("Running test #8");
-  await unregisterServer(api, signer, country, 8, "Success");
+  await unregisterServer(api, signer, 8, "Success");
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // success: #9, register device as a server
+  // error: #9, register device as a server with invalid duration
   console.log("Running test #9");
-  await registerServer(api, signer, country, 9, "Success");
+  await registerServer(api, signer, invalid_duration, 9, "Failed");
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // success: #10, Alice is in the server list
+  // success: #10, register device as a server
   console.log("Running test #10");
-  await getServersByCountry(api, country, 10, aliceAcct);
+  await registerServer(api, signer, duration, 10, "Success");
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // sucesss: #11, country code match
+  // success: #11, Alice is in the server list
   console.log("Running test #11");
-  await getDeviceInfo(api, aliceAcct, 11, country);
+  await getServersByCountry(api, country, 11, aliceAcct);
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // success: #12, ip match
+  // sucesss: #12, country code match
   console.log("Running test #12");
-  await getServerIP(api, aliceAcct, 12, ip);
+  await getDeviceInfo(api, aliceAcct, 12, country);
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // success: #13, remove device from server list
+  // success: #13, ip match
   console.log("Running test #13");
-  await unregisterServer(api, signer, country, 13, "Success");
+  await getServerIP(api, aliceAcct, 13, ip);
 
   await new Promise(r => setTimeout(r, 30000));
 
-  // success: #14, remove device from registration list
+  // success: #14, remove device from server list
   console.log("Running test #14");
-  await unregisterDevice(api, signer, 14, "Success");
+  await unregisterServer(api, signer, 14, "Success");
+
+  await new Promise(r => setTimeout(r, 30000));
+
+  // success: #15, remove device from registration list
+  console.log("Running test #15");
+  await unregisterDevice(api, signer, 15, "Success");
 
   await new Promise(r => setTimeout(r, 30000));
 }

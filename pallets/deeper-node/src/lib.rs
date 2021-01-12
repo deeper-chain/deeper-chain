@@ -5,6 +5,12 @@ use frame_support::traits::{Currency, ReservableCurrency, Vec};
 use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
 use frame_system::{self, ensure_signed};
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
