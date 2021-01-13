@@ -153,7 +153,9 @@ fn test_total_delegated_score() {
         assert_ok!(Delegating::delegate(Origin::signed(2), vec![4, 6, 8, 10]));
 
         // check total score
-        assert_eq!(Delegating::total_delegated_score(), Some(90 + 80));
+        Delegating::set_current_era(4);
+        Delegating::set_current_era_validators(vec![4, 6, 8, 10]);
+        assert_eq!(Delegating::total_delegated_score(4), Some(90 + 80));
     });
 }
 
@@ -161,7 +163,7 @@ fn test_total_delegated_score() {
 fn test_get_total_validator_score() {
     new_test_ext().execute_with(|| {
         Delegating::set_candidate_validators(vec![4, 6, 8, 10]);
-
+        
         let micropayment_vec1 = vec![(1, 90 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec1);
         assert_ok!(Delegating::delegate(Origin::signed(1), vec![4, 6, 8]));
@@ -171,7 +173,9 @@ fn test_get_total_validator_score() {
         assert_ok!(Delegating::delegate(Origin::signed(2), vec![4, 6, 8, 10]));
 
         // check total score
-        assert_eq!(Delegating::total_delegated_score(), Some(90 + 80));
+        Delegating::set_current_era(4);
+        Delegating::set_current_era_validators(vec![4, 6, 8, 10]);
+        assert_eq!(Delegating::total_delegated_score(4), Some(90 + 80));
 
         Delegating::set_current_era(5);
         Delegating::set_current_era_validators(vec![4, 6, 8]);
