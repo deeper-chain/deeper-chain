@@ -2794,7 +2794,7 @@ impl<T: Trait> Module<T> {
             ));
 
             // Set ending era reward.
-            let credit_score = T::CreditDelegate::total_delegated_score().unwrap_or(0);
+            let credit_score = T::CreditDelegate::total_delegated_score(active_era.index).unwrap_or(0);
             let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
                 credit_score as u128 * CREDIT_TO_TOKEN_FACTOR,
             );

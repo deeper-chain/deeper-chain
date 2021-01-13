@@ -335,7 +335,7 @@ pub trait CreditDelegateInterface<AccountId, B, PB> {
     fn delegated_score_of_validator(validator: &AccountId) -> Option<u64>;
 
     /// obtain the total delegated score of accountid in current era
-    fn total_delegated_score() -> Option<u64>;
+    fn total_delegated_score(era_index: EraIndex) -> Option<u64>;
 
     fn get_total_validator_score(era_index: EraIndex, validator: AccountId) -> Option<u64>;
 
@@ -396,17 +396,13 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         }
     }
 
-    fn total_delegated_score() -> Option<u64> {
+    fn total_delegated_score(era_index: EraIndex) -> Option<u64> {
         // check delegators credit score
         Self::check_and_adjust_delegated_score();
 
         let mut total_score: u64 = 0;
-        if let Some(candidate_validators) = <CandidateValidators<T>>::get() {
-            for candidate_validator in candidate_validators {
-                total_score = total_score.saturating_add(
-                    Self::delegated_score_of_validator(&candidate_validator).unwrap_or(0),
-                );
-            }
+        for (validator, _) in SelectedDelegators::<T>::iter_prefix(era_index) {
+            total_score += Self::get_total_validator_score(era_index, validator).unwrap_or(0);
         }
         Some(total_score)
     }

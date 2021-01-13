@@ -546,6 +546,7 @@ impl ExtBuilder {
                 (41, balance_factor * 2000),
                 (100, 2000 * balance_factor),
                 (101, 2000 * balance_factor),
+                (200, 2000 * balance_factor),
                 // This allows us to have a total_payout different from 0.
                 (999, 1_000_000_000_000),
             ],
