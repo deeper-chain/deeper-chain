@@ -4510,7 +4510,6 @@ version = "2.0.0"
 dependencies = [
  "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "node-primitives",
  "pallet-balances 2.0.0",
  "parity-scale-codec",
  "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",

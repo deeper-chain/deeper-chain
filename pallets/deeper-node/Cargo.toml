@@ -18,7 +18,6 @@ pallet-balances = { version = "2.0.0", default-features = false, path = "../bala
 codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '1.3.4'}
 frame-support = { version = "2.0.0", default-features = false}
 frame-system = { version = "2.0.0", default-features = false}
-node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 sp-runtime = { version = "2.0.0", default-features = false}
 
 [features]
@@ -27,6 +26,7 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'node-primitives/std',
     'sp-runtime/std',
+    'sp-io/std',
+    'pallet-balances/std',
 ]
