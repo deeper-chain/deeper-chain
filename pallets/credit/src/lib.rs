@@ -110,9 +110,9 @@ decl_module! {
 
         // init credit score
         #[weight = 10_000]
-        pub fn initialize_credit_extrinsic(origin, credit:u64) -> dispatch::DispatchResult{ //todo
+        pub fn initialize_credit(origin, credit:u64) -> dispatch::DispatchResult{ //todo
             let sender = ensure_signed(origin)?;
-            let res = Self::initialize_credit(sender.clone(), credit);
+            let res = Self::_initialize_credit(sender.clone(), credit);
             if res == true{
                 Self::deposit_event(RawEvent::CreditInitSuccess(sender, credit));
                 Ok(())
@@ -127,9 +127,9 @@ decl_module! {
 
         // clear credit score
         #[weight = 10_000]
-        pub fn kill_credit_extrinsic(origin) -> dispatch::DispatchResult{
+        pub fn kill_credit(origin) -> dispatch::DispatchResult{
             let sender = ensure_signed(origin)?;
-            let res = Self::kill_credit(sender.clone());
+            let res = Self::_kill_credit(sender.clone());
             if res == true {
                 Self::deposit_event(RawEvent::KillCreditSuccess(sender));
                 Ok(())
@@ -165,7 +165,7 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     /// init credit score
-    pub fn initialize_credit(account_id: T::AccountId, score: u64) -> bool {
+    pub fn _initialize_credit(account_id: T::AccountId, score: u64) -> bool {
         // in general, a user start from initial score = 0; with coupon, a user can
         // start from initial score at most CREDIT_INIT_SCORE
         // TODO: i.e. add coupon verification for non-zero init credit score
@@ -183,7 +183,7 @@ impl<T: Trait> Module<T> {
             if size > 1 {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
-                let score_delta: u64 = balance_num / MICROPAYMENT_TO_CREDIT_SCORE_FACTOR;
+                let score_delta: u64 = balance_num.checked_div(MICROPAYMENT_TO_CREDIT_SCORE_FACTOR).unwrap_or(0);
                 log!(
                     info,
                     "server_id: {:?}, balance_num: {},score_delta:{}",
@@ -214,7 +214,7 @@ impl<T: Trait> Module<T> {
             }
         } else {
             // uninitialize case
-            Self::initialize_credit(account_id.clone(), 0);
+            Self::_initialize_credit(account_id.clone(), 0);
             Self::_update_credit(account_id, score)
         }
     }
@@ -248,7 +248,7 @@ impl<T: Trait> Module<T> {
     }
 
     /// clear credit
-    fn kill_credit(account_id: T::AccountId) -> bool {
+    fn _kill_credit(account_id: T::AccountId) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             UserCredit::<T>::remove(account_id);
             true
