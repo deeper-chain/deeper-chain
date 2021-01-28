@@ -69,6 +69,7 @@ decl_error! {
     pub enum Error for Module<T: Trait> {
         /// Error names should be descriptive.
         NotEnoughBalance,
+        ChannelNotExist,
     }
 }
 
@@ -84,6 +85,7 @@ decl_event!(
         ChannelOpened(AccountId, AccountId, Balance, u64, BlockNumber, BlockNumber),
         ChannelClosed(AccountId, AccountId, BlockNumber),
         ClaimPayment(AccountId, AccountId, Balance),
+        BalanceAdded(AccountId, AccountId, Balance, BlockNumber),
     }
 );
 
@@ -135,7 +137,6 @@ decl_module! {
                Err(Error::<T>::NotEnoughBalance)?
           }
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
-          //Nonce::<T>::insert((sender.clone(),receiver.clone()),nonce+1);
           Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+=1);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,lock_amt,nonce,start_block,expiration));
           Ok(())
@@ -152,6 +153,22 @@ decl_module! {
           Self::_close_channel(&sender, &receiver);
           let end_block =  <frame_system::Module<T>>::block_number();
           Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
+          Ok(())
+      }
+
+      #[weight = 10_000]
+      pub fn add_balance(origin, receiver: T::AccountId, amt: BalanceOf<T>) -> DispatchResult {
+          let sender = ensure_signed(origin)?;
+          ensure!(Channel::<T>::contains_key((&sender, &receiver)), Error::<T>::ChannelNotExist);
+          if !Self::take_from_account(&sender, amt) {
+               error!("Not enough free balance to add into channel");
+               Err(Error::<T>::NotEnoughBalance)?
+          }
+          Channel::<T>::mutate((&sender, &receiver),|c|{
+              (*c).balance += amt;
+          });
+          let end_block = <frame_system::Module<T>>::block_number();
+          Self::deposit_event(RawEvent::BalanceAdded(sender, receiver, amt, end_block));
           Ok(())
       }
 
