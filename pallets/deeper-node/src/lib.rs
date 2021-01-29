@@ -2,7 +2,9 @@
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::traits::{Currency, ReservableCurrency, Vec};
-use frame_support::{decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure};
+use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
+};
 use frame_system::{self, ensure_signed};
 
 #[cfg(test)]
@@ -35,6 +37,26 @@ pub struct Node<AccountId, BlockNumber> {
     ipv4: Vec<u8>, // IP will not be exposed in future version
     country: Vec<u8>,
     expire: BlockNumber,
+}
+
+// error messages
+decl_error! {
+    pub enum Error for Module<T: Trait> {
+        /// double country registration is not allowed
+        DoubleCountryRegistration,
+        /// double level 2 region registration is not allowed
+        DoubleLevel2Registration,
+        /// double level 3 region registration is not allowed
+        DoubleLevel3Registration,
+        /// invalid country or region code
+        InvalidCode,
+        /// invalid ip address
+        InvalidIP,
+        /// device is not registered
+        DeviceNotRegister,
+        /// channel duration is too large
+        DurationOverflow,
+    }
 }
 
 // events
@@ -75,6 +97,8 @@ decl_storage! {
 // public interface for this runtime module
 decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        // Errors must be initialized if they are used by the pallet.
+        type Error = Error<T>;
         // initialize the default event for this module
         fn deposit_event() = default;
 
@@ -87,8 +111,8 @@ decl_module! {
                 RegionMapInit::put(true);
             }
 
-            ensure!(RegionMap::contains_key(&country), "invalid country code");
-            ensure!(ip.len() <= 256, "invalid ip address");
+            ensure!(RegionMap::contains_key(&country), Error::<T>::InvalidCode);
+            ensure!(ip.len() <= 256, Error::<T>::InvalidIP);
 
             if !<DeviceInfo<T>>::contains_key(&sender) {
                 let node = Node {
@@ -117,7 +141,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn unregister_device(origin) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-            ensure!(<DeviceInfo<T>>::contains_key(&sender), "device not registered!");
+            ensure!(<DeviceInfo<T>>::contains_key(&sender), Error::<T>::DeviceNotRegister);
             let _ = Self::try_remove_server(&sender);
             <DeviceInfo<T>>::remove(sender.clone());
             T::Currency::unreserve(&sender,BalanceOf::<T>::from(MIN_LOCK_AMT));
@@ -129,8 +153,8 @@ decl_module! {
         pub fn register_server(origin, duration: u8) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender),
-                    "sender device needs register first");
-            ensure!(duration <= MAX_DURATION_DAYS, "duration is too big");
+                    Error::<T>::DeviceNotRegister);
+            ensure!(duration <= MAX_DURATION_DAYS, Error::<T>::DurationOverflow);
             let block_num = (duration as u32) * DAY_TO_BLOCKNUM;
             let _ = Self::try_add_server(&sender, T::BlockNumber::from(block_num));
             Ok(())
@@ -140,8 +164,8 @@ decl_module! {
         pub fn update_server(origin, duration: u8) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender),
-                    "sender device needs register first");
-            ensure!(duration <= MAX_DURATION_DAYS, "duration is too big");
+                    Error::<T>::DeviceNotRegister);
+            ensure!(duration <= MAX_DURATION_DAYS, Error::<T>::DurationOverflow);
             let block_num = (duration as u32) * DAY_TO_BLOCKNUM;
             let mut node = <DeviceInfo<T>>::get(&sender);
             node.expire = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(block_num);
@@ -153,7 +177,7 @@ decl_module! {
         pub fn unregister_server(origin) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender),
-                    "sender device needs register first");
+                    Error::<T>::DeviceNotRegister);
             let _ = Self::try_remove_server(&sender);
             Ok(())
         }
@@ -218,7 +242,7 @@ impl<T: Trait> Module<T> {
         for item in &server_list {
             ensure!(
                 *item != sender.clone(),
-                "double country registration not allowed!"
+                Error::<T>::DoubleCountryRegistration
             );
         }
         server_list.push(sender.clone());
@@ -234,7 +258,7 @@ impl<T: Trait> Module<T> {
         for item in &server_list {
             ensure!(
                 *item != sender.clone(),
-                "double level 3 region registration not allowed!"
+                Error::<T>::DoubleLevel3Registration
             );
         }
         server_list.push(sender.clone());
@@ -250,7 +274,7 @@ impl<T: Trait> Module<T> {
         for item in &server_list {
             ensure!(
                 *item != sender.clone(),
-                "double level 2 region registration not allowed!"
+                Error::<T>::DoubleLevel2Registration
             );
         }
         server_list.push(sender.clone());

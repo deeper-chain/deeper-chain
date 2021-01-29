@@ -67,8 +67,9 @@ pub struct Chan<AccountId, BlockNumber, Balance> {
 // Errors inform users that something went wrong.
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        /// Error names should be descriptive.
+        /// Not enough balance
         NotEnoughBalance,
+        /// Micropayment channel not exist
         ChannelNotExist,
     }
 }
