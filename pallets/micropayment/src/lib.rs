@@ -138,7 +138,6 @@ decl_module! {
                Err(Error::<T>::NotEnoughBalance)?
           }
           Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
-          Nonce::<T>::mutate((sender.clone(),receiver.clone()),|v|*v+=1);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,lock_amt,nonce,start_block,expiration));
           Ok(())
       }
@@ -220,6 +219,7 @@ impl<T: Trait> Module<T> {
         // remove all the sesson_ids of given channel
         SessionId::<T>::remove_prefix((sender.clone(), receiver.clone()));
         Channel::<T>::remove((sender.clone(), receiver.clone()));
+        Nonce::<T>::mutate((sender.clone(), receiver.clone()), |v| *v += 1);
     }
 
     // verify signature, signature is on hash of |receiver_addr|nonce|session_id|amount|
