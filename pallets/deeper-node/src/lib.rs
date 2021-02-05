@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, ReservableCurrency, Vec};
+use frame_support::traits::{Currency, ReservableCurrency, Vec, Get};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 };
@@ -13,19 +13,20 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub type IpV4 = Vec<u8>;
+pub type CountryRegion = Vec<u8>;
+pub type Duration = u8;
+
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+
+    type MinLockAmt: Get<u32>;
+    type MaxDurationDays: Get<u8>;
+    type DayToBlocknum: Get<u32>;
 }
-
-const MIN_LOCK_AMT: u32 = 100;
-
-const MAX_DURATION_DAYS: u8 = 7;
-// todo: get this number from constants.rs
-const MILLISECS_PER_BLOCK: u32 = 5000;
-const DAY_TO_BLOCKNUM: u32 = 24 * 3600 * 1000 / MILLISECS_PER_BLOCK;
 
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -34,8 +35,8 @@ type BalanceOf<T> =
 #[derive(Decode, Encode, Default)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
-    ipv4: Vec<u8>, // IP will not be exposed in future version
-    country: Vec<u8>,
+    ipv4: IpV4, // IP will not be exposed in future version
+    country: CountryRegion,
     expire: BlockNumber,
 }
 
@@ -56,6 +57,8 @@ decl_error! {
         DeviceNotRegister,
         /// channel duration is too large
         DurationOverflow,
+        /// region map is not initialized
+        InvalidRegionMap,
     }
 }
 
@@ -68,18 +71,18 @@ decl_event!(
         //Balance = BalanceOf<T>,
     {
         // register node: AccountId, ipv4, country
-        RegisterNode(AccountId, Vec<u8>, Vec<u8>),
+        RegisterNode(AccountId, IpV4, CountryRegion),
         UnregisterNode(AccountId),
 
         // add account into a country's server list
-        ServerCountryAdded(AccountId, Vec<u8>, BlockNumber),
+        ServerCountryAdded(AccountId, CountryRegion, BlockNumber, u64),
         // remove account from a country's server list
-        ServerCountryRemoved(AccountId, Vec<u8>),
+        ServerCountryRemoved(AccountId, CountryRegion),
 
         // add account into a region's server list
-        ServerRegionAdded(AccountId, Vec<u8>, BlockNumber),
+        ServerRegionAdded(AccountId, CountryRegion, BlockNumber, u64),
         // remove account from a region's server list
-        ServerRegionRemoved(AccountId, Vec<u8>),
+        ServerRegionRemoved(AccountId, CountryRegion),
     }
 );
 
@@ -87,10 +90,13 @@ decl_event!(
 decl_storage! {
     trait Store for Module<T: Trait> as Device {
         RegionMapInit get(fn get_map_init): bool = false;
-        RegionMap get(fn get_region_code): map hasher(identity) Vec<u8> => Vec<u8>;
-        DeviceInfo get(fn get_device_info): map hasher(identity) T::AccountId => Node<T::AccountId, T::BlockNumber>;
-        ServersByCountry get(fn get_servers_by_country): map hasher(identity) Vec<u8> => Vec<T::AccountId>;
-        ServersByRegion get(fn get_servers_by_region): map hasher(identity) Vec<u8> => Vec<T::AccountId>;
+        RegionMap get(fn get_region_code): map hasher(blake2_128_concat) CountryRegion => CountryRegion;
+        DeviceInfo get(fn get_device_info): map hasher(blake2_128_concat) T::AccountId => Node<T::AccountId, T::BlockNumber>;
+        ServersByCountry get(fn get_servers_by_country): map hasher(blake2_128_concat) CountryRegion => Vec<T::AccountId>;
+        ServersByRegion get(fn get_servers_by_region): map hasher(blake2_128_concat) CountryRegion => Vec<T::AccountId>;
+    }
+    add_extra_genesis {
+        build(|_| Module::<T>::setup_region_map())
     }
 }
 
@@ -102,15 +108,14 @@ decl_module! {
         // initialize the default event for this module
         fn deposit_event() = default;
 
+        const MinLockAmt: u32 = T::MinLockAmt::get();
+        const MaxDurationDays: u8 = T::MaxDurationDays::get();
+        const DayToBlocknum: u32 = T::DayToBlocknum::get();
+
         #[weight = 10_000]
-        pub fn register_device(origin, ip: Vec<u8>, country: Vec<u8>) -> DispatchResult {
+        pub fn register_device(origin, ip: IpV4, country: CountryRegion) -> DispatchResult {
             let sender = ensure_signed(origin)?;
-
-            if RegionMapInit::get() == false {
-                let _ = Self::setup_region_map();
-                RegionMapInit::put(true);
-            }
-
+            ensure!(RegionMapInit::get() == true, Error::<T>::InvalidRegionMap);
             ensure!(RegionMap::contains_key(&country), Error::<T>::InvalidCode);
             ensure!(ip.len() <= 256, Error::<T>::InvalidIP);
 
@@ -121,8 +126,8 @@ decl_module! {
                     country: country.clone(),
                     expire: <frame_system::Module<T>>::block_number(),
                 };
-                T::Currency::reserve(&sender, BalanceOf::<T>::from(MIN_LOCK_AMT))?;
-                <DeviceInfo<T>>::insert(sender.clone(), node);
+                T::Currency::reserve(&sender, BalanceOf::<T>::from(T::MinLockAmt::get()))?;
+                <DeviceInfo<T>>::insert(&sender, node);
             } else {
                 let mut node = <DeviceInfo<T>>::get(&sender);
                 if node.country != country {
@@ -131,7 +136,7 @@ decl_module! {
                 }
                 node.ipv4 = ip.clone();
                 node.expire = <frame_system::Module<T>>::block_number();
-                <DeviceInfo<T>>::insert(sender.clone(), node);
+                <DeviceInfo<T>>::insert(&sender, node);
             }
 
             Self::deposit_event(RawEvent::RegisterNode(sender, ip, country));
@@ -143,33 +148,33 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender), Error::<T>::DeviceNotRegister);
             let _ = Self::try_remove_server(&sender);
-            <DeviceInfo<T>>::remove(sender.clone());
-            T::Currency::unreserve(&sender,BalanceOf::<T>::from(MIN_LOCK_AMT));
+            <DeviceInfo<T>>::remove(&sender);
+            T::Currency::unreserve(&sender,BalanceOf::<T>::from(T::MinLockAmt::get()));
             Self::deposit_event(RawEvent::UnregisterNode(sender));
             Ok(())
         }
 
         #[weight = 10_000]
-        pub fn register_server(origin, duration: u8) -> DispatchResult {
+        pub fn register_server(origin, duration: Duration) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender),
                     Error::<T>::DeviceNotRegister);
-            ensure!(duration <= MAX_DURATION_DAYS, Error::<T>::DurationOverflow);
-            let block_num = (duration as u32) * DAY_TO_BLOCKNUM;
+            ensure!(duration <= T::MaxDurationDays::get(), Error::<T>::DurationOverflow);
+            let block_num = (duration as u32) * T::DayToBlocknum::get();
             let _ = Self::try_add_server(&sender, T::BlockNumber::from(block_num));
             Ok(())
         }
 
         #[weight = 10_000]
-        pub fn update_server(origin, duration: u8) -> DispatchResult {
+        pub fn update_server(origin, duration: Duration) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(<DeviceInfo<T>>::contains_key(&sender),
                     Error::<T>::DeviceNotRegister);
-            ensure!(duration <= MAX_DURATION_DAYS, Error::<T>::DurationOverflow);
-            let block_num = (duration as u32) * DAY_TO_BLOCKNUM;
+            ensure!(duration <= T::MaxDurationDays::get(), Error::<T>::DurationOverflow);
+            let block_num = (duration as u32) * T::DayToBlocknum::get();
             let mut node = <DeviceInfo<T>>::get(&sender);
             node.expire = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(block_num);
-            <DeviceInfo<T>>::insert(sender.clone(), node);
+            <DeviceInfo<T>>::insert(&sender, node);
             Ok(())
         }
 
@@ -193,40 +198,19 @@ impl<T: Trait> Module<T> {
 
         // remove from country server list
         let mut server_list = <ServersByCountry<T>>::get(&node.country);
-        if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
-            server_list.remove(index);
-            <ServersByCountry<T>>::insert(node.country.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerCountryRemoved(
-                sender.clone(),
-                node.country.clone(),
-            ));
-        }
+        let _ = Self::country_list_remove(&mut server_list, &sender, &node.country);
 
         // remove from level 3 region server list
         server_list = <ServersByRegion<T>>::get(&first_region);
-        if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
-            server_list.remove(index);
-            <ServersByRegion<T>>::insert(first_region.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerRegionRemoved(
-                sender.clone(),
-                first_region.clone(),
-            ));
-        }
+        let _ = Self::region_list_remove(&mut server_list, &sender, &first_region);
 
         // remove from level 2 region server list
         server_list = <ServersByRegion<T>>::get(&sec_region);
-        if let Some(index) = server_list.iter().position(|x| *x == sender.clone()) {
-            server_list.remove(index);
-            <ServersByRegion<T>>::insert(sec_region.clone(), server_list);
-            Self::deposit_event(RawEvent::ServerRegionRemoved(
-                sender.clone(),
-                sec_region.clone(),
-            ));
-        }
+        let _ = Self::region_list_remove(&mut server_list, &sender, &sec_region);
 
         // ensure consistency
         node.expire = <frame_system::Module<T>>::block_number();
-        <DeviceInfo<T>>::insert(sender.clone(), node);
+        <DeviceInfo<T>>::insert(&sender, node);
 
         Ok(())
     }
@@ -239,60 +223,97 @@ impl<T: Trait> Module<T> {
 
         // country registration
         let mut server_list = <ServersByCountry<T>>::get(&node.country);
-        for item in &server_list {
-            ensure!(
-                *item != sender.clone(),
-                Error::<T>::DoubleCountryRegistration
-            );
+        if Self::country_list_insert(&mut server_list, &sender, &node.country, &duration) == false {
+            Err(Error::<T>::DoubleCountryRegistration)?
         }
-        server_list.push(sender.clone());
-        <ServersByCountry<T>>::insert(node.country.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerCountryAdded(
-            sender.clone(),
-            node.country.clone(),
-            duration,
-        ));
 
         // level 3 region registration
         server_list = <ServersByRegion<T>>::get(&first_region);
-        for item in &server_list {
-            ensure!(
-                *item != sender.clone(),
-                Error::<T>::DoubleLevel3Registration
-            );
+        if Self::region_list_insert(&mut server_list, &sender, &first_region, &duration) == false {
+            Err(Error::<T>::DoubleLevel3Registration)?
         }
-        server_list.push(sender.clone());
-        <ServersByRegion<T>>::insert(first_region.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerRegionAdded(
-            sender.clone(),
-            first_region.clone(),
-            duration,
-        ));
 
         // level 2 region registration
         server_list = <ServersByRegion<T>>::get(&sec_region);
-        for item in &server_list {
-            ensure!(
-                *item != sender.clone(),
-                Error::<T>::DoubleLevel2Registration
-            );
+        if Self::region_list_insert(&mut server_list, &sender, &sec_region, &duration) == false {
+            Err(Error::<T>::DoubleLevel2Registration)?
         }
-        server_list.push(sender.clone());
-        <ServersByRegion<T>>::insert(sec_region.clone(), server_list);
-        Self::deposit_event(RawEvent::ServerRegionAdded(
-            sender.clone(),
-            sec_region.clone(),
-            duration,
-        ));
 
         // ensure consistency
         node.expire = <frame_system::Module<T>>::block_number() + duration;
-        <DeviceInfo<T>>::insert(sender.clone(), node);
+        <DeviceInfo<T>>::insert(&sender, node);
 
         Ok(())
     }
 
-    pub fn setup_region_map() -> DispatchResult {
+
+    fn country_list_insert(servers: &mut Vec<T::AccountId>, account: &T::AccountId, country: &CountryRegion, duration: &T::BlockNumber) -> bool {
+        match servers.binary_search(&account) {
+            Ok(_) => false,
+            Err(index) => {
+                servers.insert(index, account.clone());
+                <ServersByCountry<T>>::insert(&country, servers);
+                Self::deposit_event(RawEvent::ServerCountryAdded(
+                    account.clone(),
+                    country.clone(),
+                    duration.clone(),
+                    index as u64,
+                ));
+                true
+            }
+        }
+
+    }
+
+    fn country_list_remove(servers: &mut Vec<T::AccountId>, account: &T::AccountId, country: &CountryRegion) -> bool {
+        match servers.binary_search(&account) {
+            Ok(index) => {
+                servers.remove(index);
+                <ServersByCountry<T>>::insert(&country, servers);
+                Self::deposit_event(RawEvent::ServerCountryRemoved(
+                    account.clone(),
+                    country.clone(),
+                ));
+                true
+            },
+            Err(_) => false,
+        }
+    }
+
+    fn region_list_insert(servers: &mut Vec<T::AccountId>, account: &T::AccountId, region: &CountryRegion, duration: &T::BlockNumber) -> bool {
+        match servers.binary_search(&account) {
+            Ok(_) => false,
+            Err(index) => {
+                servers.insert(index, account.clone());
+                <ServersByRegion<T>>::insert(&region, servers);
+                Self::deposit_event(RawEvent::ServerRegionAdded(
+                    account.clone(),
+                    region.clone(),
+                    duration.clone(),
+                    index as u64,
+                ));
+                true
+            }
+        }
+
+    }
+
+    fn region_list_remove(servers: &mut Vec<T::AccountId>, account: &T::AccountId, region: &CountryRegion) -> bool {
+        match servers.binary_search(&account) {
+            Ok(index) => {
+                servers.remove(index);
+                <ServersByRegion<T>>::insert(&region, servers);
+                Self::deposit_event(RawEvent::ServerRegionRemoved(
+                    account.clone(),
+                    region.clone(),
+                ));
+                true
+            },
+            Err(_) => false,
+        }
+    }
+
+    fn setup_region_map() {
         /* level 1 */
         /*
         RegionMap::insert("AMER".as_bytes().to_vec(), "ROOT".as_bytes().to_vec());
@@ -598,7 +619,7 @@ impl<T: Trait> Module<T> {
         RegionMap::insert("NR".as_bytes().to_vec(), "OCN".as_bytes().to_vec());
         RegionMap::insert("PW".as_bytes().to_vec(), "OCN".as_bytes().to_vec());
 
-        Ok(())
+        RegionMapInit::put(true);
     }
 
     pub fn registered_devices() -> Vec<Node<T::AccountId, T::BlockNumber>> {

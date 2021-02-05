@@ -422,6 +422,15 @@ parameter_types! {
 impl deeper_node::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationDays = MaxDurationDays;
+    type DayToBlocknum = DayToBlocknum;
+}
+
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
 }
 
 impl micropayment::Trait for Runtime {
@@ -432,6 +441,7 @@ impl micropayment::Trait for Runtime {
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 }
+
 impl pallet_credit::Trait for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
@@ -988,7 +998,7 @@ construct_runtime!(
         Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
         Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 
-        DeeperNode: deeper_node::{Module, Call, Storage, Event<T>},
+        DeeperNode: deeper_node::{Module, Call, Config, Storage, Event<T>},
         Micropayment: micropayment::{Module, Call, Storage, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},

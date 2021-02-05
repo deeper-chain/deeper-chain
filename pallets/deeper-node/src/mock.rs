@@ -83,9 +83,20 @@ pub type Balances = pallet_balances::Module<Test>;
 impl Trait for Test {
     type Event = ();
     type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationDays = MaxDurationDays;
+    type DayToBlocknum = DayToBlocknum;
 }
 
 pub type DeeperNode = Module<Test>;
+
+pub const MILLISECS_PER_BLOCK: u32 = 5000;
+
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
+}
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut storage = frame_system::GenesisConfig::default()
