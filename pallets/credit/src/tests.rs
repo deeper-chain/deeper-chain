@@ -8,23 +8,23 @@ use sp_runtime::DispatchError;
 fn fn_initialize_credit_extrinsic() {
     new_test_ext().execute_with(|| {
         // initialize credit [0-29]
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 29));
+        assert_ok!(Credit::initialize_credit(Origin::signed(1), 29));
         assert_eq!(Credit::get_user_credit(1), Some(0));
 
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(2), 0));
+        assert_ok!(Credit::initialize_credit(Origin::signed(2), 0));
         assert_eq!(Credit::get_user_credit(2), Some(0));
 
         // initialize credit 30
         assert_eq!(
-            Credit::initialize_credit_extrinsic(Origin::signed(3), 30),
+            Credit::initialize_credit(Origin::signed(3), 30),
             Err(DispatchError::Other("CreditInitFailed",))
         );
 
         // initialize credit twice
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(6), 29));
+        assert_ok!(Credit::initialize_credit(Origin::signed(6), 29));
         assert_eq!(Credit::get_user_credit(6), Some(0));
         assert_eq!(
-            Credit::initialize_credit_extrinsic(Origin::signed(6), 50),
+            Credit::initialize_credit(Origin::signed(6), 50),
             Err(DispatchError::Other("CreditInitFailed",))
         );
     });
@@ -34,12 +34,12 @@ fn fn_initialize_credit_extrinsic() {
 fn fn_kill_credit_extrinsic() {
     new_test_ext().execute_with(|| {
         // kill credit normal
-        assert_ok!(Credit::initialize_credit_extrinsic(Origin::signed(1), 29));
-        assert_ok!(Credit::kill_credit_extrinsic(Origin::signed(1)));
+        assert_ok!(Credit::initialize_credit(Origin::signed(1), 29));
+        assert_ok!(Credit::kill_credit(Origin::signed(1)));
 
         // uninitialized account
         assert_eq!(
-            Credit::kill_credit_extrinsic(Origin::signed(2)),
+            Credit::kill_credit(Origin::signed(2)),
             Err(DispatchError::Other("KillCreditFailed",))
         );
     });
@@ -49,15 +49,15 @@ fn fn_kill_credit_extrinsic() {
 fn fn_initialize_credit() {
     new_test_ext().execute_with(|| {
         // [0,29]
-        assert_eq!(Credit::initialize_credit(1, 0), true);
-        assert_eq!(Credit::initialize_credit(2, 29), true);
+        assert_eq!(Credit::_initialize_credit(1, 0), true);
+        assert_eq!(Credit::_initialize_credit(2, 29), true);
 
         // 30
-        assert_eq!(Credit::initialize_credit(3, 30), false);
+        assert_eq!(Credit::_initialize_credit(3, 30), false);
 
         // initialize twice
-        assert_eq!(Credit::initialize_credit(4, 29), true);
-        assert_eq!(Credit::initialize_credit(4, 28), false);
+        assert_eq!(Credit::_initialize_credit(4, 29), true);
+        assert_eq!(Credit::_initialize_credit(4, 28), false);
     });
 }
 
@@ -97,11 +97,11 @@ fn fn_attenuate_credit() {
 fn fn_kill_credit() {
     new_test_ext().execute_with(|| {
         // kill successfully
-        assert_eq!(Credit::initialize_credit(1, 29), true);
-        assert_eq!(Credit::kill_credit(1), true);
+        assert_eq!(Credit::_initialize_credit(1, 29), true);
+        assert_eq!(Credit::_kill_credit(1), true);
 
         // uninitialized account
-        assert_eq!(Credit::kill_credit(2), false);
+        assert_eq!(Credit::_kill_credit(2), false);
     });
 }
 
