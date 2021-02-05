@@ -299,6 +299,7 @@ pub fn testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         }),
+        deeper_node: Some(Default::default()),
         pallet_staking_with_credit: Some(StakingConfig {
             validator_count: initial_authorities.len() as u32 * 2,
             minimum_validator_count: initial_authorities.len() as u32,

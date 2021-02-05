@@ -2,10 +2,13 @@
     "Balance": "u128",
     "Timestamp": "Moment",
     "BlockNumber": "u32",
+    "IpV4": "Vec<u8>",
+    "CountryRegion": "Vec<u8>",
+    "Duration": "u8",
     "Node": {
         "account_id": "AccountId",
-        "ipv4": "Vec<u8>",
-        "country": "Vec<u8>",
+        "ipv4": "IpV4",
+        "country": "CountryRegion",
         "expire": "BlockNumber"
     },
     "ChannelOf": {

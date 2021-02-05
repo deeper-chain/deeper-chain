@@ -1,4 +1,4 @@
-use crate::mock::*;
+use crate::{mock::*, Error};
 use frame_support::assert_ok;
 //use frame_system::ensure_signed;
 use sp_runtime::DispatchError;
@@ -6,6 +6,7 @@ use sp_runtime::DispatchError;
 #[test]
 fn fn_register_device() {
     new_test_ext().execute_with(|| {
+        DeeperNode::setup_region_map();
         // register device
         assert_ok!(DeeperNode::register_device(
             Origin::signed(1),
@@ -19,7 +20,7 @@ fn fn_register_device() {
         // register device with invalid ip (length > 256)
         assert_eq!(
             DeeperNode::register_device(Origin::signed(2), vec![1; 257], "US".as_bytes().to_vec()),
-            Err(DispatchError::Other("invalid ip address",))
+            Err(DispatchError::from(Error::<Test>::InvalidIP))
         );
 
         // register device with invalid country code
@@ -29,7 +30,7 @@ fn fn_register_device() {
                 vec![1, 2, 3, 4],
                 "ZZ".as_bytes().to_vec()
             ),
-            Err(DispatchError::Other("invalid country code",))
+            Err(DispatchError::from(Error::<Test>::InvalidCode))
         );
 
         // register device twice
@@ -52,6 +53,7 @@ fn fn_register_device() {
 #[test]
 fn fn_unregister_device() {
     new_test_ext().execute_with(|| {
+        DeeperNode::setup_region_map();
         // unregister a registered device
         assert_ok!(DeeperNode::register_device(
             Origin::signed(1),
@@ -63,7 +65,7 @@ fn fn_unregister_device() {
         // unregister an unregistered device
         assert_eq!(
             DeeperNode::unregister_device(Origin::signed(2)),
-            Err(DispatchError::Other("device not registered!",))
+            Err(DispatchError::from(Error::<Test>::DeviceNotRegister))
         );
     });
 }
@@ -71,6 +73,7 @@ fn fn_unregister_device() {
 #[test]
 fn fn_register_server() {
     new_test_ext().execute_with(|| {
+        DeeperNode::setup_region_map();
         // register device, then register server
         assert_ok!(DeeperNode::register_device(
             Origin::signed(1),
@@ -85,7 +88,7 @@ fn fn_register_server() {
         // register server before register device
         assert_eq!(
             DeeperNode::register_server(Origin::signed(2), 1),
-            Err(DispatchError::Other("sender device needs register first",))
+            Err(DispatchError::from(Error::<Test>::DeviceNotRegister))
         );
 
         // register server with invalid duration
@@ -96,7 +99,7 @@ fn fn_register_server() {
         ));
         assert_eq!(
             DeeperNode::register_server(Origin::signed(3), 8),
-            Err(DispatchError::Other("duration is too big",))
+            Err(DispatchError::from(Error::<Test>::DurationOverflow))
         );
     });
 }
@@ -104,6 +107,7 @@ fn fn_register_server() {
 #[test]
 fn fn_unregister_server() {
     new_test_ext().execute_with(|| {
+        DeeperNode::setup_region_map();
         // register device, then register server
         assert_ok!(DeeperNode::register_device(
             Origin::signed(1),
@@ -116,7 +120,7 @@ fn fn_unregister_server() {
         // register server before register device
         assert_eq!(
             DeeperNode::unregister_server(Origin::signed(2)),
-            Err(DispatchError::Other("sender device needs register first",))
+            Err(DispatchError::from(Error::<Test>::DeviceNotRegister))
         );
     });
 }
@@ -124,6 +128,7 @@ fn fn_unregister_server() {
 #[test]
 fn fn_update_server() {
     new_test_ext().execute_with(|| {
+        DeeperNode::setup_region_map();
         // register device, then update server
         assert_ok!(DeeperNode::register_device(
             Origin::signed(1),
@@ -135,7 +140,7 @@ fn fn_update_server() {
         // update server before register device
         assert_eq!(
             DeeperNode::update_server(Origin::signed(2), 1),
-            Err(DispatchError::Other("sender device needs register first",))
+            Err(DispatchError::from(Error::<Test>::DeviceNotRegister))
         );
 
         // register device, then register server
@@ -146,7 +151,7 @@ fn fn_update_server() {
         ));
         assert_eq!(
             DeeperNode::update_server(Origin::signed(3), 10),
-            Err(DispatchError::Other("duration is too big",))
+            Err(DispatchError::from(Error::<Test>::DurationOverflow))
         );
     });
 }
