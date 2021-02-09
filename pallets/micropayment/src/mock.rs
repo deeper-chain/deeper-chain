@@ -91,7 +91,7 @@ impl pallet_balances::WeightInfo for BalancesWeightInfo {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: Balance = 100_000_000_000;
+    pub const ExistentialDeposit: Balance = 100;
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
     pub const MaxLocks: u32 = 50;
@@ -116,10 +116,16 @@ pub type Micropayment = Module<Test>;
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    system::GenesisConfig::default()
+    let mut storage = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
-        .unwrap()
-        .into()
+        .unwrap();
+    let _ = pallet_balances::GenesisConfig::<Test> {
+        balances: vec![(1, 500), (2, 500), (3, 500), (4, 500), (5, 500)],
+    }
+    .assimilate_storage(&mut storage);
+
+    let ext = sp_io::TestExternalities::from(storage);
+    ext
 }
 
 pub fn run_to_block(n: u64) {

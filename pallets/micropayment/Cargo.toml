@@ -47,8 +47,6 @@ pallet-balances = { version = "2.0.0", default-features = false, path = "../bala
 pallet-timestamp = { version = "2.0.0", default-features = false}
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 
-
-
 [features]
 default = ['std']
 std = [
