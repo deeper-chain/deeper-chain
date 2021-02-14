@@ -6,7 +6,7 @@ use frame_support::traits::{Get, Vec};
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
-use frame_system::ensure_signed;
+use frame_system::{ensure_root, ensure_signed};
 use sp_runtime::traits::{Convert, Saturating};
 
 #[cfg(test)]
@@ -85,11 +85,14 @@ decl_event!(
 // Errors inform users that something went wrong.
 decl_error! {
     pub enum Error for Module<T: Trait> {
-        /// Error names should be descriptive.
+        /// Value not exists
         NoneValue,
-        /// Errors should have helpful documentation associated with them.
+        /// Storage overflow
         StorageOverflow,
+        /// account credit already initialized
         AlreadyInitilized,
+        /// invalid credit score
+        InvalidScore,
     }
 }
 
@@ -140,8 +143,28 @@ decl_module! {
                 ))
             }
 
-
         }
+
+        #[weight = 10_000]
+        pub fn set_credit(
+               origin,
+               account_id: T::AccountId,
+               score: u64,
+           ) -> dispatch::DispatchResult {
+               ensure_root(origin)?;
+               if score > MAX_CREDIT_SCORE {
+                   Err(Error::<T>::InvalidScore)?
+               }
+               if !UserCredit::<T>::contains_key(&account_id) {
+                    UserCredit::<T>::insert(&account_id, score);
+               } else {
+                   UserCredit::<T>::mutate(account_id, |s| {
+                      *s = Some(score);
+                   });
+               }
+               Ok(())
+        }
+
 
         // Anything that needs to be done at the end of the block.
         fn on_finalize(_n: T::BlockNumber) {
@@ -183,7 +206,9 @@ impl<T: Trait> Module<T> {
             if size > 1 {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
-                let score_delta: u64 = balance_num.checked_div(MICROPAYMENT_TO_CREDIT_SCORE_FACTOR).unwrap_or(0);
+                let score_delta: u64 = balance_num
+                    .checked_div(MICROPAYMENT_TO_CREDIT_SCORE_FACTOR)
+                    .unwrap_or(0);
                 log!(
                     info,
                     "server_id: {:?}, balance_num: {},score_delta:{}",
