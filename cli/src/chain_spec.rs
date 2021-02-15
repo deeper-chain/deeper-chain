@@ -48,6 +48,41 @@ type AccountPublic = <Signature as Verify>::Signer;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
+/// get root key for deeper testnet
+pub fn testnet_root_key() -> AccountId {
+    hex![
+        // 5CHu6tEdZWEnGHa928e9CfsXnL5otzRg4xGwqCscXDrcH38t
+        "0a100b6bf4e332cac53b98af0003bbbf6984d2171bbe30a05a97bb28f5212119"
+    ]
+    .into()
+}
+
+/// return other authority keys as default validators
+pub fn other_authority_keys() -> Vec<(
+    AccountId,
+    AccountId,
+    GrandpaId,
+    BabeId,
+    ImOnlineId,
+    AuthorityDiscoveryId,
+)> {
+    vec![(
+        // 5C4xaPznTFhENxuEqbuRMLh7aKuV3Jb8neRFLtV6dRM6xPs1 (subkey inspect "$secret"//stash)
+        hex!["00318cd4222158188862345576dd3289f9252e7fc88e131a0389abc478eb0d04"].into(),
+        // 5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r (subkey inspect "$secret")
+        hex!["a0e08139ee1f24272219986fc52a261f8ffd1dafa2d56630c3bf767d5c35403e"].into(),
+        // 5Dn5C9AuoTz4P73rtMu1rkHmqBmjPxfQp7Y2RxUM7d2ee1vW  (subkey inspect --scheme ed25519
+        // "$secret")
+        hex!["4bc91e16db1b7d9d7fdc910e79af7e792ac40f6bad17e7c139e34f59c3a6d65c"].unchecked_into(),
+        // 5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r (subkey inspect "$secret")
+        hex!["a0e08139ee1f24272219986fc52a261f8ffd1dafa2d56630c3bf767d5c35403e"].unchecked_into(),
+        // 5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r (subkey inspect "$secret")
+        hex!["a0e08139ee1f24272219986fc52a261f8ffd1dafa2d56630c3bf767d5c35403e"].unchecked_into(),
+        // 5FheDAbf9FhvCpHjSBSuuXspb5nwJwSUSrfnJMvDvhGrTh1r (subkey inspect "$secret")
+        hex!["a0e08139ee1f24272219986fc52a261f8ffd1dafa2d56630c3bf767d5c35403e"].unchecked_into(),
+    )]
+}
+
 /// Node `ChainSpec` extensions.
 ///
 /// Additional parameters for some Substrate core modules,
@@ -266,6 +301,9 @@ pub fn testnet_genesis(
             get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
             get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
             get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+            testnet_root_key(),
+            other_authority_keys()[0].0.clone(),
+            other_authority_keys()[0].1.clone(),
         ]
     });
     let num_endowed_accounts = endowed_accounts.len();
@@ -388,8 +426,9 @@ fn local_testnet_genesis() -> GenesisConfig {
         vec![
             authority_keys_from_seed("Alice"),
             authority_keys_from_seed("Bob"),
+            other_authority_keys()[0].clone(),
         ],
-        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        testnet_root_key(),
         None,
         false,
     )
