@@ -120,7 +120,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 260,
+    spec_version: 1,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -442,10 +442,26 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
+// pallet_credit
+parameter_types! {
+    pub const CreditInitScore: u64 = 55;
+    pub const MaxCreditScore: u64 = 800;
+    pub const CreditScoreAttenuationLowerBound: u64 = 40;
+    pub const CreditScoreAttenuationStep: u64 = 5;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
+}
+
 impl pallet_credit::Trait for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type CurrencyToVote = CurrencyToNumberHandler;
+    type CreditInitScore = CreditInitScore;
+    type MaxCreditScore = MaxCreditScore;
+    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
+    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
+    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
+    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
 }
 
 impl pallet_delegating::Trait for Runtime {

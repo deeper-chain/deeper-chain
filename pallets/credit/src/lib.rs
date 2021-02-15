@@ -15,21 +15,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-/// Credit score threshold
-pub const MAX_CREDIT_SCORE: u64 = 100;
-/// Credit init score
-pub const CREDIT_INIT_SCORE: u64 = 30;
-/// credit score attenuation low threshold
-pub const CREDIT_SCORE_ATTENUATION_LOWER_BOUND: u64 = 40;
-/// credit score attenuation step
-pub const CREDIT_SCORE_ATTENUATION_STEP: u64 = 5;
-
-/// Credit score delegated threshold
-pub const CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD: u64 = 60;
-
-/// mircropayment size to credit factor:
-pub const MICROPAYMENT_TO_CREDIT_SCORE_FACTOR: u64 = 1_000_000_000_000_000;
-
 //pub type BlockNumber = u32;
 
 pub(crate) const LOG_TARGET: &'static str = "credit";
@@ -55,6 +40,19 @@ pub trait Trait:
     type BlocksPerEra: Get<<Self as frame_system::Trait>::BlockNumber>;
     //type Currency: Currency<Self::AccountId>;
     type CurrencyToVote: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
+
+    /// Credit init score
+    type CreditInitScore: Get<u64>;
+    /// Credit score threshold
+    type MaxCreditScore: Get<u64>;
+    /// credit score attenuation low threshold
+    type CreditScoreAttenuationLowerBound: Get<u64>;
+    /// credit score attenuation step
+    type CreditScoreAttenuationStep: Get<u64>;
+    /// Credit score delegated threshold
+    type CreditScoreDelegatedPermitThreshold: Get<u64>;
+    /// mircropayment size to credit factor:
+    type MicropaymentToCreditScoreFactor: Get<u64>;
 }
 
 pub type BalanceOf<T> = <<T as pallet_micropayment::Trait>::Currency as Currency<
@@ -64,7 +62,7 @@ pub type BalanceOf<T> = <<T as pallet_micropayment::Trait>::Currency as Currency
 decl_storage! {
     trait Store for Module<T: Trait> as Credit {
         //store credit score using map
-        pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
+       pub UserCredit get(fn get_user_credit): map hasher(blake2_128_concat) T::AccountId => Option<u64>;
     }
 }
 
@@ -152,7 +150,7 @@ decl_module! {
                score: u64,
            ) -> dispatch::DispatchResult {
                ensure_root(origin)?;
-               if score > MAX_CREDIT_SCORE {
+               if score > T::MaxCreditScore::get() {
                    Err(Error::<T>::InvalidScore)?
                }
                if !UserCredit::<T>::contains_key(&account_id) {
@@ -190,9 +188,9 @@ impl<T: Trait> Module<T> {
     /// init credit score
     pub fn _initialize_credit(account_id: T::AccountId, score: u64) -> bool {
         // in general, a user start from initial score = 0; with coupon, a user can
-        // start from initial score at most CREDIT_INIT_SCORE
+        // start from initial score at most CreditInitScore
         // TODO: i.e. add coupon verification for non-zero init credit score
-        if !UserCredit::<T>::contains_key(account_id.clone()) && score < CREDIT_INIT_SCORE {
+        if !UserCredit::<T>::contains_key(account_id.clone()) && score < T::CreditInitScore::get() {
             UserCredit::<T>::insert(account_id.clone(), 0);
             true
         } else {
@@ -207,7 +205,7 @@ impl<T: Trait> Module<T> {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
                 let score_delta: u64 = balance_num
-                    .checked_div(MICROPAYMENT_TO_CREDIT_SCORE_FACTOR)
+                    .checked_div(T::MicropaymentToCreditScoreFactor::get())
                     .unwrap_or(0);
                 log!(
                     info,
@@ -228,8 +226,8 @@ impl<T: Trait> Module<T> {
     fn _update_credit(account_id: T::AccountId, score: u64) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             match score {
-                score if score > MAX_CREDIT_SCORE => {
-                    UserCredit::<T>::insert(account_id, MAX_CREDIT_SCORE);
+                score if score > T::MaxCreditScore::get() => {
+                    UserCredit::<T>::insert(account_id, T::MaxCreditScore::get());
                     true
                 }
                 _ => {
@@ -260,11 +258,13 @@ impl<T: Trait> Module<T> {
     /// inner: attenuate credit score
     fn _attenuate_credit(account_id: T::AccountId) -> bool {
         let score = Self::get_user_credit(account_id.clone()).unwrap_or(0);
-        if score > CREDIT_SCORE_ATTENUATION_LOWER_BOUND {
-            if score - CREDIT_SCORE_ATTENUATION_STEP >= CREDIT_SCORE_ATTENUATION_LOWER_BOUND {
-                UserCredit::<T>::insert(account_id, score - CREDIT_SCORE_ATTENUATION_STEP);
+        if score > T::CreditScoreAttenuationLowerBound::get() {
+            if score - T::CreditScoreAttenuationStep::get()
+                >= T::CreditScoreAttenuationLowerBound::get()
+            {
+                UserCredit::<T>::insert(account_id, score - T::CreditScoreAttenuationStep::get());
             } else {
-                UserCredit::<T>::insert(account_id, CREDIT_SCORE_ATTENUATION_LOWER_BOUND);
+                UserCredit::<T>::insert(account_id, T::CreditScoreAttenuationLowerBound::get());
             }
             true
         } else {
@@ -298,7 +298,7 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     fn pass_threshold(account_id: T::AccountId, _ttype: u8) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             if let Some(score) = UserCredit::<T>::get(account_id) {
-                if score > CREDIT_SCORE_DELEGATED_PERMIT_THRESHOLD {
+                if score > T::CreditScoreDelegatedPermitThreshold::get() {
                     return true;
                 }
             }
@@ -311,7 +311,7 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             UserCredit::<T>::mutate(account_id, |s| {
                 let score = (*s).unwrap_or(0);
-                *s = Some(score.saturating_sub(CREDIT_SCORE_ATTENUATION_STEP * 2))
+                *s = Some(score.saturating_sub(T::CreditScoreAttenuationStep::get() * 2))
             });
         }
     }
