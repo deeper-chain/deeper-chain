@@ -299,7 +299,7 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     fn pass_threshold(account_id: T::AccountId, _ttype: u8) -> bool {
         if UserCredit::<T>::contains_key(account_id.clone()) {
             if let Some(score) = UserCredit::<T>::get(account_id) {
-                if score > T::CreditScoreDelegatedPermitThreshold::get() {
+                if score >= T::CreditScoreDelegatedPermitThreshold::get() {
                     return true;
                 }
             }
