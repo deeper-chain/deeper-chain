@@ -291,6 +291,8 @@ pub fn testnet_genesis(
         vec![
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("Bob"),
+            other_authority_keys()[0].1.clone(),
+            testnet_root_key(),
             get_account_id_from_seed::<sr25519::Public>("Charlie"),
             get_account_id_from_seed::<sr25519::Public>("Dave"),
             get_account_id_from_seed::<sr25519::Public>("Eve"),
@@ -301,9 +303,7 @@ pub fn testnet_genesis(
             get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
             get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
             get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-            testnet_root_key(),
             other_authority_keys()[0].0.clone(),
-            other_authority_keys()[0].1.clone(),
         ]
     });
     let num_endowed_accounts = endowed_accounts.len();
@@ -353,7 +353,7 @@ pub fn testnet_genesis(
         pallet_elections_phragmen: Some(ElectionsConfig {
             members: endowed_accounts
                 .iter()
-                .take((num_endowed_accounts + 1) / 2)
+                .take(num_endowed_accounts / 2)
                 .cloned()
                 .map(|member| (member, STASH))
                 .collect(),
@@ -362,7 +362,7 @@ pub fn testnet_genesis(
         pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
             members: endowed_accounts
                 .iter()
-                .take((num_endowed_accounts + 1) / 2)
+                .take(num_endowed_accounts / 2)
                 .cloned()
                 .collect(),
             phantom: Default::default(),
@@ -387,7 +387,7 @@ pub fn testnet_genesis(
         pallet_society: Some(SocietyConfig {
             members: endowed_accounts
                 .iter()
-                .take((num_endowed_accounts + 1) / 2)
+                .take(num_endowed_accounts / 2)
                 .cloned()
                 .collect(),
             pot: 0,
