@@ -111,14 +111,14 @@ decl_module! {
 
         // init credit score
         #[weight = 10_000]
-        pub fn initialize_credit(origin, credit:u64) -> dispatch::DispatchResult{ //todo
+        pub fn initialize_credit(origin) -> dispatch::DispatchResult{ //todo
             let sender = ensure_signed(origin)?;
-            let res = Self::_initialize_credit(sender.clone(), credit);
+            let res = Self::_initialize_credit(&sender, T::CreditInitScore::get());
             if res == true{
-                Self::deposit_event(RawEvent::CreditInitSuccess(sender, credit));
+                Self::deposit_event(RawEvent::CreditInitSuccess(sender, T::CreditInitScore::get()));
                 Ok(())
             }else{
-                Self::deposit_event(RawEvent::CreditInitFailed(sender, credit));
+                Self::deposit_event(RawEvent::CreditInitFailed(sender, T::CreditInitScore::get()));
                 Err(dispatch::DispatchError::Other(
                     "CreditInitFailed",
                 ))
@@ -186,12 +186,12 @@ decl_module! {
 
 impl<T: Trait> Module<T> {
     /// init credit score
-    pub fn _initialize_credit(account_id: T::AccountId, score: u64) -> bool {
+    pub fn _initialize_credit(account_id: &T::AccountId, score: u64) -> bool {
         // in general, a user start from initial score = 0; with coupon, a user can
         // start from initial score at most CreditInitScore
         // TODO: i.e. add coupon verification for non-zero init credit score
-        if !UserCredit::<T>::contains_key(account_id.clone()) && score < T::CreditInitScore::get() {
-            UserCredit::<T>::insert(account_id.clone(), 0);
+        if !UserCredit::<T>::contains_key(account_id) && score <= T::CreditInitScore::get() {
+            UserCredit::<T>::insert(account_id, score);
             true
         } else {
             false
@@ -215,16 +215,17 @@ impl<T: Trait> Module<T> {
                     score_delta
                 );
                 Self::_update_credit(
-                    server_id.clone(),
-                    Self::get_user_credit(server_id.clone()).unwrap_or(0) + score_delta,
+                    &server_id,
+                    Self::get_user_credit(&server_id).unwrap_or(T::CreditInitScore::get())
+                        + score_delta,
                 );
             }
         }
     }
 
     /// innner: update credit score
-    fn _update_credit(account_id: T::AccountId, score: u64) -> bool {
-        if UserCredit::<T>::contains_key(account_id.clone()) {
+    fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
+        if UserCredit::<T>::contains_key(account_id) {
             match score {
                 score if score > T::MaxCreditScore::get() => {
                     UserCredit::<T>::insert(account_id, T::MaxCreditScore::get());
@@ -237,7 +238,7 @@ impl<T: Trait> Module<T> {
             }
         } else {
             // uninitialize case
-            Self::_initialize_credit(account_id.clone(), 0);
+            Self::_initialize_credit(&account_id, 0);
             Self::_update_credit(account_id, score)
         }
     }
