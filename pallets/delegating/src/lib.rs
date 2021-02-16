@@ -13,7 +13,7 @@ use log::error;
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::sp_runtime::Perbill;
-use frame_support::traits::{Currency, Imbalance, LockableCurrency};
+use frame_support::traits::{Currency, Imbalance, LockableCurrency, Get};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;
@@ -41,6 +41,9 @@ pub trait Trait: frame_system::Trait {
     type CreditInterface: CreditInterface<Self::AccountId>;
 
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+
+    /// max validators can be selected to delegate
+    type MaxValidatorsCanSelected: Get<usize>;
 }
 
 pub type BalanceOf<T> =
@@ -50,9 +53,6 @@ type PositiveImbalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::PositiveImbalance;
 
 pub type EraIndex = u32;
-
-pub const CREDIT_LOCK_DURATION: u32 = 10; //todo
-pub const MAX_VALIDATORS_CAN_SELECTED: usize = 10;
 
 #[derive(Decode, Encode, Default)]
 pub struct CreditDelegateInfo<AccountId> {
@@ -147,21 +147,21 @@ decl_module! {
             let controller = ensure_signed(origin)?;
 
             // check credit pass threshold
-            if T::CreditInterface::pass_threshold(controller.clone(), 0) == false{
+            if T::CreditInterface::pass_threshold(&controller, 0) == false {
                 error!("Credit score is to low to delegating a validator!");
                 Err(Error::<T>::CreditScoreTooLow)?
             }
 
             // check validators size
-            if validators.len() > MAX_VALIDATORS_CAN_SELECTED {
+            if validators.len() > T::MaxValidatorsCanSelected::get() {
                 Err(Error::<T>::SelectTooManyValidators)?
             }
-            if validators.len() == 0{
+            if validators.len() == 0 {
                 Err(Error::<T>::SelectNoValidator)?
             }
 
             // check if controller has call delegated
-            if <DelegatedToValidators<T>>::contains_key(controller.clone()){
+            if <DelegatedToValidators<T>>::contains_key(&controller){
                 Err(Error::<T>::AlreadyDelegated)?
             }
 
@@ -302,7 +302,7 @@ impl<T: Trait> Module<T> {
                 .collect();
 
             // score to low or target_validators not in <CandidateValidators<T>>
-            if T::CreditInterface::pass_threshold(delegator.clone(), 0) == false
+            if T::CreditInterface::pass_threshold(&delegator, 0) == false
                 || next_target_validators.len() == 0
             {
                 Self::_undelegate(delegator.clone());

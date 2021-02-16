@@ -464,10 +464,14 @@ impl pallet_credit::Trait for Runtime {
     type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
 }
 
+parameter_types! {
+    pub const MaxValidatorsCanSelected: usize = 10;
+}
 impl pallet_delegating::Trait for Runtime {
     type Event = Event;
     type CreditInterface = Credit;
     type Currency = Balances;
+    type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
 }
 
 impl pallet_session::Trait for Runtime {
