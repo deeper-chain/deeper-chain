@@ -286,7 +286,7 @@ impl<T: Trait> Module<T> {
 
 pub trait CreditInterface<AccountId> {
     fn get_credit_score(account_id: AccountId) -> Option<u64>;
-    fn pass_threshold(account_id: AccountId, _ttype: u8) -> bool;
+    fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
     fn credit_slash(accouont_id: AccountId);
 }
 
@@ -296,8 +296,8 @@ impl<T: Trait> CreditInterface<T::AccountId> for Module<T> {
     }
 
     /// check if account_id's credit score is pass threshold ttype
-    fn pass_threshold(account_id: T::AccountId, _ttype: u8) -> bool {
-        if UserCredit::<T>::contains_key(account_id.clone()) {
+    fn pass_threshold(account_id: &T::AccountId, _ttype: u8) -> bool {
+        if UserCredit::<T>::contains_key(account_id) {
             if let Some(score) = UserCredit::<T>::get(account_id) {
                 if score >= T::CreditScoreDelegatedPermitThreshold::get() {
                     return true;
