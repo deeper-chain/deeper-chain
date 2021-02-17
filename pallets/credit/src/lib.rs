@@ -178,7 +178,7 @@ decl_module! {
                 Self::update_credit(micropayment_vec);
 
                 // attenuate credit score per era
-                Self::attenuate_credit(_n);
+                // Self::attenuate_credit(_n);
             }
         }
     }
