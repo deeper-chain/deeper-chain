@@ -444,7 +444,7 @@ parameter_types! {
 
 // pallet_credit
 parameter_types! {
-    pub const CreditInitScore: u64 = 55;
+    pub const CreditInitScore: u64 = 60;
     pub const MaxCreditScore: u64 = 800;
     pub const CreditScoreAttenuationLowerBound: u64 = 40;
     pub const CreditScoreAttenuationStep: u64 = 5;
