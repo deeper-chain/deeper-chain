@@ -29,10 +29,12 @@ async function get_api(url_string) {
             Balance: "u128",
             Timestamp: "Moment",
             BlockNumber: "u32",
+            CountryRegion: "Vec<u8>",
+            IpV4: "Vec<u8>",
             Node: {
                 account_id: "AccountId",
-                ipv4: "Vec<u8>",
-                country: "Vec<u8>",
+                ipv4: "IpV4",
+                country: "CountryRegion",
                 expire: "BlockNumber",
             },
             ChannelOf: {
