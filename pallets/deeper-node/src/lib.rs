@@ -108,10 +108,6 @@ decl_module! {
         // initialize the default event for this module
         fn deposit_event() = default;
 
-        const MinLockAmt: u32 = T::MinLockAmt::get();
-        const MaxDurationDays: u8 = T::MaxDurationDays::get();
-        const DayToBlocknum: u32 = T::DayToBlocknum::get();
-
         #[weight = 10_000]
         pub fn register_device(origin, ip: IpV4, country: CountryRegion) -> DispatchResult {
             let sender = ensure_signed(origin)?;
@@ -129,16 +125,15 @@ decl_module! {
                 T::Currency::reserve(&sender, BalanceOf::<T>::from(T::MinLockAmt::get()))?;
                 <DeviceInfo<T>>::insert(&sender, node);
             } else {
-                let mut node = <DeviceInfo<T>>::get(&sender);
-                if node.country != country {
-                    let _ = Self::try_remove_server(&sender);
-                    node.country = country.clone();
-                }
-                node.ipv4 = ip.clone();
-                node.expire = <frame_system::Module<T>>::block_number();
-                <DeviceInfo<T>>::insert(&sender, node);
+                <DeviceInfo<T>>::mutate(&sender, |node| {
+                    if node.country != country {
+                        let _ = Self::try_remove_server(&sender);
+                        node.country = country.clone();
+                    }
+                    node.ipv4 = ip.clone();
+                    node.expire = <frame_system::Module<T>>::block_number();
+                });
             }
-
             Self::deposit_event(RawEvent::RegisterNode(sender, ip, country));
             Ok(())
         }
@@ -172,9 +167,9 @@ decl_module! {
                     Error::<T>::DeviceNotRegister);
             ensure!(duration <= T::MaxDurationDays::get(), Error::<T>::DurationOverflow);
             let block_num = (duration as u32) * T::DayToBlocknum::get();
-            let mut node = <DeviceInfo<T>>::get(&sender);
-            node.expire = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(block_num);
-            <DeviceInfo<T>>::insert(&sender, node);
+            <DeviceInfo<T>>::mutate(&sender, |node| {
+                node.expire = <frame_system::Module<T>>::block_number() + T::BlockNumber::from(block_num);
+            });
             Ok(())
         }
 
@@ -222,20 +217,23 @@ impl<T: Trait> Module<T> {
         let sec_region = RegionMap::get(&first_region);
 
         // country registration
-        let mut server_list = <ServersByCountry<T>>::get(&node.country);
-        if Self::country_list_insert(&mut server_list, &sender, &node.country, &duration) == false {
+        let mut country_server_list = <ServersByCountry<T>>::get(&node.country);
+        if Self::country_list_insert(&mut country_server_list, &sender, &node.country, &duration) == false {
             Err(Error::<T>::DoubleCountryRegistration)?
         }
 
         // level 3 region registration
-        server_list = <ServersByRegion<T>>::get(&first_region);
-        if Self::region_list_insert(&mut server_list, &sender, &first_region, &duration) == false {
+        let mut level3_server_list = <ServersByRegion<T>>::get(&first_region);
+        if Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration) == false {
+            let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
             Err(Error::<T>::DoubleLevel3Registration)?
         }
 
         // level 2 region registration
-        server_list = <ServersByRegion<T>>::get(&sec_region);
-        if Self::region_list_insert(&mut server_list, &sender, &sec_region, &duration) == false {
+        let mut level2_server_list = <ServersByRegion<T>>::get(&sec_region);
+        if Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration) == false {
+            let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
+            let _ = Self::region_list_remove(&mut level3_server_list, &sender, &first_region);
             Err(Error::<T>::DoubleLevel2Registration)?
         }
 
