@@ -516,6 +516,7 @@ parameter_types! {
     pub const RewardAdjustPeriod: u32 = REWARD_ADJUST_PERIOD;
     pub const BlockNumberPerEra: BlockNumber = BLOCKS_PER_ERA;
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
+    pub const CreditToTokenFactor: u128 = 500_000_000_000_000; //1unit = e15 todo
     // 0.05%. The higher the value, the more strict solution acceptance becomes.
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
@@ -549,6 +550,7 @@ impl pallet_staking_with_credit::Trait for Runtime {
     type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
     type UnsignedPriority = StakingUnsignedPriority;
     type WeightInfo = weights::pallet_staking_with_credit::WeightInfo;
+    type CreditToTokenFactor = CreditToTokenFactor;
     type RewardAdjustFactor = RewardAdjustFactor;
     type RewardPerBlock = RewardPerBlock;
     type RewardAdjustPeriod = RewardAdjustPeriod;
