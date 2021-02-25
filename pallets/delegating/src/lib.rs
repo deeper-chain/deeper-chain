@@ -441,12 +441,13 @@ impl<T: Trait> CreditDelegateInterface<T::AccountId, BalanceOf<T>, PositiveImbal
         let validator_leftover_payout = era_payout - validator_commission_payout;
 
         // We can now make total validator payout:
-        if let Some(imbalance) =
-            Self::make_payout(validator_payee.clone(), validator_commission_payout)
-        {
-            Self::deposit_event(RawEvent::Reward(validator_payee, imbalance.peek()));
+        if validator_commission_payout != <BalanceOf<T>>::default() {
+            if let Some(imbalance) =
+                Self::make_payout(validator_payee.clone(), validator_commission_payout)
+            {
+                Self::deposit_event(RawEvent::Reward(validator_payee, imbalance.peek()));
+            }
         }
-
         // Lets now calculate how this is split to the nominators.
         // Reward only the clipped exposures. Note this is not necessarily sorted.
         let era_total_score =
