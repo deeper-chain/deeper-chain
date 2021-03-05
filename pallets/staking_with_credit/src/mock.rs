@@ -295,25 +295,60 @@ impl pallet_timestamp::Trait for Test {
 impl pallet_micropayment::Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
+    type DayToBlocknum = DayToBlocknum;
 }
+
+pub const MILLISECS_PER_BLOCK: u32 = 5000;
+
+parameter_types! {
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
+}
+
 impl pallet_deeper_node::Trait for Test {
     type Event = MetaEvent;
     type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationDays = MaxDurationDays;
+    type DayToBlocknum = DayToBlocknum;
+    type MaxIpLength = MaxIpLength;
+}
+
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const MaxIpLength: usize = 256;
 }
 
 parameter_types! {
     pub const BlocksPerEra: BlockNumber = 6 * 60 / (5 as BlockNumber);
+    pub const CreditInitScore: u64 = 60;
+    pub const MaxCreditScore: u64 = 800;
+    pub const CreditScoreAttenuationLowerBound: u64 = 40;
+    pub const CreditScoreAttenuationStep: u64 = 5;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
 }
 impl pallet_credit::Trait for Test {
     type Event = MetaEvent;
     type BlocksPerEra = BlocksPerEra;
     type CurrencyToVote = CurrencyToNumberHandler;
+    type CreditInitScore = CreditInitScore;
+    type MaxCreditScore = MaxCreditScore;
+    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
+    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
+    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
+    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
 }
 
 impl pallet_delegating::Trait for Test{
     type Event = MetaEvent;
     type CreditInterface = Credit;
     type Currency = Balances;
+    type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
+}
+
+parameter_types! {
+    pub const MaxValidatorsCanSelected: usize = 10;
 }
 
 pallet_staking_reward_curve::build! {
@@ -337,6 +372,8 @@ parameter_types! {
     pub const RewardAdjustPeriod: u32 = 4;
     pub const BlockNumberPerEra: BlockNumber = 6 * 60 / (5 as BlockNumber);
     pub const MiningReward: u128 = 6_000_000_000_000_000_000_000_000 / 7200;
+    pub const MaxUnlockingChunks: usize = 32;
+    pub const CreditToTokenFactor: u128 = 500_000_000_000_000; //1unit = e15 todo
 }
 
 thread_local! {
@@ -397,6 +434,8 @@ impl Trait for Test {
     type RewardAdjustPeriod = RewardAdjustPeriod;
     type BlocksPerEra = BlockNumberPerEra;
     type RemainderMiningReward = MiningReward;
+    type MaxUnlockingChunks = MaxUnlockingChunks;
+    type CreditToTokenFactor = CreditToTokenFactor;
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test

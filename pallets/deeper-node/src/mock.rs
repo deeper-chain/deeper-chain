@@ -86,6 +86,7 @@ impl Trait for Test {
     type MinLockAmt = MinLockAmt;
     type MaxDurationDays = MaxDurationDays;
     type DayToBlocknum = DayToBlocknum;
+    type MaxIpLength = MaxIpLength;
 }
 
 pub type DeeperNode = Module<Test>;
@@ -96,6 +97,7 @@ parameter_types! {
     pub const MinLockAmt: u32 = 100;
     pub const MaxDurationDays: u8 = 7;
     pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
+    pub const MaxIpLength: usize = 256;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

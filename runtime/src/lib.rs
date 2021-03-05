@@ -425,17 +425,20 @@ impl deeper_node::Trait for Runtime {
     type MinLockAmt = MinLockAmt;
     type MaxDurationDays = MaxDurationDays;
     type DayToBlocknum = DayToBlocknum;
+    type MaxIpLength = MaxIpLength;
 }
 
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
     pub const MaxDurationDays: u8 = 7;
     pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
+    pub const MaxIpLength: usize = 256;
 }
 
 impl micropayment::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type DayToBlocknum = DayToBlocknum;
 }
 
 parameter_types! {
@@ -507,6 +510,7 @@ parameter_types! {
     pub const SessionsPerEra: sp_staking::SessionIndex = 6;
     pub const BondingDuration: pallet_staking_with_credit::EraIndex = 24 * 28;
     pub const SlashDeferDuration: pallet_staking_with_credit::EraIndex = 24 * 7; // 1/4 the bonding duration.
+    pub const MaxUnlockingChunks: usize = 32;
     pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
     pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
@@ -556,6 +560,7 @@ impl pallet_staking_with_credit::Trait for Runtime {
     type RewardAdjustPeriod = RewardAdjustPeriod;
     type BlocksPerEra = BlockNumberPerEra;
     type RemainderMiningReward = MiningReward;
+    type MaxUnlockingChunks = MaxUnlockingChunks;
 }
 
 parameter_types! {

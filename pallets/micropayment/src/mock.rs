@@ -110,9 +110,16 @@ impl pallet_balances::Trait for Test {
 impl Trait for Test {
     type Event = ();
     type Currency = Balances;
+    type DayToBlocknum = DayToBlocknum;
 }
 
 pub type Micropayment = Module<Test>;
+
+pub const MILLISECS_PER_BLOCK: u32 = 5000;
+
+parameter_types! {
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
+}
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {

@@ -239,7 +239,7 @@
 //!
 //! Note that there is a limitation to the number of fund-chunks that can be scheduled to be
 //! unlocked in the future via [`unbond`](enum.Call.html#variant.unbond). In case this maximum
-//! (`MAX_UNLOCKING_CHUNKS`) is reached, the bonded account _must_ first wait until a successful
+//! (`T::MaxUnlockingChunks`) is reached, the bonded account _must_ first wait until a successful
 //! call to `withdraw_unbonded` to remove some of the chunks.
 //!
 //! ### Election Algorithm
@@ -337,7 +337,6 @@ use sp_std::{
 use pallet_delegating::CreditDelegateInterface;
 
 const STAKING_ID: LockIdentifier = *b"staking ";
-pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_NOMINATIONS: usize = <CompactAssignments as VotingLimit>::LIMIT;
 
 pub(crate) const LOG_TARGET: &'static str = "staking";
@@ -846,6 +845,9 @@ pub trait Trait: frame_system::Trait + SendTransactionTypes<Call<Self>> {
 
     /// Number of eras that staked funds must remain bonded for.
     type BondingDuration: Get<EraIndex>;
+
+    /// Max number of fund-chunks that can be scheduled to be unlocked in the future
+    type MaxUnlockingChunks: Get<usize>;
 
     /// Number of eras that slashes are deferred by, after computation.
     ///
@@ -1527,7 +1529,7 @@ decl_module! {
         /// Once the unlock period is done, you can call `withdraw_unbonded` to actually move
         /// the funds out of management ready for transfer.
         ///
-        /// No more than a limited number of unlocking chunks (see `MAX_UNLOCKING_CHUNKS`)
+        /// No more than a limited number of unlocking chunks (see `T::MaxUnlockingChunks`)
         /// can co-exists at the same time. In that case, [`Call::withdraw_unbonded`] need
         /// to be called first to remove some of the chunks (if possible).
         ///
@@ -1558,7 +1560,7 @@ decl_module! {
             let controller = ensure_signed(origin)?;
             let mut ledger = Self::ledger(&controller).ok_or(Error::<T>::NotController)?;
             ensure!(
-                ledger.unlocking.len() < MAX_UNLOCKING_CHUNKS,
+                ledger.unlocking.len() < T::MaxUnlockingChunks::get(),
                 Error::<T>::NoMoreChunks,
             );
 
@@ -1994,14 +1996,14 @@ decl_module! {
         ///
         /// # <weight>
         /// - Time complexity: O(L), where L is unlocking chunks
-        /// - Bounded by `MAX_UNLOCKING_CHUNKS`.
+        /// - Bounded by `T::MaxUnlockingChunks`.
         /// - Storage changes: Can't increase storage, only decrease it.
         /// ---------------
         /// - DB Weight:
         ///     - Reads: EraElectionStatus, Ledger, Locks, [Origin Account]
         ///     - Writes: [Origin Account], Locks, Ledger
         /// # </weight>
-        #[weight = T::WeightInfo::rebond(MAX_UNLOCKING_CHUNKS as u32)]
+        #[weight = T::WeightInfo::rebond(T::MaxUnlockingChunks::get() as u32)]
         fn rebond(origin, #[compact] value: BalanceOf<T>) -> DispatchResultWithPostInfo {
             ensure!(Self::era_election_status().is_closed(), Error::<T>::CallNotAllowed);
             let controller = ensure_signed(origin)?;

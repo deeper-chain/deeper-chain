@@ -1,9 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::codec::{Codec, Decode, Encode};
-use frame_support::traits::Vec;
+use frame_support::traits::{Vec, Get};
 use frame_support::{
-    decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
 };
 use frame_system::{self, ensure_signed};
 use sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, Member};
@@ -20,6 +20,9 @@ pub trait Trait: frame_system::Trait {
         + Copy
         + AtLeast32BitUnsigned
         + Default;
+
+    type MaxTokenNameLen: Get<usize>;
+    type MaxTokenTickerLen: Get<usize>;
 }
 
 // struct to store the token details
@@ -28,6 +31,30 @@ pub struct Erc20Token<T> {
     name: Vec<u8>,
     ticker: Vec<u8>,
     total_supply: T,
+}
+
+// error messages
+decl_error! {
+    pub enum Error for Module<T: Trait> {
+        /// invalid token name, too long
+        InvalidTokenName,
+        /// invalid token ticker, too long
+        InvalidTokenTicker,
+        /// invalid account
+        InvalidAccount,
+        /// allowance doesn't exist
+        AllowanceNotExist,
+        /// allowance isn't enough
+        AllowanceNotEnough,
+        /// balance isn't enough
+        BalanceNotEnough,
+        /// overflow in calculating next token id
+        TokenIdOverflow,
+        /// overflow in calculating balance
+        BalanceOverflow,
+        /// overflow in calculating allowance
+        AllowanceOverflow,
+    }
 }
 
 // events
@@ -78,11 +105,11 @@ decl_module! {
 
           // checking max size for name and ticker
           // byte arrays (vecs) with no max size should be avoided
-          ensure!(name.len() <= 64, "token name cannot exceed 64 bytes");
-          ensure!(ticker.len() <= 32, "token ticker cannot exceed 32 bytes");
+          ensure!(name.len() <= T::MaxTokenNameLen::get(), Error::<T>::InvalidTokenName);
+          ensure!(ticker.len() <= T::MaxTokenTickerLen::get(), Error::<T>::InvalidTokenTicker);
 
           let token_id = Self::token_id();
-          let next_token_id = token_id.checked_add(1).ok_or("overflow in calculating next token id")?;
+          let next_token_id = token_id.checked_add(1).ok_or(Error::<T>::TokenIdOverflow)?;
           TokenId::put(next_token_id);
 
           let token = Erc20Token {
@@ -110,10 +137,9 @@ decl_module! {
       #[weight = 10_000]
       fn approve(_origin, token_id: u32, spender: T::AccountId, value: T::TokenBalance) -> DispatchResult {
           let sender = ensure_signed(_origin)?;
-          ensure!(<BalanceOf<T>>::contains_key((token_id, sender.clone())), "Account does not own this token");
-
+          ensure!(<BalanceOf<T>>::contains_key((token_id, sender.clone())), Error::<T>::InvalidAccount);
           let allowance = Self::allowance((token_id, sender.clone(), spender.clone()));
-          let updated_allowance = allowance.checked_add(&value).ok_or("overflow in calculating allowance")?;
+          let updated_allowance = allowance.checked_add(&value).ok_or(Error::<T>::AllowanceOverflow)?;
           <Allowance<T>>::insert((token_id, sender.clone(), spender.clone()), updated_allowance);
 
           Self::deposit_event(RawEvent::Approval(token_id, sender.clone(), spender.clone(), value));
@@ -126,12 +152,12 @@ decl_module! {
       // if approved, transfer from an account to another account without owner's signature
       #[weight = 10_000]
       pub fn transfer_from(_origin, token_id: u32, from: T::AccountId, to: T::AccountId, value: T::TokenBalance) -> DispatchResult {
-        ensure!(<Allowance<T>>::contains_key((token_id, from.clone(), to.clone())), "Allowance does not exist.");
+        ensure!(<Allowance<T>>::contains_key((token_id, from.clone(), to.clone())), Error::<T>::AllowanceNotExist);
         let allowance = Self::allowance((token_id, from.clone(), to.clone()));
-        ensure!(allowance >= value, "Not enough allowance.");
+        ensure!(allowance >= value, Error::<T>::AllowanceNotEnough);
 
         // using checked_sub (safe math) to avoid overflow
-        let updated_allowance = allowance.checked_sub(&value).ok_or("overflow in calculating allowance")?;
+        let updated_allowance = allowance.checked_sub(&value).ok_or(Error::<T>::AllowanceOverflow)?;
         <Allowance<T>>::insert((token_id, from.clone(), to.clone()), updated_allowance);
 
         Self::deposit_event(RawEvent::Approval(token_id, from.clone(), to.clone(), value));
@@ -154,18 +180,18 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         ensure!(
             <BalanceOf<T>>::contains_key((token_id, from.clone())),
-            "Account does not own this token"
+            Error::<T>::InvalidAccount
         );
         let sender_balance = Self::balance_of((token_id, from.clone()));
-        ensure!(sender_balance >= value, "Not enough balance.");
+        ensure!(sender_balance >= value, Error::<T>::BalanceNotEnough);
 
         let updated_from_balance = sender_balance
             .checked_sub(&value)
-            .ok_or("overflow in calculating balance")?;
+            .ok_or(Error::<T>::BalanceOverflow)?;
         let receiver_balance = Self::balance_of((token_id, to.clone()));
         let updated_to_balance = receiver_balance
             .checked_add(&value)
-            .ok_or("overflow in calculating balance")?;
+            .ok_or(Error::<T>::BalanceOverflow)?;
         // reduce sender's balance
         <BalanceOf<T>>::insert((token_id, from.clone()), updated_from_balance);
 
