@@ -434,7 +434,7 @@ fn rewards_poc_pos_should_work() {
 
         let credit_score1 = Delegating::total_delegated_score(Staking::active_era().unwrap().index).unwrap_or(0);
         let credit_to_balance1 = <<mock::Test as Trait>::CurrencyToNumber as Convert<u128, BalanceOf<mock::Test>>>::convert(
-            credit_score1 as u128 * CREDIT_TO_TOKEN_FACTOR,
+            credit_score1 as u128 * <Test as Trait>::CreditToTokenFactor::get(),
         );
         let credit_part1 = Perbill::from_rational_approximation(
             credit_to_balance1,
@@ -1458,7 +1458,7 @@ fn bond_extra_and_withdraw_unbonded_works() {
 fn too_many_unbond_calls_should_not_work() {
     ExtBuilder::default().build_and_execute(|| {
         // locked at era 0 until 3
-        for _ in 0..MAX_UNLOCKING_CHUNKS - 1 {
+        for _ in 0..<Test as Trait>::MaxUnlockingChunks::get() - 1 {
             assert_ok!(Staking::unbond(Origin::signed(10), 1));
         }
 

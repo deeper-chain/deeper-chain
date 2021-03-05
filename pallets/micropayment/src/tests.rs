@@ -1,4 +1,4 @@
-use crate::mock::*;
+use crate::{mock::*, Error};
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
 use frame_support::assert_ok;
@@ -16,13 +16,13 @@ fn fn_open_channel() {
         // Channel already opened
         assert_eq!(
             Micropayment::open_channel(Origin::signed(1), 2, 1000, 3600), 
-            Err(DispatchError::Other("Channel already opened",))
+            Err(DispatchError::from(Error::<Test>::ChannelAlreadyOpened))
         );
         
         // Channel should connect two different accounts
         assert_eq!(
             Micropayment::open_channel(Origin::signed(2), 2, 1000, 3600), 
-            Err(DispatchError::Other("Channel should connect two different accounts",))
+            Err(DispatchError::from(Error::<Test>::SameChannelEnds))
         );
 
         //  duration should > 0
@@ -51,11 +51,11 @@ fn fn_close_channel() {
         // Channel not exists
         assert_eq!(
             Micropayment::close_channel(Origin::signed(2), 3), 
-            Err(DispatchError::Other("Channel not exists",))
+            Err(DispatchError::from(Error::<Test>::ChannelNotExist))
         );
         assert_eq!(
             Micropayment::close_channel(Origin::signed(1), 2), 
-            Err(DispatchError::Other("Channel not exists",))
+            Err(DispatchError::from(Error::<Test>::ChannelNotExist))
         );
     });
 }

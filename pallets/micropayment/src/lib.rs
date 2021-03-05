@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::collections::btree_map::BTreeMap;
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, Vec};
+use frame_support::traits::{Currency, Vec, Get};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 };
@@ -38,11 +38,9 @@ pub trait Trait: frame_system::Trait {
     /// Because this pallet emits events, it depends on the runtime's definition of an event.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
     type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
-}
 
-// todo: this is import from runtime constant
-const MILLISECS_PER_BLOCK: u32 = 5000;
-const DAY_TO_BLOCKNUM: u32 = 24 * 3600 * 1000 / MILLISECS_PER_BLOCK;
+    type DayToBlocknum: Get<u32>;
+}
 
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
@@ -71,6 +69,14 @@ decl_error! {
         NotEnoughBalance,
         /// Micropayment channel not exist
         ChannelNotExist,
+        /// channel has been opened
+        ChannelAlreadyOpened,
+        /// Sender and receiver are the same
+        SameChannelEnds,
+        /// Session has already been consumed
+        SessionAlreadyConsumed,
+        /// Invalid signature, cannot be verified
+        InvalidSignature,
     }
 }
 
@@ -119,11 +125,11 @@ decl_module! {
       // duration is in units of second
       pub fn open_channel(origin, receiver: T::AccountId, lock_amt: BalanceOf<T>, duration: u32) -> DispatchResult {
           let sender = ensure_signed(origin)?;
-          ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel already opened");
-          ensure!(sender.clone() != receiver.clone(), "Channel should connect two different accounts");
+          ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelAlreadyOpened);
+          ensure!(sender.clone() != receiver.clone(), Error::<T>::SameChannelEnds);
           let nonce = Nonce::<T>::get((sender.clone(),receiver.clone()));
           let start_block =  <frame_system::Module<T>>::block_number();
-          let duration_block = (duration as u32) * DAY_TO_BLOCKNUM;
+          let duration_block = (duration as u32) * T::DayToBlocknum::get();
           let expiration = start_block + T::BlockNumber::from(duration_block);
           let chan = ChannelOf::<T>{
               sender: sender.clone(),
@@ -147,7 +153,7 @@ decl_module! {
       pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
           // only receiver can close the channel
           let receiver = ensure_signed(origin)?;
-          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
+          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelNotExist);
           let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
           Self::deposit_into_account(&sender, chan.balance);
           Self::_close_channel(&sender, &receiver);
@@ -176,8 +182,7 @@ decl_module! {
       // TODO: instead of transfer from sender, transfer from sender's reserved token
       pub fn claim_payment(origin, sender: T::AccountId, session_id: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
-          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), "Channel not exists");
-
+          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelNotExist);
 
           // close channel if it expires
           let mut chan = Channel::<T>::get((sender.clone(),receiver.clone()));
@@ -189,7 +194,7 @@ decl_module! {
               return Ok(());
           }
 
-          ensure!(!SessionId::<T>::contains_key((sender.clone(),receiver.clone()),session_id), "SessionID already consumed");
+          ensure!(!SessionId::<T>::contains_key((sender.clone(),receiver.clone()),session_id), Error::<T>::SessionAlreadyConsumed);
           Self::verify_signature(&sender, &receiver, chan.nonce, session_id, amount, &signature)?;
           SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
 
@@ -245,7 +250,7 @@ impl<T: Trait> Module<T> {
         let msg = Self::construct_byte_array_and_hash(&receiver, nonce, session_id, amount);
 
         let verified = sr25519_verify(&sig, &msg, &pub_key);
-        ensure!(verified, "Fail to verify signature");
+        ensure!(verified, Error::<T>::InvalidSignature);
 
         Ok(())
     }

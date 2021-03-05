@@ -343,7 +343,7 @@ benchmarks! {
     }
 
     rebond {
-        let l in 1 .. MAX_UNLOCKING_CHUNKS as u32;
+        let l in 1 .. T::MaxUnlockingChunks::get() as u32;
         let (_, controller) = create_stash_controller::<T>(USER_SEED, 100, Default::default())?;
         let mut staking_ledger = Ledger::<T>::get(controller.clone()).unwrap();
         let unlock_chunk = UnlockChunk::<BalanceOf<T>> {
@@ -444,7 +444,7 @@ benchmarks! {
 
     #[extra]
     do_slash {
-        let l in 1 .. MAX_UNLOCKING_CHUNKS as u32;
+        let l in 1 .. T::MaxUnlockingChunks::get() as u32;
         let (stash, controller) = create_stash_controller::<T>(0, 100, Default::default())?;
         let mut staking_ledger = Ledger::<T>::get(controller.clone()).unwrap();
         let unlock_chunk = UnlockChunk::<BalanceOf<T>> {

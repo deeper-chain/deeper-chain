@@ -26,6 +26,7 @@ pub trait Trait: frame_system::Trait {
     type MinLockAmt: Get<u32>;
     type MaxDurationDays: Get<u8>;
     type DayToBlocknum: Get<u32>;
+    type MaxIpLength: Get<usize>;
 }
 
 type BalanceOf<T> =
@@ -113,7 +114,7 @@ decl_module! {
             let sender = ensure_signed(origin)?;
             ensure!(RegionMapInit::get() == true, Error::<T>::InvalidRegionMap);
             ensure!(RegionMap::contains_key(&country), Error::<T>::InvalidCode);
-            ensure!(ip.len() <= 256, Error::<T>::InvalidIP);
+            ensure!(ip.len() <= T::MaxIpLength::get(), Error::<T>::InvalidIP);
 
             if !<DeviceInfo<T>>::contains_key(&sender) {
                 let node = Node {
