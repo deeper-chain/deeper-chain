@@ -120,7 +120,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 1,
+    spec_version: 2,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -516,7 +516,7 @@ parameter_types! {
     pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
     pub const MaxIterations: u32 = 10;
     pub const RewardAdjustFactor: u128 = REWARD_ADJUST_FACTOR;
-    pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD;
+    pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD / 30;
     pub const RewardAdjustPeriod: u32 = REWARD_ADJUST_PERIOD;
     pub const BlockNumberPerEra: BlockNumber = BLOCKS_PER_ERA;
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
