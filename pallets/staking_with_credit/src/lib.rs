@@ -2842,6 +2842,8 @@ impl<T: Trait> Module<T> {
             reward_per_block = current_block_reward;
         }
 
+        reward_per_block = T::RewardPerBlock::get();
+        <BlockReward>::put(reward_per_block);
         let payout = reward_per_block * blocks_per_era;
 
         let balance_payout =

@@ -27,6 +27,9 @@ pallet-session = { version = "2.0.0", default-features = false, features = ["his
 pallet-authorship = { version = "2.0.0", default-features = false}
 sp-application-crypto = { version = "2.0.0", default-features = false}
 pallet-delegating = {version = '2.0.0', default-features = false, path = "../delegating"}
+pallet-credit = {version = '2.0.0', default-features = false, path = "../credit"}
+pallet-micropayment = {version = '2.0.0', default-features =false, path = "../micropayment"}
+pallet-deeper-node = {version = '2.0.0', default-features =false, path = "../deeper-node"}
 
 # Optional imports for benchmarking
 frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
@@ -44,9 +47,6 @@ frame-benchmarking = { version = "2.0.0"}
 rand_chacha = { version = "0.2" }
 parking_lot = "0.10.2"
 hex = "0.4"
-pallet-credit = {version = '2.0.0', default-features = false, path = "../credit"}
-pallet-micropayment = {version = '2.0.0', default-features =false, path = "../micropayment"}
-pallet-deeper-node = {version = '2.0.0', default-features =false, path = "../deeper-node"}
 
 [features]
 default = ["std"]
