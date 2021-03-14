@@ -40,7 +40,7 @@ pallet-treasury = '2.0.0'
 sp-application-crypto = '2.0.0'
 sp-runtime = '2.0.0'
 sp-externalities = '0.8.0'
-substrate-test-client = { git = "https://github.com/paritytech/substrate", version = "2.0.0" }
+substrate-test-client = { git = "https://github.com/paritytech/substrate", tag = "2.0.0" }
 wat = "1.0"
 
 [features]
