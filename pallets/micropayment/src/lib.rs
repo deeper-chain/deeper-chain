@@ -102,7 +102,7 @@ decl_storage! {
       Channel get(fn get_channel): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) => ChannelOf<T>;
       // nonce indicates the next available value; increase by one whenever open a new channel for an account pair
       Nonce get(fn get_nonce): map hasher(blake2_128_concat) (T::AccountId, T::AccountId)  => u64;
-      SessionId get(fn get_session_id): double_map hasher(blake2_128_concat) (T::AccountId, T::AccountId), hasher(blake2_128_concat) u32 => bool;
+      SessionId get(fn get_session_id): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) => Option<u32>;
       // the last block that an ccount has micropayment transaction involved
       LastUpdated get(fn last_updated): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
       // record server accounts who has claimed micropayment during a given block
@@ -194,9 +194,12 @@ decl_module! {
               return Ok(());
           }
 
-          ensure!(!SessionId::<T>::contains_key((sender.clone(),receiver.clone()),session_id), Error::<T>::SessionAlreadyConsumed);
+          if SessionId::<T>::contains_key((sender.clone(),receiver.clone())) 
+            && session_id <= Self::get_session_id((sender.clone(),receiver.clone())).unwrap_or(0) {
+                Err(Error::<T>::SessionAlreadyConsumed)?
+            }
           Self::verify_signature(&sender, &receiver, chan.nonce, session_id, amount, &signature)?;
-          SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
+          SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id); // mark session_id as used
 
           if chan.balance < amount {
                Self::deposit_into_account(&receiver, chan.balance);
@@ -222,7 +225,7 @@ decl_module! {
 impl<T: Trait> Module<T> {
     fn _close_channel(sender: &T::AccountId, receiver: &T::AccountId) {
         // remove all the sesson_ids of given channel
-        SessionId::<T>::remove_prefix((sender.clone(), receiver.clone()));
+        SessionId::<T>::remove((sender.clone(), receiver.clone()));
         Channel::<T>::remove((sender.clone(), receiver.clone()));
         Nonce::<T>::mutate((sender.clone(), receiver.clone()), |v| *v += 1);
     }
