@@ -70,6 +70,20 @@ fn fn_close_channel() {
     });
 }
 
+
+#[test]
+fn fn_close_expired_channels() {
+    new_test_ext().execute_with(|| {
+        // OK
+        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 100, 1));// 1 day = (24 * 3600 * 1000 / 5000) 
+        assert_ok!(Micropayment::open_channel(Origin::signed(1), 3, 100, 1)); 
+        assert_ok!(Micropayment::open_channel(Origin::signed(1), 4, 100, 2));
+
+        run_to_block(24*720+1);
+        assert_ok!(Micropayment::close_expired_channels(Origin::signed(1)));
+    });
+}
+
 #[test]
 fn fn_add_balance() {
     new_test_ext().execute_with(|| {
