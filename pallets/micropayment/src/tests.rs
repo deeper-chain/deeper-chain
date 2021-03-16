@@ -48,6 +48,16 @@ fn fn_close_channel() {
         assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
         assert_ok!(Micropayment::close_channel(Origin::signed(2), 1));
 
+        // Ok close by sender
+        run_to_block(1);
+        assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 1)); // 1 day = (24 * 3600 * 1000 / 5000) 
+        assert_eq!(
+            Micropayment::close_channel(Origin::signed(3), 4), 
+            Err(DispatchError::from(Error::<Test>::UnexpiredChannelCannotBeClosedBySender))
+        );
+        run_to_block(24*720+2);
+        assert_ok!(Micropayment::close_channel(Origin::signed(3), 4));
+
         // Channel not exists
         assert_eq!(
             Micropayment::close_channel(Origin::signed(2), 3), 

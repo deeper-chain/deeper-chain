@@ -71,6 +71,8 @@ decl_error! {
         ChannelNotExist,
         /// channel has been opened
         ChannelAlreadyOpened,
+        /// sender can only close expired channel
+        UnexpiredChannelCannotBeClosedBySender,
         /// Sender and receiver are the same
         SameChannelEnds,
         /// Session has already been consumed
@@ -150,16 +152,33 @@ decl_module! {
 
       #[weight = 10_000]
       // make sure claim your payment before close the channel
-      pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
-          // only receiver can close the channel
-          let receiver = ensure_signed(origin)?;
-          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelNotExist);
-          let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
-          Self::deposit_into_account(&sender, chan.balance);
-          Self::_close_channel(&sender, &receiver);
-          let end_block =  <frame_system::Module<T>>::block_number();
-          Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
-          Ok(())
+      pub fn close_channel(origin, account_id: T::AccountId) -> DispatchResult {
+          // receiver can close channel at any time;
+          // sender can only close expired channel.
+          let signer = ensure_signed(origin)?;
+
+          if Channel::<T>::contains_key((account_id.clone(),signer.clone())) { // signer is receiver
+            let chan = Channel::<T>::get((account_id.clone(),signer.clone()));
+            Self::deposit_into_account(&account_id, chan.balance);
+            Self::_close_channel(&account_id, &signer);
+            let end_block =  <frame_system::Module<T>>::block_number();
+            Self::deposit_event(RawEvent::ChannelClosed(account_id, signer, end_block));
+            return Ok(());
+          } else if Channel::<T>::contains_key((signer.clone(), account_id.clone())) { // signer is sender
+            let chan = Channel::<T>::get((signer.clone(), account_id.clone()));
+            let current_block = <frame_system::Module<T>>::block_number();
+            if chan.expiration < current_block {
+                Self::deposit_into_account(&signer, chan.balance);
+                Self::_close_channel(&signer, &account_id);
+                let end_block = current_block;
+                Self::deposit_event(RawEvent::ChannelClosed(signer, account_id, end_block));
+                return Ok(());
+            }else{
+                Err(Error::<T>::UnexpiredChannelCannotBeClosedBySender)?
+            }
+          }else {
+            Err(Error::<T>::ChannelNotExist)?
+          }
       }
 
       #[weight = 10_000]
