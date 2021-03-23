@@ -224,6 +224,7 @@ decl_module! {
           let mut chan = Channel::<T>::get(sender.clone(),receiver.clone());
           let current_block = <frame_system::Module<T>>::block_number();
           if chan.expiration < current_block {
+              Self::deposit_into_account(&sender, chan.balance);
               Self::_close_channel(&sender, &receiver);
               let end_block = current_block;
               Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
@@ -239,6 +240,7 @@ decl_module! {
 
           if chan.balance < amount {
                Self::deposit_into_account(&receiver, chan.balance);
+               Self::update_micropayment_information(&sender, &receiver, chan.balance);
                // no balance in channel now, just close it
                Self::_close_channel(&sender, &receiver);
                let end_block =  <frame_system::Module<T>>::block_number();
