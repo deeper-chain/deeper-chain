@@ -76,7 +76,7 @@ decl_error! {
         /// Sender and receiver are the same
         SameChannelEnds,
         /// Session has already been consumed
-        SessionAlreadyConsumed,
+        SessionError,
         /// Invalid signature, cannot be verified
         InvalidSignature,
     }
@@ -231,8 +231,8 @@ decl_module! {
           }
 
           if SessionId::<T>::contains_key((sender.clone(),receiver.clone())) 
-            && session_id <= Self::get_session_id((sender.clone(),receiver.clone())).unwrap_or(0) {
-                Err(Error::<T>::SessionAlreadyConsumed)?
+            && session_id != Self::get_session_id((sender.clone(),receiver.clone())).unwrap_or(0) + 1 {
+                Err(Error::<T>::SessionError)?
             }
           Self::verify_signature(&sender, &receiver, chan.nonce, session_id, amount, &signature)?;
           SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id); // mark session_id as used
