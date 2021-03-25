@@ -71,10 +71,12 @@ decl_error! {
         ChannelNotExist,
         /// channel has been opened
         ChannelAlreadyOpened,
+        /// sender can only close expired channel
+        UnexpiredChannelCannotBeClosedBySender,
         /// Sender and receiver are the same
         SameChannelEnds,
         /// Session has already been consumed
-        SessionAlreadyConsumed,
+        SessionError,
         /// Invalid signature, cannot be verified
         InvalidSignature,
     }
@@ -99,10 +101,10 @@ decl_event!(
 // storage for this module
 decl_storage! {
   trait Store for Module<T: Trait> as Device {
-      Channel get(fn get_channel): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) => ChannelOf<T>;
+      Channel get(fn get_channel): double_map hasher(blake2_128_concat) T::AccountId, hasher(blake2_128_concat) T::AccountId => ChannelOf<T>;
       // nonce indicates the next available value; increase by one whenever open a new channel for an account pair
       Nonce get(fn get_nonce): map hasher(blake2_128_concat) (T::AccountId, T::AccountId)  => u64;
-      SessionId get(fn get_session_id): double_map hasher(blake2_128_concat) (T::AccountId, T::AccountId), hasher(blake2_128_concat) u32 => bool;
+      SessionId get(fn get_session_id): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) => Option<u32>;
       // the last block that an ccount has micropayment transaction involved
       LastUpdated get(fn last_updated): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
       // record server accounts who has claimed micropayment during a given block
@@ -125,7 +127,7 @@ decl_module! {
       // duration is in units of second
       pub fn open_channel(origin, receiver: T::AccountId, lock_amt: BalanceOf<T>, duration: u32) -> DispatchResult {
           let sender = ensure_signed(origin)?;
-          ensure!(!Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelAlreadyOpened);
+          ensure!(!Channel::<T>::contains_key(sender.clone(),receiver.clone()), Error::<T>::ChannelAlreadyOpened);
           ensure!(sender.clone() != receiver.clone(), Error::<T>::SameChannelEnds);
           let nonce = Nonce::<T>::get((sender.clone(),receiver.clone()));
           let start_block =  <frame_system::Module<T>>::block_number();
@@ -143,34 +145,68 @@ decl_module! {
                error!("Not enough free balance to open channel");
                Err(Error::<T>::NotEnoughBalance)?
           }
-          Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
+          Channel::<T>::insert(sender.clone(),receiver.clone(), chan);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,lock_amt,nonce,start_block,expiration));
           Ok(())
       }
 
       #[weight = 10_000]
       // make sure claim your payment before close the channel
-      pub fn close_channel(origin, sender: T::AccountId) -> DispatchResult {
-          // only receiver can close the channel
-          let receiver = ensure_signed(origin)?;
-          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelNotExist);
-          let chan = Channel::<T>::get((sender.clone(),receiver.clone()));
-          Self::deposit_into_account(&sender, chan.balance);
-          Self::_close_channel(&sender, &receiver);
-          let end_block =  <frame_system::Module<T>>::block_number();
-          Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
-          Ok(())
+      pub fn close_channel(origin, account_id: T::AccountId) -> DispatchResult {
+          // receiver can close channel at any time;
+          // sender can only close expired channel.
+          let signer = ensure_signed(origin)?;
+
+          if Channel::<T>::contains_key(account_id.clone(),signer.clone()) { // signer is receiver
+            let chan = Channel::<T>::get(account_id.clone(),signer.clone());
+            Self::deposit_into_account(&account_id, chan.balance);
+            Self::_close_channel(&account_id, &signer);
+            let end_block =  <frame_system::Module<T>>::block_number();
+            Self::deposit_event(RawEvent::ChannelClosed(account_id, signer, end_block));
+            return Ok(());
+          } else if Channel::<T>::contains_key(signer.clone(), account_id.clone()) { // signer is sender
+            let chan = Channel::<T>::get(signer.clone(), account_id.clone());
+            let current_block = <frame_system::Module<T>>::block_number();
+            if chan.expiration < current_block {
+                Self::deposit_into_account(&signer, chan.balance);
+                Self::_close_channel(&signer, &account_id);
+                let end_block = current_block;
+                Self::deposit_event(RawEvent::ChannelClosed(signer, account_id, end_block));
+                return Ok(());
+            }else{
+                Err(Error::<T>::UnexpiredChannelCannotBeClosedBySender)?
+            }
+          }else {
+            Err(Error::<T>::ChannelNotExist)?
+          }
+      }
+
+      #[weight = 10_000]
+      // sender close all expired channels on chain
+      pub fn close_expired_channels(origin) -> DispatchResult {
+          // sender can only close expired channel.
+          let sender = ensure_signed(origin)?;
+          for (receiver, chan) in Channel::<T>::iter_prefix(sender.clone()) {
+            let current_block = <frame_system::Module<T>>::block_number();
+            if chan.expiration < current_block {
+                Self::deposit_into_account(&sender.clone(), chan.balance);
+                Self::_close_channel(&sender, &receiver);
+                let end_block = current_block;
+                Self::deposit_event(RawEvent::ChannelClosed(sender.clone(), receiver, end_block));
+            }
+          }
+         Ok(())
       }
 
       #[weight = 10_000]
       pub fn add_balance(origin, receiver: T::AccountId, amt: BalanceOf<T>) -> DispatchResult {
           let sender = ensure_signed(origin)?;
-          ensure!(Channel::<T>::contains_key((&sender, &receiver)), Error::<T>::ChannelNotExist);
+          ensure!(Channel::<T>::contains_key(&sender, &receiver), Error::<T>::ChannelNotExist);
           if !Self::take_from_account(&sender, amt) {
                error!("Not enough free balance to add into channel");
                Err(Error::<T>::NotEnoughBalance)?
           }
-          Channel::<T>::mutate((&sender, &receiver),|c|{
+          Channel::<T>::mutate(&sender, &receiver,|c|{
               (*c).balance += amt;
           });
           let end_block = <frame_system::Module<T>>::block_number();
@@ -182,24 +218,29 @@ decl_module! {
       // TODO: instead of transfer from sender, transfer from sender's reserved token
       pub fn claim_payment(origin, sender: T::AccountId, session_id: u32, amount: BalanceOf<T>, signature: Vec<u8>) -> DispatchResult {
           let receiver = ensure_signed(origin)?;
-          ensure!(Channel::<T>::contains_key((sender.clone(),receiver.clone())), Error::<T>::ChannelNotExist);
+          ensure!(Channel::<T>::contains_key(sender.clone(),receiver.clone()), Error::<T>::ChannelNotExist);
 
           // close channel if it expires
-          let mut chan = Channel::<T>::get((sender.clone(),receiver.clone()));
+          let mut chan = Channel::<T>::get(sender.clone(),receiver.clone());
           let current_block = <frame_system::Module<T>>::block_number();
           if chan.expiration < current_block {
+              Self::deposit_into_account(&sender, chan.balance);
               Self::_close_channel(&sender, &receiver);
               let end_block = current_block;
               Self::deposit_event(RawEvent::ChannelClosed(sender, receiver, end_block));
               return Ok(());
           }
 
-          ensure!(!SessionId::<T>::contains_key((sender.clone(),receiver.clone()),session_id), Error::<T>::SessionAlreadyConsumed);
+          if SessionId::<T>::contains_key((sender.clone(),receiver.clone())) 
+            && session_id != Self::get_session_id((sender.clone(),receiver.clone())).unwrap_or(0) + 1 {
+                Err(Error::<T>::SessionError)?
+            }
           Self::verify_signature(&sender, &receiver, chan.nonce, session_id, amount, &signature)?;
-          SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id, true); // mark session_id as used
+          SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id); // mark session_id as used
 
           if chan.balance < amount {
                Self::deposit_into_account(&receiver, chan.balance);
+               Self::update_micropayment_information(&sender, &receiver, chan.balance);
                // no balance in channel now, just close it
                Self::_close_channel(&sender, &receiver);
                let end_block =  <frame_system::Module<T>>::block_number();
@@ -209,7 +250,7 @@ decl_module! {
           }
 
           chan.balance -= amount;
-          Channel::<T>::insert((sender.clone(),receiver.clone()), chan);
+          Channel::<T>::insert(sender.clone(),receiver.clone(), chan);
           Self::deposit_into_account(&receiver, amount);
           Self::update_micropayment_information(&sender, &receiver, amount);
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
@@ -222,8 +263,8 @@ decl_module! {
 impl<T: Trait> Module<T> {
     fn _close_channel(sender: &T::AccountId, receiver: &T::AccountId) {
         // remove all the sesson_ids of given channel
-        SessionId::<T>::remove_prefix((sender.clone(), receiver.clone()));
-        Channel::<T>::remove((sender.clone(), receiver.clone()));
+        SessionId::<T>::remove((sender.clone(), receiver.clone()));
+        Channel::<T>::remove(sender.clone(), receiver.clone());
         Nonce::<T>::mutate((sender.clone(), receiver.clone()), |v| *v += 1);
     }
 
