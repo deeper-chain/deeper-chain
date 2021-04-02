@@ -45,6 +45,8 @@ pub trait Trait:
     type CreditInitScore: Get<u64>;
     /// Credit score threshold
     type MaxCreditScore: Get<u64>;
+    /// Credit score cap per Era
+    type CreditScoreCapPerEra: Get<u8>;
     /// credit score attenuation low threshold
     type CreditScoreAttenuationLowerBound: Get<u64>;
     /// credit score attenuation step
@@ -204,9 +206,13 @@ impl<T: Trait> Module<T> {
             if size >= 1 {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
-                let score_delta: u64 = balance_num
+                let mut score_delta: u64 = balance_num
                     .checked_div(T::MicropaymentToCreditScoreFactor::get())
                     .unwrap_or(0);
+                let cap: u64 = T::CreditScoreCapPerEra::get() as u64; 
+                if score_delta > cap {
+                    score_delta = cap
+                }
                 log!(
                     info,
                     "server_id: {:?}, balance_num: {},score_delta:{}",

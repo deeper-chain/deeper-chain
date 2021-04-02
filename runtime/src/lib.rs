@@ -449,6 +449,7 @@ parameter_types! {
 parameter_types! {
     pub const CreditInitScore: u64 = 60;
     pub const MaxCreditScore: u64 = 800;
+    pub const CreditScoreCapPerEra: u8 = 5;
     pub const CreditScoreAttenuationLowerBound: u64 = 40;
     pub const CreditScoreAttenuationStep: u64 = 5;
     pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
@@ -461,6 +462,7 @@ impl pallet_credit::Trait for Runtime {
     type CurrencyToVote = CurrencyToNumberHandler;
     type CreditInitScore = CreditInitScore;
     type MaxCreditScore = MaxCreditScore;
+    type CreditScoreCapPerEra = CreditScoreCapPerEra;
     type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
     type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
     type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
