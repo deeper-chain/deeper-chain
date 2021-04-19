@@ -107,6 +107,8 @@ decl_storage! {
       SessionId get(fn get_session_id): map hasher(blake2_128_concat) (T::AccountId, T::AccountId) => Option<u32>;
       // the last block that an ccount has micropayment transaction involved
       LastUpdated get(fn last_updated): map hasher(blake2_128_concat) T::AccountId => T::BlockNumber;
+      // record total micorpayment channel balance of accountid
+      TotalMicropaymentChannelBalance get(fn total_micropayment_chanel_balance): map hasher(blake2_128_concat) T::AccountId => Option<BalanceOf<T>>;
       // record server accounts who has claimed micropayment during a given block
       ServerByBlock get(fn get_server_by_block): double_map hasher(blake2_128_concat) T::BlockNumber, hasher(blake2_128_concat) T::AccountId => bool;
       // record client accumulated payments to a given server account during a given block
@@ -146,6 +148,7 @@ decl_module! {
                Err(Error::<T>::NotEnoughBalance)?
           }
           Channel::<T>::insert(sender.clone(),receiver.clone(), chan);
+          TotalMicropaymentChannelBalance::<T>::insert(sender.clone(), lock_amt);
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,lock_amt,nonce,start_block,expiration));
           Ok(())
       }
@@ -159,6 +162,14 @@ decl_module! {
 
           if Channel::<T>::contains_key(account_id.clone(),signer.clone()) { // signer is receiver
             let chan = Channel::<T>::get(account_id.clone(),signer.clone());
+            TotalMicropaymentChannelBalance::<T>::mutate_exists(&signer,|b|{
+                let total_balance = b.take().unwrap_or_default();
+                *b = if total_balance > chan.balance {
+                    Some(total_balance - chan.balance)
+                }else {
+                    None
+                };
+            });
             Self::deposit_into_account(&account_id, chan.balance);
             Self::_close_channel(&account_id, &signer);
             let end_block =  <frame_system::Module<T>>::block_number();
@@ -168,6 +179,14 @@ decl_module! {
             let chan = Channel::<T>::get(signer.clone(), account_id.clone());
             let current_block = <frame_system::Module<T>>::block_number();
             if chan.expiration < current_block {
+                TotalMicropaymentChannelBalance::<T>::mutate_exists(&signer,|b|{
+                    let total_balance = b.take().unwrap_or_default();
+                    *b = if total_balance > chan.balance {
+                        Some(total_balance - chan.balance)
+                    }else {
+                        None
+                    };
+                });
                 Self::deposit_into_account(&signer, chan.balance);
                 Self::_close_channel(&signer, &account_id);
                 let end_block = current_block;
@@ -189,6 +208,14 @@ decl_module! {
           for (receiver, chan) in Channel::<T>::iter_prefix(sender.clone()) {
             let current_block = <frame_system::Module<T>>::block_number();
             if chan.expiration < current_block {
+                TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender,|b| {
+                    let total_balance = b.take().unwrap_or_default();
+                    *b = if total_balance > chan.balance {
+                        Some(total_balance - chan.balance)
+                    }else {
+                        None
+                    };
+                });
                 Self::deposit_into_account(&sender.clone(), chan.balance);
                 Self::_close_channel(&sender, &receiver);
                 let end_block = current_block;
@@ -209,6 +236,10 @@ decl_module! {
           Channel::<T>::mutate(&sender, &receiver,|c|{
               (*c).balance += amt;
           });
+          TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender,|b| {
+            let total_balance = b.take().unwrap_or_default();
+            *b = Some(total_balance + amt);
+          });
           let end_block = <frame_system::Module<T>>::block_number();
           Self::deposit_event(RawEvent::BalanceAdded(sender, receiver, amt, end_block));
           Ok(())
@@ -224,6 +255,14 @@ decl_module! {
           let mut chan = Channel::<T>::get(sender.clone(),receiver.clone());
           let current_block = <frame_system::Module<T>>::block_number();
           if chan.expiration < current_block {
+            TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender,|b| {
+                let total_balance = b.take().unwrap_or_default();
+                *b = if total_balance > chan.balance {
+                    Some(total_balance - chan.balance)
+                }else {
+                    None
+                };
+            });
               Self::deposit_into_account(&sender, chan.balance);
               Self::_close_channel(&sender, &receiver);
               let end_block = current_block;
@@ -239,6 +278,14 @@ decl_module! {
           SessionId::<T>::insert((sender.clone(),receiver.clone()), session_id); // mark session_id as used
 
           if chan.balance < amount {
+                TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender,|b| {
+                    let total_balance = b.take().unwrap_or_default();
+                    *b = if total_balance > chan.balance {
+                        Some(total_balance - chan.balance)
+                    }else {
+                        None
+                    };
+                });
                Self::deposit_into_account(&receiver, chan.balance);
                Self::update_micropayment_information(&sender, &receiver, chan.balance);
                // no balance in channel now, just close it
@@ -251,6 +298,14 @@ decl_module! {
 
           chan.balance -= amount;
           Channel::<T>::insert(sender.clone(),receiver.clone(), chan);
+          TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender,|b| {
+            let total_balance = b.take().unwrap_or_default();
+            *b = if total_balance > amount {
+                Some(total_balance - amount)
+            }else {
+                None
+            };
+        });
           Self::deposit_into_account(&receiver, amount);
           Self::update_micropayment_information(&sender, &receiver, amount);
           Self::deposit_event(RawEvent::ClaimPayment(sender, receiver, amount));
