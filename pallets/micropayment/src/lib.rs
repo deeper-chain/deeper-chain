@@ -148,7 +148,14 @@ decl_module! {
                Err(Error::<T>::NotEnoughBalance)?
           }
           Channel::<T>::insert(sender.clone(),receiver.clone(), chan);
-          TotalMicropaymentChannelBalance::<T>::insert(sender.clone(), lock_amt);
+          if TotalMicropaymentChannelBalance::<T>::contains_key(&sender) {
+            TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender,|b| {
+                let total_balance = b.take().unwrap_or_default();
+                *b = Some(total_balance + lock_amt);
+              });
+          }else{
+            TotalMicropaymentChannelBalance::<T>::insert(sender.clone(), lock_amt);
+          }
           Self::deposit_event(RawEvent::ChannelOpened(sender,receiver,lock_amt,nonce,start_block,expiration));
           Ok(())
       }
@@ -162,7 +169,7 @@ decl_module! {
 
           if Channel::<T>::contains_key(account_id.clone(),signer.clone()) { // signer is receiver
             let chan = Channel::<T>::get(account_id.clone(),signer.clone());
-            TotalMicropaymentChannelBalance::<T>::mutate_exists(&signer,|b|{
+            TotalMicropaymentChannelBalance::<T>::mutate_exists(&account_id,|b|{
                 let total_balance = b.take().unwrap_or_default();
                 *b = if total_balance > chan.balance {
                     Some(total_balance - chan.balance)
