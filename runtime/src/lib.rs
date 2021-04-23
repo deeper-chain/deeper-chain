@@ -433,12 +433,14 @@ parameter_types! {
     pub const MaxDurationDays: u8 = 7;
     pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
     pub const MaxIpLength: usize = 256;
+    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
 impl micropayment::Trait for Runtime {
     type Event = Event;
     type Currency = Balances;
     type DayToBlocknum = DayToBlocknum;
+    type DataPerDPR = DataPerDPR;
 }
 
 parameter_types! {
