@@ -40,6 +40,8 @@ pub trait Trait: frame_system::Trait {
     type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
 
     type DayToBlocknum: Get<u32>;
+    /// data per DPR
+    type DataPerDPR: Get<u64>;
 }
 
 type BalanceOf<T> =
@@ -124,6 +126,8 @@ decl_module! {
       type Error = Error<T>;
       // initialize the default event for this module
       fn deposit_event() = default;
+
+      const DataPerDPR: u64 = T::DataPerDPR::get();
 
       #[weight = 10_000]
       // duration is in units of second
