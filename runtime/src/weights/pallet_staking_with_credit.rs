@@ -96,6 +96,11 @@ impl pallet_staking_with_credit::WeightInfo for WeightInfo {
             .saturating_add((9000 as Weight).saturating_mul(v as Weight))
             .saturating_add(DbWeight::get().writes(1 as Weight))
     }
+    fn set_validator_whitelist(v: u32) -> Weight {
+        (6324000 as Weight)
+            .saturating_add((9000 as Weight).saturating_mul(v as Weight))
+            .saturating_add(DbWeight::get().writes(1 as Weight))
+    }
     fn force_unstake(s: u32) -> Weight {
         (119691000 as Weight)
             .saturating_add((6681000 as Weight).saturating_mul(s as Weight))
