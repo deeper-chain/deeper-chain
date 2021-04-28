@@ -790,6 +790,7 @@ pub trait WeightInfo {
     fn force_new_era() -> Weight;
     fn force_new_era_always() -> Weight;
     fn set_invulnerables(v: u32) -> Weight;
+    fn set_validator_whitelist(v: u32) -> Weight;
     fn force_unstake(s: u32) -> Weight;
     fn cancel_deferred_slash(s: u32) -> Weight;
     fn payout_stakers_alive_staked(n: u32) -> Weight;
@@ -975,6 +976,9 @@ decl_storage! {
         /// easy to initialize and the performance hit is minimal (we expect no more than four
         /// invulnerables) and restricted to testnets.
         pub Invulnerables get(fn invulnerables) config(): Vec<T::AccountId>;
+
+        /// ValidtorWhiteList
+        pub ValidatorWhiteList get(fn validator_whiltelist) : Vec<T::AccountId>;
 
         /// Map from all locked "stash" accounts to the controller account.
         pub Bonded get(fn bonded): map hasher(twox_64_concat) T::AccountId => Option<T::AccountId>;
@@ -1885,6 +1889,21 @@ decl_module! {
         fn set_invulnerables(origin, invulnerables: Vec<T::AccountId>) {
             ensure_root(origin)?;
             <Invulnerables<T>>::put(invulnerables);
+        }
+
+
+        /// Set the validator white list.
+        /// null , any validators can come up for election; not null, only validators in whitelist can come up for election
+        /// The dispatch origin must be Root.
+        ///
+        /// # <weight>
+        /// - O(V)
+        /// - Write: ValidatorWhiteList
+        /// # </weight>
+        #[weight = T::WeightInfo::set_validator_whitelist(whitelist.len() as u32)]
+        fn set_validator_whitelist(origin, whitelist: Vec<T::AccountId>) {
+            ensure_root(origin)?;
+            <ValidatorWhiteList<T>>::put(whitelist);
         }
 
         /// Force a current staker to become completely unstaked, immediately.
@@ -3037,16 +3056,21 @@ impl<T: Trait> Module<T> {
     {
         let mut all_nominators: Vec<(T::AccountId, VoteWeight, Vec<T::AccountId>)> = Vec::new();
         let mut all_validators = Vec::new();
+        let validator_whitelist = <ValidatorWhiteList<T>>::get();
         for (validator, _) in <Validators<T>>::iter() {
-            // append self vote
-            let self_vote = (
-                validator.clone(),
-                Self::slashable_balance_of_vote_weight(&validator) / 2
-                    + Self::delegated_credit_score_of_vote_weight(&validator) / 2,
-                vec![validator.clone()],
-            );
-            all_nominators.push(self_vote);
-            all_validators.push(validator);
+            // whitelist is null , any validators can come up for election;
+            // whitelist is not null, only validators in whitelist can come up for election.
+            if validator_whitelist.len()==0 || validator_whitelist.contains(&validator.clone()){
+                // append self vote
+                let self_vote = (
+                    validator.clone(),
+                    Self::slashable_balance_of_vote_weight(&validator) / 2
+                        + Self::delegated_credit_score_of_vote_weight(&validator) / 2,
+                    vec![validator.clone()],
+                );
+                all_nominators.push(self_vote);
+                all_validators.push(validator);
+            }
         }
 
         let nominator_votes = <Nominators<T>>::iter().map(|(nominator, nominations)| {
