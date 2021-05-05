@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2019-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2019-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,8 @@
 //! Test accounts.
 
 use codec::Encode;
-use e2_chain_runtime::{CheckedExtrinsic, SessionKeys, SignedExtra, UncheckedExtrinsic};
 use node_primitives::{AccountId, Balance, Index};
+use node_runtime::{CheckedExtrinsic, SessionKeys, SignedExtra, UncheckedExtrinsic};
 use sp_keyring::{AccountKeyring, Ed25519Keyring, Sr25519Keyring};
 use sp_runtime::generic::Era;
 
@@ -108,11 +108,7 @@ pub fn sign(
                 })
                 .into();
             UncheckedExtrinsic {
-                signature: Some((
-                    pallet_indices::address::Address::Id(signed),
-                    signature,
-                    extra,
-                )),
+                signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra)),
                 function: payload.0,
             }
         }

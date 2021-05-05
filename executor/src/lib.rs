@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2018-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@ pub use sc_executor::NativeExecutor;
 // equivalent wasm code.
 native_executor_instance!(
     pub Executor,
-    e2_chain_runtime::api::dispatch,
-    e2_chain_runtime::native_version,
+    node_runtime::api::dispatch,
+    node_runtime::native_version,
     frame_benchmarking::benchmarking::HostFunctions,
 );

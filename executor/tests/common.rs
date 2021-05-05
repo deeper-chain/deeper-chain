@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2018-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,12 +32,12 @@ use sp_runtime::{
 };
 use sp_state_machine::TestExternalities as CoreTestExternalities;
 
-use e2_chain_runtime::{
+use node_executor::Executor;
+use node_primitives::{BlockNumber, Hash};
+use node_runtime::{
     constants::currency::*, Block, BuildStorage, CheckedExtrinsic, Header, Runtime,
     UncheckedExtrinsic,
 };
-use node_executor::Executor;
-use node_primitives::{BlockNumber, Hash};
 use node_testing::keyring::*;
 use sp_externalities::Externalities;
 
@@ -67,7 +67,7 @@ impl AppCrypto<MultiSigner, MultiSignature> for TestAuthorityId {
 /// as canonical. This is why `native_executor_instance` also uses the compact version of the
 /// runtime.
 pub fn compact_code_unwrap() -> &'static [u8] {
-    e2_chain_runtime::WASM_BINARY.expect(
+    node_runtime::WASM_BINARY.expect(
         "Development wasm binary is not available. \
 									  Testing is only supported with the flag disabled.",
     )
@@ -75,9 +75,9 @@ pub fn compact_code_unwrap() -> &'static [u8] {
 
 pub const GENESIS_HASH: [u8; 32] = [69u8; 32];
 
-pub const SPEC_VERSION: u32 = e2_chain_runtime::VERSION.spec_version;
+pub const SPEC_VERSION: u32 = node_runtime::VERSION.spec_version;
 
-pub const TRANSACTION_VERSION: u32 = e2_chain_runtime::VERSION.transaction_version;
+pub const TRANSACTION_VERSION: u32 = node_runtime::VERSION.transaction_version;
 
 pub type TestExternalities<H> = CoreTestExternalities<H, u64>;
 

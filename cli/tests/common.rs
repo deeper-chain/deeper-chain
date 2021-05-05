@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -53,7 +53,7 @@ pub fn wait_for(child: &mut Child, secs: usize) -> Option<ExitStatus> {
 
 /// Run the node for a while (30 seconds)
 pub fn run_dev_node_for_a_while(base_path: &Path) {
-    let mut cmd = Command::new(cargo_bin("e2-chain"));
+    let mut cmd = Command::new(cargo_bin("substrate"));
 
     let mut cmd = cmd
         .args(&["--dev"])

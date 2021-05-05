@@ -1,4 +1,6 @@
 {
+    "Address": "MultiAddress",
+    "LookupSource": "MultiAddress",
     "Balance": "u128",
     "Timestamp": "Moment",
     "BlockNumber": "u32",

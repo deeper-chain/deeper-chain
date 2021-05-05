@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@ fn inspect_works() {
 
     common::run_dev_node_for_a_while(base_path.path());
 
-    let status = Command::new(cargo_bin("e2-chain"))
+    let status = Command::new(cargo_bin("substrate"))
         .args(&["inspect", "--dev", "--pruning", "archive", "-d"])
         .arg(base_path.path())
         .args(&["block", "1"])

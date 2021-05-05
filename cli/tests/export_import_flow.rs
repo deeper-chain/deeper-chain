@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -106,7 +106,7 @@ impl<'a> ExportImportRevertExecutor<'a> {
         };
 
         // Running the command and capturing the output.
-        let output = Command::new(cargo_bin("e2-chain"))
+        let output = Command::new(cargo_bin("substrate"))
             .args(&arguments)
             .arg(&base_path)
             .arg(&self.exported_blocks_file)

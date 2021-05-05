@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2018-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +16,12 @@
 // limitations under the License.
 
 use codec::Decode;
-use e2_chain_runtime::{Executive, Indices, Runtime, UncheckedExtrinsic};
 use frame_system::offchain::{SendSignedTransaction, Signer, SubmitTransaction};
+use node_runtime::{Executive, Indices, Runtime, UncheckedExtrinsic};
 use sp_application_crypto::AppKey;
-use sp_core::testing::KeyStore;
-use sp_core::{
-    offchain::{testing::TestTransactionPoolExt, TransactionPoolExt},
-    traits::KeystoreExt,
-};
+use sp_core::offchain::{testing::TestTransactionPoolExt, TransactionPoolExt};
+use sp_keystore::{testing::KeyStore, KeystoreExt, SyncCryptoStore};
+use std::sync::Arc;
 
 pub mod common;
 use self::common::*;
@@ -63,28 +61,25 @@ fn should_submit_signed_transaction() {
     t.register_extension(TransactionPoolExt::new(pool));
 
     let keystore = KeyStore::new();
-    keystore
-        .write()
-        .sr25519_generate_new(
-            sr25519::AuthorityId::ID,
-            Some(&format!("{}/hunter1", PHRASE)),
-        )
-        .unwrap();
-    keystore
-        .write()
-        .sr25519_generate_new(
-            sr25519::AuthorityId::ID,
-            Some(&format!("{}/hunter2", PHRASE)),
-        )
-        .unwrap();
-    keystore
-        .write()
-        .sr25519_generate_new(
-            sr25519::AuthorityId::ID,
-            Some(&format!("{}/hunter3", PHRASE)),
-        )
-        .unwrap();
-    t.register_extension(KeystoreExt(keystore));
+    SyncCryptoStore::sr25519_generate_new(
+        &keystore,
+        sr25519::AuthorityId::ID,
+        Some(&format!("{}/hunter1", PHRASE)),
+    )
+    .unwrap();
+    SyncCryptoStore::sr25519_generate_new(
+        &keystore,
+        sr25519::AuthorityId::ID,
+        Some(&format!("{}/hunter2", PHRASE)),
+    )
+    .unwrap();
+    SyncCryptoStore::sr25519_generate_new(
+        &keystore,
+        sr25519::AuthorityId::ID,
+        Some(&format!("{}/hunter3", PHRASE)),
+    )
+    .unwrap();
+    t.register_extension(KeystoreExt(Arc::new(keystore)));
 
     t.execute_with(|| {
         let results =
@@ -106,21 +101,19 @@ fn should_submit_signed_twice_from_the_same_account() {
     t.register_extension(TransactionPoolExt::new(pool));
 
     let keystore = KeyStore::new();
-    keystore
-        .write()
-        .sr25519_generate_new(
-            sr25519::AuthorityId::ID,
-            Some(&format!("{}/hunter1", PHRASE)),
-        )
-        .unwrap();
-    keystore
-        .write()
-        .sr25519_generate_new(
-            sr25519::AuthorityId::ID,
-            Some(&format!("{}/hunter2", PHRASE)),
-        )
-        .unwrap();
-    t.register_extension(KeystoreExt(keystore));
+    SyncCryptoStore::sr25519_generate_new(
+        &keystore,
+        sr25519::AuthorityId::ID,
+        Some(&format!("{}/hunter1", PHRASE)),
+    )
+    .unwrap();
+    SyncCryptoStore::sr25519_generate_new(
+        &keystore,
+        sr25519::AuthorityId::ID,
+        Some(&format!("{}/hunter2", PHRASE)),
+    )
+    .unwrap();
+    t.register_extension(KeystoreExt(Arc::new(keystore)));
 
     t.execute_with(|| {
         let result =
@@ -164,20 +157,18 @@ fn should_submit_signed_twice_from_all_accounts() {
 
     let keystore = KeyStore::new();
     keystore
-        .write()
         .sr25519_generate_new(
             sr25519::AuthorityId::ID,
             Some(&format!("{}/hunter1", PHRASE)),
         )
         .unwrap();
     keystore
-        .write()
         .sr25519_generate_new(
             sr25519::AuthorityId::ID,
             Some(&format!("{}/hunter2", PHRASE)),
         )
         .unwrap();
-    t.register_extension(KeystoreExt(keystore));
+    t.register_extension(KeystoreExt(Arc::new(keystore)));
 
     t.execute_with(|| {
 		let results = Signer::<Runtime, TestAuthorityId>::all_accounts()
@@ -225,7 +216,6 @@ fn should_submit_signed_twice_from_all_accounts() {
 #[test]
 fn submitted_transaction_should_be_valid() {
     use codec::Encode;
-    use frame_support::storage::StorageMap;
     use sp_runtime::traits::StaticLookup;
     use sp_runtime::transaction_validity::{TransactionSource, TransactionTag};
 
@@ -234,14 +224,13 @@ fn submitted_transaction_should_be_valid() {
     t.register_extension(TransactionPoolExt::new(pool));
 
     let keystore = KeyStore::new();
-    keystore
-        .write()
-        .sr25519_generate_new(
-            sr25519::AuthorityId::ID,
-            Some(&format!("{}/hunter1", PHRASE)),
-        )
-        .unwrap();
-    t.register_extension(KeystoreExt(keystore));
+    SyncCryptoStore::sr25519_generate_new(
+        &keystore,
+        sr25519::AuthorityId::ID,
+        Some(&format!("{}/hunter1", PHRASE)),
+    )
+    .unwrap();
+    t.register_extension(KeystoreExt(Arc::new(keystore)));
 
     t.execute_with(|| {
         let results =
@@ -269,7 +258,8 @@ fn submitted_transaction_should_be_valid() {
         };
         let account = frame_system::AccountInfo {
             nonce: 0,
-            refcount: 0,
+            consumers: 0,
+            providers: 0,
             data,
         };
         <frame_system::Account<Runtime>>::insert(&address, account);

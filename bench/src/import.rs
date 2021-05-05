@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -132,7 +132,7 @@ impl core::Benchmark for ImportBenchmark {
             .client
             .state_at(&BlockId::number(1))
             .expect("state_at failed for block#1")
-            .inspect_with(|| {
+            .inspect_state(|| {
                 match self.block_type {
                     BlockType::RandomTransfersKeepAlive => {
                         // should be 5 per signed extrinsic + 1 per unsigned
@@ -144,13 +144,13 @@ impl core::Benchmark for ImportBenchmark {
                         //    - deposit event for charging transaction fee
                         //    - extrinsic success
                         assert_eq!(
-                            e2_chain_runtime::System::events().len(),
+                            node_runtime::System::events().len(),
                             (self.block.extrinsics.len() - 1) * 5 + 1,
                         );
                     }
                     BlockType::Noop => {
                         assert_eq!(
-                            e2_chain_runtime::System::events().len(),
+                            node_runtime::System::events().len(),
                             // should be 2 per signed extrinsic + 1 per unsigned
                             // we have 1 unsigned and the rest are signed in the block
                             // those 2 events per signed are:

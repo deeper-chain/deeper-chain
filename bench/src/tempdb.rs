@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 use kvdb::{DBTransaction, KeyValueDB};
 use kvdb_rocksdb::{Database, DatabaseConfig};
-use std::{io, sync::Arc};
+use std::{io, path::PathBuf, sync::Arc};
 
 #[derive(Debug, Clone, Copy, derive_more::Display)]
 pub enum DatabaseType {
@@ -125,7 +125,7 @@ impl Clone for TempDatabase {
         let self_db_files = std::fs::read_dir(self_dir)
             .expect("failed to list file in seed dir")
             .map(|f_result| f_result.expect("failed to read file in seed db").path())
-            .collect::<Vec<_>>();
+            .collect::<Vec<PathBuf>>();
         fs_extra::copy_items(
             &self_db_files,
             new_dir.path(),

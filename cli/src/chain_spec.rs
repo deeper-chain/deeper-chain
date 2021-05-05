@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2018-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,16 +18,16 @@
 
 //! Substrate chain configurations.
 
-use e2_chain_runtime::constants::currency::*;
-use e2_chain_runtime::Block;
-use e2_chain_runtime::{
+use grandpa_primitives::AuthorityId as GrandpaId;
+use hex_literal::hex;
+use node_runtime::constants::currency::*;
+use node_runtime::Block;
+use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
     CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
     SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig,
     SystemConfig, TechnicalCommitteeConfig,
 };
-use grandpa_primitives::AuthorityId as GrandpaId;
-use hex_literal::hex;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service::ChainType;
@@ -41,76 +41,12 @@ use sp_runtime::{
     Perbill,
 };
 
-pub use e2_chain_runtime::GenesisConfig;
 pub use node_primitives::{AccountId, Balance, Signature};
+pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-
-/// get root key for deeper testnet
-pub fn testnet_root_key() -> AccountId {
-    hex![
-        // 5CHu6tEdZWEnGHa928e9CfsXnL5otzRg4xGwqCscXDrcH38t
-        "0a100b6bf4e332cac53b98af0003bbbf6984d2171bbe30a05a97bb28f5212119"
-    ]
-    .into()
-}
-
-/// return other authority keys as default validators
-pub fn other_authority_keys() -> Vec<(
-    AccountId,
-    AccountId,
-    GrandpaId,
-    BabeId,
-    ImOnlineId,
-    AuthorityDiscoveryId,
-)> {
-    vec![
-    (
-        // 5CwMNoeXEktdpJFDNiPi29odWr8KANBWodzkBuE56DGa5ksq
-        hex!["26a0928a4a88db828747ac4d503a902f279052aa6d48f1541bad709bbad1d750"].into(),
-        // 5FyXGesEKhP7qKgx8GQs61hWF8HvrDCbCBTaN298SX3QTDhq
-        hex!["acfd11cf17c7253febc403cf4c27d1ad673011f18c5aae8846eed067ae81d342"].into(),
-        // 5EHzqtDmbUDZvxgGWjKGYz5kvmv1McBsBfZ3T2ZBL763yhj4
-        hex!["629bd6b5e0bee300e455d2d5a367afca580cfbb7cab9856486c4fcc32ef9e825"].unchecked_into(),
-        // 5FyXGesEKhP7qKgx8GQs61hWF8HvrDCbCBTaN298SX3QTDhq
-        hex!["acfd11cf17c7253febc403cf4c27d1ad673011f18c5aae8846eed067ae81d342"].unchecked_into(),
-        // 5FyXGesEKhP7qKgx8GQs61hWF8HvrDCbCBTaN298SX3QTDhq
-        hex!["acfd11cf17c7253febc403cf4c27d1ad673011f18c5aae8846eed067ae81d342"].unchecked_into(),
-        // 5FyXGesEKhP7qKgx8GQs61hWF8HvrDCbCBTaN298SX3QTDhq
-        hex!["acfd11cf17c7253febc403cf4c27d1ad673011f18c5aae8846eed067ae81d342"].unchecked_into(),
-    ),
-    (
-        // 5GQrjS6o6xG1LZxdc3SfVhoyCCCqBFL434seLiJLsJg92SyB
-        hex!["c04fb7faed38acbb55f02afe12f624fc77a1b30e02ca8a6a08dde940baa9a82f"].into(),
-        // 5GQpi5PnxBEBTzPwt8x4bYks1uD4Hy5A8ZxmmLihMiN3nqAA
-        hex!["c048e845940a64de14307e316e987e95f4a199faf8ceb8d4e5a76f5f98f59c16"].into(),
-        // 5DxYdPQuxWpjNWwPbzUE1QgkXJQR8NGjhQn7UuvD1Vaz4veX
-        hex!["53c5ed4aec243acac4a02866f891f32653bc2ed54063eb5d9962ebdaa2dcdcbe"].unchecked_into(),
-        // 5GQpi5PnxBEBTzPwt8x4bYks1uD4Hy5A8ZxmmLihMiN3nqAA
-        hex!["c048e845940a64de14307e316e987e95f4a199faf8ceb8d4e5a76f5f98f59c16"].unchecked_into(),
-        // 5GQpi5PnxBEBTzPwt8x4bYks1uD4Hy5A8ZxmmLihMiN3nqAA
-        hex!["c048e845940a64de14307e316e987e95f4a199faf8ceb8d4e5a76f5f98f59c16"].unchecked_into(),
-        // 5GQpi5PnxBEBTzPwt8x4bYks1uD4Hy5A8ZxmmLihMiN3nqAA
-        hex!["c048e845940a64de14307e316e987e95f4a199faf8ceb8d4e5a76f5f98f59c16"].unchecked_into(),
-    ),
-    (
-        // 5HNiABAGEcQtvtdkqrALzeieczDMAKjB4nEBqV7UcRsAEJxe
-        hex!["eae899c4aac8bd52b2d206d244f26b6d39a7701939cbd33b2eafd11ca9050b0e"].into(),
-        // 5Cd5bhgiBVAWxZsGiLUfC213A5cybeGgGShovY6ktKp5mosf
-        hex!["18b10afafa9c3a3ac5ab3c886f68d7c13ac500fe009e9c35c9c2cc0188ad112f"].into(),
-        // 5GFViwQFPAJqSw47jA9GmShvpG57kFEUku9GPJhR6EPNe6Ac
-        hex!["b92bc9fcc24867030bb544e432e3a190a7516bde6008bcf3eeae6ec0c191fb8c"].unchecked_into(),
-        // 5Cd5bhgiBVAWxZsGiLUfC213A5cybeGgGShovY6ktKp5mosf
-        hex!["18b10afafa9c3a3ac5ab3c886f68d7c13ac500fe009e9c35c9c2cc0188ad112f"].unchecked_into(),
-        // 5Cd5bhgiBVAWxZsGiLUfC213A5cybeGgGShovY6ktKp5mosf
-        hex!["18b10afafa9c3a3ac5ab3c886f68d7c13ac500fe009e9c35c9c2cc0188ad112f"].unchecked_into(),
-        // 5Cd5bhgiBVAWxZsGiLUfC213A5cybeGgGShovY6ktKp5mosf
-        hex!["18b10afafa9c3a3ac5ab3c886f68d7c13ac500fe009e9c35c9c2cc0188ad112f"].unchecked_into(),
-    )
-    ]
-}
 
 /// Node `ChainSpec` extensions.
 ///
@@ -316,12 +252,10 @@ pub fn testnet_genesis(
     endowed_accounts: Option<Vec<AccountId>>,
     enable_println: bool,
 ) -> GenesisConfig {
-    let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
+    let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
         vec![
             get_account_id_from_seed::<sr25519::Public>("Alice"),
             get_account_id_from_seed::<sr25519::Public>("Bob"),
-            other_authority_keys()[0].1.clone(),
-            testnet_root_key(),
             get_account_id_from_seed::<sr25519::Public>("Charlie"),
             get_account_id_from_seed::<sr25519::Public>("Dave"),
             get_account_id_from_seed::<sr25519::Public>("Eve"),
@@ -332,13 +266,18 @@ pub fn testnet_genesis(
             get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
             get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
             get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
-            other_authority_keys()[0].0.clone(),
         ]
     });
+    initial_authorities.iter().for_each(|x| {
+        if !endowed_accounts.contains(&x.0) {
+            endowed_accounts.push(x.0.clone())
+        }
+    });
+
     let num_endowed_accounts = endowed_accounts.len();
 
     const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
-    const STASH: Balance = 100 * DOLLARS;
+    const STASH: Balance = ENDOWMENT / 1000;
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
@@ -349,8 +288,7 @@ pub fn testnet_genesis(
             balances: endowed_accounts
                 .iter()
                 .cloned()
-                .map(|k| (k, ENDOWMENT))
-                .chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
+                .map(|x| (x, ENDOWMENT))
                 .collect(),
         }),
         pallet_indices: Some(IndicesConfig { indices: vec![] }),
@@ -366,8 +304,7 @@ pub fn testnet_genesis(
                 })
                 .collect::<Vec<_>>(),
         }),
-        deeper_node: Some(Default::default()),
-        pallet_staking_with_credit: Some(StakingConfig {
+        pallet_staking: Some(StakingConfig {
             validator_count: initial_authorities.len() as u32 * 2,
             minimum_validator_count: initial_authorities.len() as u32,
             stakers: initial_authorities
@@ -382,7 +319,7 @@ pub fn testnet_genesis(
         pallet_elections_phragmen: Some(ElectionsConfig {
             members: endowed_accounts
                 .iter()
-                .take(num_endowed_accounts / 2)
+                .take((num_endowed_accounts + 1) / 2)
                 .cloned()
                 .map(|member| (member, STASH))
                 .collect(),
@@ -391,7 +328,7 @@ pub fn testnet_genesis(
         pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
             members: endowed_accounts
                 .iter()
-                .take(num_endowed_accounts / 2)
+                .take((num_endowed_accounts + 1) / 2)
                 .cloned()
                 .collect(),
             phantom: Default::default(),
@@ -416,7 +353,7 @@ pub fn testnet_genesis(
         pallet_society: Some(SocietyConfig {
             members: endowed_accounts
                 .iter()
-                .take(num_endowed_accounts / 2)
+                .take((num_endowed_accounts + 1) / 2)
                 .cloned()
                 .collect(),
             pot: 0,
@@ -453,22 +390,11 @@ pub fn development_config() -> ChainSpec {
 fn local_testnet_genesis() -> GenesisConfig {
     testnet_genesis(
         vec![
-            other_authority_keys()[0].clone(),
-            other_authority_keys()[1].clone(),
-            other_authority_keys()[2].clone(),
+            authority_keys_from_seed("Alice"),
+            authority_keys_from_seed("Bob"),
         ],
-        testnet_root_key(),
-        Some(
-            vec![
-                other_authority_keys()[0].1.clone(),
-                other_authority_keys()[1].1.clone(),
-                other_authority_keys()[2].1.clone(),
-                testnet_root_key(),
-                other_authority_keys()[0].0.clone(),
-                other_authority_keys()[1].0.clone(),
-                other_authority_keys()[2].0.clone(),
-            ]
-        ),
+        get_account_id_from_seed::<sr25519::Public>("Alice"),
+        None,
         false,
     )
 }
@@ -555,7 +481,7 @@ pub(crate) mod tests {
                 ))
             },
             |config| {
-                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
+                let (keep_alive, _, _, client, network, transaction_pool) = new_light_base(config)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     keep_alive,
                     client,

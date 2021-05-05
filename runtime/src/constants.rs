@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2019-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2019-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,6 @@ pub mod currency {
     pub const MILLICENTS: Balance = 1_000_000_000;
     pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
     pub const DOLLARS: Balance = 100 * CENTS;
-    pub const DPR: Balance = DOLLARS;
 
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
         items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
@@ -51,21 +50,16 @@ pub mod time {
     /// always be assigned, in which case `MILLISECS_PER_BLOCK` and
     /// `SLOT_DURATION` should have the same value.
     ///
-    /// <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
-    pub const MILLISECS_PER_BLOCK: Moment = 5000;
+    /// <https://research.web3.foundation/en/latest/polkadot/block-production/Babe.html#-6.-practical-results>
+    pub const MILLISECS_PER_BLOCK: Moment = 3000;
     pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
-    pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
 
-    pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
-    pub const GENESIS_BLOCK_REWARD: u128 = 90_000_000_000_000_000;
-    pub const REWARD_ADJUST_FACTOR: u128 = 77_760_000; 
-    pub const REWARD_ADJUST_PERIOD: u32 = 4;
-    pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+    pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
 
     // 1 in 4 blocks (on average, not counting collisions) will be primary BABE blocks.
     pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 
-    pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 240 * MINUTES; //todo
+    pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 240 * MINUTES;
     pub const EPOCH_DURATION_IN_SLOTS: u64 = {
         const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
 

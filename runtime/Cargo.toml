@@ -1,105 +1,107 @@
 [package]
-name = "e2-chain-runtime"
-version = "2.0.0"
-authors = ["deeper.network dev"]
+name = "node-runtime"
+version = "2.0.1"
+authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2018"
 build = "build.rs"
 license = "Apache-2.0"
-repository = 'https://github.com/e2chain-dev/e2-chain-v2.0.0'
+homepage = "https://substrate.dev"
+repository = "https://github.com/paritytech/substrate/"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
-integer-sqrt = { version = "0.1.2" }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0.102", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
 
 # primitives
-sp-authority-discovery = { version = "2.0.0", default-features = false }
-sp-consensus-babe = { version = "0.8.0", default-features = false }
-sp-block-builder = { default-features = false, version = "2.0.0"}
-sp-inherents = { version = "2.0.0", default-features = false }
-node-primitives = { version = "2.0.0", default-features = false, path = "../primitives" }
-sp-offchain = { version = "2.0.0", default-features = false }
-sp-core = { version = "2.0.0", default-features = false }
-sp-std = { version = "2.0.0", default-features = false }
-sp-api = { version = "2.0.0", default-features = false }
-sp-runtime = { version = "2.0.0", default-features = false }
-sp-staking = { version = "2.0.0", default-features = false }
-sp-keyring = { version = "2.0.0", optional = true}
-sp-session = { version = "2.0.0", default-features = false }
-sp-transaction-pool = { version = "2.0.0", default-features = false}
-sp-version = { version = "2.0.0", default-features = false }
+sp-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-consensus-babe = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-block-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+sp-inherents = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+node-primitives = { version = "2.0.0", path = "../primitives", default-features = false}
+sp-offchain = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+sp-std = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-staking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-keyring = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", optional = true}
+sp-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-transaction-pool = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-version = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
 
 # frame dependencies
-frame-executive = { version = "2.0.0", default-features = false}
-frame-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-support = { version = "2.0.0", default-features = false}
-frame-system = { version = "2.0.0", default-features = false}
-frame-system-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false}
-pallet-authority-discovery = { version = "2.0.0", default-features = false}
-pallet-authorship = { version = "2.0.0", default-features = false}
-pallet-babe = { version = "2.0.0", default-features = false}
-pallet-collective = { version = "2.0.0", default-features = false}
-pallet-contracts = { version = "2.0.0", default-features = false}
-pallet-contracts-primitives = { version = "2.0.0", default-features = false}
-pallet-contracts-rpc-runtime-api = { version = "0.8.0", default-features = false}
-pallet-democracy = { version = "2.0.0", default-features = false}
-pallet-elections-phragmen = { version = "2.0.0", default-features = false}
-pallet-finality-tracker = { version = "2.0.0", default-features = false}
-pallet-grandpa = { version = "2.0.0", default-features = false}
-pallet-im-online = { version = "2.0.0", default-features = false}
-pallet-indices = { version = "2.0.0", default-features = false}
-pallet-identity = { version = "2.0.0", default-features = false}
-pallet-membership = { version = "2.0.0", default-features = false}
-pallet-multisig = { version = "2.0.0", default-features = false}
-pallet-offences = { version = "2.0.0", default-features = false}
-pallet-offences-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-pallet-proxy = { version = "2.0.0", default-features = false}
-pallet-randomness-collective-flip = { version = "2.0.0", default-features = false}
-pallet-recovery = { version = "2.0.0", default-features = false}
-pallet-session = { version = "2.0.0", features = ["historical"], default-features = false }
-pallet-session-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-pallet-staking-reward-curve = { version = "2.0.0", default-features = false}
-pallet-scheduler = { version = "2.0.0", default-features = false}
-pallet-society = { version = "2.0.0", default-features = false}
-pallet-sudo = { version = "2.0.0", default-features = false}
-pallet-timestamp = { version = "2.0.0", default-features = false}
-pallet-treasury = { version = "2.0.0", default-features = false}
-pallet-utility = { version = "2.0.0", default-features = false}
-pallet-transaction-payment = { version = "2.0.0", default-features = false}
-pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-features = false}
-pallet-vesting = { version = "2.0.0", default-features = false}
-
-
-# local pallet dependencies
-deeper-node = {package = "pallet-deeper-node", default-features = false, path = "../pallets/deeper-node", version = "2.0.0"}
-micropayment = {package = "pallet-micropayment", default-features = false, path = "../pallets/micropayment", version = "2.0.0"}
-pallet-balances = {package = "pallet-balances", default-features = false, path = "../pallets/balances",  version = "2.0.0"}
-pallet-credit = {package = "pallet-credit", default-features = false, path = "../pallets/credit", version = "2.0.0"}
-pallet-delegating = {package = "pallet-delegating", default-features = false, path = "../pallets/delegating", version = "2.0.0"}
-pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
+frame-executive = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+frame-system-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-assets = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-authorship = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-babe = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-bounties = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-contracts = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-democracy = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-grandpa = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-im-online = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-indices = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-identity = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-lottery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-mmr = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-offences = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-offences-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
+pallet-proxy = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-recovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["historical"], default-features = false }
+pallet-session-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
+pallet-staking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-staking-reward-curve = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-scheduler = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-society = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-sudo = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+pallet-tips = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-treasury = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-vesting = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+pallet-template = { version = "2.0.0", default-features = false, path = "../pallets/template" }
 
 [build-dependencies]
-wasm-builder-runner = { version = "1.0.5", package = "substrate-wasm-builder-runner"}
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 
 [dev-dependencies]
-sp-io = '2.0.0' 
+sp-io = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 
 [features]
 default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"sp-authority-discovery/std",
+	"pallet-assets/std",
 	"pallet-authority-discovery/std",
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
 	"pallet-babe/std",
+	"pallet-balances/std",
+	"pallet-bounties/std",
 	"sp-block-builder/std",
 	"codec/std",
 	"pallet-collective/std",
@@ -109,15 +111,17 @@ std = [
 	"pallet-democracy/std",
 	"pallet-elections-phragmen/std",
 	"frame-executive/std",
-	"pallet-finality-tracker/std",
 	"pallet-grandpa/std",
 	"pallet-im-online/std",
 	"pallet-indices/std",
 	"sp-inherents/std",
+	"pallet-lottery/std",
 	"pallet-membership/std",
+	"pallet-mmr/std",
 	"pallet-multisig/std",
 	"pallet-identity/std",
 	"pallet-scheduler/std",
+	"pallet-template/std",
 	"node-primitives/std",
 	"sp-offchain/std",
 	"pallet-offences/std",
@@ -130,6 +134,7 @@ std = [
 	"sp-api/std",
 	"sp-runtime/std",
 	"sp-staking/std",
+	"pallet-staking/std",
 	"sp-keyring",
 	"sp-session/std",
 	"pallet-sudo/std",
@@ -138,6 +143,7 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"pallet-timestamp/std",
+	"pallet-tips/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
@@ -147,18 +153,16 @@ std = [
 	"pallet-society/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
-	"pallet-credit/std",
-	"pallet-delegating/std",
-	"pallet-staking_with_credit/std",
-    "pallet-balances/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
+	"pallet-assets/runtime-benchmarks",
 	"pallet-babe/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
+	"pallet-bounties/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-contracts/runtime-benchmarks",
 	"pallet-democracy/runtime-benchmarks",
@@ -167,12 +171,15 @@ runtime-benchmarks = [
 	"pallet-identity/runtime-benchmarks",
 	"pallet-im-online/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
+	"pallet-lottery/runtime-benchmarks",
+	"pallet-mmr/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-society/runtime-benchmarks",
-	"pallet-staking_with_credit/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
+	"pallet-tips/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",

@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2018-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,18 +16,17 @@
 // limitations under the License.
 
 use codec::{Encode, Joiner};
-use e2_chain_runtime::{
-    constants::currency::*, Balances, Call, CheckedExtrinsic, Multiplier, Runtime,
-    TransactionByteFee, TransactionPayment,
-};
 use frame_support::{
     traits::Currency,
     weights::{
         constants::ExtrinsicBaseWeight, GetDispatchInfo, IdentityFee, WeightToFeePolynomial,
     },
-    StorageMap, StorageValue,
 };
 use node_primitives::Balance;
+use node_runtime::{
+    constants::currency::*, Balances, Call, CheckedExtrinsic, Multiplier, Runtime,
+    TransactionByteFee, TransactionPayment,
+};
 use node_testing::keyring::*;
 use sp_core::NeverNativeValue;
 use sp_runtime::{FixedPointNumber, Perbill};
@@ -126,6 +125,21 @@ fn fee_multiplier_increases_and_decreases_on_big_weight() {
     });
 }
 
+fn new_account_info(free_dollars: u128) -> Vec<u8> {
+    frame_system::AccountInfo {
+        nonce: 0u32,
+        consumers: 0,
+        providers: 0,
+        data: (
+            free_dollars * DOLLARS,
+            0 * DOLLARS,
+            0 * DOLLARS,
+            0 * DOLLARS,
+        ),
+    }
+    .encode()
+}
+
 #[test]
 fn transaction_fee_is_correct() {
     // This uses the exact values of substrate-node.
@@ -138,27 +152,11 @@ fn transaction_fee_is_correct() {
     let mut t = new_test_ext(compact_code_unwrap(), false);
     t.insert(
         <frame_system::Account<Runtime>>::hashed_key_for(alice()),
-        (
-            0u32,
-            0u32,
-            100 * DOLLARS,
-            0 * DOLLARS,
-            0 * DOLLARS,
-            0 * DOLLARS,
-        )
-            .encode(),
+        new_account_info(100),
     );
     t.insert(
         <frame_system::Account<Runtime>>::hashed_key_for(bob()),
-        (
-            0u32,
-            0u32,
-            10 * DOLLARS,
-            0 * DOLLARS,
-            0 * DOLLARS,
-            0 * DOLLARS,
-        )
-            .encode(),
+        new_account_info(10),
     );
     t.insert(
         <pallet_balances::TotalIssuance<Runtime>>::hashed_key().to_vec(),

@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2019-2020 Parity Technologies (UK) Ltd.
+// Copyright (C) 2019-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,8 +19,8 @@
 //! Genesis Configuration.
 
 use crate::keyring::*;
-use e2_chain_runtime::constants::currency::*;
-use e2_chain_runtime::{
+use node_runtime::constants::currency::*;
+use node_runtime::{
     wasm_binary_unwrap, AccountId, BalancesConfig, ContractsConfig, GenesisConfig, GrandpaConfig,
     IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig, SystemConfig,
 };
@@ -90,8 +90,7 @@ pub fn config_endowed(
                 ),
             ],
         }),
-        deeper_node: Some(Default::default()),
-        pallet_staking_with_credit: Some(StakingConfig {
+        pallet_staking: Some(StakingConfig {
             stakers: vec![
                 (dave(), alice(), 111 * DOLLARS, StakerStatus::Validator),
                 (eve(), bob(), 100 * DOLLARS, StakerStatus::Validator),
