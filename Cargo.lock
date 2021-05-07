@@ -3757,7 +3757,7 @@ dependencies = [
  "node-rpc",
  "node-runtime",
  "pallet-authority-discovery",
- "pallet-balances",
+ "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-grandpa",
  "pallet-im-online",
@@ -3826,7 +3826,7 @@ dependencies = [
  "node-primitives",
  "node-runtime",
  "node-testing",
- "pallet-balances",
+ "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-grandpa",
  "pallet-im-online",
@@ -3939,7 +3939,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-authorship",
  "pallet-babe",
- "pallet-balances",
+ "pallet-balances 3.0.0",
  "pallet-bounties",
  "pallet-collective",
  "pallet-contracts",
@@ -4009,7 +4009,7 @@ dependencies = [
  "node-executor",
  "node-primitives",
  "node-runtime",
- "pallet-balances",
+ "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-grandpa",
  "pallet-indices",
@@ -4260,6 +4260,22 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "sp-timestamp",
+]
+
+[[package]]
+name = "pallet-balances"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -4569,7 +4585,7 @@ source = "git+https://github.com/paritytech/substrate?tag=v3.0.0#49a4103f4bfef55
 dependencies = [
  "frame-support",
  "frame-system",
- "pallet-balances",
+ "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "parity-scale-codec",
  "serde",
  "sp-runtime",
@@ -4586,7 +4602,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-babe",
- "pallet-balances",
+ "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-offences",
@@ -4853,7 +4869,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
- "pallet-balances",
+ "pallet-balances 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "parity-scale-codec",
  "serde",
  "sp-runtime",

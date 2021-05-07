@@ -6,7 +6,7 @@ description = "Generic Substrate node implementation in Rust."
 build = "build.rs"
 edition = "2018"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
-default-run = "substrate"
+default-run = "e2-chain"
 homepage = "https://substrate.dev"
 repository = "https://github.com/paritytech/substrate/"
 
@@ -25,7 +25,7 @@ is-it-maintained-issue-resolution = { repository = "paritytech/substrate" }
 is-it-maintained-open-issues = { repository = "paritytech/substrate" }
 
 [[bin]]
-name = "substrate"
+name = "e2-chain"
 path = "bin/main.rs"
 required-features = ["cli"]
 
@@ -81,7 +81,7 @@ pallet-indices = { git = "https://github.com/paritytech/substrate", tag = "v3.0.
 pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 frame-system = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-balances = { version = "3.0.0", path = "../pallets/balances" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 pallet-im-online = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
