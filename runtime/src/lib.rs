@@ -481,6 +481,11 @@ impl pallet_delegating::Trait for Runtime {
     type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
 }
 
+
+impl pallet_eth_sub_bridge::Trait for Runtime {
+    type Event = Event;
+}
+
 impl pallet_session::Trait for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Trait>::AccountId;
@@ -1033,6 +1038,7 @@ construct_runtime!(
         Micropayment: micropayment::{Module, Call, Storage, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
+        Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>},
     }
 );
 

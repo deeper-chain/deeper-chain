@@ -1321,6 +1321,7 @@ dependencies = [
  "pallet-delegating",
  "pallet-democracy",
  "pallet-elections-phragmen",
+ "pallet-eth-sub-bridge",
  "pallet-finality-tracker",
  "pallet-grandpa",
  "pallet-identity",
@@ -4569,6 +4570,22 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-npos-elections",
+ "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "pallet-eth-sub-bridge"
+version = "2.0.0"
+dependencies = [
+ "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances 2.0.0",
+ "pallet-timestamp 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec",
+ "serde",
+ "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
