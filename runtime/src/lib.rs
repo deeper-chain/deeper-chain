@@ -78,6 +78,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_staking_with_credit::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
+pub use pallet_timestamp::Call as TimestampCall;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
@@ -484,6 +485,7 @@ impl pallet_delegating::Trait for Runtime {
 
 impl pallet_eth_sub_bridge::Trait for Runtime {
     type Event = Event;
+    type Currency = Balances;
 }
 
 impl pallet_session::Trait for Runtime {
