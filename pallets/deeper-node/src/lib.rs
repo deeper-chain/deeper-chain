@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, ReservableCurrency, Vec, Get};
+use frame_support::traits::{Currency, Get, ReservableCurrency, Vec};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 };
@@ -219,20 +219,26 @@ impl<T: Trait> Module<T> {
 
         // country registration
         let mut country_server_list = <ServersByCountry<T>>::get(&node.country);
-        if Self::country_list_insert(&mut country_server_list, &sender, &node.country, &duration) == false {
+        if Self::country_list_insert(&mut country_server_list, &sender, &node.country, &duration)
+            == false
+        {
             Err(Error::<T>::DoubleCountryRegistration)?
         }
 
         // level 3 region registration
         let mut level3_server_list = <ServersByRegion<T>>::get(&first_region);
-        if Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration) == false {
+        if Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration)
+            == false
+        {
             let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
             Err(Error::<T>::DoubleLevel3Registration)?
         }
 
         // level 2 region registration
         let mut level2_server_list = <ServersByRegion<T>>::get(&sec_region);
-        if Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration) == false {
+        if Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration)
+            == false
+        {
             let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
             let _ = Self::region_list_remove(&mut level3_server_list, &sender, &first_region);
             Err(Error::<T>::DoubleLevel2Registration)?
@@ -245,8 +251,12 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-
-    fn country_list_insert(servers: &mut Vec<T::AccountId>, account: &T::AccountId, country: &CountryRegion, duration: &T::BlockNumber) -> bool {
+    fn country_list_insert(
+        servers: &mut Vec<T::AccountId>,
+        account: &T::AccountId,
+        country: &CountryRegion,
+        duration: &T::BlockNumber,
+    ) -> bool {
         match servers.binary_search(&account) {
             Ok(_) => false,
             Err(index) => {
@@ -261,10 +271,13 @@ impl<T: Trait> Module<T> {
                 true
             }
         }
-
     }
 
-    fn country_list_remove(servers: &mut Vec<T::AccountId>, account: &T::AccountId, country: &CountryRegion) -> bool {
+    fn country_list_remove(
+        servers: &mut Vec<T::AccountId>,
+        account: &T::AccountId,
+        country: &CountryRegion,
+    ) -> bool {
         match servers.binary_search(&account) {
             Ok(index) => {
                 servers.remove(index);
@@ -274,12 +287,17 @@ impl<T: Trait> Module<T> {
                     country.clone(),
                 ));
                 true
-            },
+            }
             Err(_) => false,
         }
     }
 
-    fn region_list_insert(servers: &mut Vec<T::AccountId>, account: &T::AccountId, region: &CountryRegion, duration: &T::BlockNumber) -> bool {
+    fn region_list_insert(
+        servers: &mut Vec<T::AccountId>,
+        account: &T::AccountId,
+        region: &CountryRegion,
+        duration: &T::BlockNumber,
+    ) -> bool {
         match servers.binary_search(&account) {
             Ok(_) => false,
             Err(index) => {
@@ -294,10 +312,13 @@ impl<T: Trait> Module<T> {
                 true
             }
         }
-
     }
 
-    fn region_list_remove(servers: &mut Vec<T::AccountId>, account: &T::AccountId, region: &CountryRegion) -> bool {
+    fn region_list_remove(
+        servers: &mut Vec<T::AccountId>,
+        account: &T::AccountId,
+        region: &CountryRegion,
+    ) -> bool {
         match servers.binary_search(&account) {
             Ok(index) => {
                 servers.remove(index);
@@ -307,7 +328,7 @@ impl<T: Trait> Module<T> {
                     region.clone(),
                 ));
                 true
-            },
+            }
             Err(_) => false,
         }
     }

@@ -340,7 +340,7 @@ impl pallet_credit::Trait for Test {
     type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
 }
 
-impl pallet_delegating::Trait for Test{
+impl pallet_delegating::Trait for Test {
     type Event = MetaEvent;
     type CreditInterface = Credit;
     type Currency = Balances;

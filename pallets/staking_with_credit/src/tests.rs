@@ -257,10 +257,7 @@ fn rewards_should_work() {
         start_session(3);
 
         assert_eq!(Staking::active_era().unwrap().index, 1);
-        assert_eq!(
-            mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()),
-            0
-        );
+        assert_eq!(mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()), 0);
         assert_eq!(
             *mock::staking_events().last().unwrap(),
             RawEvent::EraPayout(0, 6480000000000000000, 0)
@@ -269,21 +266,27 @@ fn rewards_should_work() {
 
         assert_eq_error_rate!(
             Balances::total_balance(&10),
-            init_balance_10 + part_for_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0),
+            init_balance_10
+                + part_for_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&11), init_balance_11, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&20),
-            init_balance_20 + part_for_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0),
+            init_balance_20
+                + part_for_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&21), init_balance_21, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&100),
             init_balance_100
-                + part_for_100_from_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0)
-                + part_for_100_from_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0),
+                + part_for_100_from_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0)
+                + part_for_100_from_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&101), init_balance_101, 2);
@@ -296,10 +299,7 @@ fn rewards_should_work() {
         assert!(total_payout_1 > 10); // Test is meaningful if reward something
 
         mock::start_era(2);
-        assert_eq!(
-            mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()),
-            0
-        );
+        assert_eq!(mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()), 0);
         assert_eq!(
             *mock::staking_events().last().unwrap(),
             RawEvent::EraPayout(1, 6480000000000000000, 0)
@@ -308,21 +308,29 @@ fn rewards_should_work() {
 
         assert_eq_error_rate!(
             Balances::total_balance(&10),
-            init_balance_10 + part_for_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0 + total_payout_1),
+            init_balance_10
+                + part_for_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0
+                        + total_payout_1),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&11), init_balance_11, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&20),
-            init_balance_20 + part_for_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0),
+            init_balance_20
+                + part_for_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&21), init_balance_21, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&100),
             init_balance_100
-                + part_for_100_from_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0 + total_payout_1)
-                + part_for_100_from_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0),
+                + part_for_100_from_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0
+                        + total_payout_1)
+                + part_for_100_from_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&101), init_balance_101, 2);
@@ -348,7 +356,7 @@ fn rewards_poc_pos_should_work() {
         let micropayment_vec1 = vec![(200, 80 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec1);
         assert_ok!(Delegating::delegate(Origin::signed(200), vec![11, 21]));
-        
+
         // set reward ponts in era0
         <Module<Test>>::reward_by_ids(vec![(11, 50)]);
         <Module<Test>>::reward_by_ids(vec![(11, 50)]);
@@ -375,8 +383,8 @@ fn rewards_poc_pos_should_work() {
 
         // -------------------------------era 1 -----------------------------------------
         start_era(1);
-        println!("Era1: 10 = {:?}",Staking::ledger(&10));
-        println!("Era1: 20 = {:?}",Staking::ledger(&20));
+        println!("Era1: 10 = {:?}", Staking::ledger(&10));
+        println!("Era1: 20 = {:?}", Staking::ledger(&20));
         assert_eq!(
             *mock::staking_events().last().unwrap(),
             RawEvent::EraPayout(0, 6480000000000000000, 0)
@@ -388,28 +396,30 @@ fn rewards_poc_pos_should_work() {
         let part_for_20 = Perbill::from_rational_approximation::<u32>(1000, 1375);
         let part_for_100_from_10 = Perbill::from_rational_approximation::<u32>(125, 1125);
         let part_for_100_from_20 = Perbill::from_rational_approximation::<u32>(375, 1375);
-        assert_eq_error_rate!(
-            Balances::total_balance(&200),
-            init_balance_200,
-            2
-        );
+        assert_eq_error_rate!(Balances::total_balance(&200), init_balance_200, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&10),
-            init_balance_10 + part_for_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0),
+            init_balance_10
+                + part_for_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&11), 1000, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&20),
-            init_balance_20 + part_for_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0),
+            init_balance_20
+                + part_for_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&21), 2000, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&100),
             init_balance_100
-                + part_for_100_from_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0)
-                + part_for_100_from_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0),
+                + part_for_100_from_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0)
+                + part_for_100_from_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&101), init_balance_101, 2);
@@ -421,26 +431,32 @@ fn rewards_poc_pos_should_work() {
         <Module<Test>>::reward_by_ids(vec![(21, 50)]);
 
         assert_eq!(Staking::active_era().unwrap().index, 1);
-        assert_eq!(
-            mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()),
-            0
-        );
-        
+        assert_eq!(mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()), 0);
+
         //<Module<Test>>::reward_by_ids(vec![(11, 1)]);
 
         // Compute total payout now for whole duration as other parameter won't change
         let total_payout_1 = current_total_payout_for_duration(3 * 1000);
         assert!(total_payout_1 > 10); // Test is meaningful if reward something
 
-        let credit_score1 = Delegating::total_delegated_score(Staking::active_era().unwrap().index).unwrap_or(0);
-        let credit_to_balance1 = <<mock::Test as Trait>::CurrencyToNumber as Convert<u128, BalanceOf<mock::Test>>>::convert(
+        let credit_score1 =
+            Delegating::total_delegated_score(Staking::active_era().unwrap().index).unwrap_or(0);
+        let credit_to_balance1 = <<mock::Test as Trait>::CurrencyToNumber as Convert<
+            u128,
+            BalanceOf<mock::Test>,
+        >>::convert(
             credit_score1 as u128 * <Test as Trait>::CreditToTokenFactor::get(),
         );
         let credit_part1 = Perbill::from_rational_approximation(
             credit_to_balance1,
             Staking::eras_total_stake(&(Staking::active_era().unwrap().index)) + credit_to_balance1,
         );
-        println!("Test: part= {:?}, credit_to_balance = {:?}, token= {:?}", credit_part1, credit_to_balance1, Staking::eras_total_stake(&(Staking::active_era().unwrap().index)));
+        println!(
+            "Test: part= {:?}, credit_to_balance = {:?}, token= {:?}",
+            credit_part1,
+            credit_to_balance1,
+            Staking::eras_total_stake(&(Staking::active_era().unwrap().index))
+        );
         let credit_payout1 = credit_part1 * total_payout_1;
         let staking_payout1 = total_payout_1 - credit_payout1;
 
@@ -455,18 +471,28 @@ fn rewards_poc_pos_should_work() {
 
         assert_eq_error_rate!(
             Balances::total_balance(&200),
-            init_balance_200 + Perbill::from_rational_approximation::<u32>(2,3) * credit_payout1 + Perbill::from_rational_approximation::<u32>(1,3) * credit_payout1,
+            init_balance_200
+                + Perbill::from_rational_approximation::<u32>(2, 3) * credit_payout1
+                + Perbill::from_rational_approximation::<u32>(1, 3) * credit_payout1,
             2
         );
         assert_eq_error_rate!(
             Balances::total_balance(&10),
-            init_balance_10 + part_for_10 * (Perbill::from_rational_approximation::<u32>(2,3) * total_payout_0) + part_for_10 * (Perbill::from_rational_approximation::<u32>(2,3) * staking_payout1),
+            init_balance_10
+                + part_for_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_0)
+                + part_for_10
+                    * (Perbill::from_rational_approximation::<u32>(2, 3) * staking_payout1),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&11), 1000, 2);
         assert_eq_error_rate!(
             Balances::total_balance(&20),
-            init_balance_20 + part_for_20 * (Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0) + part_for_20 * (Perbill::from_rational_approximation::<u32>(1,3) * staking_payout1),
+            init_balance_20
+                + part_for_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0)
+                + part_for_20
+                    * (Perbill::from_rational_approximation::<u32>(1, 3) * staking_payout1),
             2
         );
         assert_eq_error_rate!(Balances::total_balance(&21), 2000, 2);
@@ -475,11 +501,7 @@ fn rewards_poc_pos_should_work() {
         <Module<Test>>::reward_by_ids(vec![(11, 50)]);
         <Module<Test>>::reward_by_ids(vec![(21, 50)]);
 
-
-        assert_eq!(
-            mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()),
-            0
-        );
+        assert_eq!(mock::REWARD_REMAINDER_UNBALANCED.with(|v| *v.borrow()), 0);
     });
 }
 
@@ -745,31 +767,36 @@ fn nominating_and_rewards_should_work() {
             // it is expected that nominators will also be paid. See below
 
             mock::make_all_reward_payment(1);
-            let payout_for_10 = Perbill::from_rational_approximation::<u32>(1,3) * total_payout_1;
-            let payout_for_20 = Perbill::from_rational_approximation::<u32>(2,3) * total_payout_1;
+            let payout_for_10 = Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_1;
+            let payout_for_20 = Perbill::from_rational_approximation::<u32>(2, 3) * total_payout_1;
             // Nominator 2: has [400/1800 ~ 2/9 from 10] + [600/2200 ~ 3/11 from 20]'s reward. ==> 2/9 + 3/11
             assert_eq_error_rate!(
                 Balances::total_balance(&2),
-                initial_balance + (Perbill::from_rational_approximation::<u32>(2,9) * payout_for_10 + Perbill::from_rational_approximation::<u32>(3,11) * payout_for_20),
+                initial_balance
+                    + (Perbill::from_rational_approximation::<u32>(2, 9) * payout_for_10
+                        + Perbill::from_rational_approximation::<u32>(3, 11) * payout_for_20),
                 1,
             );
             // Nominator 4: has [400/1800 ~ 2/9 from 10] + [600/2200 ~ 3/11 from 20]'s reward. ==> 2/9 + 3/11
             assert_eq_error_rate!(
                 Balances::total_balance(&4),
-                initial_balance + (Perbill::from_rational_approximation::<u32>(2,9) * payout_for_10  + Perbill::from_rational_approximation::<u32>(3,11)* payout_for_20),
+                initial_balance
+                    + (Perbill::from_rational_approximation::<u32>(2, 9) * payout_for_10
+                        + Perbill::from_rational_approximation::<u32>(3, 11) * payout_for_20),
                 1,
             );
 
             // Validator 10: got 800 / 1800 external stake => 8/18 =? 4/9 => Validator's share = 5/9
             assert_eq_error_rate!(
                 Balances::total_balance(&10),
-                initial_balance + Perbill::from_rational_approximation::<u32>(5,9) * payout_for_10,
+                initial_balance + Perbill::from_rational_approximation::<u32>(5, 9) * payout_for_10,
                 1,
             );
             // Validator 20: got 1200 / 2200 external stake => 12/22 =? 6/11 => Validator's share = 5/11
             assert_eq_error_rate!(
                 Balances::total_balance(&20),
-                initial_balance + Perbill::from_rational_approximation::<u32>(5,11) * payout_for_20,
+                initial_balance
+                    + Perbill::from_rational_approximation::<u32>(5, 11) * payout_for_20,
                 1,
             );
         });
@@ -1217,8 +1244,12 @@ fn validator_payment_prefs_work() {
 
         let taken_cut = commission * total_payout_1;
         let shared_cut = total_payout_1 - taken_cut;
-        let reward_of_10 = Perbill::from_rational_approximation(exposure_1.own, exposure_1.total)* shared_cut + taken_cut;
-        let reward_of_100 = Perbill::from_rational_approximation(exposure_1.others[0].value, exposure_1.total) * shared_cut;
+        let reward_of_10 = Perbill::from_rational_approximation(exposure_1.own, exposure_1.total)
+            * shared_cut
+            + taken_cut;
+        let reward_of_100 =
+            Perbill::from_rational_approximation(exposure_1.others[0].value, exposure_1.total)
+                * shared_cut;
         assert_eq_error_rate!(
             Balances::total_balance(&10),
             balance_era_1_10 + reward_of_10,
@@ -2177,7 +2208,8 @@ fn bond_with_little_staked_value_bounded() {
             // Old ones are rewarded.
             assert_eq!(
                 Balances::free_balance(10),
-                init_balance_10 + Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0
+                init_balance_10
+                    + Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0
             );
             // no rewards paid to 2. This was initial election.
             assert_eq!(Balances::free_balance(2), init_balance_2);
@@ -2197,11 +2229,13 @@ fn bond_with_little_staked_value_bounded() {
 
             assert_eq!(
                 Balances::free_balance(2),
-                init_balance_2 + Perbill::from_rational_approximation::<u32>(1,3) * total_payout_1
+                init_balance_2 + Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_1
             );
             assert_eq!(
                 Balances::free_balance(&10),
-                init_balance_10 + Perbill::from_rational_approximation::<u32>(1,3) * total_payout_0 + Perbill::from_rational_approximation::<u32>(1,3) * total_payout_1,
+                init_balance_10
+                    + Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_0
+                    + Perbill::from_rational_approximation::<u32>(1, 3) * total_payout_1,
             );
         });
 }

@@ -5,11 +5,7 @@ use frame_support::{
 };
 
 use sp_core::H256;
-use sp_runtime::{
-    testing::Header,
-    traits::IdentityLookup,
-    Perbill,
-};
+use sp_runtime::{testing::Header, traits::IdentityLookup, Perbill};
 
 pub(crate) type AccountId = u64;
 pub(crate) type AccountIndex = u64;
@@ -74,11 +70,8 @@ impl pallet_balances::Trait for Test {
     type WeightInfo = ();
 }
 
-
-
 pub type System = frame_system::Module<Test>;
 pub type Balances = pallet_balances::Module<Test>;
-
 
 impl Trait for Test {
     type Event = ();

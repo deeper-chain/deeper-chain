@@ -13,7 +13,7 @@ use log::error;
 
 use frame_support::codec::{Decode, Encode};
 use frame_support::sp_runtime::Perbill;
-use frame_support::traits::{Currency, Imbalance, LockableCurrency, Get};
+use frame_support::traits::{Currency, Get, Imbalance, LockableCurrency};
 use frame_support::{decl_error, decl_event, decl_module, decl_storage, dispatch};
 use frame_system::ensure_signed;
 use pallet_credit::CreditInterface;

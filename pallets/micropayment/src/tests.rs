@@ -1,11 +1,10 @@
 use crate::{mock::*, Error};
+use frame_support::assert_ok;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
-use frame_support::assert_ok;
 use sp_runtime::DispatchError;
 //use sp_keyring::sr25519::Keyring;
 //use frame_system::ensure_signed;
-
 
 #[test]
 fn fn_open_channel() {
@@ -15,31 +14,33 @@ fn fn_open_channel() {
 
         // Channel already opened
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(1), 2, 1000, 3600), 
+            Micropayment::open_channel(Origin::signed(1), 2, 1000, 3600),
             Err(DispatchError::from(Error::<Test>::ChannelAlreadyOpened))
         );
-        
+
         // Channel should connect two different accounts
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(2), 2, 1000, 3600), 
+            Micropayment::open_channel(Origin::signed(2), 2, 1000, 3600),
             Err(DispatchError::from(Error::<Test>::SameChannelEnds))
         );
 
         //  duration should > 0
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(3), 4, 200, 0), 
+            Micropayment::open_channel(Origin::signed(3), 4, 200, 0),
             Ok(())
         );
 
-        // balance of 2 is 500, but channel balance experted is 1000  
+        // balance of 2 is 500, but channel balance experted is 1000
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(2), 3, 1000, 3600), 
-            Err(DispatchError::Module { index: 0, error: 0, message: Some("NotEnoughBalance") })
+            Micropayment::open_channel(Origin::signed(2), 3, 1000, 3600),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 0,
+                message: Some("NotEnoughBalance")
+            })
         );
-
     });
 }
-
 
 #[test]
 fn fn_close_channel() {
@@ -50,36 +51,37 @@ fn fn_close_channel() {
 
         // Ok close by sender
         run_to_block(1);
-        assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 1)); // 1 day = (24 * 3600 * 1000 / 5000) 
+        assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 1)); // 1 day = (24 * 3600 * 1000 / 5000)
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(3), 4), 
-            Err(DispatchError::from(Error::<Test>::UnexpiredChannelCannotBeClosedBySender))
+            Micropayment::close_channel(Origin::signed(3), 4),
+            Err(DispatchError::from(
+                Error::<Test>::UnexpiredChannelCannotBeClosedBySender
+            ))
         );
-        run_to_block(24*720+2);
+        run_to_block(24 * 720 + 2);
         assert_ok!(Micropayment::close_channel(Origin::signed(3), 4));
 
         // Channel not exists
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(2), 3), 
+            Micropayment::close_channel(Origin::signed(2), 3),
             Err(DispatchError::from(Error::<Test>::ChannelNotExist))
         );
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(1), 2), 
+            Micropayment::close_channel(Origin::signed(1), 2),
             Err(DispatchError::from(Error::<Test>::ChannelNotExist))
         );
     });
 }
 
-
 #[test]
 fn fn_close_expired_channels() {
     new_test_ext().execute_with(|| {
         // OK
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 100, 1));// 1 day = (24 * 3600 * 1000 / 5000) 
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 3, 100, 1)); 
+        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 100, 1)); // 1 day = (24 * 3600 * 1000 / 5000)
+        assert_ok!(Micropayment::open_channel(Origin::signed(1), 3, 100, 1));
         assert_ok!(Micropayment::open_channel(Origin::signed(1), 4, 100, 2));
 
-        run_to_block(24*720+1);
+        run_to_block(24 * 720 + 1);
         assert_ok!(Micropayment::close_expired_channels(Origin::signed(1)));
     });
 }
@@ -93,17 +95,24 @@ fn fn_add_balance() {
 
         // Channel not exists
         assert_eq!(
-            Micropayment::add_balance(Origin::signed(2), 3, 100), 
-            Err(DispatchError::Module { index: 0, error: 1, message: Some("ChannelNotExist") })
+            Micropayment::add_balance(Origin::signed(2), 3, 100),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 1,
+                message: Some("ChannelNotExist")
+            })
         );
 
         // NotEnoughBalance 500-300 = 200, but add_balance 500
         assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 3600));
         assert_eq!(
-            Micropayment::add_balance(Origin::signed(3), 4, 500), 
-            Err(DispatchError::Module { index: 0, error: 0, message: Some("NotEnoughBalance") })
+            Micropayment::add_balance(Origin::signed(3), 4, 500),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 0,
+                message: Some("NotEnoughBalance")
+            })
         );
-
     });
 }
 

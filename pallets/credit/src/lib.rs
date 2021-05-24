@@ -209,7 +209,7 @@ impl<T: Trait> Module<T> {
                 let mut score_delta: u64 = balance_num
                     .checked_div(T::MicropaymentToCreditScoreFactor::get())
                     .unwrap_or(0);
-                let cap: u64 = T::CreditScoreCapPerEra::get() as u64; 
+                let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
                 if score_delta > cap {
                     score_delta = cap
                 }

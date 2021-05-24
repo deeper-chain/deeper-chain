@@ -4,15 +4,21 @@
 /// Learn more about FRAME and the core library of Substrate FRAME pallets:
 /// https://substrate.dev/docs/en/knowledgebase/runtime/frame
 mod types;
-use types::{TransferMessage,Kind,ProposalId, Status, BridgeMessage, MemberId,Limits,BridgeTransfer,ValidatorMessage, LimitMessage, IntoArray};
 use codec::Encode;
+use types::{
+    BridgeMessage, BridgeTransfer, IntoArray, Kind, LimitMessage, Limits, MemberId, ProposalId,
+    Status, TransferMessage, ValidatorMessage,
+};
 
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch::DispatchResult, traits::Get, ensure, fail};
-use frame_system::ensure_signed;
 use frame_support::traits::{Currency, Imbalance, LockableCurrency, WithdrawReasons};
-use sp_runtime::traits::{Hash, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Bounded};
-use sp_std::prelude::Vec;
+use frame_support::{
+    decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, fail,
+    traits::Get,
+};
+use frame_system::ensure_signed;
 use sp_core::H160;
+use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash};
+use sp_std::prelude::Vec;
 type Result<T> = core::result::Result<T, &'static str>;
 
 #[cfg(test)]
@@ -26,17 +32,17 @@ const DAY_IN_BLOCKS: u32 = 14_400;
 const DAY: u32 = 86_400;
 const LOCK_IDENTIFIER: [u8; 8] = *b"sub--eth";
 
-pub trait Trait: frame_system::Trait + timestamp::Trait{
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	type Currency: Currency<Self::AccountId> + LockableCurrency<Self::AccountId>;
+pub trait Trait: frame_system::Trait + timestamp::Trait {
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+    type Currency: Currency<Self::AccountId> + LockableCurrency<Self::AccountId>;
 }
 
 type BalanceOf<T> =
     <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Bridge {
-		BridgeIsOperational get(fn bridge_is_operational): bool = true;
+    trait Store for Module<T: Trait> as Bridge {
+        BridgeIsOperational get(fn bridge_is_operational): bool = true;
         BridgeMessages get(fn bridge_messages): map hasher(blake2_128_concat) T::Hash  => BridgeMessage<T::AccountId, T::Hash>;
 
         // limits change history
@@ -75,51 +81,51 @@ decl_storage! {
             .map(|acc: T::AccountId| (acc, true)).collect::<Vec<_>>()
         }): map hasher(blake2_128_concat) T::AccountId  => bool;
         ValidatorAccounts get(fn validator_accounts) config(): Vec<T::AccountId>;
-	}
-	add_extra_genesis{
+    }
+    add_extra_genesis{
         config(current_limits): Vec<BalanceOf<T>>;
     }
 }
 
 decl_event!(
-	pub enum Event<T> 
-    where 
-    AccountId = <T as frame_system::Trait>::AccountId,
-    Hash = <T as frame_system::Trait>::Hash,
-    Balance = BalanceOf<T>,
-    Moment = <T as timestamp::Trait>::Moment, 
+    pub enum Event<T>
+    where
+        AccountId = <T as frame_system::Trait>::AccountId,
+        Hash = <T as frame_system::Trait>::Hash,
+        Balance = BalanceOf<T>,
+        Moment = <T as timestamp::Trait>::Moment,
     {
-		RelayMessage(Hash),
+        RelayMessage(Hash),
         ApprovedRelayMessage(Hash, AccountId, H160, Balance),
         CancellationConfirmedMessage(Hash),
         MintedMessage(Hash),
         BurnedMessage(Hash, AccountId, H160, Balance),
         AccountPausedMessage(Hash, AccountId, Moment),
         AccountResumedMessage(Hash, AccountId, Moment),
-	}
+    }
 );
 
 // Errors inform users that something went wrong.
 decl_error! {
-	pub enum Error for Module<T: Trait> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
-	}
+    pub enum Error for Module<T: Trait> {
+        /// Error names should be descriptive.
+        NoneValue,
+        /// Errors should have helpful documentation associated with them.
+        StorageOverflow,
+    }
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		// Errors must be initialized if they are used by the pallet.
-		type Error = Error<T>;
+    pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+        // Errors must be initialized if they are used by the pallet.
+        type Error = Error<T>;
 
-		// Events must be initialized if they are used by the pallet.
-		fn deposit_event() = default;
+        // Events must be initialized if they are used by the pallet.
+        fn deposit_event() = default;
 
-		// initiate substrate -> ethereum transfer.
+        // initiate substrate -> ethereum transfer.
         // create transfer and emit the RelayMessage event
-		#[weight = 10_000]
+        #[weight = 10_000]
         pub fn set_transfer(origin, to: H160, #[compact] amount: BalanceOf<T>)-> DispatchResult
         {
             let from = ensure_signed(origin)?;
@@ -147,7 +153,7 @@ decl_module! {
             Ok(())
         }
 
-		// ethereum-side multi-signed mint operation
+        // ethereum-side multi-signed mint operation
         #[weight = 10_000]
         pub fn multi_signed_mint(origin, message_id: T::Hash, from: H160, to: T::AccountId, #[compact] amount: BalanceOf<T>)-> DispatchResult {
             let validator = ensure_signed(origin)?;
@@ -175,161 +181,161 @@ decl_module! {
             Ok(())
         }
 
-		  // change maximum tx limit
-		  #[weight = 10_000]
-		  pub fn update_limits(origin, max_tx_value: BalanceOf<T>, day_max_limit: BalanceOf<T>, day_max_limit_for_one_address: BalanceOf<T>, max_pending_tx_limit: BalanceOf<T>,min_tx_value: BalanceOf<T>)-> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  Self::check_validator(validator.clone())?;
-			  let limits = Limits{
-				  max_tx_value,
-				  day_max_limit,
-				  day_max_limit_for_one_address,
-				  max_pending_tx_limit,
-				  min_tx_value,
-			  };
-			  Self::check_limits(&limits)?;
-			  let id = (limits.clone(), T::BlockNumber::from(0)).using_encoded(<T as frame_system::Trait>::Hashing::hash);
-  
-			  if !<LimitMessages<T>>::contains_key(id) {
-				  let message = LimitMessage {
-					  id,
-					  limits,
-					  status: Status::UpdateLimits,
-				  };
-				  <LimitMessages<T>>::insert(id, message);
-				  Self::get_transfer_id_checked(id, Kind::Limits)?;
-			  }
-  
-			  let transfer_id = <TransferId<T>>::get(id);
-			  Self::_sign(validator, transfer_id)?;
-			  Ok(())
-		  }
-  
-		  // validator`s response to RelayMessage
-		  #[weight = 10_000]
-		  pub fn approve_transfer(origin, message_id: T::Hash) -> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  ensure!(Self::bridge_is_operational(), "Bridge is not operational");
-			  Self::check_validator(validator.clone())?;
-  
-			  let id = <TransferId<T>>::get(message_id);
-			  Self::_sign(validator, id)?;
-			  Ok(())
-		  }
-  
-		  // each validator calls it to update whole set of validators
-		  #[weight = 10_000]
-		  pub fn update_validator_list(origin, message_id: T::Hash, quorum: u64, new_validator_list: Vec<T::AccountId>) -> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  Self::check_validator(validator.clone())?;
-  
-			  if !<ValidatorHistory<T>>::contains_key(message_id) {
-				  let message = ValidatorMessage {
-					  message_id,
-					  quorum,
-					  accounts: new_validator_list,
-					  action: Status::UpdateValidatorSet,
-					  status: Status::UpdateValidatorSet,
-				  };
-				  <ValidatorHistory<T>>::insert(message_id, message);
-				  Self::get_transfer_id_checked(message_id, Kind::Validator)?;
-			  }
-  
-			  let id = <TransferId<T>>::get(message_id);
-			  Self::_sign(validator, id)?;
-			  Ok(())
-		  }
-  
-		  // each validator calls it to pause the bridge
+          // change maximum tx limit
           #[weight = 10_000]
-		  pub fn pause_bridge(origin) -> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  Self::check_validator(validator.clone())?;
-  
-			  ensure!(Self::bridge_is_operational(), "Bridge is not operational already");
-			  let hash = ("pause", T::BlockNumber::from(0)).using_encoded(<T as frame_system::Trait>::Hashing::hash);
-  
-			  if !<BridgeMessages<T>>::contains_key(hash) {
-				  let message = BridgeMessage {
-					  message_id: hash,
-					  account: validator.clone(),
-					  action: Status::PauseTheBridge,
-					  status: Status::PauseTheBridge,
-				  };
-				  <BridgeMessages<T>>::insert(hash, message);
-				  Self::get_transfer_id_checked(hash, Kind::Bridge)?;
-			  }
-  
-			  let id = <TransferId<T>>::get(hash);
-			  Self::_sign(validator, id)?;
-			  Ok(())
-		  }
-  
-		  // each validator calls it to resume the bridge
-          #[weight = 10_000]
-		  pub fn resume_bridge(origin) -> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  Self::check_validator(validator.clone())?;
-  
-			  let hash = ("resume", T::BlockNumber::from(0)).using_encoded(<T as frame_system::Trait>::Hashing::hash);
-  
-			  if !<BridgeMessages<T>>::contains_key(hash) {
-				  let message = BridgeMessage {
-					  message_id: hash,
-					  account: validator.clone(),
-					  action: Status::ResumeTheBridge,
-					  status: Status::ResumeTheBridge,
-				  };
-				  <BridgeMessages<T>>::insert(hash, message);
-				  Self::get_transfer_id_checked(hash, Kind::Bridge)?;
-			  }
-  
-			  let id = <TransferId<T>>::get(hash);
-			  Self::_sign(validator, id)?;
-			  Ok(())
-		  }
-  
-		  //confirm burn from validator
-		  #[weight = 10_000]
-		  pub fn confirm_transfer(origin, message_id: T::Hash) -> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  ensure!(Self::bridge_is_operational(), "Bridge is not operational");
-			  Self::check_validator(validator.clone())?;
-  
-			  let id = <TransferId<T>>::get(message_id);
-  
-			  let is_approved = <TransferMessages<T>>::get(message_id).status == Status::Approved ||
-			  <TransferMessages<T>>::get(message_id).status == Status::Confirmed;
-			  ensure!(is_approved, "This transfer must be approved first.");
-  
-			  Self::update_status(message_id, Status::Confirmed, Kind::Transfer)?;
-			  Self::reopen_for_burn_confirmation(message_id)?;
-			  Self::_sign(validator, id)?;
-			  Ok(())
-		  }
-  
-		  //cancel burn from validator
-		  #[weight = 10_000]
-		  pub fn cancel_transfer(origin, message_id: T::Hash) -> DispatchResult {
-			  let validator = ensure_signed(origin)?;
-			  Self::check_validator(validator.clone())?;
-  
-			  let has_burned = <TransferMessages<T>>::contains_key(message_id) && <TransferMessages<T>>::get(message_id).status == Status::Confirmed;
-			  ensure!(!has_burned, "Failed to cancel. This transfer is already executed.");
-  
-			  let id = <TransferId<T>>::get(message_id);
-			  Self::update_status(message_id, Status::Canceled, Kind::Transfer)?;
-			  Self::reopen_for_burn_confirmation(message_id)?;
-			  Self::_sign(validator, id)?;
-			  Ok(())
-		  }
+          pub fn update_limits(origin, max_tx_value: BalanceOf<T>, day_max_limit: BalanceOf<T>, day_max_limit_for_one_address: BalanceOf<T>, max_pending_tx_limit: BalanceOf<T>,min_tx_value: BalanceOf<T>)-> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              Self::check_validator(validator.clone())?;
+              let limits = Limits{
+                  max_tx_value,
+                  day_max_limit,
+                  day_max_limit_for_one_address,
+                  max_pending_tx_limit,
+                  min_tx_value,
+              };
+              Self::check_limits(&limits)?;
+              let id = (limits.clone(), T::BlockNumber::from(0)).using_encoded(<T as frame_system::Trait>::Hashing::hash);
 
-		  //close enough to clear it exactly at UTC 00:00 instead of BlockNumber
-		  fn on_finalize() {
+              if !<LimitMessages<T>>::contains_key(id) {
+                  let message = LimitMessage {
+                      id,
+                      limits,
+                      status: Status::UpdateLimits,
+                  };
+                  <LimitMessages<T>>::insert(id, message);
+                  Self::get_transfer_id_checked(id, Kind::Limits)?;
+              }
+
+              let transfer_id = <TransferId<T>>::get(id);
+              Self::_sign(validator, transfer_id)?;
+              Ok(())
+          }
+
+          // validator`s response to RelayMessage
+          #[weight = 10_000]
+          pub fn approve_transfer(origin, message_id: T::Hash) -> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              ensure!(Self::bridge_is_operational(), "Bridge is not operational");
+              Self::check_validator(validator.clone())?;
+
+              let id = <TransferId<T>>::get(message_id);
+              Self::_sign(validator, id)?;
+              Ok(())
+          }
+
+          // each validator calls it to update whole set of validators
+          #[weight = 10_000]
+          pub fn update_validator_list(origin, message_id: T::Hash, quorum: u64, new_validator_list: Vec<T::AccountId>) -> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              Self::check_validator(validator.clone())?;
+
+              if !<ValidatorHistory<T>>::contains_key(message_id) {
+                  let message = ValidatorMessage {
+                      message_id,
+                      quorum,
+                      accounts: new_validator_list,
+                      action: Status::UpdateValidatorSet,
+                      status: Status::UpdateValidatorSet,
+                  };
+                  <ValidatorHistory<T>>::insert(message_id, message);
+                  Self::get_transfer_id_checked(message_id, Kind::Validator)?;
+              }
+
+              let id = <TransferId<T>>::get(message_id);
+              Self::_sign(validator, id)?;
+              Ok(())
+          }
+
+          // each validator calls it to pause the bridge
+          #[weight = 10_000]
+          pub fn pause_bridge(origin) -> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              Self::check_validator(validator.clone())?;
+
+              ensure!(Self::bridge_is_operational(), "Bridge is not operational already");
+              let hash = ("pause", T::BlockNumber::from(0)).using_encoded(<T as frame_system::Trait>::Hashing::hash);
+
+              if !<BridgeMessages<T>>::contains_key(hash) {
+                  let message = BridgeMessage {
+                      message_id: hash,
+                      account: validator.clone(),
+                      action: Status::PauseTheBridge,
+                      status: Status::PauseTheBridge,
+                  };
+                  <BridgeMessages<T>>::insert(hash, message);
+                  Self::get_transfer_id_checked(hash, Kind::Bridge)?;
+              }
+
+              let id = <TransferId<T>>::get(hash);
+              Self::_sign(validator, id)?;
+              Ok(())
+          }
+
+          // each validator calls it to resume the bridge
+          #[weight = 10_000]
+          pub fn resume_bridge(origin) -> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              Self::check_validator(validator.clone())?;
+
+              let hash = ("resume", T::BlockNumber::from(0)).using_encoded(<T as frame_system::Trait>::Hashing::hash);
+
+              if !<BridgeMessages<T>>::contains_key(hash) {
+                  let message = BridgeMessage {
+                      message_id: hash,
+                      account: validator.clone(),
+                      action: Status::ResumeTheBridge,
+                      status: Status::ResumeTheBridge,
+                  };
+                  <BridgeMessages<T>>::insert(hash, message);
+                  Self::get_transfer_id_checked(hash, Kind::Bridge)?;
+              }
+
+              let id = <TransferId<T>>::get(hash);
+              Self::_sign(validator, id)?;
+              Ok(())
+          }
+
+          //confirm burn from validator
+          #[weight = 10_000]
+          pub fn confirm_transfer(origin, message_id: T::Hash) -> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              ensure!(Self::bridge_is_operational(), "Bridge is not operational");
+              Self::check_validator(validator.clone())?;
+
+              let id = <TransferId<T>>::get(message_id);
+
+              let is_approved = <TransferMessages<T>>::get(message_id).status == Status::Approved ||
+              <TransferMessages<T>>::get(message_id).status == Status::Confirmed;
+              ensure!(is_approved, "This transfer must be approved first.");
+
+              Self::update_status(message_id, Status::Confirmed, Kind::Transfer)?;
+              Self::reopen_for_burn_confirmation(message_id)?;
+              Self::_sign(validator, id)?;
+              Ok(())
+          }
+
+          //cancel burn from validator
+          #[weight = 10_000]
+          pub fn cancel_transfer(origin, message_id: T::Hash) -> DispatchResult {
+              let validator = ensure_signed(origin)?;
+              Self::check_validator(validator.clone())?;
+
+              let has_burned = <TransferMessages<T>>::contains_key(message_id) && <TransferMessages<T>>::get(message_id).status == Status::Confirmed;
+              ensure!(!has_burned, "Failed to cancel. This transfer is already executed.");
+
+              let id = <TransferId<T>>::get(message_id);
+              Self::update_status(message_id, Status::Canceled, Kind::Transfer)?;
+              Self::reopen_for_burn_confirmation(message_id)?;
+              Self::_sign(validator, id)?;
+              Ok(())
+          }
+
+          //close enough to clear it exactly at UTC 00:00 instead of BlockNumber
+          fn on_finalize() {
             // clear accounts blocked day earlier (e.g. 18759 - 1)
             let yesterday = Self::get_day_pair().0;
             let is_first_day = Self::get_day_pair().1 == yesterday;
-        
+
             if <DailyBlocked<T>>::contains_key(yesterday) && !is_first_day {
                 let blocked_yesterday = <DailyBlocked<T>>::get(yesterday);
                 blocked_yesterday.iter().for_each(|a| <DailyLimits<T>>::remove(a));
@@ -341,8 +347,8 @@ decl_module! {
                 );
                 <DailyBlocked<T>>::remove(yesterday);
             }
-    	}
-	}
+        }
+    }
 }
 
 impl<T: Trait> Module<T> {
@@ -417,7 +423,7 @@ impl<T: Trait> Module<T> {
             <DailyHolds<T>>::insert(to.clone(), (T::BlockNumber::from(0), message.message_id));
         }
 
-        T::Currency::deposit_creating(&to,  message.amount); // mint
+        T::Currency::deposit_creating(&to, message.amount); // mint
 
         Self::deposit_event(RawEvent::MintedMessage(message.message_id));
         Self::update_status(message.message_id, Status::Confirmed, Kind::Transfer)
@@ -438,7 +444,9 @@ impl<T: Trait> Module<T> {
         ));
         Self::update_status(message.message_id, Status::Approved, Kind::Transfer)
     }
-    fn _cancel_transfer(message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>) -> Result<()> {
+    fn _cancel_transfer(
+        message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
+    ) -> Result<()> {
         T::Currency::remove_lock(LOCK_IDENTIFIER, &message.substrate_address); // unlock
         Self::update_status(message.message_id, Status::Canceled, Kind::Transfer)
     }
@@ -457,7 +465,9 @@ impl<T: Trait> Module<T> {
         <CurrentLimits<T>>::put(message.limits);
         Self::update_status(message.id, Status::Confirmed, Kind::Limits)
     }
-    fn add_pending_burn(message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>) -> Result<()> {
+    fn add_pending_burn(
+        message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
+    ) -> Result<()> {
         let current = <CurrentPendingBurn<T>>::get();
         let next = current
             .checked_add(&message.amount)
@@ -465,7 +475,9 @@ impl<T: Trait> Module<T> {
         <CurrentPendingBurn<T>>::put(next);
         Ok(())
     }
-    fn add_pending_mint(message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>) -> Result<()> {
+    fn add_pending_mint(
+        message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
+    ) -> Result<()> {
         let current = <CurrentPendingMint<T>>::get();
         let next = current
             .checked_add(&message.amount)
@@ -473,7 +485,9 @@ impl<T: Trait> Module<T> {
         <CurrentPendingMint<T>>::put(next);
         Ok(())
     }
-    fn sub_pending_burn(message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>) -> Result<()> {
+    fn sub_pending_burn(
+        message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
+    ) -> Result<()> {
         let current = <CurrentPendingBurn<T>>::get();
         let next = current
             .checked_sub(&message.amount)
@@ -481,7 +495,9 @@ impl<T: Trait> Module<T> {
         <CurrentPendingBurn<T>>::put(next);
         Ok(())
     }
-    fn sub_pending_mint(message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>) -> Result<()> {
+    fn sub_pending_mint(
+        message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
+    ) -> Result<()> {
         let current = <CurrentPendingMint<T>>::get();
         let next = current
             .checked_sub(&message.amount)
@@ -516,7 +532,12 @@ impl<T: Trait> Module<T> {
         message: &TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
         account: T::AccountId,
     ) -> Result<()> {
-        T::Currency::set_lock(LOCK_IDENTIFIER, &account, message.amount, WithdrawReasons::all()); // lock
+        T::Currency::set_lock(
+            LOCK_IDENTIFIER,
+            &account,
+            message.amount,
+            WithdrawReasons::all(),
+        ); // lock
         Ok(())
     }
 
@@ -537,7 +558,9 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn execute_transfer(message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>) -> Result<()> {
+    fn execute_transfer(
+        message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
+    ) -> Result<()> {
         match message.action {
             Status::Deposit => match message.status {
                 Status::Approved => Self::deposit(message),
@@ -662,19 +685,14 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    fn check_daily_account_volume(
-        account: T::AccountId,
-        amount: BalanceOf<T>,
-    ) -> Result<()> {
+    fn check_daily_account_volume(account: T::AccountId, amount: BalanceOf<T>) -> Result<()> {
         let cur_pending = <DailyLimits<T>>::get(&account);
         let cur_pending_account_limit = <CurrentLimits<T>>::get().day_max_limit_for_one_address;
         let can_burn = cur_pending + amount < cur_pending_account_limit;
 
         //store current day (like 18768)
         let today = Self::get_day_pair().1;
-        let user_blocked = <DailyBlocked<T>>::get(today)
-            .iter()
-            .any(|a| *a == account);
+        let user_blocked = <DailyBlocked<T>>::get(today).iter().any(|a| *a == account);
 
         if !can_burn {
             <DailyBlocked<T>>::mutate(today, |v| {
@@ -683,9 +701,7 @@ impl<T: Trait> Module<T> {
                     let now = <timestamp::Module<T>>::get();
                     let hash = (now.clone(), account.clone())
                         .using_encoded(<T as frame_system::Trait>::Hashing::hash);
-                    Self::deposit_event(RawEvent::AccountPausedMessage(
-                        hash, account, now
-                    ))
+                    Self::deposit_event(RawEvent::AccountPausedMessage(hash, account, now))
                 }
             });
         }

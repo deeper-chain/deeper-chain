@@ -5,7 +5,6 @@ use sp_std::prelude::Vec;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-
 pub type Count = u64;
 pub type MemberId = u64;
 pub type ProposalId = u64;
@@ -53,7 +52,6 @@ pub enum Action<AccountId, Balance, Timeout> {
     ChangeTimeout(Timeout),
     ChangeMaximumNumberOfMembers(MemberId),
 }
-
 
 //bridge
 #[derive(Encode, Decode, Clone, PartialEq)]
