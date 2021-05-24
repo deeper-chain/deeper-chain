@@ -5,7 +5,7 @@ edition = '2018'
 homepage = 'https://deeper.network'
 license = 'Unlicense'
 name = 'pallet-delegating'
-repository = 'https://github.com/e2chain-dev/e2-chain'
+repository = 'https://github.com/deeper/deeper-chain'
 version = '2.0.0'
 
 [package.metadata.docs.rs]

@@ -106,7 +106,7 @@ impl<'a> ExportImportRevertExecutor<'a> {
         };
 
         // Running the command and capturing the output.
-        let output = Command::new(cargo_bin("e2-chain"))
+        let output = Command::new(cargo_bin("deeper-chain"))
             .args(&arguments)
             .arg(&base_path)
             .arg(&self.exported_blocks_file)

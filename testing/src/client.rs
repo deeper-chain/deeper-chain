@@ -34,7 +34,7 @@ pub type Client = client::Client<
     Backend,
     client::LocalCallExecutor<Backend, Executor>,
     node_primitives::Block,
-    e2_chain_runtime::RuntimeApi,
+    deeper_chain_runtime::RuntimeApi,
 >;
 
 /// Transaction for node-runtime.

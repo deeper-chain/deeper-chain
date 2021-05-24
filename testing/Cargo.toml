@@ -23,7 +23,7 @@ pallet-indices = '2.0.0'
 sp-keyring = '2.0.0'
 node-executor = { version = "2.0.0", path = "../executor" }
 node-primitives = { version = "2.0.0", path = "../primitives" }
-e2-chain-runtime = { version = "2.0.0", path = "../runtime" }
+deeper-chain-runtime = { version = "2.0.0", path = "../runtime" }
 sp-core = '2.0.0'
 sp-io = '2.0.0'
 frame-support = '2.0.0'

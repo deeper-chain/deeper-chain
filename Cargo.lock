@@ -1197,6 +1197,80 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4d0e2d24e5ee3b23a01de38eefdcd978907890701f08ffffd4cb457ca4ee8d6"
 
 [[package]]
+name = "deeper-chain-runtime"
+version = "2.0.0"
+dependencies = [
+ "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-executive 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "frame-system-benchmarking",
+ "frame-system-rpc-runtime-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex-literal",
+ "integer-sqrt",
+ "node-primitives",
+ "pallet-authority-discovery",
+ "pallet-authorship 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-babe 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-balances 2.0.0",
+ "pallet-collective",
+ "pallet-contracts",
+ "pallet-contracts-primitives",
+ "pallet-contracts-rpc-runtime-api",
+ "pallet-credit",
+ "pallet-deeper-node",
+ "pallet-delegating",
+ "pallet-democracy",
+ "pallet-elections-phragmen",
+ "pallet-eth-sub-bridge",
+ "pallet-finality-tracker",
+ "pallet-grandpa",
+ "pallet-identity",
+ "pallet-im-online",
+ "pallet-indices",
+ "pallet-membership",
+ "pallet-micropayment",
+ "pallet-multisig",
+ "pallet-offences",
+ "pallet-offences-benchmarking",
+ "pallet-proxy",
+ "pallet-randomness-collective-flip",
+ "pallet-recovery",
+ "pallet-scheduler",
+ "pallet-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-session-benchmarking",
+ "pallet-society",
+ "pallet-staking-reward-curve",
+ "pallet-staking_with_credit",
+ "pallet-sudo",
+ "pallet-timestamp 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury",
+ "pallet-utility",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "serde",
+ "sp-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-authority-discovery",
+ "sp-block-builder 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-consensus-babe 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-inherents 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-keyring 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-offchain 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-staking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-transaction-pool 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-version 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "static_assertions",
+ "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1294,80 +1368,6 @@ name = "dyn-clone"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55796afa1b20c2945ca8eabfc421839f2b766619209f1ede813cf2484f31804"
-
-[[package]]
-name = "e2-chain-runtime"
-version = "2.0.0"
-dependencies = [
- "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-executive 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system-benchmarking",
- "frame-system-rpc-runtime-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex-literal",
- "integer-sqrt",
- "node-primitives",
- "pallet-authority-discovery",
- "pallet-authorship 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-babe 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-balances 2.0.0",
- "pallet-collective",
- "pallet-contracts",
- "pallet-contracts-primitives",
- "pallet-contracts-rpc-runtime-api",
- "pallet-credit",
- "pallet-deeper-node",
- "pallet-delegating",
- "pallet-democracy",
- "pallet-elections-phragmen",
- "pallet-eth-sub-bridge",
- "pallet-finality-tracker",
- "pallet-grandpa",
- "pallet-identity",
- "pallet-im-online",
- "pallet-indices",
- "pallet-membership",
- "pallet-micropayment",
- "pallet-multisig",
- "pallet-offences",
- "pallet-offences-benchmarking",
- "pallet-proxy",
- "pallet-randomness-collective-flip",
- "pallet-recovery",
- "pallet-scheduler",
- "pallet-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-session-benchmarking",
- "pallet-society",
- "pallet-staking-reward-curve",
- "pallet-staking_with_credit",
- "pallet-sudo",
- "pallet-timestamp 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-treasury",
- "pallet-utility",
- "pallet-vesting",
- "parity-scale-codec",
- "serde",
- "sp-api 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-authority-discovery",
- "sp-block-builder 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-consensus-babe 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-inherents 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-io 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-keyring 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-offchain 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-session 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-staking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-transaction-pool 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-version 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "static_assertions",
- "substrate-wasm-builder-runner 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "ed25519"
@@ -3829,8 +3829,8 @@ dependencies = [
 name = "node-bench"
 version = "0.8.0"
 dependencies = [
+ "deeper-chain-runtime",
  "derive_more",
- "e2-chain-runtime",
  "fs_extra",
  "futures 0.3.7",
  "hash-db",
@@ -3886,7 +3886,7 @@ name = "node-cli"
 version = "2.0.0"
 dependencies = [
  "assert_cmd",
- "e2-chain-runtime",
+ "deeper-chain-runtime",
  "frame-benchmarking-cli",
  "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3962,7 +3962,7 @@ name = "node-executor"
 version = "2.0.0"
 dependencies = [
  "criterion",
- "e2-chain-runtime",
+ "deeper-chain-runtime",
  "frame-benchmarking 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4024,7 +4024,7 @@ dependencies = [
 name = "node-rpc"
 version = "2.0.0"
 dependencies = [
- "e2-chain-runtime",
+ "deeper-chain-runtime",
  "jsonrpc-core",
  "node-primitives",
  "pallet-contracts-rpc",
@@ -4066,7 +4066,7 @@ name = "node-testing"
 version = "2.0.0"
 dependencies = [
  "criterion",
- "e2-chain-runtime",
+ "deeper-chain-runtime",
  "frame-support 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-system 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "fs_extra",

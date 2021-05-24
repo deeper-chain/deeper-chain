@@ -19,8 +19,8 @@
 //! Genesis Configuration.
 
 use crate::keyring::*;
-use e2_chain_runtime::constants::currency::*;
-use e2_chain_runtime::{
+use deeper_chain_runtime::constants::currency::*;
+use deeper_chain_runtime::{
     wasm_binary_unwrap, AccountId, BalancesConfig, ContractsConfig, GenesisConfig, GrandpaConfig,
     IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig, SystemConfig, BridgeConfig,
 };

@@ -18,9 +18,9 @@
 
 //! Substrate chain configurations.
 
-use e2_chain_runtime::constants::currency::*;
-use e2_chain_runtime::Block;
-use e2_chain_runtime::{
+use deeper_chain_runtime::constants::currency::*;
+use deeper_chain_runtime::Block;
+use deeper_chain_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
     CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
     SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig, BridgeConfig,
@@ -41,7 +41,7 @@ use sp_runtime::{
     Perbill,
 };
 
-pub use e2_chain_runtime::GenesisConfig;
+pub use deeper_chain_runtime::GenesisConfig;
 pub use node_primitives::{AccountId, Balance, Signature};
 
 type AccountPublic = <Signature as Verify>::Signer;
