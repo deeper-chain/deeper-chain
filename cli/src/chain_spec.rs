@@ -353,13 +353,17 @@ pub fn testnet_genesis(
     const STASH: Balance = 100 * DOLLARS;
 
     let bridge_validators: Vec<AccountId> = vec![
-        hex!("0d96d3dbdb55964e521a2f1dc1428ae55336063fd8f0e07bebbcb1becf79a67b").into(),
-        // 5CtXvt2othnZpkneuTg6xENMwXbmwV3da1YeNAeYx5wMaCvz
-        hex!("80133ea92f48aa928119aaaf524bc75e436a5c9eb24878a9e28ac7b0b37aa81a").into(),
-        // 5CqXmy44eTwGQCX8GaLrUfTAyEswGSd4PgSKMgUdLfDLBhZZ
-        hex!("3c7f612cdda6d0a3aad9da0fb6cb624721b04067f00bd0034062e6e2db2cd23e").into(),
-        // 5DnUF5fQ6KNYPWRAcHYpMu32pUtdLv6ksRcSLeuofrxmPsTU
+        hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into(),
+        // 5DDCabfWypaJwMdXeKCxHmBtxWwob3RSYZeP9pMZa6V3bKEL
+        hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into(),
+        // 5FbMwvsF5serYgaQkcJ9itgiUX4RxftCF6reptrLym6YgERX
+        hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into(),
+        // 5ECHkxssXVeENxozUbe4p64sZq6ktzFnv37BCbsAoS8AMxU3
     ];
+    let mut new_endowed_accounts = endowed_accounts.clone();
+    new_endowed_accounts.push(hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into());
+    new_endowed_accounts.push(hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into());
+    new_endowed_accounts.push(hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into());
 
     GenesisConfig {
         frame_system: Some(SystemConfig {
@@ -367,7 +371,7 @@ pub fn testnet_genesis(
             changes_trie_config: Default::default(),
         }),
         pallet_balances: Some(BalancesConfig {
-            balances: endowed_accounts
+            balances: new_endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, ENDOWMENT))

@@ -94,6 +94,8 @@ pub use deeper_node;
 
 /// Import the micropayment pallet
 pub use micropayment;
+pub use pallet_eth_sub_bridge as bridge;
+pub use pallet_eth_sub_bridge::Call as BridgeCall;
 
 /// Weights for pallets used in the runtime.
 mod weights;
