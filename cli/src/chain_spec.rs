@@ -361,9 +361,12 @@ pub fn testnet_genesis(
         // 5ECHkxssXVeENxozUbe4p64sZq6ktzFnv37BCbsAoS8AMxU3
     ];
     let mut new_endowed_accounts = endowed_accounts.clone();
-    new_endowed_accounts.push(hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into());
-    new_endowed_accounts.push(hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into());
-    new_endowed_accounts.push(hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into());
+    new_endowed_accounts
+        .push(hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into());
+    new_endowed_accounts
+        .push(hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into());
+    new_endowed_accounts
+        .push(hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into());
 
     GenesisConfig {
         frame_system: Some(SystemConfig {

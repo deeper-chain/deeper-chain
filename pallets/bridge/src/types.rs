@@ -2,13 +2,8 @@ use codec::{Decode, Encode};
 use sp_core::H160;
 use sp_std::prelude::Vec;
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
-pub type Count = u64;
 pub type MemberId = u64;
 pub type ProposalId = u64;
-pub type VotesCount = MemberId;
 pub type Days = u32;
 pub type Rate = u32;
 

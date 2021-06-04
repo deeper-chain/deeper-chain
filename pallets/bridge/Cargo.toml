@@ -23,6 +23,7 @@ sp-io = {version = "2.0.0", default-features = false}
 serde = { version = "1.0.117", optional = true, features = ["derive"] }
 timestamp = {version = "2.0.0", package="pallet-timestamp", default-features = false}
 pallet-balances = { version = "2.0.0", default-features = false, path = "../balances" }
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 
 
 [features]
@@ -37,4 +38,6 @@ std = [
 	'sp-io/std',
 	'serde/std',
 	'timestamp/std',
+	'node-primitives/std',
+	'pallet-balances/std',
 ]

@@ -60,7 +60,7 @@
       "message_id": "H256",
       "eth_address": "H160",
       "substrate_address": "AccountId",
-      "amount": "TokenBalance",
+      "amount": "Balance",
       "status": "Status",
       "direction": "Status"
     },

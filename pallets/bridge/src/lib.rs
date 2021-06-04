@@ -10,10 +10,9 @@ use types::{
     Status, TransferMessage, ValidatorMessage,
 };
 
-use frame_support::traits::{Currency, Imbalance, LockableCurrency, WithdrawReasons};
+use frame_support::traits::{Currency, ReservableCurrency};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, fail,
-    traits::Get,
 };
 use frame_system::ensure_signed;
 use sp_core::H160;
@@ -30,11 +29,10 @@ mod tests;
 const MAX_VALIDATORS: u32 = 100_000;
 const DAY_IN_BLOCKS: u32 = 14_400;
 const DAY: u32 = 86_400;
-const LOCK_IDENTIFIER: [u8; 8] = *b"sub--eth";
 
 pub trait Trait: frame_system::Trait + timestamp::Trait {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-    type Currency: Currency<Self::AccountId> + LockableCurrency<Self::AccountId>;
+    type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 }
 
 type BalanceOf<T> =
@@ -447,7 +445,7 @@ impl<T: Trait> Module<T> {
     fn _cancel_transfer(
         message: TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
     ) -> Result<()> {
-        T::Currency::remove_lock(LOCK_IDENTIFIER, &message.substrate_address); // unlock
+        T::Currency::unreserve(&message.substrate_address, message.amount); // unlock
         Self::update_status(message.message_id, Status::Canceled, Kind::Transfer)
     }
     fn pause_the_bridge(message: BridgeMessage<T::AccountId, T::Hash>) -> Result<()> {
@@ -532,12 +530,7 @@ impl<T: Trait> Module<T> {
         message: &TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
         account: T::AccountId,
     ) -> Result<()> {
-        T::Currency::set_lock(
-            LOCK_IDENTIFIER,
-            &account,
-            message.amount,
-            WithdrawReasons::all(),
-        ); // lock
+        let _ = T::Currency::reserve(&account, message.amount);
         Ok(())
     }
 
@@ -545,8 +538,7 @@ impl<T: Trait> Module<T> {
         let message = <TransferMessages<T>>::get(message_id);
         let from = message.substrate_address.clone();
         let to = message.eth_address;
-        T::Currency::remove_lock(LOCK_IDENTIFIER, &from); // unlock
-        T::Currency::burn(message.amount); // burn
+        T::Currency::slash_reserved(&from, message.amount); // burn
         <DailyLimits<T>>::mutate(from.clone(), |a| *a -= message.amount);
 
         Self::deposit_event(RawEvent::BurnedMessage(
