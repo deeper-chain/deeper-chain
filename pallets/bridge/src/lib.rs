@@ -16,7 +16,7 @@ use frame_support::{
 };
 use frame_system::ensure_signed;
 use sp_core::H160;
-use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash};
+use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
 use sp_std::prelude::Vec;
 type Result<T> = core::result::Result<T, &'static str>;
 
@@ -530,7 +530,7 @@ impl<T: Trait> Module<T> {
         message: &TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
         account: T::AccountId,
     ) -> Result<()> {
-        let _ = T::Currency::reserve(&account, message.amount);
+        let _ = T::Currency::reserve(&account, message.amount)?;
         Ok(())
     }
 
@@ -538,7 +538,11 @@ impl<T: Trait> Module<T> {
         let message = <TransferMessages<T>>::get(message_id);
         let from = message.substrate_address.clone();
         let to = message.eth_address;
-        T::Currency::slash_reserved(&from, message.amount); // burn
+        let (_, res_bal) = T::Currency::slash_reserved(&from, message.amount); // burn
+        ensure!(
+            res_bal == (BalanceOf::<T>::zero()),
+            "slash_reserved failed"
+        );
         <DailyLimits<T>>::mutate(from.clone(), |a| *a -= message.amount);
 
         Self::deposit_event(RawEvent::BurnedMessage(
