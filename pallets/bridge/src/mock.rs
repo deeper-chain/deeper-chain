@@ -129,7 +129,6 @@ type TimestampModule = timestamp::Module<Test>;
 const V1: u64 = 1;
 const V2: u64 = 2;
 const V3: u64 = 3;
-const V4: u64 = 4;
 const USER1: u64 = 5;
 const USER2: u64 = 6;
 

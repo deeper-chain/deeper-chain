@@ -539,10 +539,7 @@ impl<T: Trait> Module<T> {
         let from = message.substrate_address.clone();
         let to = message.eth_address;
         let (_, res_bal) = T::Currency::slash_reserved(&from, message.amount); // burn
-        ensure!(
-            res_bal == (BalanceOf::<T>::zero()),
-            "slash_reserved failed"
-        );
+        ensure!(res_bal == (BalanceOf::<T>::zero()), "slash_reserved failed");
         <DailyLimits<T>>::mutate(from.clone(), |a| *a -= message.amount);
 
         Self::deposit_event(RawEvent::BurnedMessage(
