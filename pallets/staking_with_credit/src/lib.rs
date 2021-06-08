@@ -2815,7 +2815,8 @@ impl<T: Trait> Module<T> {
             ));
 
             // Set ending era reward.
-            let credit_score = T::CreditDelegate::total_delegated_score(active_era.index).unwrap_or(0);
+            let credit_score =
+                T::CreditDelegate::total_delegated_score(active_era.index).unwrap_or(0);
             let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
                 credit_score as u128 * T::CreditToTokenFactor::get(),
             );
@@ -3060,7 +3061,7 @@ impl<T: Trait> Module<T> {
         for (validator, _) in <Validators<T>>::iter() {
             // whitelist is null , any validators can come up for election;
             // whitelist is not null, only validators in whitelist can come up for election.
-            if validator_whitelist.len()==0 || validator_whitelist.contains(&validator.clone()){
+            if validator_whitelist.len() == 0 || validator_whitelist.contains(&validator.clone()) {
                 // append self vote
                 let self_vote = (
                     validator.clone(),

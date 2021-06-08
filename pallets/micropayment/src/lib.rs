@@ -3,7 +3,7 @@ extern crate alloc;
 use alloc::collections::btree_map::BTreeMap;
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::{Currency, Vec, Get};
+use frame_support::traits::{Currency, Get, Vec};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
 };
@@ -281,7 +281,7 @@ decl_module! {
               return Ok(());
           }
 
-          if SessionId::<T>::contains_key((sender.clone(),receiver.clone())) 
+          if SessionId::<T>::contains_key((sender.clone(),receiver.clone()))
             && session_id != Self::get_session_id((sender.clone(),receiver.clone())).unwrap_or(0) + 1 {
                 Err(Error::<T>::SessionError)?
             }
