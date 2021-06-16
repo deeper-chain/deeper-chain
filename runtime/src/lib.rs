@@ -75,6 +75,7 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
+pub use pallet_micropayment;
 pub use pallet_template;
 
 #[cfg(any(feature = "std", test))]
@@ -1029,6 +1030,20 @@ impl pallet_template::Config for Runtime {
     type Event = Event;
 }
 
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
+    pub const MaxIpLength: usize = 256;
+    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
+}
+impl pallet_micropayment::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type DayToBlocknum = DayToBlocknum;
+    type DataPerDPR = DataPerDPR;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1072,6 +1087,7 @@ construct_runtime!(
         Mmr: pallet_mmr::{Module, Storage},
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
         TemplateModule: pallet_template::{Module, Call, Storage, Event<T>},
+        Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
     }
 );
 
