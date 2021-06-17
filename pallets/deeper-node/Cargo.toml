@@ -1,0 +1,36 @@
+[package]
+name = "pallet-deeper-node"
+description = 'deeper node pallet'
+edition = '2018'
+authors = ["deeper dev"]
+version = '3.0.0'
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
+
+
+[dev-dependencies]
+
+sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+
+
+[features]
+default = ['std']
+std = [
+    'serde',
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    'sp-runtime/std',
+    'sp-io/std',
+    'pallet-balances/std',
+]

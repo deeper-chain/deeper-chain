@@ -59,7 +59,7 @@ use sp_core::{
 use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::curve::PiecewiseLinear;
 use sp_runtime::traits::{
-    self, BlakeTwo256, Block as BlockT, ConvertInto, NumberFor, OpaqueKeys, SaturatedConversion,
+    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys, SaturatedConversion,
     StaticLookup,
 };
 use sp_runtime::transaction_validity::{
@@ -1044,6 +1044,50 @@ impl pallet_micropayment::Config for Runtime {
     type DataPerDPR = DataPerDPR;
 }
 
+impl pallet_deeper_node::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationDays = MaxDurationDays;
+    type DayToBlocknum = DayToBlocknum;
+    type MaxIpLength = MaxIpLength;
+}
+
+parameter_types! {
+    pub const CreditInitScore: u64 = 60;
+    pub const MaxCreditScore: u64 = 800;
+    pub const CreditScoreCapPerEra: u8 = 5;
+    pub const CreditScoreAttenuationLowerBound: u64 = 40;
+    pub const CreditScoreAttenuationStep: u64 = 5;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
+    pub const BlocksPerEra: BlockNumber = BLOCKS_PER_ERA;
+}
+
+pub struct CurrencyToNumberHandler;
+impl Convert<Balance, u64> for CurrencyToNumberHandler { 
+    fn convert(x: Balance) -> u64 { 
+        x as u64 
+    }
+}
+impl Convert<u128, Balance> for CurrencyToNumberHandler { 
+    fn convert(x: u128) -> Balance { x }
+}
+
+
+impl pallet_credit::Config for Runtime {
+    type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
+    type CurrencyToVote = CurrencyToNumberHandler;
+    type CreditInitScore = CreditInitScore;
+    type MaxCreditScore = MaxCreditScore;
+    type CreditScoreCapPerEra = CreditScoreCapPerEra;
+    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
+    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
+    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
+    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1088,6 +1132,8 @@ construct_runtime!(
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
         TemplateModule: pallet_template::{Module, Call, Storage, Event<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
+        Credit: pallet_credit::{Module, Call, Storage, Event<T>},
+        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
     }
 );
 

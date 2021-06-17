@@ -1,21 +1,21 @@
 use crate as pallet_micropayment;
 use frame_support::{
-	StorageValue, StorageMap, parameter_types, assert_ok,
-	traits::{ChangeMembers, Currency, LockIdentifier, OnInitialize, OnFinalize, GenesisBuild},
+    assert_ok, parameter_types,
+    traits::{ChangeMembers, Currency, GenesisBuild, LockIdentifier, OnFinalize, OnInitialize},
+    StorageMap, StorageValue,
 };
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    BuildStorage,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 
 use node_primitives::Balance;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -72,7 +72,7 @@ impl pallet_balances::Config for Test {
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
-    type WeightInfo = ();//pallet_balances::weights::SubstrateWeight<Test>;
+    type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
 parameter_types! {

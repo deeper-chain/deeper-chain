@@ -1,5 +1,9 @@
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok, dispatch::{DispatchResultWithPostInfo, DispatchError, DispatchErrorWithPostInfo}, weights::PostDispatchInfo };
+use frame_support::{
+    assert_noop, assert_ok,
+    dispatch::{DispatchError, DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+    weights::PostDispatchInfo,
+};
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
 
@@ -12,13 +16,17 @@ fn fn_open_channel() {
         // Channel already opened
         assert_eq!(
             Micropayment::open_channel(Origin::signed(1), 2, 1000, 3600),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::ChannelAlreadyOpened))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::ChannelAlreadyOpened
+            ))
         );
 
         // Channel should connect two different accounts
         assert_eq!(
             Micropayment::open_channel(Origin::signed(2), 2, 1000, 3600),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::SameChannelEnds))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::SameChannelEnds
+            ))
         );
 
         //  duration should > 0
@@ -28,13 +36,17 @@ fn fn_open_channel() {
         );
 
         // balance of 2 is 500, but channel balance experted is 1000
-        if let Err(dispatch_error_with_post_info) = Micropayment::open_channel(Origin::signed(2), 3, 1000, 3600){
-            assert_eq!( dispatch_error_with_post_info.error,
+        if let Err(dispatch_error_with_post_info) =
+            Micropayment::open_channel(Origin::signed(2), 3, 1000, 3600)
+        {
+            assert_eq!(
+                dispatch_error_with_post_info.error,
                 DispatchError::Module {
                     index: 2,
                     error: 0,
-                    message: Some("NotEnoughBalance") 
-                });
+                    message: Some("NotEnoughBalance")
+                }
+            );
         }
     });
 }
@@ -61,11 +73,15 @@ fn fn_close_channel() {
         // Channel not exists
         assert_eq!(
             Micropayment::close_channel(Origin::signed(2), 3),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::ChannelNotExist))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::ChannelNotExist
+            ))
         );
         assert_eq!(
             Micropayment::close_channel(Origin::signed(1), 2),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::ChannelNotExist))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::ChannelNotExist
+            ))
         );
     });
 }
@@ -91,24 +107,32 @@ fn fn_add_balance() {
         assert_ok!(Micropayment::add_balance(Origin::signed(1), 2, 100));
 
         // Channel not exists
-        if let Err(dispatch_error_with_post_info) = Micropayment::add_balance(Origin::signed(2), 3, 100) {
-            assert_eq!( dispatch_error_with_post_info.error,
+        if let Err(dispatch_error_with_post_info) =
+            Micropayment::add_balance(Origin::signed(2), 3, 100)
+        {
+            assert_eq!(
+                dispatch_error_with_post_info.error,
                 DispatchError::Module {
                     index: 2,
                     error: 1,
-                    message: Some("ChannelNotExist") 
-                });
+                    message: Some("ChannelNotExist")
+                }
+            );
         }
 
         // NotEnoughBalance 500-300 = 200, but add_balance 500
         assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 3600));
-        if let Err(dispatch_error_with_post_info) = Micropayment::add_balance(Origin::signed(3), 4, 500) {
-            assert_eq!( dispatch_error_with_post_info.error,
+        if let Err(dispatch_error_with_post_info) =
+            Micropayment::add_balance(Origin::signed(3), 4, 500)
+        {
+            assert_eq!(
+                dispatch_error_with_post_info.error,
                 DispatchError::Module {
                     index: 2,
                     error: 0,
-                    message: Some("NotEnoughBalance") 
-                });
+                    message: Some("NotEnoughBalance")
+                }
+            );
         }
     });
 }

@@ -3759,6 +3759,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-balances 3.0.0",
  "pallet-contracts",
+ "pallet-deeper-node",
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-indices",
@@ -3945,6 +3946,8 @@ dependencies = [
  "pallet-contracts",
  "pallet-contracts-primitives",
  "pallet-contracts-rpc-runtime-api",
+ "pallet-credit",
+ "pallet-deeper-node",
  "pallet-democracy",
  "pallet-elections-phragmen",
  "pallet-grandpa",
@@ -4012,6 +4015,7 @@ dependencies = [
  "node-runtime",
  "pallet-balances 3.0.0",
  "pallet-contracts",
+ "pallet-deeper-node",
  "pallet-grandpa",
  "pallet-indices",
  "pallet-session",
@@ -4398,6 +4402,38 @@ dependencies = [
  "sp-api",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-credit"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "pallet-balances 3.0.0",
+ "pallet-deeper-node",
+ "pallet-micropayment",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-deeper-node"
+version = "3.0.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances 3.0.0",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

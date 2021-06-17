@@ -26,7 +26,7 @@ use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
     CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
     SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig,
+    SystemConfig, TechnicalCommitteeConfig, DeeperNodeConfig
 };
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
@@ -360,6 +360,9 @@ pub fn testnet_genesis(
             max_members: 999,
         }),
         pallet_vesting: Some(Default::default()),
+        pallet_deeper_node: Some(DeeperNodeConfig {
+            tmp: 0  
+        })
     }
 }
 

@@ -84,6 +84,8 @@ pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/parityt
 pallet-vesting = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-template = { version = "2.0.0", default-features = false, path = "../pallets/template" }
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../pallets/micropayment" }
+pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
+pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
