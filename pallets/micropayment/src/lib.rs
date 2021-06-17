@@ -71,11 +71,6 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
-    // The pallet's runtime storage items.
-    #[pallet::storage]
-    #[pallet::getter(fn something)]
-    pub type Something<T> = StorageValue<_, u32>;
-
     // get channel info
     #[pallet::storage]
     #[pallet::getter(fn get_channel)]
@@ -145,9 +140,6 @@ pub mod pallet {
     #[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Event documentation should end with an array that provides descriptive names for event
-        /// parameters. [something, who]
-        SomethingStored(u32, T::AccountId),
         ChannelOpened(
             T::AccountId,
             T::AccountId,
@@ -161,13 +153,8 @@ pub mod pallet {
         BalanceAdded(T::AccountId, T::AccountId, BalanceOf<T>, T::BlockNumber),
     }
 
-    // Errors inform users that something went wrong.
     #[pallet::error]
     pub enum Error<T> {
-        /// Error names should be descriptive.
-        NoneValue,
-        /// Errors should have helpful documentation associated with them.
-        StorageOverflow,
         /// Not enough balance
         NotEnoughBalance,
         /// Micropayment channel not exist
@@ -486,7 +473,7 @@ pub mod pallet {
             hash
         }
 
-        fn update_micropayment_information(
+        pub fn update_micropayment_information(
             sender: &T::AccountId,
             receiver: &T::AccountId,
             amount: BalanceOf<T>,
