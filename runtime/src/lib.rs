@@ -76,6 +76,7 @@ use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
 pub use pallet_template;
+// pub use pallet_deeper_node;
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
