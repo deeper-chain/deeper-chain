@@ -57,6 +57,8 @@ pub mod time {
 
     pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
 
+    pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+
     // 1 in 4 blocks (on average, not counting collisions) will be primary BABE blocks.
     pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 

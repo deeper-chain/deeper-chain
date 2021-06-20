@@ -45,6 +45,7 @@ sp-block-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.
 sc-block-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-inherents = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
 log = "0.4.8"
 tempfile = "3.1.0"
 fs_extra = "1"

@@ -124,5 +124,8 @@ pub fn config_endowed(
             max_members: 999,
         }),
         pallet_vesting: Some(Default::default()),
+        pallet_deeper_node: Some(
+            Default::default()
+        ),
     }
 }

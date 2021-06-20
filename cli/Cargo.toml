@@ -88,6 +88,7 @@ pallet-im-online = { default-features = false, git = "https://github.com/parityt
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-staking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }
