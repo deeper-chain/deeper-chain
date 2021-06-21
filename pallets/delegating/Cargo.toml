@@ -1,0 +1,43 @@
+[package]
+authors = ['deeper.network dev']
+description = 'FRAME pallet template for defining custom runtime logic.'
+edition = '2018'
+homepage = 'https://deeper.network'
+license = 'Unlicense'
+name = 'pallet-delegating'
+repository = 'https://github.com/e2chain-dev/e2-chain'
+version = '3.0.0'
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+log = { default-features = false, version = "0.4.11" }
+frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-std = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-session = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-credit = {version = '3.0.0', default-features =false, path = "../credit"}
+pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
+
+[dev-dependencies]
+pallet-balances = { version = "3.0.0", path = "../balances", default-features = false}
+pallet-timestamp = { version = "3.0.0", default-features = false}
+pallet-deeper-node = {version = '3.0.0', default-features =false, path = "../deeper-node"}
+
+[features]
+default = ['std']
+std = [
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    'sp-std/std',
+    'pallet-credit/std',
+    'sp-core/std',
+    'pallet-session/std',
+    'pallet-micropayment/std',
+]

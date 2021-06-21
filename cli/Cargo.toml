@@ -86,7 +86,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 pallet-im-online = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-pallet-staking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+pallet-staking-with-credit = { path = "../pallets/staking-with-credit", version = "3.0.0"}
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
 

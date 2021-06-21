@@ -21,12 +21,19 @@ macro_rules! log {
 	};
 }
 
+pub trait CreditInterface<AccountId> {
+    fn get_credit_score(account_id: AccountId) -> Option<u64>;
+    fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
+    fn credit_slash(accouont_id: AccountId);
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use frame_support::traits:: {Currency, Vec};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{Convert};
+    use super::*;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -222,6 +229,33 @@ pub mod pallet {
                 true
             } else {
                 false
+            }
+        }
+    }
+    impl<T: Config> CreditInterface<T::AccountId> for Module<T> {
+        fn get_credit_score(account_id: T::AccountId) -> Option<u64> {
+            Self::get_user_credit(account_id)
+        }
+    
+        /// check if account_id's credit score is pass threshold ttype
+        fn pass_threshold(account_id: &T::AccountId, _ttype: u8) -> bool {
+            if UserCredit::<T>::contains_key(account_id) {
+                if let Some(score) = UserCredit::<T>::get(account_id) {
+                    if score >= T::CreditScoreDelegatedPermitThreshold::get() {
+                        return true;
+                    }
+                }
+            }
+            false
+        }
+    
+        /// credit slash
+        fn credit_slash(account_id: T::AccountId) {
+            if UserCredit::<T>::contains_key(account_id.clone()) {
+                UserCredit::<T>::mutate(account_id, |s| {
+                    let score = (*s).unwrap_or(0);
+                    *s = Some(score.saturating_sub(T::CreditScoreAttenuationStep::get() * 2))
+                });
             }
         }
     }

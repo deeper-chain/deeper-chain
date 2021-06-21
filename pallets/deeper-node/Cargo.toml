@@ -18,7 +18,6 @@ pallet-balances = { version = "3.0.0", default-features = false, path = "../bala
 
 
 [dev-dependencies]
-
 sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 
