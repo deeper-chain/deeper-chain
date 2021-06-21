@@ -18,13 +18,13 @@
 
 //! Substrate chain configurations.
 
-use e2_chain_runtime::constants::currency::*;
-use e2_chain_runtime::Block;
-use e2_chain_runtime::{
-    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
-    CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
-    SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig,
+use deeper_chain_runtime::constants::currency::*;
+use deeper_chain_runtime::Block;
+use deeper_chain_runtime::{
+    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig,
+    ContractsConfig, CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig,
+    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
+    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
@@ -41,7 +41,7 @@ use sp_runtime::{
     Perbill,
 };
 
-pub use e2_chain_runtime::GenesisConfig;
+pub use deeper_chain_runtime::GenesisConfig;
 pub use node_primitives::{AccountId, Balance, Signature};
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -352,13 +352,29 @@ pub fn testnet_genesis(
     const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
     const STASH: Balance = 100 * DOLLARS;
 
+    let bridge_validators: Vec<AccountId> = vec![
+        hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into(),
+        // 5DDCabfWypaJwMdXeKCxHmBtxWwob3RSYZeP9pMZa6V3bKEL
+        hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into(),
+        // 5FbMwvsF5serYgaQkcJ9itgiUX4RxftCF6reptrLym6YgERX
+        hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into(),
+        // 5ECHkxssXVeENxozUbe4p64sZq6ktzFnv37BCbsAoS8AMxU3
+    ];
+    let mut new_endowed_accounts = endowed_accounts.clone();
+    new_endowed_accounts
+        .push(hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into());
+    new_endowed_accounts
+        .push(hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into());
+    new_endowed_accounts
+        .push(hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into());
+
     GenesisConfig {
         frame_system: Some(SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
             changes_trie_config: Default::default(),
         }),
         pallet_balances: Some(BalancesConfig {
-            balances: endowed_accounts
+            balances: new_endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, ENDOWMENT))
@@ -435,6 +451,17 @@ pub fn testnet_genesis(
             max_members: 999,
         }),
         pallet_vesting: Some(Default::default()),
+        pallet_eth_sub_bridge: Some(BridgeConfig {
+            validator_accounts: bridge_validators,
+            validators_count: 3u32,
+            current_limits: vec![
+                100 * 10u128.pow(18),
+                200 * 10u128.pow(18),
+                50 * 10u128.pow(18),
+                400 * 10u128.pow(18),
+                10 * 10u128.pow(18),
+            ],
+        }),
     }
 }
 

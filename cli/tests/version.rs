@@ -29,7 +29,7 @@ fn expected_regex() -> Regex {
 #[test]
 fn version_is_full() {
     let expected = expected_regex();
-    let output = Command::new(cargo_bin("e2-chain"))
+    let output = Command::new(cargo_bin("deeper-chain"))
         .args(&["--version"])
         .output()
         .unwrap();

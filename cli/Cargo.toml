@@ -6,9 +6,9 @@ description = "Generic Substrate node implementation in Rust."
 build = "build.rs"
 edition = "2018"
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
-default-run = "e2-chain"
+default-run = "deeper-chain"
 homepage = "https://deepernetwork.io"
-repository = "https://github.com/e2chain-dev/e2-chain-v2.0.0"
+repository = "https://github.com/deeper-chain/deeper-chain"
 
 [package.metadata.wasm-pack.profile.release]
 # `wasm-opt` has some problems on linux, see
@@ -25,7 +25,7 @@ is-it-maintained-issue-resolution = { repository = "paritytech/substrate" }
 is-it-maintained-open-issues = { repository = "paritytech/substrate" }
 
 [[bin]]
-name = "e2-chain"
+name = "deeper-chain"
 path = "bin/main.rs"
 required-features = ["cli"]
 
@@ -86,10 +86,11 @@ frame-support = { version = "2.0.0", default-features = false}
 pallet-im-online = { version = "2.0.0", default-features = false}
 pallet-authority-discovery = '2.0.0' 
 pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
+pallet-eth-sub-bridge = { default-features = false, path = "../pallets/bridge", version = "2.0.0" }
 pallet-grandpa = '2.0.0'
 
 # node-specific dependencies
-e2-chain-runtime = { version = "2.0.0", path = "../runtime" }
+deeper-chain-runtime = { version = "2.0.0", path = "../runtime" }
 node-rpc = { version = "2.0.0", path = "../rpc" }
 node-primitives = { version = "2.0.0", path = "../primitives" }
 node-executor = { version = "2.0.0", path = "../executor" }
@@ -154,6 +155,6 @@ cli = [
 	"substrate-build-script-utils",
 ]
 runtime-benchmarks = [
-	"e2-chain-runtime/runtime-benchmarks",
+	"deeper-chain-runtime/runtime-benchmarks",
 	"frame-benchmarking-cli",
 ]

@@ -8,8 +8,8 @@
 file_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 cd "$file_path"
 
-#replace it to your program location, e.g. ../target/release/e2-chain
-program=../target/debug/e2-chain
+#replace it to your program location, e.g. ../target/release/deeper-chain
+program=../target/debug/deeper-chain
 
 port=$((30333+$2))
 ws_port=$((9944+$2))

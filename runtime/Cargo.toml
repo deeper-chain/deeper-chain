@@ -1,11 +1,11 @@
 [package]
-name = "e2-chain-runtime"
+name = "deeper-chain-runtime"
 version = "2.0.0"
 authors = ["deeper.network dev"]
 edition = "2018"
 build = "build.rs"
 license = "Apache-2.0"
-repository = 'https://github.com/e2chain-dev/e2-chain-v2.0.0'
+repository = 'https://github.com/deeper-chain/deeper-chain'
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -84,6 +84,8 @@ pallet-balances = {package = "pallet-balances", default-features = false, path =
 pallet-credit = {package = "pallet-credit", default-features = false, path = "../pallets/credit", version = "2.0.0"}
 pallet-delegating = {package = "pallet-delegating", default-features = false, path = "../pallets/delegating", version = "2.0.0"}
 pallet-staking_with_credit = {package = "pallet-staking_with_credit", default-features = false, path = "../pallets/staking_with_credit", version = "2.0.0"}
+pallet-eth-sub-bridge = {package = "pallet-eth-sub-bridge", default-features = false, path = "../pallets/bridge", version = "2.0.0"}
+
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.5", package = "substrate-wasm-builder-runner"}
@@ -150,6 +152,7 @@ std = [
 	"pallet-credit/std",
 	"pallet-delegating/std",
 	"pallet-staking_with_credit/std",
+	"pallet-eth-sub-bridge/std",
     "pallet-balances/std",
 ]
 runtime-benchmarks = [

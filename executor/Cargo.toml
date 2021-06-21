@@ -14,7 +14,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.4" }
 node-primitives = { version = "2.0.0", path = "../primitives" }
-e2-chain-runtime = { version = "2.0.0", path = "../runtime" }
+deeper-chain-runtime = { version = "2.0.0", path = "../runtime" }
 sc-executor = '0.8.0' 
 sp-core = '2.0.0'
 sp-io = '2.0.0'

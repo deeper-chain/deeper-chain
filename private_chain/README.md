@@ -217,13 +217,13 @@ Config and key generation
 ```
 # In private_chain folder:
 # get template from "local" config
-../target/debug/e2-chain build-spec --disable-default-bootnode --chain local > first.json
+../target/debug/deeper-chain build-spec --disable-default-bootnode --chain local > first.json
 # add new key into genesis config
 ./chain_spec_gen.py -i first.json -o second.json
 # or import existing key into genesis config
 ./chain_spec_gen.py -i first.json -o second.json -k <loc_to_key_file>
 # create raw config
-../target/debug/e2-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
+../target/debug/deeper-chain build-spec --chain=second.json --raw --disable-default-bootnode > customSpecRaw.json
 ```
 
 Start a private network

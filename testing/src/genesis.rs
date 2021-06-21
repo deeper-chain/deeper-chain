@@ -19,11 +19,13 @@
 //! Genesis Configuration.
 
 use crate::keyring::*;
-use e2_chain_runtime::constants::currency::*;
-use e2_chain_runtime::{
-    wasm_binary_unwrap, AccountId, BalancesConfig, ContractsConfig, GenesisConfig, GrandpaConfig,
-    IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig, SystemConfig,
+use deeper_chain_runtime::constants::currency::*;
+use deeper_chain_runtime::{
+    wasm_binary_unwrap, AccountId, BalancesConfig, BridgeConfig, ContractsConfig, GenesisConfig,
+    GrandpaConfig, IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig,
+    SystemConfig,
 };
+use hex_literal::hex;
 use sp_core::ChangesTrieConfiguration;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
 use sp_runtime::Perbill;
@@ -49,6 +51,14 @@ pub fn config_endowed(
         (ferdie(), 100 * DOLLARS),
     ];
 
+    let bridge_validators: Vec<AccountId> = vec![
+        hex!("0d96d3dbdb55964e521a2f1dc1428ae55336063fd8f0e07bebbcb1becf79a67b").into(),
+        // 5CtXvt2othnZpkneuTg6xENMwXbmwV3da1YeNAeYx5wMaCvz
+        hex!("80133ea92f48aa928119aaaf524bc75e436a5c9eb24878a9e28ac7b0b37aa81a").into(),
+        // 5CqXmy44eTwGQCX8GaLrUfTAyEswGSd4PgSKMgUdLfDLBhZZ
+        hex!("3c7f612cdda6d0a3aad9da0fb6cb624721b04067f00bd0034062e6e2db2cd23e").into(),
+        // 5DnUF5fQ6KNYPWRAcHYpMu32pUtdLv6ksRcSLeuofrxmPsTU
+    ];
     endowed.extend(
         extra_endowed
             .into_iter()
@@ -125,5 +135,16 @@ pub fn config_endowed(
             max_members: 999,
         }),
         pallet_vesting: Some(Default::default()),
+        pallet_eth_sub_bridge: Some(BridgeConfig {
+            validator_accounts: bridge_validators,
+            validators_count: 3u32,
+            current_limits: vec![
+                100 * 10u128.pow(18),
+                200 * 10u128.pow(18),
+                50 * 10u128.pow(18),
+                400 * 10u128.pow(18),
+                10 * 10u128.pow(18),
+            ],
+        }),
     }
 }

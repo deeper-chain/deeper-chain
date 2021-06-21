@@ -20,7 +20,7 @@
 
 //! Service implementation. Specialized wrapper over substrate service.
 
-use e2_chain_runtime::RuntimeApi;
+use deeper_chain_runtime::RuntimeApi;
 use futures::prelude::*;
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
 use node_executor::Executor;

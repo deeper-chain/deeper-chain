@@ -24,19 +24,19 @@ cargo build --release
 Purge any existing dev chain state:
 
 ```bash
-./target/release/e2-chain purge-chain --dev
+./target/release/deeper-chain purge-chain --dev
 ```
 
 Start a dev chain:
 
 ```bash
-./target/release/e2-chain --dev
+./target/release/deeper-chain --dev
 ```
 
 Or, start a dev chain with detailed logging:
 
 ```bash
-RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/e2-chain -lruntime=debug --dev
+RUST_LOG=debug RUST_BACKTRACE=1 ./target/release/deeper-chain -lruntime=debug --dev
 ```
 
 ### Multi-Node Local Testnet

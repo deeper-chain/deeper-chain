@@ -18,7 +18,7 @@
 
 use crate::service::{new_full_base, new_partial, NewFullBase};
 use crate::{chain_spec, service, Cli, Subcommand};
-use e2_chain_runtime::{Block, RuntimeApi};
+use deeper_chain_runtime::{Block, RuntimeApi};
 use node_executor::Executor;
 use sc_cli::{ChainSpec, Result, Role, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
@@ -61,7 +61,7 @@ impl SubstrateCli for Cli {
     }
 
     fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &e2_chain_runtime::VERSION
+        &deeper_chain_runtime::VERSION
     }
 }
 

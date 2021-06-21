@@ -76,6 +76,7 @@ pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 #[cfg(any(feature = "std", test))]
 pub use pallet_staking_with_credit::StakerStatus;
+pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -93,6 +94,8 @@ pub use deeper_node;
 
 /// Import the micropayment pallet
 pub use micropayment;
+pub use pallet_eth_sub_bridge as bridge;
+pub use pallet_eth_sub_bridge::Call as BridgeCall;
 
 /// Weights for pallets used in the runtime.
 mod weights;
@@ -113,8 +116,8 @@ pub fn wasm_binary_unwrap() -> &'static [u8] {
 
 /// Runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("e2-chain"),
-    impl_name: create_runtime_str!("e2-chain"),
+    spec_name: create_runtime_str!("deeper-chain"),
+    impl_name: create_runtime_str!("deeper-chain"),
     authoring_version: 10,
     // Per convention: if the runtime behavior changes, increment spec_version
     // and set impl_version to 0. If only runtime
@@ -479,6 +482,11 @@ impl pallet_delegating::Trait for Runtime {
     type CreditInterface = Credit;
     type Currency = Balances;
     type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
+}
+
+impl pallet_eth_sub_bridge::Trait for Runtime {
+    type Event = Event;
+    type Currency = Balances;
 }
 
 impl pallet_session::Trait for Runtime {
@@ -1033,6 +1041,7 @@ construct_runtime!(
         Micropayment: micropayment::{Module, Call, Storage, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
+        Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>},
     }
 );
 

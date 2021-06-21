@@ -144,13 +144,13 @@ impl core::Benchmark for ImportBenchmark {
                         //    - deposit event for charging transaction fee
                         //    - extrinsic success
                         assert_eq!(
-                            e2_chain_runtime::System::events().len(),
+                            deeper_chain_runtime::System::events().len(),
                             (self.block.extrinsics.len() - 1) * 5 + 1,
                         );
                     }
                     BlockType::Noop => {
                         assert_eq!(
-                            e2_chain_runtime::System::events().len(),
+                            deeper_chain_runtime::System::events().len(),
                             // should be 2 per signed extrinsic + 1 per unsigned
                             // we have 1 unsigned and the rest are signed in the block
                             // those 2 events per signed are:
