@@ -14,7 +14,7 @@ const DPR = new BN("1000000000000000", 10); // base = 1e15 according to frontend
 // pallet credit test
 async function initializeCreditScore(api, signer, score, test, expect) {
     const unsub = await api.tx.credit
-        .initializeCreditExtrinsic(score)
+        .initializeCredit(score)
         .signAndSend(signer, ({ events = [], status }) => {
             if (status.isFinalized) {
                 events.forEach(({ phase, event: { data, method, section } }) => {
@@ -38,7 +38,7 @@ async function initializeCreditScore(api, signer, score, test, expect) {
 
 async function killCreditScore(api, signer, test, expect) {
     const unsub = await api.tx.credit
-        .killCreditExtrinsic()
+        .killCredit()
         .signAndSend(signer, ({ events = [], status }) => {
             if (status.isFinalized) {
                 events.forEach(({ phase, event: { data, method, section } }) => {

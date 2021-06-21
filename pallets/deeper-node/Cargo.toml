@@ -15,10 +15,10 @@ frame-support = {default-features = false, git = "https://github.com/paritytech/
 frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
-
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
+sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 
 [dev-dependencies]
-sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 
 
@@ -32,4 +32,5 @@ std = [
     'sp-runtime/std',
     'sp-io/std',
     'pallet-balances/std',
+    'node-primitives/std',
 ]

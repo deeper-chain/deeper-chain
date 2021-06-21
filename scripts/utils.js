@@ -26,6 +26,7 @@ async function get_api(url_string) {
         types: {
             Address: "MultiAddress",
             LookupSource: "MultiAddress",
+            AccountInfo: 'AccountInfoWithDualRefCount',
             Balance: 'u128',
             Timestamp: 'Moment',
             BlockNumber: 'u32',
