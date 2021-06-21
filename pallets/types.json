@@ -75,7 +75,7 @@
       "status": "Status",
       "action": "Status"
     },
-    "ValidatorsMessage": {
+    "ValidatorMessage": {
       "message_id": "H256",
       "quorum": "u64",
       "accounts": "Vec<AccountId>",

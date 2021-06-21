@@ -710,11 +710,11 @@ impl<T: Trait> Module<T> {
         let min = <CurrentLimits<T>>::get().min_tx_value;
 
         ensure!(
-            amount > min,
+            amount >= min,
             "Invalid amount for transaction. Reached minimum limit."
         );
         ensure!(
-            amount < max,
+            amount <= max,
             "Invalid amount for transaction. Reached maximum limit."
         );
         Ok(())
