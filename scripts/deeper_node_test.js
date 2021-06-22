@@ -1,39 +1,13 @@
 // Import the API, Keyring and some utility functions
 const { ApiPromise, WsProvider } = require('@polkadot/api');
 const { Keyring } = require('@polkadot/keyring');
+const Utils = require("./utils.js");
+
+const serverHost = "ws://127.0.0.1:9944";
 
 async function getApiInstance() {
-  const wsProvider = new WsProvider("ws://127.0.0.1:9944");
-  const api = await ApiPromise.create({
-    provider: wsProvider,
-    types: {
-      "Balance": "u128",
-      "Timestamp": "Moment",
-      "BlockNumber": "u32",
-      "IpV4": "Vec<u8>",
-      "CountryRegion": "Vec<u8>",
-      "Duration": "u8",
-      "Node": {
-        "account_id": "AccountId",
-        "ipv4": "IpV4",
-        "country": "CountryRegion",
-        "expire": "BlockNumber"
-      },
-      "ChannelOf": {
-        "sender": "AccountId",
-        "receiver": "AccountId",
-        "balance": "Balance",
-        "nonce": "u64",
-        "opened": "BlockNumber",
-        "expiration": "BlockNumber"
-      },
-      "CreditDelegateInfo": {
-        "delegator": "AccountId",
-        "score": "u64",
-        "validators": "Vec<AccountId>"
-      }
-    },
-  });
+  //connect to chain
+  const api = await Utils.get_api(serverHost);
   return api;
 }
 

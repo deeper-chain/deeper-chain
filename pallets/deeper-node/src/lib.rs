@@ -411,7 +411,7 @@ pub mod pallet {
             }
         }
 
-        fn setup_region_map() {
+        pub fn setup_region_map() {
             /* level 1 */
             /*
             RegionMap::insert("AMER".as_bytes().to_vec(), "ROOT".as_bytes().to_vec());

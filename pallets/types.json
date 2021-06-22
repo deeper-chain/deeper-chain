@@ -1,6 +1,7 @@
 {
     "Address": "MultiAddress",
     "LookupSource": "MultiAddress",
+    "AccountInfo": "AccountInfoWithDualRefCount",
     "Balance": "u128",
     "Timestamp": "Moment",
     "BlockNumber": "u32",

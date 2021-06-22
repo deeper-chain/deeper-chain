@@ -23,6 +23,8 @@ sp-std = {default-features = false, git = "https://github.com/paritytech/substra
 pallet-session = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-credit = {version = '3.0.0', default-features =false, path = "../credit"}
 pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
+serde = { version = "1.0.101", optional = true, features = ["derive"] }
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 
 [dev-dependencies]
 pallet-balances = { version = "3.0.0", path = "../balances", default-features = false}
@@ -36,8 +38,16 @@ std = [
     'frame-support/std',
     'frame-system/std',
     'sp-std/std',
+    'sp-runtime/std',
     'pallet-credit/std',
+    'sp-io/std',
     'sp-core/std',
     'pallet-session/std',
     'pallet-micropayment/std',
+    'pallet-balances/std',
+    'pallet-timestamp/std',
+    'pallet-deeper-node/std',
+    'node-primitives/std',
+    'log/std',
+    'serde',
 ]

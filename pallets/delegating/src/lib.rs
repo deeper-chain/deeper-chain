@@ -89,9 +89,9 @@ pub mod pallet {
 
     #[derive(Decode, Encode, Default)]
     pub struct CreditDelegateInfo<AccountId> {
-        delegator: AccountId,
-        score: u64,
-        validators: Vec<AccountId>,
+        pub delegator: AccountId,
+        pub score: u64,
+        pub validators: Vec<AccountId>,
     }
 
     #[pallet::pallet]
