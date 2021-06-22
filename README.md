@@ -7,8 +7,8 @@ deeper chain node is built on top of Substrate v2.0.0 full node
 Get the required compiler version and wasm component before compiling.
 
 ```
-rustup install nightly-2020-10-06
-rustup target add wasm32-unknown-unknown --toolchain nightly-2020-10-06
+rustup install nightly-2021-03-11
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-03-11
 
 # fix environmental package bug if it happens
 cargo update -p environmental
