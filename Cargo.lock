@@ -3872,6 +3872,7 @@ dependencies = [
  "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-deeper-node",
+ "pallet-eth-sub-bridge",
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-indices",
@@ -4063,6 +4064,7 @@ dependencies = [
  "pallet-delegating",
  "pallet-democracy",
  "pallet-elections-phragmen",
+ "pallet-eth-sub-bridge",
  "pallet-grandpa",
  "pallet-identity",
  "pallet-im-online",
@@ -4122,6 +4124,7 @@ dependencies = [
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "fs_extra",
  "futures 0.3.12",
+ "hex-literal",
  "log",
  "node-executor",
  "node-primitives",
@@ -4129,6 +4132,7 @@ dependencies = [
  "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-deeper-node",
+ "pallet-eth-sub-bridge",
  "pallet-grandpa",
  "pallet-indices",
  "pallet-session",
@@ -4599,6 +4603,23 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-npos-elections",
+ "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
+ "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
+]
+
+[[package]]
+name = "pallet-eth-sub-bridge"
+version = "3.0.0"
+dependencies = [
+ "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
+ "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
+ "node-primitives",
+ "pallet-balances 3.0.0",
+ "pallet-timestamp 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
+ "parity-scale-codec",
+ "serde",
+ "sp-core 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
+ "sp-io 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
 ]

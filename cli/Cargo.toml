@@ -89,6 +89,7 @@ pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", 
 pallet-staking-with-credit = { path = "../pallets/staking-with-credit", version = "3.0.0"}
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
+pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }

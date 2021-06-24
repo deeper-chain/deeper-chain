@@ -77,6 +77,8 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 pub use pallet_template;
+pub use pallet_eth_sub_bridge;
+pub use pallet_eth_sub_bridge::Call as BridgeCall;
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
@@ -1044,6 +1046,11 @@ impl pallet_template::Config for Runtime {
     type Event = Event;
 }
 
+impl pallet_eth_sub_bridge::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+}
+
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
     pub const MaxDurationDays: u8 = 7;
@@ -1051,6 +1058,7 @@ parameter_types! {
     pub const MaxIpLength: usize = 256;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
+
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
@@ -1158,7 +1166,8 @@ construct_runtime!(
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
-        Delegating: pallet_delegating::{Module, Call, Storage, Event<T>}
+        Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
+        Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>}
     }
 );
 
@@ -1502,6 +1511,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, pallet_template, TemplateModule);
+            add_benchmark!(params, batches, pallet_eth_sub_bridge, Bridge);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

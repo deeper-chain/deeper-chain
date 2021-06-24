@@ -87,6 +87,7 @@ pallet-micropayment = { version = "3.0.0", default-features = false, path = "../
 pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
 pallet-delegating = { version = "3.0.0", default-features = false, path = "../pallets/delegating" }
+pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}

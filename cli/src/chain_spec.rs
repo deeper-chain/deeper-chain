@@ -23,7 +23,7 @@ use hex_literal::hex;
 use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
-    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
+    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig, ContractsConfig,
     CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
     SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig,
     SystemConfig, TechnicalCommitteeConfig, DeeperNodeConfig
@@ -355,16 +355,34 @@ pub fn testnet_genesis(
     const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
     const STASH: Balance = ENDOWMENT / 1000;
 
+    let bridge_validators: Vec<AccountId> = vec![
+        hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into(),
+        // 5DDCabfWypaJwMdXeKCxHmBtxWwob3RSYZeP9pMZa6V3bKEL
+        hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into(),
+        // 5FbMwvsF5serYgaQkcJ9itgiUX4RxftCF6reptrLym6YgERX
+        hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into(),
+        // 5ECHkxssXVeENxozUbe4p64sZq6ktzFnv37BCbsAoS8AMxU3
+    ];
+
+    let mut new_endowed_accounts = endowed_accounts.clone();
+    new_endowed_accounts
+        .push(hex!("32b6e2fd3d19d875fc5a23a2bbc449b9b2dad1aa5f11aec6fe5ea9f5ba08f70e").into());
+    new_endowed_accounts
+        .push(hex!("9c164987ba60615be6074837036983ab96559cb4a3d6ada17ed0e092f044a521").into());
+    new_endowed_accounts
+        .push(hex!("5e414ecf3c9d3fba082d1b440b24abb7539ef64e9473bed53a754f686f06e52f").into());
+
     GenesisConfig {
         frame_system: Some(SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
             changes_trie_config: Default::default(),
         }),
         pallet_balances: Some(BalancesConfig {
-            balances: endowed_accounts
+            balances: new_endowed_accounts
                 .iter()
                 .cloned()
                 .map(|x| (x, ENDOWMENT))
+                .chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
                 .collect(),
         }),
         pallet_indices: Some(IndicesConfig { indices: vec![] }),
@@ -438,7 +456,18 @@ pub fn testnet_genesis(
         pallet_vesting: Some(Default::default()),
         pallet_deeper_node: Some(DeeperNodeConfig {
             tmp: 0  
-        })
+        }),
+        pallet_eth_sub_bridge: Some(BridgeConfig {
+            validator_accounts: bridge_validators,
+            validators_count: 3u32,
+            current_limits: vec![
+                100 * 10u128.pow(18),
+                200 * 10u128.pow(18),
+                50 * 10u128.pow(18),
+                400 * 10u128.pow(18),
+                10 * 10u128.pow(18),
+            ],
+        }),
     }
 }
 
