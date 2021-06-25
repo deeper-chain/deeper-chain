@@ -159,6 +159,10 @@ std = [
 	"pallet-recovery/std",
 	"pallet-vesting/std",
 	"pallet-micropayment/std",
+	"pallet-credit/std",
+	"pallet-delegating/std",
+	"pallet-eth-sub-bridge/std",
+	"pallet-deeper-node/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

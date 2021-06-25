@@ -3130,11 +3130,16 @@ impl<T: Config> Module<T> {
 		let weight_of = Self::slashable_balance_of_fn();
 		let mut all_nominators: Vec<(T::AccountId, VoteWeight, Vec<T::AccountId>)> = Vec::new();
 		let mut all_validators = Vec::new();
+		let validator_whitelist = <ValidatorWhiteList<T>>::get();
 		for (validator, _) in <Validators<T>>::iter() {
-			// append self vote
-			let self_vote = (validator.clone(), weight_of(&validator), vec![validator.clone()]);
-			all_nominators.push(self_vote);
-			all_validators.push(validator);
+			// whitelist is null , any validators can come up for election;
+            // whitelist is not null, only validators in whitelist can come up for election.
+            if validator_whitelist.len() == 0 || validator_whitelist.contains(&validator.clone()) {
+				// append self vote
+				let self_vote = (validator.clone(), weight_of(&validator), vec![validator.clone()]);
+				all_nominators.push(self_vote);
+				all_validators.push(validator);
+			}
 		}
 
 		let nominator_votes = <Nominators<T>>::iter().map(|(nominator, nominations)| {

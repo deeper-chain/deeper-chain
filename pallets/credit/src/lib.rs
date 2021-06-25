@@ -32,7 +32,7 @@ pub mod pallet {
     use frame_support::traits:: {Currency, Vec};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
-    use sp_runtime::traits::{Convert};
+    use sp_runtime::traits::{Convert, Saturating};
     use super::*;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
@@ -103,7 +103,24 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_finalize(_n: T::BlockNumber) {
+            // We update credit score of account per era
+            // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
+            // to aggregate total payment and number of clients first before pass it into update_credit's input
+            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
+                // update credit score per era
+                let from = _n.saturating_sub(T::BlocksPerEra::get());
+                let to = _n.saturating_sub(T::BlockNumber::from(1u32));
+                log!(info, "micropayment_statistics block number from {:?} - to {:?}", from, to);
+                let micropayment_vec = pallet_micropayment::Module::<T>::micropayment_statistics(from, to);
+                Self::update_credit(micropayment_vec);
+
+                // attenuate credit score per era
+                // Self::attenuate_credit(_n);
+            }
+		}
+	}
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
