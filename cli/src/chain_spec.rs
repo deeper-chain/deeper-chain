@@ -382,7 +382,6 @@ pub fn testnet_genesis(
                 .iter()
                 .cloned()
                 .map(|x| (x, ENDOWMENT))
-                .chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
                 .collect(),
         }),
         pallet_indices: Some(IndicesConfig { indices: vec![] }),
