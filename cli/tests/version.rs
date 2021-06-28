@@ -22,14 +22,14 @@ use regex::Regex;
 use std::process::Command;
 
 fn expected_regex() -> Regex {
-    Regex::new(r"^substrate (\d+\.\d+\.\d+(?:-.+?)?)-([a-f\d]+|unknown)-(.+?)-(.+?)(?:-(.+))?$")
+    Regex::new(r"^deeper-chain (\d+\.\d+\.\d+(?:-.+?)?)-([a-f\d]+|unknown)-(.+?)-(.+?)(?:-(.+))?$")
         .unwrap()
 }
 
 #[test]
 fn version_is_full() {
     let expected = expected_regex();
-    let output = Command::new(cargo_bin("substrate"))
+    let output = Command::new(cargo_bin("deeper-chain"))
         .args(&["--version"])
         .output()
         .unwrap();
@@ -58,7 +58,7 @@ fn test_regex_matches_properly() {
     let expected = expected_regex();
 
     let captures = expected
-        .captures("substrate 2.0.0-da487d19d-x86_64-linux-gnu")
+        .captures("deeper-chain 2.0.0-da487d19d-x86_64-linux-gnu")
         .unwrap();
     assert_eq!(&captures[1], "2.0.0");
     assert_eq!(&captures[2], "da487d19d");
@@ -67,7 +67,7 @@ fn test_regex_matches_properly() {
     assert_eq!(captures.get(5).map(|x| x.as_str()), Some("gnu"));
 
     let captures = expected
-        .captures("substrate 2.0.0-alpha.5-da487d19d-x86_64-linux-gnu")
+        .captures("deeper-chain 2.0.0-alpha.5-da487d19d-x86_64-linux-gnu")
         .unwrap();
     assert_eq!(&captures[1], "2.0.0-alpha.5");
     assert_eq!(&captures[2], "da487d19d");
@@ -76,7 +76,7 @@ fn test_regex_matches_properly() {
     assert_eq!(captures.get(5).map(|x| x.as_str()), Some("gnu"));
 
     let captures = expected
-        .captures("substrate 2.0.0-alpha.5-da487d19d-x86_64-linux")
+        .captures("deeper-chain 2.0.0-alpha.5-da487d19d-x86_64-linux")
         .unwrap();
     assert_eq!(&captures[1], "2.0.0-alpha.5");
     assert_eq!(&captures[2], "da487d19d");

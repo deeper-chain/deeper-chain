@@ -37,6 +37,7 @@ use sp_runtime::{
 };
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use std::{cell::RefCell, collections::HashSet};
+use node_primitives::Moment;
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
 pub const BLOCK_TIME: u64 = 1000;
@@ -102,6 +103,10 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Staking: staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
+		Credit: pallet_credit::{Module, Call, Storage, Event<T>},
+		DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
+		Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
+		Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -164,6 +169,81 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type WeightInfo = ();
 }
+
+parameter_types! {
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
+}
+impl pallet_micropayment::Config for Test {
+    type Event = Event;
+    type Currency = Balances;
+    type DayToBlocknum = DayToBlocknum;
+    type DataPerDPR = DataPerDPR;
+}
+
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const MaxIpLength: usize = 256;
+}
+impl pallet_deeper_node::Config for Test {
+    type Event = Event;
+    type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationDays = MaxDurationDays;
+    type DayToBlocknum = DayToBlocknum;
+    type MaxIpLength = MaxIpLength;
+}
+
+pub const MILLISECS_PER_BLOCK: Moment = 3000;
+pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+
+parameter_types! {
+    pub const CreditInitScore: u64 = 60;
+    pub const MaxCreditScore: u64 = 800;
+    pub const CreditScoreCapPerEra: u8 = 5;
+    pub const CreditScoreAttenuationLowerBound: u64 = 40;
+    pub const CreditScoreAttenuationStep: u64 = 5;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
+    pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
+}
+
+pub struct CurrencyToNumberHandler;
+impl Convert<Balance, u64> for CurrencyToNumberHandler { 
+    fn convert(x: Balance) -> u64 { 
+        x as u64 
+    }
+}
+impl Convert<u128, Balance> for CurrencyToNumberHandler { 
+    fn convert(x: u128) -> Balance { x }
+}
+
+impl pallet_credit::Config for Test {
+    type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
+    type CurrencyToVote = CurrencyToNumberHandler;
+    type CreditInitScore = CreditInitScore;
+    type MaxCreditScore = MaxCreditScore;
+    type CreditScoreCapPerEra = CreditScoreCapPerEra;
+    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
+    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
+    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
+    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
+}
+
+parameter_types! {
+    pub const MaxValidatorsCanSelected: usize = 10;
+}
+
+impl pallet_delegating::Config for Test {
+	type Event = Event;
+	type CreditInterface = Credit;
+	type Currency = Balances;
+	type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
+}
+
 parameter_types! {
 	pub const UncleGenerations: u64 = 0;
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(25);
@@ -262,6 +342,14 @@ impl Config for Test {
 	type UnsignedPriority = UnsignedPriority;
 	type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
 	type WeightInfo = ();
+	type CreditDelegate = Delegating;
+	type CurrencyToNumber = ();
+	type CreditToTokenFactor = ();
+	type RewardAdjustFactor = ();
+	type RewardPerBlock = ();
+	type RewardAdjustPeriod = ();
+	type BlocksPerEra = ();
+	type RemainderMiningReward = ();
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
