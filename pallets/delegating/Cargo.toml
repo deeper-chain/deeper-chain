@@ -25,11 +25,10 @@ pallet-credit = {version = '3.0.0', default-features =false, path = "../credit"}
 pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
-
-[dev-dependencies]
 pallet-balances = { version = "3.0.0", path = "../balances", default-features = false}
 pallet-timestamp = { version = "3.0.0", default-features = false}
 pallet-deeper-node = {version = '3.0.0', default-features =false, path = "../deeper-node"}
+
 
 [features]
 default = ['std']

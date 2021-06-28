@@ -77,7 +77,7 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 pub use pallet_template;
-pub use pallet_eth_sub_bridge;
+pub use pallet_eth_sub_bridge as bridge;
 pub use pallet_eth_sub_bridge::Call as BridgeCall;
 
 #[cfg(any(feature = "std", test))]
