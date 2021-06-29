@@ -181,13 +181,14 @@ mod multiplier_tests {
     fn min_change_per_day() {
         run_with_system_weight(max_normal(), || {
             let mut fm = Multiplier::one();
-            // See the example in the doc of `TargetedFeeAdjustment`. are at least 0.234, hence
-            // `fm > 1.234`.
+            // See the example in the doc of `TargetedFeeAdjustment`.
+            // Our block time is 5 seconds, and every day has 17280 blocks.
+            // p >= 0.00001 * 17280 * 0.75 p >= 0.1296
             for _ in 0..DAYS {
                 let next = runtime_multiplier_update(fm);
                 fm = next;
             }
-            assert!(fm > Multiplier::saturating_from_rational(1234, 1000));
+            assert!(fm > Multiplier::saturating_from_rational(11296, 10000));
         })
     }
 
