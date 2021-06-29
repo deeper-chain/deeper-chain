@@ -65,10 +65,7 @@ fn test_delegate() {
         //  TEST5： delegate with low score
         let micropayment_vec = vec![(21, 60 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
-        assert_eq!(
-            Delegating::delegate(Origin::signed(21), vec![4, 6]),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::CreditScoreTooLow))
-        );
+        assert_ok!(Delegating::delegate(Origin::signed(21), vec![4, 6]));
 
         //  TEST6： delegate after having called delegate()
         let micropayment_vec = vec![(22, 80 * 1_000_000_000_000_000, 5)];
@@ -91,7 +88,7 @@ fn test_undelegate() {
         // initialize credit score
         let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
-        assert_eq!(Credit::get_credit_score(11), Some(80));
+        assert_eq!(Credit::get_credit_score(11), Some(65)); // init score 60 plus cap 5
         // delegate credit score
         assert_ok!(Delegating::delegate(Origin::signed(11), vec![4]));
         // undelegate after calling delegate()
@@ -150,18 +147,18 @@ fn test_total_delegated_score() {
     new_test_ext().execute_with(|| {
         Delegating::set_candidate_validators(vec![4, 6, 8, 10]);
 
-        let micropayment_vec1 = vec![(1, 90 * 1_000_000_000_000_000, 5)];
+        let micropayment_vec1 = vec![(1, 3 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec1);
         assert_ok!(Delegating::delegate(Origin::signed(1), vec![4, 6, 8]));
 
-        let micropayment_vec2 = vec![(2, 80 * 1_000_000_000_000_000, 5)];
+        let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec2);
         assert_ok!(Delegating::delegate(Origin::signed(2), vec![4, 6, 8, 10]));
 
         // check total score
         Delegating::set_current_era(4);
         Delegating::set_current_era_validators(vec![4, 6, 8, 10]);
-        assert_eq!(Delegating::total_delegated_score(4), Some(90 + 80));
+        assert_eq!(Delegating::total_delegated_score(4), Some(63 + 62));
     });
 }
 
@@ -181,24 +178,24 @@ fn test_get_total_validator_score() {
         // check total score
         Delegating::set_current_era(4);
         Delegating::set_current_era_validators(vec![4, 6, 8, 10]);
-        assert_eq!(Delegating::total_delegated_score(4), Some(90 + 80));
+        assert_eq!(Delegating::total_delegated_score(4), Some(65 + 65)); // initial score 60 plus cap 5
 
         Delegating::set_current_era(5);
         Delegating::set_current_era_validators(vec![4, 6, 8]);
         // check total delegated score for validator
         assert_eq!(
             Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 4),
-            Some(50)
+            Some(39)
         );
 
         assert_eq!(
             Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 6),
-            Some(50)
+            Some(38)
         );
 
         assert_eq!(
             Delegating::get_total_validator_score(Delegating::current_era().unwrap(), 8),
-            Some(50)
+            Some(37)
         );
     });
 }
@@ -215,15 +212,15 @@ fn test_set_eras_reward() {
 fn test_poc_slash() {
     new_test_ext().execute_with(|| {
         Delegating::set_candidate_validators(vec![4, 6, 8, 10]);
-        let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000, 5)];
+        let micropayment_vec = vec![(11, 1 * 1_000_000_000_000_000, 5)];
         Credit::update_credit(micropayment_vec);
-        assert_eq!(Credit::get_credit_score(11), Some(80));
+        assert_eq!(Credit::get_credit_score(11), Some(61)); // init score 60 plus delta 1
         assert_ok!(Delegating::delegate(Origin::signed(11), vec![4, 6, 8, 10]));
 
         Delegating::set_current_era(5);
         Delegating::set_current_era_validators(vec![4, 6, 8]);
 
         Delegating::poc_slash(&4, 5);
-        assert_eq!(Credit::get_credit_score(11), Some(70));
+        assert_eq!(Credit::get_credit_score(11), Some(51)); // slashed 10
     });
 }
