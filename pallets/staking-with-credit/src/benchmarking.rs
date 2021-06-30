@@ -862,6 +862,7 @@ mod tests {
 	}
 
 	#[test]
+	#[ignore]
 	fn test_benchmarks() {
 		ExtBuilder::default().has_stakers(true).build().execute_with(|| {
 			assert_ok!(test_benchmark_bond::<Test>());

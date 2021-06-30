@@ -195,7 +195,7 @@ impl pallet_deeper_node::Config for Test {
     type MaxIpLength = MaxIpLength;
 }
 
-pub const MILLISECS_PER_BLOCK: Moment = 3000;
+pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 
@@ -319,6 +319,17 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for RewardRemainderMock {
 	}
 }
 
+const GENESIS_BLOCK_REWARD: u128 = 90_000_000_000_000_000;
+const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
+
+parameter_types! {
+	pub const RewardAdjustPeriod: u32 = 4;
+	pub const CreditToTokenFactor: u128 = 500_000_000_000_000;
+	pub const RewardAdjustFactor: u128 = 77_760_000;
+	pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD / 30;
+	pub const MiningReward: u128 = TOTAL_MINING_REWARD;
+}
+
 impl Config for Test {
 	type Currency = Balances;
 	type UnixTime = Timestamp;
@@ -343,13 +354,13 @@ impl Config for Test {
 	type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
 	type WeightInfo = ();
 	type CreditDelegate = Delegating;
-	type CurrencyToNumber = ();
-	type CreditToTokenFactor = ();
-	type RewardAdjustFactor = ();
-	type RewardPerBlock = ();
-	type RewardAdjustPeriod = ();
-	type BlocksPerEra = ();
-	type RemainderMiningReward = ();
+	type CurrencyToNumber = CurrencyToNumberHandler;
+	type CreditToTokenFactor = CreditToTokenFactor;
+	type RewardAdjustFactor = RewardAdjustFactor;
+	type RewardPerBlock = RewardPerBlock;
+	type RewardAdjustPeriod = RewardAdjustPeriod;
+	type BlocksPerEra = BlocksPerEra;
+	type RemainderMiningReward = MiningReward;
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test

@@ -102,7 +102,7 @@ impl pallet_deeper_node::Config for Test {
     type MaxIpLength = MaxIpLength;
 }
 
-pub const MILLISECS_PER_BLOCK: Moment = 3000;
+pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 parameter_types! {
