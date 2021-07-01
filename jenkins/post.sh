@@ -16,3 +16,4 @@ curl -s -X POST https://hooks.slack.com/services/${webhook_key} \
     "icon_emoji": ":four_leaf_clover:",
     "text": "[${JOB_NAME}] 分支构建 ${status}"
 }
+EOF
