@@ -21,7 +21,7 @@ pipeline {
             }
             steps {
 //                sh 'cargo test'
-//                sh 'cargo clean'
+                sh 'cargo clean'
                 sh 'echo 123 >/tmp/jenkinstest.log'
                 publishHTML target: [
                             reportName: '单元测试覆盖率报告',
