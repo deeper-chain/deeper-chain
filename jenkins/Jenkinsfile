@@ -1,0 +1,79 @@
+#!groovy
+pipeline {
+    agent any
+    environment {
+
+        webhook_key = credentials('webhook_key')
+    }
+
+    stages {
+        stage('SCM') {
+            steps {
+      //          git credentialsId: 'jenkins-ssh-github', url: 'git@github.com:deeper-chain/deeper-chain.git'
+            sh 'echo hello'
+            }
+        }
+        stage('Unit Test'){
+            when {
+                not {
+                    branch 'master'
+                }
+            }
+            steps {
+//                sh 'cargo test'
+//                sh 'cargo clean'
+                sh 'echo 123 >/tmp/jenkinstest.log'
+                publishHTML target: [
+                            reportName: '单元测试覆盖率报告',
+                            reportDir: 'report',
+                            reportFiles: 'coverage/lcov-report/index.html',
+                            reportTitles: '覆盖率',
+                            allowMissing: true,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: false
+                        ]
+                publishHTML target: [
+                            reportName: '代码质量报告',
+                            reportDir: 'report',
+                            reportFiles: 'lint/eslint.html',
+                            reportTitles: '代码质量',
+                            allowMissing: true,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: false
+                        ]}
+        }
+        stage('Code Build') {
+            steps{
+                echo "Building test"
+//                sh 'cargo build --release'
+            }
+        }
+    }
+    post{
+        always{
+            sh 'cargo clean'
+        }
+        success {
+              script {
+                if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
+                    sh(script: "bash jenkins/post.sh fixed")
+                }
+
+            }
+        }
+        fixed{
+            script {
+                if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
+                    sh(script: "bash jenkins/post.sh fixed")
+                }
+
+            }
+        }
+        regression {
+            script {
+                if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
+                    sh(script: "bash jenkins/post.sh regression")
+                }
+            }
+        }
+    }   }
