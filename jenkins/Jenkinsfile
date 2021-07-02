@@ -2,17 +2,10 @@
 pipeline {
     agent any
     environment {
-
         webhook_key = credentials('webhook_key')
     }
 
     stages {
-        stage('SCM') {
-            steps {
-      //          git credentialsId: 'jenkins-ssh-github', url: 'git@github.com:deeper-chain/deeper-chain.git'
-            sh 'echo hello'
-            }
-        }
         stage('Unit Test'){
             when {
                 not {
@@ -20,13 +13,12 @@ pipeline {
                 }
             }
             steps {
-//                sh 'cargo test'
-//                sh 'cargo clean'
-                sh 'echo 123 >/tmp/jenkinstest.log'
+                sh 'cargo tarpaulin -v  --timeout 36000  --output-dir report --out Html'
+                sh 'cargo clean'
                 publishHTML target: [
                             reportName: '单元测试覆盖率报告',
                             reportDir: 'report',
-                            reportFiles: 'coverage/lcov-report/index.html',
+                            reportFiles: 'tarpaulin-report.html',
                             reportTitles: '覆盖率',
                             allowMissing: true,
                             alwaysLinkToLastBuild: true,
