@@ -35,9 +35,12 @@ pipeline {
                         ]}
         }
         stage('Code Build') {
+           when {
+                branch 'master'
+            }
             steps{
-                echo "Building test"
-//                sh 'cargo build --release'
+                echo "Code Building"
+                sh 'cargo build --release'
             }
         }
  //TODO   stage('Deploy')
@@ -48,17 +51,12 @@ pipeline {
         }
         fixed{
             script {
-                if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
                     sh(script: "bash jenkins/post.sh fixed")
-                }
-
             }
         }
         regression {
             script {
-                if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
                     sh(script: "bash jenkins/post.sh regression")
-                }
             }
         }
     }   }
