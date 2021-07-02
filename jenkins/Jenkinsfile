@@ -46,14 +46,6 @@ pipeline {
         always{
             sh 'cargo clean'
         }
-        success {
-              script {
-                if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
-                    sh(script: "bash jenkins/post.sh fixed")
-                }
-
-            }
-        }
         fixed{
             script {
                 if ( env.BRANCH_NAME == "lugo-test-jenkins" ) {
