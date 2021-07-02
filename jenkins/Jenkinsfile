@@ -15,11 +15,10 @@ pipeline {
             steps {
                 sh 'cargo tarpaulin -v  --timeout 36000  --output-dir report --out Html'
                 sh 'cargo clean'
-                sh 'mv report/tarpaulin-report.html report/index.html '
                 publishHTML target: [
                             reportName: '单元测试覆盖率报告',
                             reportDir: 'report',
-                            reportFiles: 'index.html',
+                            reportFiles: 'tarpaulin-report.html',
                             reportTitles: '覆盖率',
                             allowMissing: true,
                             alwaysLinkToLastBuild: true,
@@ -41,6 +40,7 @@ pipeline {
 //                sh 'cargo build --release'
             }
         }
+ //TODO   stage('Deploy')
     }
     post{
         always{
