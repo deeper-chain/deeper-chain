@@ -13,6 +13,9 @@ rustup target add wasm32-unknown-unknown --toolchain nightly-2021-03-11
 # fix environmental package bug if it happens
 cargo update -p environmental
 
+# thread_local 1.1.2 has a bug: "memory leak"
+cargo update -p thread_local
+
 # compile
 cargo build --release
 ```
