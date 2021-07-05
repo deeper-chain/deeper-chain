@@ -24,15 +24,7 @@ pipeline {
                             alwaysLinkToLastBuild: true,
                             keepAll: false
                         ]
-                publishHTML target: [
-                            reportName: '代码质量报告',
-                            reportDir: 'report',
-                            reportFiles: 'lint/eslint.html',
-                            reportTitles: '代码质量',
-                            allowMissing: true,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: false
-                        ]}
+}
         }
         stage('Code Build') {
            when {
