@@ -65,7 +65,7 @@
     "substrate_address": "AccountId",
     "amount": "TokenBalance",
     "status": "Status",
-    "direction": "Status"
+    "action": "Status"
   },
   "LimitMessage": {
     "id": "H256",
