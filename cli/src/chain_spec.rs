@@ -43,6 +43,7 @@ use sp_runtime::{
 
 pub use node_primitives::{AccountId, Balance, Signature};
 pub use node_runtime::GenesisConfig;
+use serde_json as json;
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -489,7 +490,7 @@ pub fn development_config() -> ChainSpec {
         vec![],
         None,
         None,
-        None,
+        Some(chain_spec_properties()),
         Default::default(),
     )
 }
@@ -515,6 +516,24 @@ fn local_testnet_genesis() -> GenesisConfig {
     )
 }
 
+/// customize tokenDecimals
+pub fn chain_spec_properties() -> json::map::Map<String, json::Value> {
+    let mut properties: json::map::Map<String, json::Value> = json::map::Map::new();
+    properties.insert(
+        String::from("ss58Format"),
+        json::Value::Number(json::Number::from(42)),
+    );
+    properties.insert(
+        String::from("tokenDecimals"),
+        json::Value::Number(json::Number::from(18)),
+    );
+    properties.insert(
+        String::from("tokenSymbol"),
+        json::Value::String(String::from("DPR")),
+    );
+    properties
+}
+
 /// Local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config() -> ChainSpec {
     ChainSpec::from_genesis(
@@ -525,7 +544,7 @@ pub fn local_testnet_config() -> ChainSpec {
         vec![],
         None,
         None,
-        None,
+        Some(chain_spec_properties()),
         Default::default(),
     )
 }
