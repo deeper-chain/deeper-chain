@@ -85,7 +85,7 @@ pub use frame_system::Call as SystemCall;
 #[cfg(any(feature = "std", test))]
 pub use pallet_balances::Call as BalancesCall;
 #[cfg(any(feature = "std", test))]
-pub use pallet_staking_with_credit::StakerStatus;
+pub use pallet_staking::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
@@ -441,7 +441,7 @@ parameter_types! {
 impl pallet_session::Config for Runtime {
     type Event = Event;
     type ValidatorId = <Self as frame_system::Config>::AccountId;
-    type ValidatorIdOf = pallet_staking_with_credit::StashOf<Self>;
+    type ValidatorIdOf = pallet_staking::StashOf<Self>;
     type ShouldEndSession = Babe;
     type NextSessionRotation = Babe;
     type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, Staking>;
@@ -452,8 +452,8 @@ impl pallet_session::Config for Runtime {
 }
 
 impl pallet_session::historical::Config for Runtime {
-    type FullIdentification = pallet_staking_with_credit::Exposure<AccountId, Balance>;
-    type FullIdentificationOf = pallet_staking_with_credit::ExposureOf<Runtime>;
+    type FullIdentification = pallet_staking::Exposure<AccountId, Balance>;
+    type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
 }
 
 pallet_staking_reward_curve::build! {
@@ -469,8 +469,8 @@ pallet_staking_reward_curve::build! {
 
 parameter_types! {
     pub const SessionsPerEra: sp_staking::SessionIndex = 6;
-    pub const BondingDuration: pallet_staking_with_credit::EraIndex = 24 * 28;
-    pub const SlashDeferDuration: pallet_staking_with_credit::EraIndex = 24 * 7; // 1/4 the bonding duration.
+    pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
+    pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
     pub const MaxNominatorRewardedPerValidator: u32 = 256;
     pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
@@ -489,7 +489,7 @@ parameter_types! {
         .saturating_sub(BlockExecutionWeight::get());
 }
 
-impl pallet_staking_with_credit::Config for Runtime {
+impl pallet_staking::Config for Runtime {
     type Currency = Balances;
     type CreditInterface = Credit;
     type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
@@ -527,7 +527,7 @@ impl pallet_staking_with_credit::Config for Runtime {
     type RewardAdjustPeriod = RewardAdjustPeriod;
     type BlocksPerEra = BlockNumberPerEra;
     type RemainderMiningReward = MiningReward;
-    type WeightInfo = pallet_staking_with_credit::weights::SubstrateWeight<Runtime>;
+    type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1114,12 +1114,6 @@ impl pallet_credit::Config for Runtime {
 parameter_types! {
     pub const MaxValidatorsCanSelected: usize = 10;
 }
-impl pallet_delegating::Config for Runtime {
-    type Event = Event;
-    type CreditInterface = Credit;
-    type Currency = Balances;
-    type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
-}
 
 construct_runtime!(
     pub enum Runtime where
@@ -1135,7 +1129,7 @@ construct_runtime!(
         Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
-        Staking: pallet_staking_with_credit::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
+        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
@@ -1167,7 +1161,6 @@ construct_runtime!(
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
-        Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
         Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>}
     }
 );
@@ -1504,7 +1497,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-            add_benchmark!(params, batches, pallet_staking_with_credit, Staking);
+            add_benchmark!(params, batches, pallet_staking, Staking);
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_tips, Tips);
