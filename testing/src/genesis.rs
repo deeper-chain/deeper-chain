@@ -19,15 +19,16 @@
 //! Genesis Configuration.
 
 use crate::keyring::*;
+use hex_literal::hex;
 use node_runtime::constants::currency::*;
 use node_runtime::{
-    wasm_binary_unwrap, AccountId, BalancesConfig, BridgeConfig, ContractsConfig, GenesisConfig, GrandpaConfig,
-    IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig, SystemConfig,
+    wasm_binary_unwrap, AccountId, BalancesConfig, BridgeConfig, ContractsConfig, GenesisConfig,
+    GrandpaConfig, IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig,
+    SystemConfig,
 };
 use sp_core::ChangesTrieConfiguration;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
 use sp_runtime::Perbill;
-use hex_literal::hex;
 
 /// Create genesis runtime configuration for tests.
 pub fn config(support_changes_trie: bool, code: Option<&[u8]>) -> GenesisConfig {
@@ -134,9 +135,7 @@ pub fn config_endowed(
             max_members: 999,
         }),
         pallet_vesting: Some(Default::default()),
-        pallet_deeper_node: Some(
-            Default::default()
-        ),
+        pallet_deeper_node: Some(Default::default()),
         pallet_eth_sub_bridge: Some(BridgeConfig {
             validator_accounts: bridge_validators,
             validators_count: 3u32,

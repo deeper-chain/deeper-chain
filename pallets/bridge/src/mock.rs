@@ -10,7 +10,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use node_primitives::{ Balance, Moment };
+use node_primitives::{Balance, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

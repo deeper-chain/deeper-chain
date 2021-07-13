@@ -92,14 +92,8 @@ fn sub2eth_burn_works() {
 
         //approval
         assert_eq!(Balances::free_balance(USER2), balance_of_user2);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V2), sub_message_id));
 
         message = get_message();
         assert_eq!(message.status, Status::Approved);
@@ -109,19 +103,13 @@ fn sub2eth_burn_works() {
 
         assert_eq!(Balances::reserved_balance(USER2), amount2);
 
-        assert_ok!(Bridge::confirm_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::confirm_transfer(Origin::signed(V2), sub_message_id));
 
         message = get_message();
         let transfer = Bridge::transfers(1);
         assert_eq!(message.status, Status::Confirmed);
         assert_eq!(transfer.open, true);
-        assert_ok!(Bridge::confirm_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::confirm_transfer(Origin::signed(V1), sub_message_id));
         // assert_ok!(Bridge::confirm_transfer(Origin::signed(USER1), sub_message_id));
         //BurnedMessage(Hash, AccountId, H160, u64) event emitted
         assert_eq!(Balances::free_balance(USER2), balance_of_user2 - amount2);
@@ -171,25 +159,13 @@ fn sub2eth_burn_cancel_works() {
         ));
 
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V2), sub_message_id));
         let mut message = Bridge::messages(sub_message_id);
         // funds are locked and waiting for confirmation
         assert_eq!(message.status, Status::Approved);
-        assert_ok!(Bridge::cancel_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
-        assert_ok!(Bridge::cancel_transfer(
-            Origin::signed(V3),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::cancel_transfer(Origin::signed(V2), sub_message_id));
+        assert_ok!(Bridge::cancel_transfer(Origin::signed(V3), sub_message_id));
         message = Bridge::messages(sub_message_id);
         assert_eq!(message.status, Status::Canceled);
     })
@@ -219,14 +195,8 @@ fn burn_cancel_should_fail() {
 
         //approval
         assert_eq!(Balances::reserved_balance(USER2), 0);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V2), sub_message_id));
 
         message = get_message();
         assert_eq!(message.status, Status::Approved);
@@ -237,19 +207,13 @@ fn burn_cancel_should_fail() {
         assert_eq!(Balances::free_balance(USER2), balance_of_user2 - amount2);
         // once it happends, validators call confirm_transfer
 
-        assert_ok!(Bridge::confirm_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::confirm_transfer(Origin::signed(V2), sub_message_id));
 
         message = get_message();
         let transfer = Bridge::transfers(1);
         assert_eq!(message.status, Status::Confirmed);
         assert_eq!(transfer.open, true);
-        assert_ok!(Bridge::confirm_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::confirm_transfer(Origin::signed(V1), sub_message_id));
         // assert_ok!(Bridge::confirm_transfer(Origin::signed(USER1), sub_message_id));
         //BurnedMessage(Hash, AccountId, H160, u64) event emitted
 
@@ -319,13 +283,7 @@ fn extrinsics_restricted_should_fail() {
 
         // substrate <-- Ethereum
         assert_noop!(
-            Bridge::multi_signed_mint(
-                Origin::signed(V2),
-                eth_message_id,
-                eth_address,
-                USER2,
-                1000
-            ),
+            Bridge::multi_signed_mint(Origin::signed(V2), eth_message_id, eth_address, USER2, 1000),
             "Bridge is not operational"
         );
     })
@@ -405,10 +363,7 @@ fn instant_withdraw_should_fail() {
         assert_eq!(message.status, Status::Withdraw);
         //approval
         assert_eq!(Balances::reserved_balance(USER3), 0);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_eq!(
             Bridge::approve_transfer(Origin::signed(V2), sub_message_id),
@@ -497,10 +452,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER3),
@@ -508,10 +460,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(1);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER4),
@@ -519,10 +468,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(2);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER5),
@@ -530,10 +476,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(3);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER6),
@@ -541,10 +484,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(4);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER7),
@@ -552,10 +492,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(5);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER8),
@@ -563,10 +500,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(6);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER9),
@@ -574,10 +508,7 @@ fn pending_burn_limit_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(7);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
 
         assert_eq!(Bridge::pending_burn_count(), amount2 * 8);
         assert_noop!(
@@ -696,14 +627,8 @@ fn blocking_account_by_volume_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V2), sub_message_id));
 
         assert_eq!(
             Bridge::set_transfer(Origin::signed(USER2), eth_address, amount2),
@@ -726,14 +651,8 @@ fn blocked_account_unblocked_next_day_should_work() {
             amount2
         ));
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V1),
-            sub_message_id
-        ));
-        assert_ok!(Bridge::approve_transfer(
-            Origin::signed(V2),
-            sub_message_id
-        ));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
+        assert_ok!(Bridge::approve_transfer(Origin::signed(V2), sub_message_id));
         assert_eq!(
             Bridge::set_transfer(Origin::signed(USER2), eth_address, amount2),
             Err(DispatchErrorWithPostInfo::from(
@@ -756,4 +675,3 @@ fn blocked_account_unblocked_next_day_should_work() {
         ));
     })
 }
-

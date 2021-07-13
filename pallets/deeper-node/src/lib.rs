@@ -85,7 +85,7 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub tmp: BalanceOf<T>
+        pub tmp: BalanceOf<T>,
     }
 
     #[cfg(feature = "std")]

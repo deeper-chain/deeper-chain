@@ -69,7 +69,9 @@ fn fn_unregister_device() {
         // unregister an unregistered device
         assert_eq!(
             DeeperNode::unregister_device(Origin::signed(2)),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::DeviceNotRegister))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::DeviceNotRegister
+            ))
         );
     });
 }
@@ -92,7 +94,9 @@ fn fn_register_server() {
         // register server before register device
         assert_eq!(
             DeeperNode::register_server(Origin::signed(2), 1),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::DeviceNotRegister))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::DeviceNotRegister
+            ))
         );
 
         // register server with invalid duration
@@ -103,7 +107,9 @@ fn fn_register_server() {
         ));
         assert_eq!(
             DeeperNode::register_server(Origin::signed(3), 8),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::DurationOverflow))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::DurationOverflow
+            ))
         );
     });
 }
@@ -124,7 +130,9 @@ fn fn_unregister_server() {
         // register server before register device
         assert_eq!(
             DeeperNode::unregister_server(Origin::signed(2)),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::DeviceNotRegister))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::DeviceNotRegister
+            ))
         );
     });
 }
@@ -144,7 +152,9 @@ fn fn_update_server() {
         // update server before register device
         assert_eq!(
             DeeperNode::update_server(Origin::signed(2), 1),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::DeviceNotRegister))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::DeviceNotRegister
+            ))
         );
 
         // register device, then register server
@@ -155,7 +165,9 @@ fn fn_update_server() {
         ));
         assert_eq!(
             DeeperNode::update_server(Origin::signed(3), 10),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::DurationOverflow))
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::DurationOverflow
+            ))
         );
     });
 }
