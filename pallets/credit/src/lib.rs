@@ -21,10 +21,32 @@ macro_rules! log {
 	};
 }
 
+use codec::{Encode, Decode};
+
+#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
+pub enum CreditLevel {
+	Zero,
+	One,
+	Two,
+	Three,
+	Four,
+	Five,
+	Six,
+	Seven,
+	Eight,
+}
+
+impl Default for CreditLevel {
+	fn default() -> Self{
+		CreditLevel::Zero
+	}
+}
+
 pub trait CreditInterface<AccountId> {
     fn get_credit_score(account_id: AccountId) -> Option<u64>;
     fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
     fn credit_slash(accouont_id: AccountId);
+    fn get_credit_level(credit_score: u16) -> CreditLevel;
 }
 
 #[frame_support::pallet]
@@ -274,6 +296,21 @@ pub mod pallet {
                     *s = Some(score.saturating_sub(T::CreditScoreAttenuationStep::get() * 2))
                 });
             }
+        }
+
+        fn get_credit_level(credit_score: u16) -> CreditLevel {
+            let credit_level = match credit_score {
+                0..=99 => CreditLevel::Zero,
+                100..=199 => CreditLevel::One,
+                200..=299 => CreditLevel::Two,
+                300..=399 => CreditLevel::Three,
+                400..=499 => CreditLevel::Four,
+                500..=599 => CreditLevel::Five,
+                600..=699 => CreditLevel::Six,
+                700..=799 => CreditLevel::Seven,
+                _ => CreditLevel::Eight,
+            };
+            credit_level
         }
     }
 }
