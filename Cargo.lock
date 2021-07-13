@@ -4976,6 +4976,7 @@ dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?tag=v3.0.0)",
  "hex",
+ "log",
  "node-primitives",
  "pallet-authorship",
  "pallet-balances 3.0.0",

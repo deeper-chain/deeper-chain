@@ -491,7 +491,8 @@ parameter_types! {
 
 impl pallet_staking_with_credit::Config for Runtime {
     type Currency = Balances;
-    type CreditDelegate = Delegating;
+    type CreditInterface = Credit;
+    type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
     type UnixTime = Timestamp;
     type CurrencyToVote = U128CurrencyToVote;
     type CurrencyToNumber = CurrencyToNumberHandler;

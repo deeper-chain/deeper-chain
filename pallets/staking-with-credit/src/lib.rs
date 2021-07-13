@@ -332,11 +332,12 @@ use sp_npos_elections::{
 	SupportMap, VoteWeight, CompactSolution, PerThing128,
 };
 pub use weights::WeightInfo;
-use pallet_delegating::CreditDelegateInterface;
+use pallet_credit::CreditInterface;
 
 const STAKING_ID: LockIdentifier = *b"staking ";
 pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 pub const MAX_NOMINATIONS: usize = <CompactAssignments as CompactSolution>::LIMIT;
+use log::error;
 
 pub(crate) const LOG_TARGET: &'static str = "staking";
 
@@ -781,12 +782,12 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 	/// The staking balance.
 	type Currency: LockableCurrency<Self::AccountId, Moment=Self::BlockNumber>;
 
-	/// Delegating Interface
-    type CreditDelegate: CreditDelegateInterface<
-        Self::AccountId,
-        BalanceOf<Self>,
-        PositiveImbalanceOf<Self>,
-    >;
+	/// Credit CreditInterface
+	type CreditInterface: CreditInterface<Self::AccountId>;
+
+	/// max validators can be selected to delegate
+	type MaxValidatorsCanSelected: Get<usize>;
+
 	/// Time used for computing era duration.
 	///
 	/// It is guaranteed to start being called from the first `on_finalize`. Thus value at genesis
@@ -894,6 +895,14 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type BlocksPerEra: Get<u128>;
 
     type RemainderMiningReward: Get<u128>;
+}
+
+/// info of credit delegating
+#[derive(Decode, Encode, Default)]
+pub struct CreditDelegateInfo<AccountId> {
+    delegator: AccountId,
+    score: u64,
+    validators: Vec<AccountId>,
 }
 
 /// Mode of era-forcing.
@@ -1119,6 +1128,31 @@ decl_storage! {
 
         pub RemainderMiningReward get(fn remainder_mining_reward): Option<u128>;
 
+		/// TODO to be remove storage from delegating pallet 
+        /// (delegator) -> CreditDelegateInfo{}
+        DelegatedToValidators get(fn delegated_to_validators): map hasher(blake2_128_concat) T::AccountId => CreditDelegateInfo<T::AccountId>;
+        /// (delegator, validator) -> bool
+        HasDelegatedToValidator get(fn has_delegated_to_validator): double_map hasher(blake2_128_concat) T::AccountId
+        , hasher(blake2_128_concat) T::AccountId => Option<bool>;
+
+        /// Candidate delegators info
+        /// (candidateValidator) -> Vec<(delegator, score)>
+        CandidateDelegators get(fn candidate_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
+
+        pub ErasValidatorPocReward get(fn eras_validator_poc_reward):
+            map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
+
+        /// (EraIndex, validatorId) -> Vec<(delegator, score, hasSlashed)>
+        SelectedDelegators get(fn selected_delegators): double_map hasher(blake2_128_concat) EraIndex,
+        hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64, bool)>;
+
+		/// current era validators
+		/// new era  Return the potential new staking set.
+		pub CurrentEraValidators get(fn current_era_validators): Option<Vec<T::AccountId>>;
+
+        ///  candidate validator list: CandidateValidators == Validators
+        pub CandidateValidators get(fn get_candidate_validators): Option<Vec<T::AccountId>>;
+
 		/// True if network has been upgraded to this version.
 		/// Storage version of the pallet.
 		///
@@ -1215,6 +1249,12 @@ decl_event!(
 		Withdrawn(AccountId, Balance),
 		/// A nominator has been kicked from a validator. \[nominator, stash\]
 		Kicked(AccountId, AccountId),
+		/// Delegated to a candivalidator
+        Delegated(AccountId),
+        /// Undelegate from a candivalidator
+		UnDelegated(AccountId),
+        /// The staker has been rewarded by this amount. \[stash, amount\]
+        PocReward(AccountId, Balance),
 	}
 );
 
@@ -1292,6 +1332,18 @@ decl_error! {
 		TooManyTargets,
 		/// A nomination target was supplied that was blocked or otherwise not a validator.
 		BadTarget,
+		/// Already delegate to a validator
+		AlreadyDelegated,
+		/// Have not been delegated to a validator
+        NotDelegate,
+		/// Credit score of delegator is too low
+		CreditScoreTooLow,
+		/// Target of delegation is not in candidate validators
+		NotInCandidateValidator,
+		/// Select too many candidate validators
+		SelectTooManyValidators,
+		/// No candidate validator has been selected 
+		SelectNoValidator,
 	}
 }
 
@@ -2302,6 +2354,70 @@ decl_module! {
 
 			Ok(())
 		}
+	
+		/// delegate credit score to validators in vec equally
+        #[weight = 10_000]
+        pub fn delegate(origin, validators: Vec<T::AccountId>) -> DispatchResult {
+            // check signature
+            let controller = ensure_signed(origin)?;
+
+            // check credit pass threshold
+            if T::CreditInterface::pass_threshold(&controller, 0) == false {
+                error!("Credit score is to low to delegating a validator!");
+                Err(Error::<T>::CreditScoreTooLow)?
+            }
+
+            // check validators size
+            if validators.len() > T::MaxValidatorsCanSelected::get() {
+                Err(Error::<T>::SelectTooManyValidators)?
+            }
+            if validators.len() == 0 {
+                Err(Error::<T>::SelectNoValidator)?
+            }
+
+            // check if controller has call delegated
+            if <DelegatedToValidators<T>>::contains_key(&controller){
+                Err(Error::<T>::AlreadyDelegated)?
+            }
+
+            // check target validators in candidate_validators
+            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+            for validator in validators.clone() {
+                if !candidate_validators.contains(&validator){
+                    error!("Validator AccountId  isn't in candidateValidators");
+                    Err(Error::<T>::NotInCandidateValidator)?
+                }
+            }
+
+            // get avg score to validators
+            let validators_vec = Self::cut_credit_score(controller.clone(), validators.clone());
+            Self::_delegate(controller.clone(), validators_vec);
+
+            let credit_delegate_info = CreditDelegateInfo{
+                delegator: controller.clone(),
+                score: T::CreditInterface::get_credit_score(controller.clone()).unwrap(),
+                validators: validators.clone(),
+            };
+            <DelegatedToValidators<T>>::insert(controller.clone(), credit_delegate_info);
+
+            Self::deposit_event(RawEvent::Delegated(controller));
+            Ok(())
+        }
+
+		/// undelegate 
+        #[weight = 10_000]
+        pub fn undelegate(origin) -> DispatchResult {
+            let controller = ensure_signed(origin)?;
+
+            if !<DelegatedToValidators<T>>::contains_key(controller.clone()){
+                Err(Error::<T>::NotDelegate)?
+            }
+            Self::_undelegate(controller.clone());
+            <DelegatedToValidators<T>>::remove(controller.clone());
+
+            Self::deposit_event(RawEvent::UnDelegated(controller));
+            Ok(())
+        }
 	}
 }
 
@@ -2314,11 +2430,11 @@ impl<T: Config> Module<T> {
 
 	/// internal impl of delegated_credit_score
     fn delegated_credit_score_of_vote_weight(validator: &T::AccountId) -> VoteWeight {
-        let score = T::CreditDelegate::delegated_score_of_validator(validator).unwrap_or(0);
+        let score = Self::delegated_score_of_validator(validator).unwrap_or(0);
         let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
             score as u128 * T::CreditToTokenFactor::get(),
         );
-		let total_credit = T::CreditDelegate::total_delegated_score(Self::current_era().unwrap_or_default()).unwrap_or(0);
+		let total_credit = Self::total_delegated_score(Self::current_era().unwrap_or_default()).unwrap_or(0);
 		let total_credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
             total_credit as u128 * T::CreditToTokenFactor::get(),
         );
@@ -2467,7 +2583,7 @@ impl<T: Config> Module<T> {
 		let validator_staking_payout = validator_exposure_part * validator_leftover_payout;
 
 		// call poc payout_delegators
-        T::CreditDelegate::payout_delegators(
+        Self::payout_delegators(
             era.clone(),
             validator_commission,
             validator_total_reward_part,
@@ -2890,7 +3006,7 @@ impl<T: Config> Module<T> {
 
 			// Set ending era reward.
 			let credit_score =
-				T::CreditDelegate::total_delegated_score(active_era.index).unwrap_or(0);
+				Self::total_delegated_score(active_era.index).unwrap_or(0);
 			let credit_to_balance = <T::CurrencyToNumber as Convert<u128, BalanceOf<T>>>::convert(
 				credit_score as u128 * T::CreditToTokenFactor::get(),
 			);
@@ -2909,7 +3025,7 @@ impl<T: Config> Module<T> {
 			// PoS
 			<ErasValidatorReward<T>>::insert(&active_era.index, staking_payout);
 			// PoC
-			T::CreditDelegate::set_eras_reward(active_era.index, credit_payout);
+			Self::set_eras_reward(active_era.index, credit_payout);
 
 			T::RewardRemainder::on_unbalanced(T::Currency::issue(rest));
 		}
@@ -2964,9 +3080,8 @@ impl<T: Config> Module<T> {
 
 		// add for poc delegating pallet
         let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
-        T::CreditDelegate::set_candidate_validators(candidate_validators);
-        T::CreditDelegate::set_current_era(current_era);
-        T::CreditDelegate::set_current_era_validators(
+        Self::set_candidate_validators(candidate_validators);
+        Self::set_current_era_validators(
             maybe_new_validators.clone().unwrap_or_default(),
         );
 
@@ -3320,6 +3435,252 @@ impl<T: Config> Module<T> {
 	pub fn set_slash_reward_fraction(fraction: Perbill) {
 		SlashRewardFraction::put(fraction);
 	}
+
+	fn _delegate(delegator: T::AccountId, validators_vec: Vec<(T::AccountId, u64)>) {
+        for (validator, score) in validators_vec {
+            let has_delegated =
+                <HasDelegatedToValidator<T>>::get(delegator.clone(), validator.clone())
+                    .unwrap_or(false);
+            if has_delegated == false {
+                // delegate first times
+                if CandidateDelegators::<T>::contains_key(validator.clone()) {
+                    let mut delegators = CandidateDelegators::<T>::take(validator.clone());
+                    delegators.push((delegator.clone(), score));
+                    CandidateDelegators::<T>::insert(validator.clone(), delegators);
+                } else {
+                    let delegators = vec![(delegator.clone(), score)];
+                    CandidateDelegators::<T>::insert(validator.clone(), delegators);
+                }
+            } else {
+                // delegated, update score
+                let delegators = CandidateDelegators::<T>::take(validator.clone());
+                let next_delegators: Vec<_> = delegators
+                    .iter()
+                    .map(|(d, s)| {
+                        if *d == delegator.clone() {
+                            ((*d).clone(), score)
+                        } else {
+                            ((*d).clone(), *s)
+                        }
+                    })
+                    .collect();
+                CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
+            }
+            <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), true);
+        }
+    }
+
+    fn _undelegate(delegator: T::AccountId) {
+        for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(delegator.clone()) {
+            if CandidateDelegators::<T>::contains_key(validator.clone()) {
+                let delegators = CandidateDelegators::<T>::take(validator.clone());
+                let next_delegators: Vec<_> = delegators
+                    .iter()
+                    .filter(|(d, _)| *d != delegator.clone())
+                    .collect();
+                CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
+                <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), false);
+            }
+        }
+    }
+
+    // partion credit score of delegator
+    fn cut_credit_score(
+        delegator: T::AccountId,
+        target_validators: Vec<T::AccountId>,
+    ) -> Vec<(T::AccountId, u64)> {
+        let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
+        let len = target_validators.len();
+        let answer: u64 = total_score / len as u64;
+        let mut remainder: u64 = total_score % len as u64;
+        let mut validators: Vec<(T::AccountId, u64)> = vec![];
+        for v in target_validators {
+            if remainder != 0 {
+                validators.push((v, answer + 1));
+                remainder -= 1;
+            } else {
+                validators.push((v, answer));
+            }
+        }
+        log!(
+            info,
+            "score of: {:?} is {}, delegate to validaors{:?}",
+            delegator,
+            total_score,
+            validators.clone()
+        );
+        validators
+    }
+
+    fn check_and_adjust_delegated_score() {
+        for (delegator, credit_delegate_info) in DelegatedToValidators::<T>::iter() {
+            // check validators in CandidateValidators
+            let target_validators = credit_delegate_info.validators;
+            let mut target_is_changed = false;
+            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+            let next_target_validators: Vec<_> = target_validators
+                .iter()
+                .filter(|v| {
+                    if candidate_validators.contains(v) {
+                        true
+                    } else {
+                        target_is_changed = true;
+                        false
+                    }
+                })
+                .map(|v| (*v).clone())
+                .collect();
+
+            // score to low or target_validators not in <CandidateValidators<T>>
+            if T::CreditInterface::pass_threshold(&delegator, 0) == false
+                || next_target_validators.len() == 0
+            {
+                Self::_undelegate(delegator.clone());
+                <DelegatedToValidators<T>>::remove(delegator.clone());
+            } else {
+                let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
+                // score has update or target_validators changed
+                if total_score != credit_delegate_info.score || target_is_changed == true {
+                    Self::_undelegate(delegator.clone());
+
+                    let validators_vec =
+                        Self::cut_credit_score(delegator.clone(), next_target_validators);
+                    Self::_delegate(delegator.clone(), validators_vec);
+
+                    let mut info = <DelegatedToValidators<T>>::take(delegator.clone());
+                    info.score = total_score;
+                    <DelegatedToValidators<T>>::insert(delegator.clone(), info);
+                }
+            }
+        }
+    }
+
+	fn set_current_era_validators(validators: Vec<T::AccountId>) {
+        <CurrentEraValidators<T>>::put(validators.clone());
+        let current_era = Self::current_era().unwrap_or(0);
+
+        for validator in validators {
+            let delegators = CandidateDelegators::<T>::get(validator.clone());
+            let selected_delegators: Vec<_> = delegators
+                .iter()
+                .map(|(d, s)| ((*d).clone(), *s, false))
+                .collect();
+            SelectedDelegators::<T>::insert(current_era, validator, selected_delegators);
+        }
+    }
+
+    fn set_candidate_validators(candidate_validators: Vec<T::AccountId>) {
+        <CandidateValidators<T>>::put(candidate_validators);
+    }
+
+    fn delegated_score_of_validator(validator: &T::AccountId) -> Option<u64> {
+        if <CandidateDelegators<T>>::contains_key(validator) {
+            let delegators = <CandidateDelegators<T>>::get(validator);
+            let mut score: u64 = 0;
+            for (_, s) in delegators {
+                score += s;
+            }
+            Some(score)
+        } else {
+            Some(0)
+        }
+    }
+
+    fn total_delegated_score(era_index: EraIndex) -> Option<u64> {
+        // check delegators credit score
+        Self::check_and_adjust_delegated_score();
+
+        let mut total_score: u64 = 0;
+        for (validator, _) in SelectedDelegators::<T>::iter_prefix(era_index) {
+            total_score += Self::get_total_validator_score(era_index, validator).unwrap_or(0);
+        }
+        Some(total_score)
+    }
+
+    fn get_total_validator_score(era_index: EraIndex, validator: T::AccountId) -> Option<u64> {
+        if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
+            let delegators = <SelectedDelegators<T>>::get(era_index, validator);
+            let mut total_score: u64 = 0;
+            for (_, s, _) in delegators {
+                total_score += s;
+            }
+            Some(total_score)
+        } else {
+            Some(0)
+        }
+    }
+
+    fn set_eras_reward(era_index: EraIndex, total_reward: BalanceOf<T>) {
+        <ErasValidatorPocReward<T>>::insert(era_index, total_reward);
+    }
+
+    fn payout_delegators(
+        era_index: EraIndex,
+        commission: Perbill,
+        validator_reward_part: Perbill,
+        validator: T::AccountId,
+        validator_payee: T::AccountId,
+    ) -> bool {
+        if !<ErasValidatorPocReward<T>>::contains_key(&era_index) {
+            return false;
+        }
+        let total_payout = <ErasValidatorPocReward<T>>::get(&era_index).unwrap();
+        let era_payout = validator_reward_part * total_payout;
+
+        let validator_commission_payout = commission * era_payout;
+        let validator_leftover_payout = era_payout - validator_commission_payout;
+
+        // We can now make total validator payout:
+        if validator_commission_payout != <BalanceOf<T>>::default() {
+            if let Some(imbalance) =
+                Self::poc_make_payout(validator_payee.clone(), validator_commission_payout)
+            {
+                Self::deposit_event(RawEvent::PocReward(validator_payee, imbalance.peek()));
+            }
+        }
+        // Lets now calculate how this is split to the nominators.
+        // Reward only the clipped exposures. Note this is not necessarily sorted.
+        let era_total_score =
+            Self::get_total_validator_score(era_index, validator.clone()).unwrap();
+        let delegators = <SelectedDelegators<T>>::get(era_index, validator.clone());
+        for (who, s, _) in delegators {
+            let delegator_exposure_part = Perbill::from_rational_approximation(s, era_total_score);
+
+            let delegator_reward: BalanceOf<T> =
+                delegator_exposure_part * validator_leftover_payout;
+            // We can now make nominator payout:
+            if let Some(imbalance) = Self::poc_make_payout(who.clone(), delegator_reward) {
+                Self::deposit_event(RawEvent::PocReward(who, imbalance.peek()));
+            }
+        }
+        true
+    }
+
+    fn poc_make_payout(receiver: T::AccountId, amount: BalanceOf<T>) -> Option<PositiveImbalanceOf<T>> {
+        Some(T::Currency::deposit_creating(&receiver, amount))
+    }
+
+    // poc credit slash
+    fn poc_slash(validator: &T::AccountId, era_index: EraIndex) {
+        if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
+            let delegators = <SelectedDelegators<T>>::take(era_index, validator);
+            let update_delegators: Vec<_> = delegators
+                .iter()
+                .map(|(d, s, slashed)| {
+                    if *slashed == false && <DelegatedToValidators<T>>::contains_key((*d).clone()) {
+                        T::CreditInterface::credit_slash((*d).clone());
+                        // undelegate
+                        Self::_undelegate((*d).clone());
+                        <DelegatedToValidators<T>>::remove((*d).clone());
+                        ((*d).clone(), *s, true)
+                    } else {
+                        ((*d).clone(), *s, *slashed)
+                    }
+                })
+                .collect();
+            <SelectedDelegators<T>>::insert(era_index, validator, update_delegators);
+        }
+    }
 }
 
 /// In this implementation `new_session(session)` must be called before `end_session(session-1)`
@@ -3363,7 +3724,7 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
 	{
 		//update cadidate validators for PoC
         let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
-        T::CreditDelegate::set_candidate_validators(candidate_validators);
+        Self::set_candidate_validators(candidate_validators);
 
 		<Self as pallet_session::SessionManager<_>>::new_session(new_index).map(|validators| {
 			let current_era = Self::current_era()
@@ -3518,7 +3879,7 @@ for Module<T> where
 			}
 
 			// poc_stash(stash,slash_era): check delegators behind stash
-            T::CreditDelegate::poc_slash(stash, slash_era);
+            Self::poc_slash(stash, slash_era);
 
 			let unapplied = slashing::compute_slash::<T>(slashing::SlashParams {
 				stash,
