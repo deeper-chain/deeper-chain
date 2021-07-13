@@ -1,6 +1,7 @@
 target/
 node_modules/
 .idea/
+.DS_Store
 Cargo.lock
 nohup.out
 private_chain/first.json
