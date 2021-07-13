@@ -1,15 +1,13 @@
 use crate as pallet_credit;
 use frame_support::{
-    assert_ok, parameter_types,
-    traits::{ChangeMembers, Currency, GenesisBuild, LockIdentifier, OnFinalize, OnInitialize},
-    StorageMap, StorageValue,
+    parameter_types,
+    traits::{OnFinalize, OnInitialize},
 };
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, Convert, IdentityLookup},
-    BuildStorage,
 };
 
 use node_primitives::{Balance, BlockNumber, Moment};
