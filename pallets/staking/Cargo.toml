@@ -1,5 +1,5 @@
 [package]
-name = "pallet-staking-with-credit"
+name = "pallet-staking"
 version = "3.0.0"
 authors = ["Parity Technologies <admin@parity.io>"]
 edition = "2018"
@@ -26,8 +26,9 @@ frame-system = { default-features = false, git = "https://github.com/paritytech/
 pallet-session = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" , features = ["historical"] }
 pallet-authorship = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"  }
 sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"  }
-pallet-delegating = { default-features = false, path = "../delegating", version = "3.0.0" }
-node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
+pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
+node-primitives = { version = '2.0.0', default-features = false, path = "../../primitives" }
+log = { default-features = false, version = "0.4.11" }
 
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0", optional = true }
@@ -39,8 +40,7 @@ sp-storage = {git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-tracing = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-balances = { version = "3.0.0", path = "../balances" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-pallet-staking-reward-curve = { version = "3.0.0",  path = "../staking-with-credit/reward-curve" }
-pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
+pallet-staking-reward-curve = { version = "3.0.0",  path = "../staking/reward-curve" }
 pallet-deeper-node = {version = '3.0.0', default-features =false, path = "../deeper-node"}
 pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
 substrate-test-utils = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
@@ -65,6 +65,7 @@ std = [
 	"pallet-authorship/std",
 	"sp-application-crypto/std",
 	"node-primitives/std",
+	"pallet-credit/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

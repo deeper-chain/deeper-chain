@@ -70,8 +70,8 @@ pallet-randomness-collective-flip = { git = "https://github.com/paritytech/subst
 pallet-recovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
 pallet-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["historical"], default-features = false }
 pallet-session-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
-pallet-staking-with-credit = { path = "../pallets/staking-with-credit", version = "3.0.0", default-features = false }
-pallet-staking-reward-curve = { path = "../pallets/staking-with-credit/reward-curve", version = "3.0.0", default-features = false }
+pallet-staking = { path = "../pallets/staking", version = "3.0.0", default-features = false }
+pallet-staking-reward-curve = { path = "../pallets/staking/reward-curve", version = "3.0.0", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-society = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
@@ -86,7 +86,6 @@ pallet-template = { version = "2.0.0", default-features = false, path = "../pall
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../pallets/micropayment" }
 pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
-pallet-delegating = { version = "3.0.0", default-features = false, path = "../pallets/delegating" }
 pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 
 [build-dependencies]
@@ -139,7 +138,7 @@ std = [
 	"sp-api/std",
 	"sp-runtime/std",
 	"sp-staking/std",
-	"pallet-staking-with-credit/std",
+	"pallet-staking/std",
 	"sp-keyring",
 	"sp-session/std",
 	"pallet-sudo/std",
@@ -160,7 +159,6 @@ std = [
 	"pallet-vesting/std",
 	"pallet-micropayment/std",
 	"pallet-credit/std",
-	"pallet-delegating/std",
 	"pallet-eth-sub-bridge/std",
 	"pallet-deeper-node/std",
 ]
@@ -187,7 +185,7 @@ runtime-benchmarks = [
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-society/runtime-benchmarks",
-	"pallet-staking-with-credit/runtime-benchmarks",
+	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-tips/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",

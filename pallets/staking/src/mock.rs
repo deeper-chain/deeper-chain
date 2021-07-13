@@ -105,7 +105,6 @@ frame_support::construct_runtime!(
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
 		Credit: pallet_credit::{Module, Call, Storage, Event<T>},
 		DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
-		Delegating: pallet_delegating::{Module, Call, Storage, Event<T>},
 		Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
 	}
 );
@@ -234,17 +233,6 @@ impl pallet_credit::Config for Test {
 }
 
 parameter_types! {
-    pub const MaxValidatorsCanSelected: usize = 10;
-}
-
-impl pallet_delegating::Config for Test {
-	type Event = Event;
-	type CreditInterface = Credit;
-	type Currency = Balances;
-	type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
-}
-
-parameter_types! {
 	pub const UncleGenerations: u64 = 0;
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(25);
 }
@@ -328,6 +316,7 @@ parameter_types! {
 	pub const RewardAdjustFactor: u128 = 77_760_000;
 	pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD / 30;
 	pub const MiningReward: u128 = TOTAL_MINING_REWARD;
+	pub const MaxValidatorsCanSelected: usize = 10;
 }
 
 impl Config for Test {
@@ -353,7 +342,8 @@ impl Config for Test {
 	type UnsignedPriority = UnsignedPriority;
 	type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
 	type WeightInfo = ();
-	type CreditDelegate = Delegating;
+	type CreditInterface = Credit;
+	type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
 	type CurrencyToNumber = CurrencyToNumberHandler;
 	type CreditToTokenFactor = CreditToTokenFactor;
 	type RewardAdjustFactor = RewardAdjustFactor;
