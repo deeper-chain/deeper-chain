@@ -3076,6 +3076,7 @@ impl<T: Config> Module<T> {
 		}
 
 		// Set staking information for new era.
+
 		let maybe_new_validators = Self::select_and_update_validators(current_era);
 
 		// add for poc delegating pallet

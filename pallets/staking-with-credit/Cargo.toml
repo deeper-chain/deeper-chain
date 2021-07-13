@@ -26,7 +26,6 @@ frame-system = { default-features = false, git = "https://github.com/paritytech/
 pallet-session = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" , features = ["historical"] }
 pallet-authorship = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"  }
 sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"  }
-pallet-delegating = { default-features = false, path = "../delegating", version = "3.0.0" }
 pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 node-primitives = { version = '2.0.0', default-features = false, path = "../../primitives" }
 log = { default-features = false, version = "0.4.11" }

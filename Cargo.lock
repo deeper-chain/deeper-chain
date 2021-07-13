@@ -4982,7 +4982,6 @@ dependencies = [
  "pallet-balances 3.0.0",
  "pallet-credit",
  "pallet-deeper-node",
- "pallet-delegating",
  "pallet-micropayment",
  "pallet-session",
  "pallet-staking-reward-curve",
