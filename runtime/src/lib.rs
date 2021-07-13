@@ -59,8 +59,8 @@ use sp_core::{
 use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::curve::PiecewiseLinear;
 use sp_runtime::traits::{
-    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys, SaturatedConversion,
-    StaticLookup,
+    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys,
+    SaturatedConversion, StaticLookup,
 };
 use sp_runtime::transaction_validity::{
     TransactionPriority, TransactionSource, TransactionValidity,
@@ -75,10 +75,10 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
-pub use pallet_micropayment;
-pub use pallet_template;
 pub use pallet_eth_sub_bridge as bridge;
 pub use pallet_eth_sub_bridge::Call as BridgeCall;
+pub use pallet_micropayment;
+pub use pallet_template;
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
@@ -1088,15 +1088,16 @@ parameter_types! {
 }
 
 pub struct CurrencyToNumberHandler;
-impl Convert<Balance, u64> for CurrencyToNumberHandler { 
-    fn convert(x: Balance) -> u64 { 
-        x as u64 
+impl Convert<Balance, u64> for CurrencyToNumberHandler {
+    fn convert(x: Balance) -> u64 {
+        x as u64
     }
 }
-impl Convert<u128, Balance> for CurrencyToNumberHandler { 
-    fn convert(x: u128) -> Balance { x }
+impl Convert<u128, Balance> for CurrencyToNumberHandler {
+    fn convert(x: u128) -> Balance {
+        x
+    }
 }
-
 
 impl pallet_credit::Config for Runtime {
     type Event = Event;

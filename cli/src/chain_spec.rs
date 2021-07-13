@@ -23,10 +23,10 @@ use hex_literal::hex;
 use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
-    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig, ContractsConfig,
-    CouncilConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
-    SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig,
-    SystemConfig, TechnicalCommitteeConfig, DeeperNodeConfig
+    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig,
+    ContractsConfig, CouncilConfig, DeeperNodeConfig, DemocracyConfig, ElectionsConfig,
+    GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig,
+    StakerStatus, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
@@ -454,9 +454,7 @@ pub fn testnet_genesis(
             max_members: 999,
         }),
         pallet_vesting: Some(Default::default()),
-        pallet_deeper_node: Some(DeeperNodeConfig {
-            tmp: 0  
-        }),
+        pallet_deeper_node: Some(DeeperNodeConfig { tmp: 0 }),
         pallet_eth_sub_bridge: Some(BridgeConfig {
             validator_accounts: bridge_validators,
             validators_count: 3u32,
