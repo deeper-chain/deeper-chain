@@ -1,4 +1,5 @@
-use crate::{mock::*, Error, CreditInterface};
+use super::CreditLevel;
+use crate::{mock::*, CreditInterface, Error};
 use frame_support::{
     assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
@@ -6,7 +7,6 @@ use frame_support::{
 };
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
-use super::CreditLevel;
 
 #[test]
 fn fn_initialize_credit_extrinsic() {

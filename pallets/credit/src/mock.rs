@@ -8,11 +8,11 @@ use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Convert},
+    traits::{BlakeTwo256, Convert, IdentityLookup},
     BuildStorage,
 };
 
-use node_primitives:: { Balance, BlockNumber, Moment };
+use node_primitives::{Balance, BlockNumber, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -117,13 +117,15 @@ parameter_types! {
 }
 
 pub struct CurrencyToNumberHandler;
-impl Convert<Balance, u64> for CurrencyToNumberHandler { 
-    fn convert(x: Balance) -> u64 { 
-        x as u64 
+impl Convert<Balance, u64> for CurrencyToNumberHandler {
+    fn convert(x: Balance) -> u64 {
+        x as u64
     }
 }
-impl Convert<u128, Balance> for CurrencyToNumberHandler { 
-    fn convert(x: u128) -> Balance { x }
+impl Convert<u128, Balance> for CurrencyToNumberHandler {
+    fn convert(x: u128) -> Balance {
+        x
+    }
 }
 
 impl pallet_credit::Config for Test {
