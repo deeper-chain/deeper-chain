@@ -214,7 +214,6 @@ fn should_submit_signed_twice_from_all_accounts() {
 }
 
 #[test]
-#[ignore = "failed due to unknown reason"] // TODO: fix me
 fn submitted_transaction_should_be_valid() {
     use codec::Encode;
     use sp_runtime::traits::StaticLookup;
@@ -254,7 +253,7 @@ fn submitted_transaction_should_be_valid() {
         let author = extrinsic.signature.clone().unwrap().0;
         let address = Indices::lookup(author).unwrap();
         let data = pallet_balances::AccountData {
-            free: 5_000_000_000_000,
+            free: 50_000_000_000_000_000,
             ..Default::default()
         };
         let account = frame_system::AccountInfo {
