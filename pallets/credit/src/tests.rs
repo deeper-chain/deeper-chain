@@ -1,12 +1,9 @@
-use super::CreditLevel;
-use crate::{mock::*, CreditInterface, Error};
-use frame_support::{
-    assert_noop, assert_ok,
-    dispatch::{DispatchError, DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-    weights::PostDispatchInfo,
-};
-use sp_core::sr25519::{Public, Signature};
-use sp_io::crypto::sr25519_verify;
+use super::{CreditLevel, CreditSetting};
+use crate::{mock::*, CreditInterface};
+use frame_support::{assert_noop, assert_ok};
+use frame_system::RawOrigin;
+use sp_runtime::traits::BadOrigin;
+use sp_runtime::Percent;
 
 #[test]
 fn fn_initialize_credit_extrinsic() {
@@ -47,5 +44,50 @@ fn get_credit_level() {
         assert_eq!(Credit::get_credit_level(800), CreditLevel::Eight);
         assert_eq!(Credit::get_credit_level(950), CreditLevel::Eight);
         assert_eq!(Credit::get_credit_level(1099), CreditLevel::Eight);
+    });
+}
+
+#[test]
+fn update_credit_setting() {
+    new_test_ext().execute_with(|| {
+        let credit_setting = CreditSetting {
+            credit_level: CreditLevel::One,
+            balance: 20_000,
+            base_apy: Percent::from_percent(39),
+            bonus_apy: Percent::from_percent(0),
+            tax_rate: Percent::from_percent(10),
+            max_referees_with_rewards: 1,
+            reward_per_referee: 18,
+        };
+        assert_noop!(
+            Credit::update_credit_setting(Origin::signed(1), credit_setting.clone()),
+            BadOrigin
+        );
+        assert_ok!(Credit::update_credit_setting(
+            RawOrigin::Root.into(),
+            credit_setting.clone()
+        ));
+        assert_eq!(
+            Credit::get_credit_setting(CreditLevel::One).unwrap(),
+            credit_setting
+        );
+
+        let credit_setting_updated = CreditSetting {
+            credit_level: CreditLevel::One,
+            balance: 40_000,
+            base_apy: Percent::from_percent(45),
+            bonus_apy: Percent::from_percent(3),
+            tax_rate: Percent::from_percent(9),
+            max_referees_with_rewards: 2,
+            reward_per_referee: 18,
+        };
+        assert_ok!(Credit::update_credit_setting(
+            RawOrigin::Root.into(),
+            credit_setting_updated.clone()
+        ));
+        assert_eq!(
+            Credit::get_credit_setting(CreditLevel::One).unwrap(),
+            credit_setting_updated
+        );
     });
 }

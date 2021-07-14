@@ -1160,7 +1160,7 @@ construct_runtime!(
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
         TemplateModule: pallet_template::{Module, Call, Storage, Event<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>},
+        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
         Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>}
     }

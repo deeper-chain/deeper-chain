@@ -22,8 +22,12 @@ macro_rules! log {
 }
 
 use codec::{Decode, Encode};
+use sp_runtime::Percent;
+#[cfg(feature = "std")]
+use sp_runtime::{Deserialize, Serialize};
 
 #[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
     Zero,
     One,
@@ -40,6 +44,18 @@ impl Default for CreditLevel {
     fn default() -> Self {
         CreditLevel::Zero
     }
+}
+
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct CreditSetting<Balance> {
+    pub credit_level: CreditLevel,
+    pub balance: Balance,
+    pub base_apy: Percent,
+    pub bonus_apy: Percent,
+    pub tax_rate: Percent,
+    pub max_referees_with_rewards: u8,
+    pub reward_per_referee: Balance,
 }
 
 pub trait CreditInterface<AccountId> {
@@ -96,6 +112,34 @@ pub mod pallet {
     #[pallet::getter(fn get_user_credit)]
     pub(super) type UserCredit<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn get_credit_setting)]
+    pub(super) type CreditSettings<T: Config> =
+        StorageMap<_, Identity, CreditLevel, CreditSetting<BalanceOf<T>>, OptionQuery>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            GenesisConfig {
+                credit_settings: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            for cs in self.credit_settings.clone().into_iter() {
+                <CreditSettings<T>>::insert(cs.credit_level.clone(), cs);
+            }
+        }
+    }
 
     #[pallet::event]
     #[pallet::metadata(T::AccountId = "AccountId")]
@@ -169,6 +213,17 @@ pub mod pallet {
                 Err(Error::<T>::CreditInitFailed)?
             }
         }
+
+        /// This operation requires sudo now and it will be decentralized in future
+        #[pallet::weight(10_000)]
+        pub fn update_credit_setting(
+            origin: OriginFor<T>,
+            credit_setting: CreditSetting<BalanceOf<T>>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?; // requires sudo
+            CreditSettings::<T>::insert(credit_setting.credit_level.clone(), credit_setting);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -214,7 +269,7 @@ pub mod pallet {
             }
         }
 
-        /// innner: update credit score
+        /// inner: update credit score
         fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
             if UserCredit::<T>::contains_key(account_id) {
                 match score {
