@@ -56,7 +56,7 @@ fn update_credit_setting() {
             base_apy: Percent::from_percent(39),
             bonus_apy: Percent::from_percent(0),
             tax_rate: Percent::from_percent(10),
-            number_of_referees: 1,
+            max_referees_with_rewards: 1,
             reward_per_referee: 18,
         };
         assert_noop!(
@@ -78,7 +78,7 @@ fn update_credit_setting() {
             base_apy: Percent::from_percent(45),
             bonus_apy: Percent::from_percent(3),
             tax_rate: Percent::from_percent(9),
-            number_of_referees: 2,
+            max_referees_with_rewards: 2,
             reward_per_referee: 18,
         };
         assert_ok!(Credit::update_credit_setting(

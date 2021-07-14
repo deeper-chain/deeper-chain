@@ -91,5 +91,27 @@
     "open": "bool",
     "votes": "MemberId",
     "kind": "Kind"
+  },
+  "CreditLevel": {
+    "_enum": [
+      "Zero",
+      "One",
+      "Two",
+      "Three",
+      "Four",
+      "Five",
+      "Six",
+      "Seven",
+      "Eight"
+    ]
+  },
+  "CreditSetting": {
+    "credit_level": "CreditLevel",
+    "balance": "Balance",
+    "base_apy": "Percent",
+    "bonus_apy": "Percent",
+    "tax_rate": "Percent",
+    "max_referees_with_rewards": "u8",
+    "reward_per_referee": "Balance"
   }
 }

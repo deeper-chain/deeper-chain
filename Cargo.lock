@@ -3759,6 +3759,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-balances 3.0.0",
  "pallet-contracts",
+ "pallet-credit",
  "pallet-deeper-node",
  "pallet-eth-sub-bridge",
  "pallet-grandpa",

@@ -24,10 +24,11 @@ use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig,
-    ContractsConfig, CouncilConfig, DeeperNodeConfig, DemocracyConfig, ElectionsConfig,
-    GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig,
-    StakerStatus, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+    ContractsConfig, CouncilConfig, CreditConfig, DeeperNodeConfig, DemocracyConfig,
+    ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
+    SocietyConfig, StakerStatus, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
+use pallet_credit::{CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service::ChainType;
@@ -38,7 +39,7 @@ use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
-    Perbill,
+    Perbill, Percent,
 };
 
 pub use node_primitives::{AccountId, Balance, Signature};
@@ -353,7 +354,7 @@ pub fn testnet_genesis(
 
     let num_endowed_accounts = endowed_accounts.len();
 
-    const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
+    const ENDOWMENT: Balance = 10_000_000 * DPR;
     const STASH: Balance = ENDOWMENT / 1000;
 
     let bridge_validators: Vec<AccountId> = vec![
@@ -464,6 +465,91 @@ pub fn testnet_genesis(
                 50 * 10u128.pow(18),
                 400 * 10u128.pow(18),
                 10 * 10u128.pow(18),
+            ],
+        }),
+        pallet_credit: Some(CreditConfig {
+            credit_settings: vec![
+                CreditSetting {
+                    credit_level: CreditLevel::Zero,
+                    balance: 0,
+                    base_apy: Percent::from_percent(0),
+                    bonus_apy: Percent::from_percent(0),
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 0,
+                    reward_per_referee: 0,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::One,
+                    balance: 20_000 * DPR,
+                    base_apy: Percent::from_percent(39),
+                    bonus_apy: Percent::from_percent(0),
+                    tax_rate: Percent::from_percent(10),
+                    max_referees_with_rewards: 1,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Two,
+                    balance: 46_800 * DPR,
+                    base_apy: Percent::from_percent(42),
+                    bonus_apy: Percent::from_percent(5),
+                    tax_rate: Percent::from_percent(9),
+                    max_referees_with_rewards: 2,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Three,
+                    balance: 76_800 * DPR,
+                    base_apy: Percent::from_percent(45),
+                    bonus_apy: Percent::from_percent(8),
+                    tax_rate: Percent::from_percent(8),
+                    max_referees_with_rewards: 3,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Four,
+                    balance: 138_000 * DPR,
+                    base_apy: Percent::from_percent(48),
+                    bonus_apy: Percent::from_percent(11),
+                    tax_rate: Percent::from_percent(7),
+                    max_referees_with_rewards: 7,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Five,
+                    balance: 218_000 * DPR,
+                    base_apy: Percent::from_percent(51),
+                    bonus_apy: Percent::from_percent(15),
+                    tax_rate: Percent::from_percent(6),
+                    max_referees_with_rewards: 12,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Six,
+                    balance: 0,
+                    base_apy: Percent::from_percent(54),
+                    bonus_apy: Percent::from_percent(20),
+                    tax_rate: Percent::from_percent(5),
+                    max_referees_with_rewards: 18,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Seven,
+                    balance: 0,
+                    base_apy: Percent::from_percent(57),
+                    bonus_apy: Percent::from_percent(25),
+                    tax_rate: Percent::from_percent(4),
+                    max_referees_with_rewards: 25,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Eight,
+                    balance: 0,
+                    base_apy: Percent::from_percent(60),
+                    bonus_apy: Percent::from_percent(39),
+                    tax_rate: Percent::from_percent(3),
+                    max_referees_with_rewards: 34,
+                    reward_per_referee: 18 * DPR,
+                },
             ],
         }),
     }

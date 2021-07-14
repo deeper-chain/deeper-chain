@@ -22,9 +22,12 @@ macro_rules! log {
 }
 
 use codec::{Decode, Encode};
-use sp_runtime::{Deserialize, Percent, Serialize};
+use sp_runtime::Percent;
+#[cfg(feature = "std")]
+use sp_runtime::{Deserialize, Serialize};
 
-#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
     Zero,
     One,
@@ -43,14 +46,15 @@ impl Default for CreditLevel {
     }
 }
 
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditSetting<Balance> {
     pub credit_level: CreditLevel,
     pub balance: Balance,
     pub base_apy: Percent,
     pub bonus_apy: Percent,
     pub tax_rate: Percent,
-    pub number_of_referees: u8,
+    pub max_referees_with_rewards: u8,
     pub reward_per_referee: Balance,
 }
 

@@ -147,5 +147,6 @@ pub fn config_endowed(
                 10 * 10u128.pow(18),
             ],
         }),
+        pallet_credit: Some(Default::default()),
     }
 }
