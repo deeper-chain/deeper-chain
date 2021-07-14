@@ -58,11 +58,18 @@ pub struct CreditSetting<Balance> {
     pub reward_per_referee: Balance,
 }
 
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct CreditData {
+    pub credit: u64,
+    pub number_of_referees: u8,
+}
+
 pub trait CreditInterface<AccountId> {
-    fn get_credit_score(account_id: AccountId) -> Option<u64>;
+    fn get_credit_score(account_id: &AccountId) -> Option<u64>;
     fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
-    fn credit_slash(accouont_id: AccountId);
-    fn get_credit_level(credit_score: u16) -> CreditLevel;
+    fn slash_credit(account_id: &AccountId);
+    fn get_credit_level(credit_score: u64) -> CreditLevel;
 }
 
 #[frame_support::pallet]
@@ -110,17 +117,18 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn get_user_credit)]
-    pub(super) type UserCredit<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
+    pub type UserCredit<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, CreditData, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn get_credit_setting)]
-    pub(super) type CreditSettings<T: Config> =
-        StorageMap<_, Identity, CreditLevel, CreditSetting<BalanceOf<T>>, OptionQuery>;
+    pub type CreditSettings<T: Config> =
+        StorageMap<_, Identity, CreditLevel, CreditSetting<BalanceOf<T>>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
+        pub user_credit_data: Vec<(T::AccountId, CreditData)>,
     }
 
     #[cfg(feature = "std")]
@@ -128,6 +136,7 @@ pub mod pallet {
         fn default() -> Self {
             GenesisConfig {
                 credit_settings: Default::default(),
+                user_credit_data: Default::default(),
             }
         }
     }
@@ -138,6 +147,9 @@ pub mod pallet {
             for cs in self.credit_settings.clone().into_iter() {
                 <CreditSettings<T>>::insert(cs.credit_level.clone(), cs);
             }
+            for uc in self.user_credit_data.clone().into_iter() {
+                <UserCredit<T>>::insert(uc.0, uc.1);
+            }
         }
     }
 
@@ -145,27 +157,10 @@ pub mod pallet {
     #[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        CreditInitSuccess(T::AccountId, u64),
-        CreditInitFailed(T::AccountId, u64),
         CreditUpdateSuccess(T::AccountId, u64),
         CreditUpdateFailed(T::AccountId, u64),
         KillCreditSuccess(T::AccountId),
         KillCreditFailed(T::AccountId),
-    }
-
-    // Errors inform users that something went wrong.
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Value not exists
-        NoneValue,
-        /// Storage overflow
-        StorageOverflow,
-        /// account credit already initialized
-        AlreadyInitilized,
-        /// invalid credit score
-        InvalidScore,
-        /// credit init failed
-        CreditInitFailed,
     }
 
     #[pallet::hooks]
@@ -199,21 +194,6 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        // init credit score
-        #[pallet::weight(10_000)]
-        pub fn initialize_credit(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            //todo
-            let sender = ensure_signed(origin)?;
-            let res = Self::_initialize_credit(&sender, T::CreditInitScore::get());
-            if res == true {
-                Self::deposit_event(Event::CreditInitSuccess(sender, T::CreditInitScore::get()));
-                Ok(().into())
-            } else {
-                Self::deposit_event(Event::CreditInitFailed(sender, T::CreditInitScore::get()));
-                Err(Error::<T>::CreditInitFailed)?
-            }
-        }
-
         /// This operation requires sudo now and it will be decentralized in future
         #[pallet::weight(10_000)]
         pub fn update_credit_setting(
@@ -227,19 +207,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// init credit score
-        pub fn _initialize_credit(account_id: &T::AccountId, score: u64) -> bool {
-            // in general, a user start from initial score = 0; with coupon, a user can
-            // start from initial score at most CreditInitScore
-            // TODO: i.e. add coupon verification for non-zero init credit score
-            if !UserCredit::<T>::contains_key(account_id) && score <= T::CreditInitScore::get() {
-                UserCredit::<T>::insert(account_id, score);
-                true
-            } else {
-                false
-            }
-        }
-
         /// update credit score per era using micropayment vec
         pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
             for (server_id, balance, size) in micropayment_vec {
@@ -248,11 +215,8 @@ pub mod pallet {
                         <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
                     let mut score_delta: u64 = balance_num
                         .checked_div(T::MicropaymentToCreditScoreFactor::get())
-                        .unwrap_or(0);
-                    let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
-                    if score_delta > cap {
-                        score_delta = cap
-                    }
+                        .unwrap_or(0)
+                        .into();
                     log!(
                         info,
                         "server_id: {:?}, balance_num: {},score_delta:{}",
@@ -260,32 +224,34 @@ pub mod pallet {
                         balance_num,
                         score_delta
                     );
-                    Self::_update_credit(
-                        &server_id,
-                        Self::get_user_credit(&server_id).unwrap_or(T::CreditInitScore::get())
-                            + score_delta,
-                    );
+                    let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
+                    if score_delta > cap {
+                        score_delta = cap
+                    }
+                    if score_delta > 0 {
+                        let new_credit = Self::get_credit_score(&server_id)
+                            .unwrap_or(0)
+                            .saturating_add(score_delta);
+                        Self::_update_credit(&server_id, new_credit);
+                        Self::deposit_event(Event::CreditUpdateSuccess(server_id, new_credit));
+                    }
                 }
             }
         }
 
         /// inner: update credit score
-        fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
+        fn _update_credit(account_id: &T::AccountId, score: u64) {
             if UserCredit::<T>::contains_key(account_id) {
-                match score {
-                    score if score > T::MaxCreditScore::get() => {
-                        UserCredit::<T>::insert(account_id, T::MaxCreditScore::get());
-                        true
-                    }
-                    _ => {
-                        UserCredit::<T>::insert(account_id, score);
-                        true
-                    }
-                }
+                UserCredit::<T>::mutate(account_id, |v| match v {
+                    Some(credit_data) => credit_data.credit = score,
+                    _ => (),
+                });
             } else {
-                // uninitialize case
-                Self::_initialize_credit(&account_id, 0);
-                Self::_update_credit(account_id, score)
+                let credit_data = CreditData {
+                    credit: score,
+                    number_of_referees: 0,
+                };
+                UserCredit::<T>::insert(account_id, credit_data);
             }
         }
 
@@ -303,22 +269,16 @@ pub mod pallet {
         }
 
         /// inner: attenuate credit score
-        fn _attenuate_credit(account_id: T::AccountId) -> bool {
-            let score = Self::get_user_credit(account_id.clone()).unwrap_or(0);
-            if score > T::CreditScoreAttenuationLowerBound::get() {
-                if score - T::CreditScoreAttenuationStep::get()
-                    >= T::CreditScoreAttenuationLowerBound::get()
-                {
-                    UserCredit::<T>::insert(
-                        account_id,
-                        score - T::CreditScoreAttenuationStep::get(),
-                    );
+        fn _attenuate_credit(account_id: T::AccountId) {
+            let score = Self::get_credit_score(&account_id).unwrap_or(0);
+            let lower_bound = T::CreditScoreAttenuationLowerBound::get();
+            if score > lower_bound {
+                let attenuated_score = score - T::CreditScoreAttenuationStep::get();
+                if attenuated_score > lower_bound {
+                    Self::_update_credit(&account_id, attenuated_score);
                 } else {
-                    UserCredit::<T>::insert(account_id, T::CreditScoreAttenuationLowerBound::get());
+                    Self::_update_credit(&account_id, lower_bound);
                 }
-                true
-            } else {
-                false
             }
         }
 
@@ -332,15 +292,20 @@ pub mod pallet {
             }
         }
     }
+
     impl<T: Config> CreditInterface<T::AccountId> for Module<T> {
-        fn get_credit_score(account_id: T::AccountId) -> Option<u64> {
-            Self::get_user_credit(account_id)
+        fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
+            if let Some(credit_data) = Self::get_user_credit(account_id) {
+                Some(credit_data.credit)
+            } else {
+                None
+            }
         }
 
         /// check if account_id's credit score is pass threshold ttype
         fn pass_threshold(account_id: &T::AccountId, _ttype: u8) -> bool {
             if UserCredit::<T>::contains_key(account_id) {
-                if let Some(score) = UserCredit::<T>::get(account_id) {
+                if let Some(score) = Self::get_credit_score(account_id) {
                     if score >= T::CreditScoreDelegatedPermitThreshold::get() {
                         return true;
                     }
@@ -349,17 +314,19 @@ pub mod pallet {
             false
         }
 
-        /// credit slash
-        fn credit_slash(account_id: T::AccountId) {
+        fn slash_credit(account_id: &T::AccountId) {
             if UserCredit::<T>::contains_key(account_id.clone()) {
-                UserCredit::<T>::mutate(account_id, |s| {
-                    let score = (*s).unwrap_or(0);
-                    *s = Some(score.saturating_sub(T::CreditScoreAttenuationStep::get() * 2))
+                let penalty = T::CreditScoreAttenuationStep::get();
+                UserCredit::<T>::mutate(account_id, |v| match v {
+                    Some(credit_data) => {
+                        credit_data.credit = credit_data.credit.saturating_sub(penalty)
+                    }
+                    _ => (),
                 });
             }
         }
 
-        fn get_credit_level(credit_score: u16) -> CreditLevel {
+        fn get_credit_level(credit_score: u64) -> CreditLevel {
             let credit_level = match credit_score {
                 0..=99 => CreditLevel::Zero,
                 100..=199 => CreditLevel::One,

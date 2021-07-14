@@ -104,12 +104,12 @@ pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 parameter_types! {
-    pub const CreditInitScore: u64 = 60;
-    pub const MaxCreditScore: u64 = 800;
+    pub const CreditInitScore: u64 = 0;
+    pub const MaxCreditScore: u64 = u64::MAX;
     pub const CreditScoreCapPerEra: u8 = 5;
     pub const CreditScoreAttenuationLowerBound: u64 = 40;
     pub const CreditScoreAttenuationStep: u64 = 5;
-    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 100;
     pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }

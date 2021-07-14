@@ -2397,12 +2397,12 @@ decl_module! {
             }
 
             // get avg score to validators
-            let validators_vec = Self::cut_credit_score(controller.clone(), validators.clone());
+            let validators_vec = Self::cut_credit_score(&controller, validators.clone());
             Self::_delegate(controller.clone(), validators_vec);
 
             let credit_delegate_info = CreditDelegateInfo{
                 delegator: controller.clone(),
-                score: T::CreditInterface::get_credit_score(controller.clone()).unwrap(),
+                score: T::CreditInterface::get_credit_score(&controller).unwrap(),
                 validators: validators.clone(),
             };
             <DelegatedToValidators<T>>::insert(controller.clone(), credit_delegate_info);
@@ -3530,10 +3530,10 @@ impl<T: Config> Module<T> {
 
     // partion credit score of delegator
     fn cut_credit_score(
-        delegator: T::AccountId,
+        delegator: &T::AccountId,
         target_validators: Vec<T::AccountId>,
     ) -> Vec<(T::AccountId, u64)> {
-        let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
+        let total_score = T::CreditInterface::get_credit_score(delegator).unwrap();
         let len = target_validators.len();
         let answer: u64 = total_score / len as u64;
         let mut remainder: u64 = total_score % len as u64;
@@ -3582,13 +3582,12 @@ impl<T: Config> Module<T> {
                 Self::_undelegate(delegator.clone());
                 <DelegatedToValidators<T>>::remove(delegator.clone());
             } else {
-                let total_score = T::CreditInterface::get_credit_score(delegator.clone()).unwrap();
+                let total_score = T::CreditInterface::get_credit_score(&delegator).unwrap();
                 // score has update or target_validators changed
                 if total_score != credit_delegate_info.score || target_is_changed == true {
                     Self::_undelegate(delegator.clone());
 
-                    let validators_vec =
-                        Self::cut_credit_score(delegator.clone(), next_target_validators);
+                    let validators_vec = Self::cut_credit_score(&delegator, next_target_validators);
                     Self::_delegate(delegator.clone(), validators_vec);
 
                     let mut info = <DelegatedToValidators<T>>::take(delegator.clone());
@@ -3715,7 +3714,7 @@ impl<T: Config> Module<T> {
                 .iter()
                 .map(|(d, s, slashed)| {
                     if *slashed == false && <DelegatedToValidators<T>>::contains_key((*d).clone()) {
-                        T::CreditInterface::credit_slash((*d).clone());
+                        T::CreditInterface::slash_credit(d);
                         // undelegate
                         Self::_undelegate((*d).clone());
                         <DelegatedToValidators<T>>::remove((*d).clone());

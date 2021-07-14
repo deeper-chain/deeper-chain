@@ -28,7 +28,7 @@ use node_runtime::{
     ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
     SocietyConfig, StakerStatus, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
-use pallet_credit::{CreditLevel, CreditSetting};
+use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service::ChainType;
@@ -551,6 +551,19 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
             ],
+            user_credit_data: new_endowed_accounts
+                .iter()
+                .cloned()
+                .map(|x| {
+                    (
+                        x,
+                        CreditData {
+                            credit: 100,
+                            number_of_referees: 1,
+                        },
+                    )
+                })
+                .collect(),
         }),
     }
 }
