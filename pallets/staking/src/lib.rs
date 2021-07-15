@@ -453,6 +453,15 @@ impl<AccountId> Default for RewardDestination<AccountId> {
     }
 }
 
+#[derive(Encode, Decode, Default, RuntimeDebug)]
+pub struct RewardData<Balance: HasCompact> {
+    pub total_referee_reward: Balance,
+    pub received_referee_reward: Balance,
+    pub daily_referee_reward: Balance,
+    pub received_pocr_reward: Balance,
+    pub daily_poc_reward: Balance,
+}
+
 /// Preference of what happens regarding validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct ValidatorPrefs {
@@ -788,7 +797,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     /// Credit CreditInterface
-    type CreditInterface: CreditInterface<Self::AccountId>;
+    type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
 
     /// max validators can be selected to delegate
     type MaxValidatorsCanSelected: Get<usize>;
@@ -1135,7 +1144,6 @@ decl_storage! {
 
         pub RemainderMiningReward get(fn remainder_mining_reward): Option<u128>;
 
-        /// TODO to be remove storage from delegating pallet
         /// (delegator) -> CreditDelegateInfo{}
         DelegatedToValidators get(fn delegated_to_validators): map hasher(blake2_128_concat) T::AccountId => CreditDelegateInfo<T::AccountId>;
         /// (delegator, validator) -> bool
@@ -1159,6 +1167,9 @@ decl_storage! {
 
         ///  candidate validator list: CandidateValidators == Validators
         pub CandidateValidators get(fn get_candidate_validators): Option<Vec<T::AccountId>>;
+
+        /// reward of delegator
+        pub Reward get(fn get_reward): map hasher(blake2_128_concat) T::AccountId => RewardData<BalanceOf<T>>;
 
         /// True if network has been upgraded to this version.
         /// Storage version of the pallet.

@@ -53,6 +53,7 @@ pub struct CreditSetting<Balance> {
     pub balance: Balance,
     pub base_apy: Percent,
     pub bonus_apy: Percent,
+    pub max_rank_with_bonus: u32, // max rank which can get bonusin the credit_level
     pub tax_rate: Percent,
     pub max_referees_with_rewards: u8,
     pub reward_per_referee: Balance,
@@ -60,17 +61,21 @@ pub struct CreditSetting<Balance> {
 
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct CreditData {
+pub struct CreditData<BlockNumber> {
     pub credit: u64,
+    pub initial_credit_level: CreditLevel,
+    pub rank_in_initial_credit_level: u32,
     pub number_of_referees: u8,
+    pub expiration: BlockNumber,
 }
 
-pub trait CreditInterface<AccountId> {
+pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
     fn get_number_of_referees(account_id: &AccountId) -> Option<u8>;
     fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
     fn slash_credit(account_id: &AccountId);
     fn get_credit_level(credit_score: u64) -> CreditLevel;
+    fn get_reward(account_id: &AccountId) -> Option<(Balance, Balance)>;
 }
 
 #[frame_support::pallet]
@@ -79,7 +84,10 @@ pub mod pallet {
     use frame_support::traits::{Currency, Vec};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
-    use sp_runtime::traits::{Convert, Saturating};
+    use sp_runtime::{
+        traits::{Convert, Saturating, Zero},
+        Perbill,
+    };
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -119,17 +127,23 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn get_user_credit)]
     pub type UserCredit<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, CreditData, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, CreditData<T::BlockNumber>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn get_credit_setting)]
     pub type CreditSettings<T: Config> =
         StorageMap<_, Identity, CreditLevel, CreditSetting<BalanceOf<T>>, ValueQuery>;
 
+    /// (daily_base_poc_reward, daily_poc_reward_with_bonus)
+    #[pallet::storage]
+    #[pallet::getter(fn get_daily_poc_reward)]
+    pub type DailyPocReward<T: Config> =
+        StorageMap<_, Identity, CreditLevel, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
-        pub user_credit_data: Vec<(T::AccountId, CreditData)>,
+        pub user_credit_data: Vec<(T::AccountId, CreditData<T::BlockNumber>)>,
     }
 
     #[cfg(feature = "std")]
@@ -202,6 +216,31 @@ pub mod pallet {
             credit_setting: CreditSetting<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
+
+            let daily_referee_reward = credit_setting
+                .reward_per_referee
+                .saturating_mul(credit_setting.max_referees_with_rewards.into());
+
+            // poc reward
+            let base_total_reward = Perbill::from_rational_approximation(270u32, 365u32)
+                * (credit_setting.base_apy * credit_setting.balance);
+            let base_daily_poc_reward = Perbill::from_rational_approximation(1u32, 270u32)
+                * base_total_reward
+                - daily_referee_reward;
+
+            let base_total_reward_with_bonus = Perbill::from_rational_approximation(270u32, 365u32)
+                * (credit_setting
+                    .base_apy
+                    .saturating_add(credit_setting.bonus_apy)
+                    * credit_setting.balance);
+            let base_daily_poc_reward_with_bonus =
+                Perbill::from_rational_approximation(1u32, 270u32) * base_total_reward_with_bonus
+                    - daily_referee_reward;
+
+            DailyPocReward::<T>::insert(
+                credit_setting.credit_level.clone(),
+                (base_daily_poc_reward, base_daily_poc_reward_with_bonus),
+            );
             CreditSettings::<T>::insert(credit_setting.credit_level.clone(), credit_setting);
             Ok(().into())
         }
@@ -305,7 +344,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> CreditInterface<T::AccountId> for Module<T> {
+    impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Module<T> {
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
             if let Some(credit_data) = Self::get_user_credit(account_id) {
                 Some(credit_data.credit)
@@ -359,6 +398,51 @@ pub mod pallet {
                 _ => CreditLevel::Eight,
             };
             credit_level
+        }
+
+        fn get_reward(account_id: &T::AccountId) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
+            // read storage
+            if let Some(credit_data) = Self::get_user_credit(account_id) {
+                let current_block = <frame_system::Module<T>>::block_number();
+                if current_block < credit_data.expiration {
+                    // unexpirated
+                    let initial_credit_level = credit_data.initial_credit_level;
+                    let credit_setting = Self::get_credit_setting(initial_credit_level);
+                    // referal reward
+                    let number_of_referees = if credit_data.number_of_referees
+                        <= credit_setting.max_referees_with_rewards
+                    {
+                        credit_data.number_of_referees
+                    } else {
+                        credit_setting.max_referees_with_rewards
+                    };
+                    let daily_referee_reward = credit_setting
+                        .reward_per_referee
+                        .saturating_mul(number_of_referees.into());
+
+                    // poc reward
+                    let credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
+                    let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
+                        Self::get_daily_poc_reward(credit_level);
+                    let daily_poc_reward = if credit_data.rank_in_initial_credit_level
+                        <= credit_setting.max_rank_with_bonus
+                    {
+                        daily_poc_reward_with_bonus
+                    } else {
+                        base_daily_poc_reward
+                    };
+
+                    Some((daily_referee_reward, daily_poc_reward))
+                } else {
+                    // expired
+                    // only daily_base_poc_reward
+                    let credit_level = Self::get_credit_level(credit_data.credit);
+                    let (base_daily_poc_reward, _) = Self::get_daily_poc_reward(credit_level);
+                    Some((BalanceOf::<T>::zero(), base_daily_poc_reward))
+                }
+            } else {
+                None
+            }
         }
     }
 }
