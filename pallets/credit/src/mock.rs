@@ -1,5 +1,7 @@
+use super::CreditData;
 use crate as pallet_credit;
 use frame_support::{
+    pallet_prelude::GenesisBuild,
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
@@ -104,12 +106,12 @@ pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 parameter_types! {
-    pub const CreditInitScore: u64 = 60;
-    pub const MaxCreditScore: u64 = 800;
+    pub const CreditInitScore: u64 = 0;
+    pub const MaxCreditScore: u64 = u64::MAX;
     pub const CreditScoreCapPerEra: u8 = 5;
     pub const CreditScoreAttenuationLowerBound: u64 = 40;
     pub const CreditScoreAttenuationStep: u64 = 5;
-    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 100;
     pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
@@ -144,13 +146,47 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut storage = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
-    let _ = pallet_balances::GenesisConfig::<Test> {
+    pallet_balances::GenesisConfig::<Test> {
         balances: vec![(1, 500), (2, 500), (3, 500), (4, 500), (5, 500)],
     }
-    .assimilate_storage(&mut storage);
+    .assimilate_storage(&mut storage)
+    .unwrap();
+    let genesis_config = pallet_credit::GenesisConfig::<Test> {
+        credit_settings: vec![],
+        user_credit_data: vec![
+            (
+                1,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+            (
+                2,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+            (
+                3,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+            (
+                4,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+        ],
+    };
+    GenesisBuild::<Test>::assimilate_storage(&genesis_config, &mut storage).unwrap();
 
-    let ext = sp_io::TestExternalities::from(storage);
-    ext
+    storage.into()
 }
 
 pub fn run_to_block(n: u64) {

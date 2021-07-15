@@ -113,5 +113,9 @@
     "tax_rate": "Percent",
     "max_referees_with_rewards": "u8",
     "reward_per_referee": "Balance"
+  },
+  "CreditData": {
+    "credit": "u64",
+    "number_of_referees": "u8"
   }
 }
