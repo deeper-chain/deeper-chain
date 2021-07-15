@@ -95,6 +95,20 @@ fn get_credit_score() {
 }
 
 #[test]
+fn get_number_of_referees() {
+    new_test_ext().execute_with(|| {
+        UserCredit::<Test>::insert(
+            1,
+            CreditData {
+                credit: 100,
+                number_of_referees: 1,
+            },
+        );
+        assert_eq!(Credit::get_number_of_referees(&1).unwrap(), 1);
+    });
+}
+
+#[test]
 fn slash_credit() {
     new_test_ext().execute_with(|| {
         UserCredit::<Test>::insert(

@@ -67,6 +67,7 @@ pub struct CreditData {
 
 pub trait CreditInterface<AccountId> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
+    fn get_number_of_referees(account_id: &AccountId) -> Option<u8>;
     fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
     fn slash_credit(account_id: &AccountId);
     fn get_credit_level(credit_score: u64) -> CreditLevel;
@@ -308,6 +309,14 @@ pub mod pallet {
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
             if let Some(credit_data) = Self::get_user_credit(account_id) {
                 Some(credit_data.credit)
+            } else {
+                None
+            }
+        }
+
+        fn get_number_of_referees(account_id: &T::AccountId) -> Option<u8> {
+            if let Some(credit_data) = Self::get_user_credit(account_id) {
+                Some(credit_data.number_of_referees)
             } else {
                 None
             }
