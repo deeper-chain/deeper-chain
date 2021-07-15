@@ -219,39 +219,50 @@ pub mod pallet {
                         .into();
                     log!(
                         info,
-                        "server_id: {:?}, balance_num: {},score_delta:{}",
+                        "server_id: {:?}, balance_num: {}, score_delta:{}",
                         server_id.clone(),
                         balance_num,
                         score_delta
                     );
                     let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
                     if score_delta > cap {
-                        score_delta = cap
+                        score_delta = cap;
+                        log!(
+                            info,
+                            "server_id: {:?} score_delta capped at {}",
+                            server_id.clone(),
+                            cap
+                        );
                     }
                     if score_delta > 0 {
                         let new_credit = Self::get_credit_score(&server_id)
                             .unwrap_or(0)
                             .saturating_add(score_delta);
-                        Self::_update_credit(&server_id, new_credit);
-                        Self::deposit_event(Event::CreditUpdateSuccess(server_id, new_credit));
+                        if !Self::_update_credit(&server_id, new_credit) {
+                            log!(
+                                error,
+                                "failed to update credit {} for server_id: {:?}",
+                                new_credit,
+                                server_id.clone()
+                            );
+                        }
                     }
                 }
             }
         }
 
         /// inner: update credit score
-        fn _update_credit(account_id: &T::AccountId, score: u64) {
+        fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
             if UserCredit::<T>::contains_key(account_id) {
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => credit_data.credit = score,
                     _ => (),
                 });
+                Self::deposit_event(Event::CreditUpdateSuccess((*account_id).clone(), score));
+                true
             } else {
-                let credit_data = CreditData {
-                    credit: score,
-                    number_of_referees: 0,
-                };
-                UserCredit::<T>::insert(account_id, credit_data);
+                Self::deposit_event(Event::CreditUpdateFailed((*account_id).clone(), score));
+                false
             }
         }
 

@@ -120,7 +120,7 @@ fn update_credit() {
         Credit::update_credit(micropayments);
         assert_eq!(Credit::get_user_credit(&1).unwrap().credit, 5);
         assert_eq!(Credit::get_user_credit(&2).unwrap().credit, 1);
-        assert_eq!(Credit::get_user_credit(&3), None);
+        assert_eq!(Credit::get_user_credit(&3).unwrap().credit, 0);
         micropayments = vec![
             (1, 4 * 1_000_000_000_000_000, 1),
             (2, 2 * 1_000_000_000_000_000, 3),
@@ -129,6 +129,6 @@ fn update_credit() {
         Credit::update_credit(micropayments);
         assert_eq!(Credit::get_user_credit(&1).unwrap().credit, 9); // 5 + 4
         assert_eq!(Credit::get_user_credit(&2).unwrap().credit, 3); // 1 + 2
-        assert_eq!(Credit::get_user_credit(&4), None);
+        assert_eq!(Credit::get_user_credit(&4).unwrap().credit, 0);
     });
 }

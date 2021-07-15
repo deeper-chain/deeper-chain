@@ -1,5 +1,7 @@
+use super::CreditData;
 use crate as pallet_credit;
 use frame_support::{
+    pallet_prelude::GenesisBuild,
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
@@ -144,13 +146,47 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut storage = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
-    let _ = pallet_balances::GenesisConfig::<Test> {
+    pallet_balances::GenesisConfig::<Test> {
         balances: vec![(1, 500), (2, 500), (3, 500), (4, 500), (5, 500)],
     }
-    .assimilate_storage(&mut storage);
+    .assimilate_storage(&mut storage)
+    .unwrap();
+    let genesis_config = pallet_credit::GenesisConfig::<Test> {
+        credit_settings: vec![],
+        user_credit_data: vec![
+            (
+                1,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+            (
+                2,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+            (
+                3,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+            (
+                4,
+                CreditData {
+                    credit: 0,
+                    number_of_referees: 0,
+                },
+            ),
+        ],
+    };
+    GenesisBuild::<Test>::assimilate_storage(&genesis_config, &mut storage).unwrap();
 
-    let ext = sp_io::TestExternalities::from(storage);
-    ext
+    storage.into()
 }
 
 pub fn run_to_block(n: u64) {
