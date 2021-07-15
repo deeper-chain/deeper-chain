@@ -160,7 +160,7 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             for cs in self.credit_settings.clone().into_iter() {
-                <CreditSettings<T>>::insert(cs.credit_level.clone(), cs);
+                Pallet::<T>::_update_credit_setting(cs);
             }
             for uc in self.user_credit_data.clone().into_iter() {
                 <UserCredit<T>>::insert(uc.0, uc.1);
@@ -216,32 +216,7 @@ pub mod pallet {
             credit_setting: CreditSetting<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
-
-            let daily_referee_reward = credit_setting
-                .reward_per_referee
-                .saturating_mul(credit_setting.max_referees_with_rewards.into());
-
-            // poc reward
-            let base_total_reward = Perbill::from_rational_approximation(270u32, 365u32)
-                * (credit_setting.base_apy * credit_setting.balance);
-            let base_daily_poc_reward = Perbill::from_rational_approximation(1u32, 270u32)
-                * base_total_reward
-                - daily_referee_reward;
-
-            let base_total_reward_with_bonus = Perbill::from_rational_approximation(270u32, 365u32)
-                * (credit_setting
-                    .base_apy
-                    .saturating_add(credit_setting.bonus_apy)
-                    * credit_setting.balance);
-            let base_daily_poc_reward_with_bonus =
-                Perbill::from_rational_approximation(1u32, 270u32) * base_total_reward_with_bonus
-                    - daily_referee_reward;
-
-            DailyPocReward::<T>::insert(
-                credit_setting.credit_level.clone(),
-                (base_daily_poc_reward, base_daily_poc_reward_with_bonus),
-            );
-            CreditSettings::<T>::insert(credit_setting.credit_level.clone(), credit_setting);
+            Self::_update_credit_setting(credit_setting);
             Ok(().into())
         }
     }
@@ -341,6 +316,36 @@ pub mod pallet {
             } else {
                 false
             }
+        }
+    }
+
+    impl<T: Config> Module<T> {
+        fn _update_credit_setting(credit_setting: CreditSetting<BalanceOf<T>>) {
+            let daily_referee_reward = credit_setting
+                .reward_per_referee
+                .saturating_mul(credit_setting.max_referees_with_rewards.into());
+
+            // poc reward
+            let base_total_reward = Perbill::from_rational_approximation(270u32, 365u32)
+                * (credit_setting.base_apy * credit_setting.balance);
+            let base_daily_poc_reward = (Perbill::from_rational_approximation(1u32, 270u32)
+                * base_total_reward)
+                .saturating_sub(daily_referee_reward);
+
+            let base_total_reward_with_bonus = Perbill::from_rational_approximation(270u32, 365u32)
+                * (credit_setting
+                    .base_apy
+                    .saturating_add(credit_setting.bonus_apy)
+                    * credit_setting.balance);
+            let base_daily_poc_reward_with_bonus =
+                (Perbill::from_rational_approximation(1u32, 270u32) * base_total_reward_with_bonus)
+                    .saturating_sub(daily_referee_reward);
+
+            DailyPocReward::<T>::insert(
+                credit_setting.credit_level.clone(),
+                (base_daily_poc_reward, base_daily_poc_reward_with_bonus),
+            );
+            CreditSettings::<T>::insert(credit_setting.credit_level.clone(), credit_setting);
         }
     }
 

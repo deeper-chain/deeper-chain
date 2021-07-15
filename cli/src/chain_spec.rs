@@ -531,7 +531,7 @@ pub fn testnet_genesis(
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Six,
-                    balance: 0,
+                    balance: 288_000 * DPR,
                     base_apy: Percent::from_percent(54),
                     bonus_apy: Percent::from_percent(20),
                     max_rank_with_bonus: 400u32,
@@ -541,7 +541,7 @@ pub fn testnet_genesis(
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Seven,
-                    balance: 0,
+                    balance: 368_000 * DPR,
                     base_apy: Percent::from_percent(57),
                     bonus_apy: Percent::from_percent(25),
                     max_rank_with_bonus: 200u32,
@@ -551,7 +551,7 @@ pub fn testnet_genesis(
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Eight,
-                    balance: 0,
+                    balance: 468_000 * DPR,
                     base_apy: Percent::from_percent(60),
                     bonus_apy: Percent::from_percent(39),
                     max_rank_with_bonus: 100u32,
