@@ -1,11 +1,5 @@
-use crate::{mock::*, Error};
-use frame_support::{
-    assert_noop, assert_ok,
-    dispatch::{DispatchError, DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-    weights::PostDispatchInfo,
-};
-use sp_core::sr25519::{Public, Signature};
-use sp_io::crypto::sr25519_verify;
+use crate::{mock::*, Error, NodeInterface};
+use frame_support::{assert_ok, dispatch::DispatchErrorWithPostInfo};
 
 #[test]
 fn fn_register_device() {
@@ -169,5 +163,27 @@ fn fn_update_server() {
                 Error::<Test>::DurationOverflow
             ))
         );
+    });
+}
+
+#[test]
+fn im_online() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_eq!(DeeperNode::get_im_online(1), 0);
+        run_to_block(1);
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_eq!(DeeperNode::get_im_online(1), 1);
+    });
+}
+
+#[test]
+fn im_offline() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        run_to_block(1);
+        assert_eq!(DeeperNode::im_offline(&1), false);
+        run_to_block(24 * 3600 * 1000 / 5000 + 1);
+        assert_eq!(DeeperNode::im_offline(&1), true);
     });
 }

@@ -26,6 +26,12 @@ pub struct Node<AccountId, BlockNumber> {
     expire: BlockNumber,
 }
 
+pub trait NodeInterface<AccountId> {
+    /// This function will be used by credit pallet to 
+    /// re-calculate credit for accounts that have credit.
+    fn im_offline(account_id: &AccountId) -> bool;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -82,6 +88,11 @@ pub mod pallet {
     #[pallet::getter(fn get_servers_by_region)]
     pub(super) type ServersByRegion<T: Config> =
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn get_im_online)]
+    pub(super) type ImOnline<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -255,6 +266,13 @@ pub mod pallet {
                 Error::<T>::DeviceNotRegister
             );
             let _ = Self::try_remove_server(&sender);
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)]
+        pub fn im_online(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ImOnline::<T>::insert(sender, <frame_system::Module<T>>::block_number());
             Ok(().into())
         }
     }
@@ -722,6 +740,14 @@ pub mod pallet {
 
         pub fn registered_devices() -> Vec<Node<T::AccountId, T::BlockNumber>> {
             DeviceInfo::<T>::iter_values().collect::<Vec<_>>()
+        }
+    }
+
+    impl<T: Config> NodeInterface<T::AccountId> for Module<T> {
+        fn im_offline(account_id: &T::AccountId) -> bool {
+            let block = Self::get_im_online(account_id);
+            let current_block = <frame_system::Module<T>>::block_number();
+            current_block - block > T::BlockNumber::from(T::DayToBlocknum::get())
         }
     }
 }
