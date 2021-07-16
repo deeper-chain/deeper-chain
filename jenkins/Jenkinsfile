@@ -1,6 +1,6 @@
 #!groovy
 pipeline {
-    agent any
+    agent { label "deeper-chain-runner" }
     environment {
         webhook_key = credentials('webhook_key')
     }
