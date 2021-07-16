@@ -20,12 +20,15 @@
 use crate as staking;
 use crate::*;
 use frame_support::{
-    assert_ok, parameter_types,
+    assert_ok,
+    pallet_prelude::GenesisBuild,
+    parameter_types,
     traits::{Currency, FindAuthor, Get, OnFinalize, OnInitialize, OneSessionHandler},
     weights::{constants::RocksDbWeight, Weight},
     IterableStorageMap, StorageDoubleMap, StorageMap, StorageValue,
 };
 use node_primitives::Moment;
+use pallet_credit::{CreditData, CreditLevel};
 use sp_core::H256;
 use sp_io;
 use sp_npos_elections::{
@@ -104,9 +107,9 @@ frame_support::construct_runtime!(
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
         Staking: staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
     }
@@ -572,6 +575,94 @@ impl ExtBuilder {
                 .collect(),
         }
         .assimilate_storage(&mut storage);
+
+        pub const BLOCKS_PER_ERA: u64 = 178000 as u64;
+        let credit_genesis_config = pallet_credit::GenesisConfig::<Test> {
+            credit_settings: vec![],
+            user_credit_data: vec![
+                (
+                    1,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    2,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    3,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    4,
+                    CreditData {
+                        credit: 0,
+                        initial_credit_level: CreditLevel::Zero,
+                        rank_in_initial_credit_level: 0u32,
+                        number_of_referees: 0,
+                        expiration: 0,
+                    },
+                ),
+                (
+                    10,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    11,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    19,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    22,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+            ],
+        };
+        GenesisBuild::<Test>::assimilate_storage(&credit_genesis_config, &mut storage).unwrap();
 
         let mut ext = sp_io::TestExternalities::from(storage);
         ext.execute_with(|| {

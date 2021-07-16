@@ -5455,30 +5455,30 @@ fn test_delegate() {
             // initialize credit score
             let micropayment_vec = vec![(10, 80 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(10), Some(65));
+            assert_eq!(Credit::get_credit_score(&10), Some(105));
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(10), vec![4]));
             // check delegated info
             let info = Staking::delegated_to_validators(10);
-            assert_eq!(info.score, 65);
+            assert_eq!(info.score, 105);
             assert_eq!(info.validators, vec![4]);
-            assert_eq!(Staking::candidate_delegators(4), vec![(10, 65)]);
+            assert_eq!(Staking::candidate_delegators(4), vec![(10, 105)]);
 
             // TEST2： delegate to many validators
             // initialize credit score
             let micropayment_vec = vec![(11, 65 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(11), Some(65));
+            assert_eq!(Credit::get_credit_score(&11), Some(105));
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(11), vec![4, 6, 8, 10]));
             // check delegated info
             let info = Staking::delegated_to_validators(11);
-            assert_eq!(info.score, 65);
+            assert_eq!(info.score, 105);
             assert_eq!(info.validators, vec![4, 6, 8, 10]);
-            assert_eq!(Staking::candidate_delegators(4), vec![(10, 65), (11, 17)]);
-            assert_eq!(Staking::candidate_delegators(6), vec![(11, 16)]);
-            assert_eq!(Staking::candidate_delegators(8), vec![(11, 16)]);
-            assert_eq!(Staking::candidate_delegators(10), vec![(11, 16)]);
+            assert_eq!(Staking::candidate_delegators(4), vec![(10, 105), (11, 27)]);
+            assert_eq!(Staking::candidate_delegators(6), vec![(11, 26)]);
+            assert_eq!(Staking::candidate_delegators(8), vec![(11, 26)]);
+            assert_eq!(Staking::candidate_delegators(10), vec![(11, 26)]);
 
             //  TEST3： delegate with invalid validator
             let micropayment_vec = vec![(19, 80 * 1_000_000_000_000_000, 5)];
@@ -5489,24 +5489,18 @@ fn test_delegate() {
             );
 
             //  TEST4： delegate with invalid validator
-            let micropayment_vec = vec![(20, 80 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
             assert_noop!(
                 Staking::delegate(Origin::signed(19), vec![4, 5]),
                 Error::<Test>::NotInCandidateValidator
             );
 
             //  TEST5： delegate with low score
-            //let micropayment_vec = vec![(21, 60 * 1_000_000_000_000_000, 5)];
-            //Credit::update_credit(micropayment_vec);
             assert_noop!(
                 Staking::delegate(Origin::signed(21), vec![4, 6]),
                 Error::<Test>::CreditScoreTooLow
             );
 
             //  TEST6： delegate after having called delegate()
-            let micropayment_vec = vec![(22, 80 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
             assert_ok!(Staking::delegate(Origin::signed(22), vec![4, 6, 8, 10]));
             assert_noop!(
                 Staking::delegate(Origin::signed(22), vec![4]),
@@ -5527,7 +5521,7 @@ fn test_undelegate() {
             // initialize credit score
             let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(11), Some(65));
+            assert_eq!(Credit::get_credit_score(&11), Some(105));
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(11), vec![4]));
             // undelegate after calling delegate()
@@ -5577,7 +5571,7 @@ fn test_total_delegated_score() {
 
             // check total score
             mock::start_active_era(4);
-            assert_eq!(Staking::total_delegated_score(4), Some(63 + 62));
+            assert_eq!(Staking::total_delegated_score(4), Some(103 + 102));
         });
 }
 
@@ -5596,18 +5590,18 @@ fn test_get_total_validator_score() {
 
             // check total score
             mock::start_active_era(4);
-            assert_eq!(Staking::total_delegated_score(4), Some(61 + 62));
+            assert_eq!(Staking::total_delegated_score(4), Some(101 + 102));
 
             mock::start_active_era(5);
             // check total delegated score for validator
             assert_eq!(
                 Staking::get_total_validator_score(Staking::current_era().unwrap(), 11),
-                Some(62)
+                Some(102)
             );
 
             assert_eq!(
                 Staking::get_total_validator_score(Staking::current_era().unwrap(), 21),
-                Some(61)
+                Some(101)
             );
         });
 }
@@ -5629,12 +5623,12 @@ fn test_poc_slash() {
         .build_and_execute(|| {
             let micropayment_vec = vec![(11, 1 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(11), Some(61)); // init score 60 plus delta 1
+            assert_eq!(Credit::get_credit_score(&11), Some(101)); // init score 60 plus delta 1
             assert_ok!(Staking::delegate(Origin::signed(11), vec![11, 21]));
 
             mock::start_active_era(5);
 
             Staking::poc_slash(&11, 5);
-            assert_eq!(Credit::get_credit_score(11), Some(51)); // slashed 10
+            assert_eq!(Credit::get_credit_score(&11), Some(96)); // slashed 5
         });
 }
