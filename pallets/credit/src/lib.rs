@@ -413,7 +413,7 @@ pub mod pallet {
                     if current_block <= credit_data.expiration {
                         // unexpirated
                         let initial_credit_level = credit_data.initial_credit_level;
-                        let credit_setting = Self::get_credit_setting(initial_credit_level);
+                        let credit_setting = Self::get_credit_setting(initial_credit_level.clone());
                         // referal reward
                         let number_of_referees = if credit_data.number_of_referees
                             <= credit_setting.max_referees_with_rewards
@@ -427,18 +427,38 @@ pub mod pallet {
                             .saturating_mul(number_of_referees.into());
 
                         // poc reward
-                        let credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
+                        let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
                         let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
-                            Self::get_daily_poc_reward(credit_level);
-                        let daily_poc_reward = if credit_data.rank_in_initial_credit_level
-                            <= credit_setting.max_rank_with_bonus
-                        {
-                            daily_poc_reward_with_bonus
-                        } else {
-                            base_daily_poc_reward
-                        };
+                            Self::get_daily_poc_reward(current_credit_level.clone());
 
-                        Some((daily_referee_reward, daily_poc_reward))
+                        if current_credit_level == initial_credit_level {
+                            // level unchanged
+                            let daily_poc_reward = if credit_data.rank_in_initial_credit_level
+                                <= credit_setting.max_rank_with_bonus
+                            {
+                                daily_poc_reward_with_bonus
+                            } else {
+                                base_daily_poc_reward
+                            };
+                            Some((daily_referee_reward, daily_poc_reward))
+                        } else {
+                            // level changed
+                            let (
+                                initial_base_daily_poc_reward,
+                                initial_daily_poc_reward_with_bonus,
+                            ) = Self::get_daily_poc_reward(initial_credit_level);
+
+                            let daily_poc_reward = if credit_data.rank_in_initial_credit_level
+                                <= credit_setting.max_rank_with_bonus
+                            {
+                                base_daily_poc_reward
+                                    + (initial_daily_poc_reward_with_bonus
+                                        - initial_base_daily_poc_reward)
+                            } else {
+                                base_daily_poc_reward
+                            };
+                            Some((daily_referee_reward, daily_poc_reward))
+                        }
                     } else {
                         // expired
                         // only daily_base_poc_reward
