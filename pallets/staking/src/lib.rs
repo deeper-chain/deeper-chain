@@ -1184,6 +1184,12 @@ decl_storage! {
             <BlockReward>::put(T::RewardPerBlock::get());
             <RemainderMiningReward>::put(T::RemainderMiningReward::get());
 
+            let candidate_validators : Vec<_> = (&config.stakers)
+                .iter()
+                .map(|&(ref stash, _, _, _)| (stash.clone()))
+                .collect();
+            <CandidateValidators<T>>::put(candidate_validators);
+
             for &(ref stash, ref controller, balance, ref status) in &config.stakers {
                 assert!(
                     T::Currency::free_balance(&stash) >= balance,
@@ -1194,6 +1200,10 @@ decl_storage! {
                     T::Lookup::unlookup(controller.clone()),
                     balance,
                     RewardDestination::Staked,
+                );
+                let _ = <Module<T>>::delegate(
+                    T::Origin::from(Some(controller.clone()).into()),
+                    vec![stash.clone()]
                 );
                 let _ = match status {
                     StakerStatus::Validator => {
@@ -2381,10 +2391,9 @@ decl_module! {
 
             // check credit pass threshold
             if T::CreditInterface::pass_threshold(&controller, 0) == false {
-                error!("Credit score is to low to delegating a validator!");
+                error!("Credit score is too low to delegating a validator!");
                 Err(Error::<T>::CreditScoreTooLow)?
             }
-
             // check validators size
             if validators.len() > T::MaxValidatorsCanSelected::get() {
                 Err(Error::<T>::SelectTooManyValidators)?
