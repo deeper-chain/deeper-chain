@@ -1,16 +1,15 @@
 #!groovy
 pipeline {
-    agent { label "deeper-chain-runner" }
+    agent { label 'deeper-chain-runner' }
     environment {
         webhook_key = credentials('webhook_key')
     }
 
     stages {
-        stage('Unit Test'){
+        stage('Unit Test') {
             when {
                 not {
                     branch 'master'
-                    branch 'doni-jenkins'
                 }
             }
             steps {
@@ -25,31 +24,31 @@ pipeline {
                             alwaysLinkToLastBuild: true,
                             keepAll: false
                         ]
-}
+            }
         }
         stage('Code Build') {
-           when {
+            when {
                 branch 'master'
             }
-            steps{
-                echo "Code Building"
+            steps {
+                echo 'Code Building'
                 sh 'cargo build --release'
             }
         }
- //TODO   stage('Deploy')
+    //TODO   stage('Deploy')
     }
-    post{
-        always{
+    post {
+        always {
             sh 'cargo clean'
         }
-        fixed{
+        fixed {
             script {
-                    sh(script: "bash jenkins/post.sh fixed")
+                    sh(script: 'bash jenkins/post.sh fixed')
             }
         }
         regression {
             script {
-                    sh(script: "bash jenkins/post.sh regression")
+                    sh(script: 'bash jenkins/post.sh regression')
             }
         }
     }   }
