@@ -5623,7 +5623,7 @@ fn test_poc_slash() {
         .build_and_execute(|| {
             let micropayment_vec = vec![(11, 1 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(&11), Some(101)); // init score 60 plus delta 1
+            assert_eq!(Credit::get_credit_score(&11), Some(100 + 1)); // init score 100 plus delta 1
             assert_ok!(Staking::delegate(Origin::signed(11), vec![11, 21]));
 
             mock::start_active_era(5);

@@ -253,7 +253,6 @@ fn get_reward_with_slash_credit_with_bonus() {
             Some((18000000000000000000 * 7, 97068450647875213020))
         );
 
-
         Credit::slash_credit(&7);
         assert_eq!(Credit::get_user_credit(&7).unwrap().credit, 400 - 5);
         assert_eq!(

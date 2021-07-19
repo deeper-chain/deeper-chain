@@ -53,7 +53,7 @@ pub struct CreditSetting<Balance> {
     pub balance: Balance,
     pub base_apy: Percent,
     pub bonus_apy: Percent,
-    pub max_rank_with_bonus: u32, // max rank which can get bonusin the credit_level
+    pub max_rank_with_bonus: u32, // max rank which can get bonus in the credit_level
     pub tax_rate: Percent,
     pub max_referees_with_rewards: u8,
     pub reward_per_referee: Balance,
@@ -408,7 +408,7 @@ pub mod pallet {
         fn get_reward(account_id: &T::AccountId) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
             // read storage
             if let Some(credit_data) = Self::get_user_credit(account_id) {
-                if Self::pass_threshold(account_id, 0) == true {
+                if Self::pass_threshold(account_id, 0) {
                     let current_block = <frame_system::Module<T>>::block_number();
                     if current_block <= credit_data.expiration {
                         // unexpirated
