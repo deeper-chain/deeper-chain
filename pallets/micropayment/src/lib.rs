@@ -11,7 +11,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub(crate) const LOG_TARGET: &'static str = "micropayment";
+pub(crate) const LOG_TARGET: &'static str = "micro-payment";
 // syntactic sugar for logging.
 #[macro_export]
 macro_rules! log {
@@ -33,7 +33,10 @@ pub mod pallet {
     use pallet_balances::MutableCurrency;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::{traits::Zero, SaturatedConversion};
+    use sp_runtime::{
+        traits::{StoredMapError, Zero},
+        SaturatedConversion,
+    };
     extern crate alloc;
     use alloc::collections::btree_map::BTreeMap;
 
@@ -59,7 +62,7 @@ pub mod pallet {
         BalanceOf<T>,
     >;
 
-    // struct to store the registered Device Informatin
+    // struct to store micro-payment channel
     #[derive(Decode, Encode, Default)]
     pub struct Chan<AccountId, BlockNumber, Balance> {
         sender: AccountId,
@@ -99,19 +102,19 @@ pub mod pallet {
     pub(super) type SessionId<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u32, OptionQuery>;
 
-    // the last block that an ccount has micropayment transaction involved
+    // the last block that an ccount has micro-payment transaction involved
     #[pallet::storage]
     #[pallet::getter(fn last_updated)]
     pub(super) type LastUpdated<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, ValueQuery>;
 
-    // record total micorpayment channel balance of accountid
+    // record total micro-payment channel balance of accountId
     #[pallet::storage]
     #[pallet::getter(fn total_micropayment_chanel_balance)]
     pub(super) type TotalMicropaymentChannelBalance<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
 
-    // record server accounts who has claimed micropayment during a given block
+    // record server accounts who has claimed micro-payment during a given block
     #[pallet::storage]
     #[pallet::getter(fn get_server_by_block)]
     pub(super) type ServerByBlock<T: Config> = StorageDoubleMap<
@@ -160,7 +163,7 @@ pub mod pallet {
     pub enum Error<T> {
         /// Not enough balance
         NotEnoughBalance,
-        /// Micropayment channel not exist
+        /// micro-payment channel not exist
         ChannelNotExist,
         /// channel has been opened
         ChannelAlreadyOpened,
@@ -192,16 +195,16 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
-                !Channel::<T>::contains_key(sender.clone(), receiver.clone()),
+                !Channel::<T>::contains_key(&sender, &receiver),
                 Error::<T>::ChannelAlreadyOpened
             );
             ensure!(
                 sender.clone() != receiver.clone(),
                 Error::<T>::SameChannelEnds
             );
-            let nonce = Nonce::<T>::get((sender.clone(), receiver.clone()));
+            let nonce = Nonce::<T>::get((&sender, &receiver));
             let start_block = <frame_system::Module<T>>::block_number();
-            let duration_block = (duration as u32) * T::DayToBlocknum::get();
+            let duration_block = (duration as u32) * T::DayToBlocknum::get(); // TODO fix this bug
             let expiration = start_block + T::BlockNumber::from(duration_block);
             let chan = ChannelOf::<T> {
                 sender: sender.clone(),
@@ -373,16 +376,15 @@ pub mod pallet {
                 return Ok(().into());
             }
 
-            if SessionId::<T>::contains_key((sender.clone(), receiver.clone()))
-                && session_id
-                    != Self::get_session_id((sender.clone(), receiver.clone())).unwrap_or(0) + 1
+            if SessionId::<T>::contains_key((&sender, &receiver))
+                && session_id != Self::get_session_id((&sender, &receiver)).unwrap_or(0) + 1
             {
                 Err(Error::<T>::SessionError)?
             }
             Self::verify_signature(
                 &sender, &receiver, chan.nonce, session_id, amount, &signature,
             )?;
-            SessionId::<T>::insert((sender.clone(), receiver.clone()), session_id); // mark session_id as used
+            SessionId::<T>::insert((&sender, &receiver), session_id); // mark session_id as used
 
             if chan.balance < amount {
                 TotalMicropaymentChannelBalance::<T>::mutate_exists(&sender, |b| {
@@ -426,16 +428,16 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         fn _close_channel(sender: &T::AccountId, receiver: &T::AccountId) {
-            // remove all the sesson_ids of given channel
-            SessionId::<T>::remove((sender.clone(), receiver.clone()));
-            Channel::<T>::remove(sender.clone(), receiver.clone());
-            Nonce::<T>::mutate((sender.clone(), receiver.clone()), |v| *v += 1);
+            // remove all the session_ids of given channel
+            SessionId::<T>::remove((sender, receiver));
+            Channel::<T>::remove(sender, receiver);
+            Nonce::<T>::mutate((sender, receiver), |v| *v += 1);
         }
 
         // verify signature, signature is on hash of |receiver_addr|nonce|session_id|amount|
         // during one session_id, a sender can send multiple accumulated
-        // micropayments with the same session_id; the receiver can only claim one payment of the same
-        // session_id, i.e. the latest accumulated micropayment.
+        // micro-payments with the same session_id; the receiver can only claim one payment of the same
+        // session_id, i.e. the latest accumulated micro-payment.
         pub fn verify_signature(
             sender: &T::AccountId,
             receiver: &T::AccountId,
@@ -483,16 +485,16 @@ pub mod pallet {
         ) {
             // update last block
             let block_number = <frame_system::Module<T>>::block_number();
-            LastUpdated::<T>::insert(sender.clone(), block_number);
-            LastUpdated::<T>::insert(receiver.clone(), block_number);
+            LastUpdated::<T>::insert(&sender, block_number);
+            LastUpdated::<T>::insert(&receiver, block_number);
             log!(
                 info,
-                "lastupdated block is {:?} for accounts: {:?}, {:?}",
+                "last updated block is {:?} for accounts: {:?}, {:?}",
                 block_number,
                 &sender,
                 &receiver
             );
-            // update micropaymentinfo
+            // update micro-payment info
             ServerByBlock::<T>::insert(block_number, receiver.clone(), true);
             let balance = ClientPaymentByBlockServer::<T>::get((&block_number, &receiver), &sender);
             ClientPaymentByBlockServer::<T>::insert(
@@ -501,12 +503,12 @@ pub mod pallet {
                 balance + amount,
             );
 
-            log!(info, "micropayment info updated at block {:?} for receiver:{:?}, sender:{:?}, with old balance {:?}, new balance {:?}",
+            log!(info, "micro-payment info updated at block {:?} for receiver:{:?}, sender:{:?}, with old balance {:?}, new balance {:?}",
                     block_number, &receiver, &sender, balance, balance+amount);
         }
 
-        // calculate accumulated micropayments statitics between block number "from" and "to" inclusively
-        // return is a list of (server_account, accumulated_micropayments,
+        // calculate accumulated micro-payments statistics between block number "from" and "to" inclusively
+        // return is a list of (server_account, accumulated_micro-payments,
         // num_of_clients) between block "from" and "to" (inclusive)
         pub fn micropayment_statistics(
             from: T::BlockNumber,
@@ -546,35 +548,34 @@ pub mod pallet {
             res
         }
 
-        // return the last blocknumber for an account join micropayment activity
-        pub fn last_update_block(acc: T::AccountId) -> T::BlockNumber {
-            LastUpdated::<T>::get(acc)
+        // return the last blocknumber for an account join micro-payment activity
+        pub fn last_update_block(account: T::AccountId) -> T::BlockNumber {
+            LastUpdated::<T>::get(account)
         }
 
         // TODO: take ExistentialDeposit into account
-        fn take_from_account(acc: &T::AccountId, amt: BalanceOf<T>) -> bool {
-            let actual = T::Currency::mutate_account_balance(acc, |account| {
-                if amt > account.free {
+        fn take_from_account(account: &T::AccountId, amount: BalanceOf<T>) -> bool {
+            let result = T::Currency::mutate_account_balance(account, |balance| {
+                if amount > balance.free {
                     return Zero::zero();
                 } else {
-                    account.free -= amt;
+                    balance.free -= amount;
                 }
-                return amt;
+                return amount;
             });
-            if let Ok(actual_balance) = actual {
-                if actual_balance < amt {
-                    return false;
-                } else {
-                    return true;
-                }
+            match result {
+                Ok(actual_amount) => actual_amount == amount,
+                _ => false
             }
-            false
         }
 
-        fn deposit_into_account(acc: &T::AccountId, amt: BalanceOf<T>) {
-            let _ = T::Currency::mutate_account_balance(acc, |account| {
-                account.free += amt;
-            });
+        fn deposit_into_account(
+            account: &T::AccountId,
+            amount: BalanceOf<T>,
+        ) -> Result<(), StoredMapError> {
+            T::Currency::mutate_account_balance(account, |balance| {
+                balance.free += amount;
+            })
         }
     }
 }
