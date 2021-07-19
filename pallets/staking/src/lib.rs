@@ -453,6 +453,15 @@ impl<AccountId> Default for RewardDestination<AccountId> {
     }
 }
 
+#[derive(Encode, Decode, Default, RuntimeDebug)]
+pub struct RewardData<Balance: HasCompact> {
+    pub total_referee_reward: Balance,
+    pub received_referee_reward: Balance,
+    pub daily_referee_reward: Balance,
+    pub received_pocr_reward: Balance,
+    pub daily_poc_reward: Balance,
+}
+
 /// Preference of what happens regarding validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct ValidatorPrefs {
@@ -788,7 +797,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
     /// Credit CreditInterface
-    type CreditInterface: CreditInterface<Self::AccountId>;
+    type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
 
     /// max validators can be selected to delegate
     type MaxValidatorsCanSelected: Get<usize>;
@@ -1135,7 +1144,6 @@ decl_storage! {
 
         pub RemainderMiningReward get(fn remainder_mining_reward): Option<u128>;
 
-        /// TODO to be remove storage from delegating pallet
         /// (delegator) -> CreditDelegateInfo{}
         DelegatedToValidators get(fn delegated_to_validators): map hasher(blake2_128_concat) T::AccountId => CreditDelegateInfo<T::AccountId>;
         /// (delegator, validator) -> bool
@@ -1160,6 +1168,9 @@ decl_storage! {
         ///  candidate validator list: CandidateValidators == Validators
         pub CandidateValidators get(fn get_candidate_validators): Option<Vec<T::AccountId>>;
 
+        /// reward of delegator
+        pub Reward get(fn get_reward): map hasher(blake2_128_concat) T::AccountId => RewardData<BalanceOf<T>>;
+
         /// True if network has been upgraded to this version.
         /// Storage version of the pallet.
         ///
@@ -1173,6 +1184,12 @@ decl_storage! {
             <BlockReward>::put(T::RewardPerBlock::get());
             <RemainderMiningReward>::put(T::RemainderMiningReward::get());
 
+            let candidate_validators : Vec<_> = (&config.stakers)
+                .iter()
+                .map(|&(ref stash, _, _, _)| (stash.clone()))
+                .collect();
+            <CandidateValidators<T>>::put(candidate_validators);
+
             for &(ref stash, ref controller, balance, ref status) in &config.stakers {
                 assert!(
                     T::Currency::free_balance(&stash) >= balance,
@@ -1183,6 +1200,10 @@ decl_storage! {
                     T::Lookup::unlookup(controller.clone()),
                     balance,
                     RewardDestination::Staked,
+                );
+                let _ = <Module<T>>::delegate(
+                    T::Origin::from(Some(controller.clone()).into()),
+                    vec![stash.clone()]
                 );
                 let _ = match status {
                     StakerStatus::Validator => {
@@ -2370,10 +2391,9 @@ decl_module! {
 
             // check credit pass threshold
             if T::CreditInterface::pass_threshold(&controller, 0) == false {
-                error!("Credit score is to low to delegating a validator!");
+                error!("Credit score is too low to delegating a validator!");
                 Err(Error::<T>::CreditScoreTooLow)?
             }
-
             // check validators size
             if validators.len() > T::MaxValidatorsCanSelected::get() {
                 Err(Error::<T>::SelectTooManyValidators)?

@@ -20,7 +20,7 @@
 
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
-use node_runtime::constants::currency::*;
+use node_runtime::constants::{currency::*, time::BLOCKS_PER_ERA};
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig,
@@ -42,7 +42,7 @@ use sp_runtime::{
     Perbill, Percent,
 };
 
-pub use node_primitives::{AccountId, Balance, Signature};
+pub use node_primitives::{AccountId, Balance, BlockNumber, Signature};
 pub use node_runtime::GenesisConfig;
 use serde_json as json;
 
@@ -474,6 +474,7 @@ pub fn testnet_genesis(
                     balance: 0,
                     base_apy: Percent::from_percent(0),
                     bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
                     tax_rate: Percent::from_percent(0),
                     max_referees_with_rewards: 0,
                     reward_per_referee: 0,
@@ -483,6 +484,7 @@ pub fn testnet_genesis(
                     balance: 20_000 * DPR,
                     base_apy: Percent::from_percent(39),
                     bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
                     tax_rate: Percent::from_percent(10),
                     max_referees_with_rewards: 1,
                     reward_per_referee: 18 * DPR,
@@ -490,63 +492,70 @@ pub fn testnet_genesis(
                 CreditSetting {
                     credit_level: CreditLevel::Two,
                     balance: 46_800 * DPR,
-                    base_apy: Percent::from_percent(42),
-                    bonus_apy: Percent::from_percent(5),
-                    tax_rate: Percent::from_percent(9),
+                    base_apy: Percent::from_percent(40),
+                    bonus_apy: Percent::from_percent(7),
+                    max_rank_with_bonus: 1200u32,
+                    tax_rate: Percent::from_percent(10),
                     max_referees_with_rewards: 2,
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Three,
                     balance: 76_800 * DPR,
-                    base_apy: Percent::from_percent(45),
-                    bonus_apy: Percent::from_percent(8),
-                    tax_rate: Percent::from_percent(8),
+                    base_apy: Percent::from_percent(42),
+                    bonus_apy: Percent::from_percent(11),
+                    max_rank_with_bonus: 1000u32,
+                    tax_rate: Percent::from_percent(9),
                     max_referees_with_rewards: 3,
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Four,
                     balance: 138_000 * DPR,
-                    base_apy: Percent::from_percent(48),
-                    bonus_apy: Percent::from_percent(11),
-                    tax_rate: Percent::from_percent(7),
+                    base_apy: Percent::from_percent(46),
+                    bonus_apy: Percent::from_percent(13),
+                    max_rank_with_bonus: 800u32,
+                    tax_rate: Percent::from_percent(9),
                     max_referees_with_rewards: 7,
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Five,
                     balance: 218_000 * DPR,
-                    base_apy: Percent::from_percent(51),
-                    bonus_apy: Percent::from_percent(15),
-                    tax_rate: Percent::from_percent(6),
+                    base_apy: Percent::from_percent(50),
+                    bonus_apy: Percent::from_percent(16),
+                    max_rank_with_bonus: 600u32,
+                    tax_rate: Percent::from_percent(8),
                     max_referees_with_rewards: 12,
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Six,
-                    balance: 0,
+                    balance: 288_000 * DPR,
                     base_apy: Percent::from_percent(54),
                     bonus_apy: Percent::from_percent(20),
-                    tax_rate: Percent::from_percent(5),
+                    max_rank_with_bonus: 400u32,
+                    tax_rate: Percent::from_percent(7),
                     max_referees_with_rewards: 18,
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Seven,
-                    balance: 0,
+                    balance: 368_000 * DPR,
                     base_apy: Percent::from_percent(57),
                     bonus_apy: Percent::from_percent(25),
-                    tax_rate: Percent::from_percent(4),
+                    max_rank_with_bonus: 200u32,
+                    tax_rate: Percent::from_percent(6),
                     max_referees_with_rewards: 25,
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
                     credit_level: CreditLevel::Eight,
-                    balance: 0,
+                    balance: 468_000 * DPR,
                     base_apy: Percent::from_percent(60),
-                    bonus_apy: Percent::from_percent(39),
-                    tax_rate: Percent::from_percent(3),
+                    bonus_apy: Percent::from_percent(30),
+                    max_rank_with_bonus: 100u32,
+                    tax_rate: Percent::from_percent(5),
                     max_referees_with_rewards: 34,
                     reward_per_referee: 18 * DPR,
                 },
@@ -559,7 +568,10 @@ pub fn testnet_genesis(
                         x,
                         CreditData {
                             credit: 100,
+                            initial_credit_level: CreditLevel::One,
+                            rank_in_initial_credit_level: 1u32,
                             number_of_referees: 1,
+                            expiration: BLOCKS_PER_ERA,
                         },
                     )
                 })

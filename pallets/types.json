@@ -110,12 +110,16 @@
     "balance": "Balance",
     "base_apy": "Percent",
     "bonus_apy": "Percent",
+    "max_rank_with_bonus": "u32",
     "tax_rate": "Percent",
     "max_referees_with_rewards": "u8",
     "reward_per_referee": "Balance"
   },
   "CreditData": {
     "credit": "u64",
-    "number_of_referees": "u8"
+    "initial_credit_level": "CreditLevel",
+    "rank_in_initial_credit_level": "u32",
+    "number_of_referees": "u8",
+    "expiration": "BlockNumber"
   }
 }
