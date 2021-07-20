@@ -13,8 +13,8 @@ fn open_channel() {
         // OK
         assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
         assert_eq!(
-            Micropayment::get_channel(&1, &2), 
-            Chan{
+            Micropayment::get_channel(&1, &2),
+            Chan {
                 client: 1,
                 server: 2,
                 balance: 300,

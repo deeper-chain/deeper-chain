@@ -115,7 +115,7 @@ pub mod pallet {
     #[pallet::getter(fn get_payment_by_server)]
     pub(super) type PaymentByServer<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
-    
+
     #[pallet::storage]
     #[pallet::getter(fn get_clients_by_server)]
     pub(super) type ClientsByServer<T: Config> =
@@ -477,7 +477,13 @@ pub mod pallet {
             ClientsByServer::<T>::mutate(server, |v| {
                 v.insert((*client).clone());
             });
-            log!(info, "client:{:?} added to server:{:?} at block {:?}", client, server, block_number);        
+            log!(
+                info,
+                "client:{:?} added to server:{:?} at block {:?}",
+                client,
+                server,
+                block_number
+            );
         }
 
         // calculate accumulated micro-payments statistics of
