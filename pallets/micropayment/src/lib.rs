@@ -34,6 +34,7 @@ pub mod pallet {
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{StoredMapError, Zero};
+    use sp_std::collections::btree_set::BTreeSet;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -114,6 +115,11 @@ pub mod pallet {
     #[pallet::getter(fn get_payment_by_server)]
     pub(super) type PaymentByServer<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
+    
+    #[pallet::storage]
+    #[pallet::getter(fn get_clients_by_server)]
+    pub(super) type ClientsByServer<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, BTreeSet<T::AccountId>, ValueQuery>;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -424,7 +430,7 @@ pub mod pallet {
             sig.copy_from_slice(&signature);
             let sig = sr25519::Signature::from_slice(&sig);
 
-            let msg = Self::construct_byte_array_and_hash(&server, nonce, session_id, amount);
+            let msg = Self::construct_byte_array_and_hash(server, nonce, session_id, amount);
 
             let verified = sr25519_verify(&sig, &msg, &pub_key);
             ensure!(verified, Error::<T>::InvalidSignature);
@@ -455,27 +461,32 @@ pub mod pallet {
         ) {
             // update last block
             let block_number = <frame_system::Module<T>>::block_number();
-            LastUpdated::<T>::insert(&client, block_number);
-            LastUpdated::<T>::insert(&server, block_number);
+            LastUpdated::<T>::insert(client, block_number);
+            LastUpdated::<T>::insert(server, block_number);
             log!(
                 info,
                 "last updated block is {:?} for accounts: {:?}, {:?}",
                 block_number,
-                &client,
-                &server
+                client,
+                server
             );
-            let balance = Self::get_payment_by_server(&server);
-            PaymentByServer::<T>::insert(&server, balance + amount);
+            let balance = Self::get_payment_by_server(server);
+            PaymentByServer::<T>::insert(server, balance + amount);
             log!(info, "micro-payment info updated at block {:?} for server:{:?}, with old balance {:?}, new balance {:?}",
-                    block_number, &server, balance, balance + amount);
+                    block_number, server, balance, balance + amount);
+            ClientsByServer::<T>::mutate(server, |v| {
+                v.insert((*client).clone());
+            });
+            log!(info, "client:{:?} added to server:{:?} at block {:?}", client, server, block_number);        
         }
 
         // calculate accumulated micro-payments statistics of
         // the period since the genesis or last call of this function
-        pub fn micropayment_statistics() -> Vec<(T::AccountId, BalanceOf<T>)> {
-            let mut stats: Vec<(T::AccountId, BalanceOf<T>)> = Vec::new();
-            for (k, v) in PaymentByServer::<T>::drain() {
-                stats.push((k, v));
+        pub fn micropayment_statistics() -> Vec<(T::AccountId, BalanceOf<T>, u32)> {
+            let mut stats: Vec<(T::AccountId, BalanceOf<T>, u32)> = Vec::new();
+            for (server, payment) in PaymentByServer::<T>::drain() {
+                let num_of_clients = ClientsByServer::<T>::take(&server).len() as u32;
+                stats.push((server, payment, num_of_clients));
             }
             stats
         }

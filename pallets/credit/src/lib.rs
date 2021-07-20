@@ -222,8 +222,8 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         /// update credit score per era using micropayment vec
-        pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>)>) {
-            for (server_id, balance) in micropayment_vec {
+        pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
+            for (server_id, balance, _num_of_clients) in micropayment_vec {
                 let balance_num =
                     <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
                 let mut score_delta: u64 = balance_num

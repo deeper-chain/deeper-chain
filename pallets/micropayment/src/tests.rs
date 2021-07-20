@@ -237,8 +237,8 @@ fn micropayment_statistics() {
         run_to_block(9);
         let mut stats = Micropayment::micropayment_statistics();
         stats.sort_by(|a, b| (*a).0.cmp(&(*b).0));
-        assert_eq!(stats[0], (1, 18));
-        assert_eq!(stats[1], (2, 10));
+        assert_eq!(stats[0], (1, 18, 3));
+        assert_eq!(stats[1], (2, 10, 2));
         stats = Micropayment::micropayment_statistics();
         assert_eq!(stats.len(), 0); // the data should have been drained
     });
