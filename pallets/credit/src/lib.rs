@@ -76,6 +76,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn slash_credit(account_id: &AccountId);
     fn get_credit_level(credit_score: u64) -> CreditLevel;
     fn get_reward(account_id: &AccountId) -> Option<(Balance, Balance)>;
+    fn get_top_referee_reward(account_id: &AccountId) -> Option<Balance>;
 }
 
 #[frame_support::pallet]
@@ -469,6 +470,27 @@ pub mod pallet {
             } else {
                 None
             }
+        }
+
+        fn get_top_referee_reward(account_id: &T::AccountId) -> Option<BalanceOf<T>> {
+            if let Some(credit_data) = Self::get_user_credit(account_id) {
+                if Self::pass_threshold(account_id, 0) {
+                    let credit_setting = Self::get_credit_setting(credit_data.initial_credit_level);
+                    let number_of_referees = if credit_data.number_of_referees
+                        <= credit_setting.max_referees_with_rewards
+                    {
+                        credit_data.number_of_referees
+                    } else {
+                        credit_setting.max_referees_with_rewards
+                    };
+                    let daily_referee_reward = credit_setting
+                        .reward_per_referee
+                        .saturating_mul(number_of_referees.into());
+                    let top_referee_reward = daily_referee_reward.saturating_mul((270u32).into());
+                    return Some(top_referee_reward);
+                }
+            }
+            None
         }
     }
 }

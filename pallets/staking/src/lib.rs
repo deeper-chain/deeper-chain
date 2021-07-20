@@ -303,6 +303,7 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed, offchain::SendTransactionTypes,
 };
 use pallet_credit::CreditInterface;
+use pallet_deeper_node::NodeInterface;
 use pallet_session::historical;
 use sp_npos_elections::{
     generate_solution_type, is_score_better, seq_phragmen, to_support_map, Assignment,
@@ -799,6 +800,9 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// Credit CreditInterface
     type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
 
+    /// Deepernode  NodeInterface
+    type NodeInterface: NodeInterface<Self::AccountId>;
+
     /// max validators can be selected to delegate
     type MaxValidatorsCanSelected: Get<usize>;
 
@@ -1161,15 +1165,19 @@ decl_storage! {
         SelectedDelegators get(fn selected_delegators): double_map hasher(blake2_128_concat) EraIndex,
         hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64, bool)>;
 
+        /// (EraIndex, delegator) -> bool
+        Delegators get(fn get_delegators): double_map hasher(blake2_128_concat) EraIndex,
+            hasher(blake2_128_concat) T::AccountId => Option<bool>;
+
         /// current era validators
         /// new era  Return the potential new staking set.
-        pub CurrentEraValidators get(fn current_era_validators): Option<Vec<T::AccountId>>;
+        pub CurrentEraValidators get(fn get_current_era_validators): Option<Vec<T::AccountId>>;
 
         ///  candidate validator list: CandidateValidators == Validators
         pub CandidateValidators get(fn get_candidate_validators): Option<Vec<T::AccountId>>;
 
         /// reward of delegator
-        pub Reward get(fn get_reward): map hasher(blake2_128_concat) T::AccountId => RewardData<BalanceOf<T>>;
+        pub Reward get(fn get_reward): map hasher(blake2_128_concat) T::AccountId => Option<RewardData<BalanceOf<T>>>;
 
         /// True if network has been upgraded to this version.
         /// Storage version of the pallet.
@@ -1281,8 +1289,11 @@ decl_event!(
         Delegated(AccountId),
         /// Undelegate from a candivalidator
         UnDelegated(AccountId),
-        /// The staker has been rewarded by this amount. \[stash, amount\]
         PocReward(AccountId, Balance),
+        /// The delegator  has been rewarded by this amount. \[accountid, amount\]
+        DelegatorReward(AccountId, Balance),
+        /// The validator  has been rewarded by this amount. \[accountid, amount\]
+        ValidatorReward(AccountId, Balance),
     }
 );
 
@@ -3039,10 +3050,74 @@ impl<T: Config> Module<T> {
         Self::apply_unapplied_slashes(active_era);
     }
 
+    /// distribute pocr reward
+    fn distribute_pocr_reward(current_era: EraIndex) {
+        // distribute delegators
+        let mut total_poc_reward = BalanceOf::<T>::zero();
+        for (delegator, flag) in Delegators::<T>::iter_prefix(current_era) {
+            if flag && T::NodeInterface::im_offline(&delegator) == false {
+                if let Some((daily_referee_reward, daily_poc_reward)) =
+                    T::CreditInterface::get_reward(&delegator)
+                {
+                    // update RewardData
+                    if Reward::<T>::contains_key(&delegator) {
+                        Reward::<T>::mutate(&delegator, |data| match data {
+                            Some(reward_data) => {
+                                reward_data.received_referee_reward += daily_referee_reward;
+                                reward_data.daily_referee_reward = daily_referee_reward;
+                                reward_data.received_pocr_reward += daily_poc_reward;
+                                reward_data.daily_poc_reward = daily_poc_reward;
+                            }
+                            _ => (),
+                        });
+                    } else {
+                        let reward_data = RewardData::<BalanceOf<T>> {
+                            total_referee_reward: T::CreditInterface::get_top_referee_reward(
+                                &delegator,
+                            )
+                            .unwrap_or_default(),
+                            received_referee_reward: daily_referee_reward,
+                            daily_referee_reward: daily_referee_reward,
+                            received_pocr_reward: daily_poc_reward,
+                            daily_poc_reward: daily_poc_reward,
+                        };
+                        Reward::<T>::insert(&delegator, reward_data);
+                    }
+                    total_poc_reward += daily_poc_reward;
+                    T::Currency::deposit_creating(
+                        &delegator,
+                        daily_referee_reward + daily_poc_reward,
+                    );
+                    Self::deposit_event(RawEvent::DelegatorReward(
+                        delegator,
+                        daily_referee_reward + daily_poc_reward
+                    ));
+                }
+            }
+        }
+
+        // distribute validators
+        if let Some(current_era_validators) = Self::get_current_era_validators() {
+            let len = current_era_validators.len();
+            let validator_reward = Percent::from_percent(5)
+                * (Perbill::from_rational_approximation(1, len as u32) * total_poc_reward);
+            for (validator, _) in SelectedDelegators::<T>::iter_prefix(current_era) {
+                T::Currency::deposit_creating(&validator, validator_reward);
+                Self::deposit_event(RawEvent::ValidatorReward(
+                    validator,
+                    validator_reward
+                ));
+            }
+        }
+    }
+
     /// Compute payout for era.
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
         if let Some(_active_era_start) = active_era.start {
+            Self::distribute_pocr_reward(active_era.index);
+
+            // TODO delete me
             let (validator_payout, max_payout) = Self::calculate_era_payout(active_era.index);
             log!(
                 info,
@@ -3626,7 +3701,10 @@ impl<T: Config> Module<T> {
             let delegators = CandidateDelegators::<T>::get(validator.clone());
             let selected_delegators: Vec<_> = delegators
                 .iter()
-                .map(|(d, s)| ((*d).clone(), *s, false))
+                .map(|(d, s)| {
+                    Delegators::<T>::insert(current_era, (*d).clone(), true);
+                    ((*d).clone(), *s, false)
+                })
                 .collect();
             SelectedDelegators::<T>::insert(current_era, validator, selected_delegators);
         }
