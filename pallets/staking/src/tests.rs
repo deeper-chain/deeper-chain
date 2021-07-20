@@ -5453,7 +5453,7 @@ fn test_delegate() {
 
             // TEST1： delegate to one validator
             // initialize credit score
-            let micropayment_vec = vec![(10, 80 * 1_000_000_000_000_000)];
+            let micropayment_vec = vec![(10, 80 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
             assert_eq!(Credit::get_credit_score(&10), Some(105));
             // delegate credit score
@@ -5466,7 +5466,7 @@ fn test_delegate() {
 
             // TEST2： delegate to many validators
             // initialize credit score
-            let micropayment_vec = vec![(11, 65 * 1_000_000_000_000_000)];
+            let micropayment_vec = vec![(11, 65 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
             assert_eq!(Credit::get_credit_score(&11), Some(105));
             // delegate credit score
@@ -5481,7 +5481,7 @@ fn test_delegate() {
             assert_eq!(Staking::candidate_delegators(10), vec![(11, 26)]);
 
             //  TEST3： delegate with invalid validator
-            let micropayment_vec = vec![(19, 80 * 1_000_000_000_000_000)];
+            let micropayment_vec = vec![(19, 80 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
             assert_noop!(
                 Staking::delegate(Origin::signed(19), vec![5]),
@@ -5519,7 +5519,7 @@ fn test_undelegate() {
 
             // TEST1： undelegate
             // initialize credit score
-            let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000)];
+            let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
             assert_eq!(Credit::get_credit_score(&11), Some(105));
             // delegate credit score
@@ -5561,11 +5561,11 @@ fn test_total_delegated_score() {
         .existential_deposit(10)
         .build_and_execute(|| {
             // 11 , 21 is validator in mock.rs
-            let micropayment_vec1 = vec![(1, 3 * 1_000_000_000_000_000)];
+            let micropayment_vec1 = vec![(1, 3 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec1);
             assert_ok!(Staking::delegate(Origin::signed(1), vec![11, 21]));
 
-            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000)];
+            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec2);
             assert_ok!(Staking::delegate(Origin::signed(2), vec![11, 21]));
 
@@ -5580,11 +5580,11 @@ fn test_get_total_validator_score() {
     ExtBuilder::default()
         .existential_deposit(10)
         .build_and_execute(|| {
-            let micropayment_vec1 = vec![(1, 1 * 1_000_000_000_000_000)];
+            let micropayment_vec1 = vec![(1, 1 * 1_000_000_000_000_000, 1)];
             Credit::update_credit(micropayment_vec1);
             assert_ok!(Staking::delegate(Origin::signed(1), vec![11, 21]));
 
-            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000)];
+            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 2)];
             Credit::update_credit(micropayment_vec2);
             assert_ok!(Staking::delegate(Origin::signed(2), vec![11, 21]));
 
@@ -5621,7 +5621,7 @@ fn test_poc_slash() {
     ExtBuilder::default()
         .existential_deposit(10)
         .build_and_execute(|| {
-            let micropayment_vec = vec![(11, 1 * 1_000_000_000_000_000)];
+            let micropayment_vec = vec![(11, 1 * 1_000_000_000_000_000, 5)];
             Credit::update_credit(micropayment_vec);
             assert_eq!(Credit::get_credit_score(&11), Some(100 + 1)); // init score 100 plus delta 1
             assert_ok!(Staking::delegate(Origin::signed(11), vec![11, 21]));

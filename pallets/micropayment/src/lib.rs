@@ -494,6 +494,7 @@ pub mod pallet {
                 let num_of_clients = ClientsByServer::<T>::take(&server).len() as u32;
                 stats.push((server, payment, num_of_clients));
             }
+            ClientsByServer::<T>::drain(); // it should be empty already, but let's drain it for safety
             stats
         }
 
