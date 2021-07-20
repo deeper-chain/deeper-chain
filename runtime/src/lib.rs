@@ -1053,18 +1053,22 @@ impl pallet_eth_sub_bridge::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MinLockAmt: u32 = 100;
-    pub const MaxDurationDays: u8 = 7;
-    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / MILLISECS_PER_BLOCK) as u32;
-    pub const MaxIpLength: usize = 256;
+    pub const SecsPerBlock: u32 = MILLISECS_PER_BLOCK as u32 / 1000;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type DayToBlocknum = DayToBlocknum;
+    type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
+}
+
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+    pub const MaxIpLength: usize = 256;
 }
 
 impl pallet_deeper_node::Config for Runtime {

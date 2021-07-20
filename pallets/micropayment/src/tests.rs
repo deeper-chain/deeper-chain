@@ -1,17 +1,28 @@
+use super::Chan;
 use crate::{mock::*, Error};
 use frame_support::{
-    assert_noop, assert_ok,
-    dispatch::{DispatchError, DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-    weights::PostDispatchInfo,
+    assert_ok,
+    dispatch::{DispatchError, DispatchErrorWithPostInfo},
 };
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
 
 #[test]
-fn fn_open_channel() {
+fn open_channel() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
+        assert_eq!(
+            Micropayment::get_channel(&1, &2), 
+            Chan{
+                client: 1,
+                server: 2,
+                balance: 300,
+                nonce: 0,
+                opened: 0,
+                expiration: 720
+            }
+        );
 
         // Channel already opened
         assert_eq!(
@@ -188,25 +199,33 @@ fn test_signature() {
 }
 
 #[test]
-fn fn_update_micropayment_information() {
+fn update_micropayment_information() {
     new_test_ext().execute_with(|| {
         Micropayment::update_micropayment_information(&2, &1, 5);
-        let balance =
-            Micropayment::get_clientpayment_by_block_server((&System::block_number(), 1), 2);
-        Micropayment::update_micropayment_information(&2, &1, 5);
+        let mut balance = Micropayment::get_payment_by_server(&1);
         assert_eq!(balance, 5);
-        let balance1 =
-            Micropayment::get_clientpayment_by_block_server((&System::block_number(), 1), 2);
-        assert_eq!(balance1, 10);
-        let server_flag = Micropayment::get_server_by_block(&System::block_number(), &1);
-        let client_flag = Micropayment::get_server_by_block(&System::block_number(), &2);
-        assert_eq!(server_flag, true);
-        assert_eq!(client_flag, false);
+        assert_eq!(Micropayment::last_updated(&1), 0);
+        assert_eq!(Micropayment::last_updated(&2), 0);
+
+        run_to_block(1);
+        Micropayment::update_micropayment_information(&2, &1, 6);
+        balance = Micropayment::get_payment_by_server(&1);
+        assert_eq!(balance, 11);
+        assert_eq!(Micropayment::last_updated(&1), 1);
+        assert_eq!(Micropayment::last_updated(&2), 1);
+
+        run_to_block(2);
+        Micropayment::update_micropayment_information(&3, &1, 4);
+        balance = Micropayment::get_payment_by_server(&1);
+        assert_eq!(balance, 15);
+        assert_eq!(Micropayment::last_updated(&1), 2);
+        assert_eq!(Micropayment::last_updated(&2), 1);
+        assert_eq!(Micropayment::last_updated(&3), 2);
     });
 }
 
 #[test]
-fn fn_micropayment_statistics() {
+fn micropayment_statistics() {
     new_test_ext().execute_with(|| {
         Micropayment::update_micropayment_information(&2, &1, 7);
         Micropayment::update_micropayment_information(&4, &1, 3);
@@ -216,9 +235,11 @@ fn fn_micropayment_statistics() {
         run_to_block(6);
         Micropayment::update_micropayment_information(&3, &2, 9);
         run_to_block(9);
-        let mut res = Micropayment::micropayment_statistics(0, 9);
-        res.sort_by(|a, b| (*a).0.cmp(&(*b).0));
-        assert_eq!(res[0], (1, 18, 3));
-        assert_eq!(res[1], (2, 10, 2));
+        let mut stats = Micropayment::micropayment_statistics();
+        stats.sort_by(|a, b| (*a).0.cmp(&(*b).0));
+        assert_eq!(stats[0], (1, 18));
+        assert_eq!(stats[1], (2, 10));
+        stats = Micropayment::micropayment_statistics();
+        assert_eq!(stats.len(), 0); // the data should have been drained
     });
 }

@@ -1,15 +1,13 @@
 use crate as pallet_micropayment;
 use frame_support::{
-    assert_ok, parameter_types,
-    traits::{ChangeMembers, Currency, GenesisBuild, LockIdentifier, OnFinalize, OnInitialize},
-    StorageMap, StorageValue,
+    parameter_types,
+    traits::{OnFinalize, OnInitialize},
 };
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    BuildStorage,
 };
 
 use node_primitives::Balance;
@@ -76,13 +74,13 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+    pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
-    type DayToBlocknum = DayToBlocknum;
+    type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
 }
 

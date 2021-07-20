@@ -194,8 +194,7 @@ pub mod pallet {
                     from,
                     to
                 );
-                let micropayment_vec =
-                    pallet_micropayment::Module::<T>::micropayment_statistics(from, to);
+                let micropayment_vec = pallet_micropayment::Module::<T>::micropayment_statistics();
                 Self::update_credit(micropayment_vec);
 
                 // attenuate credit score per era
@@ -223,44 +222,42 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         /// update credit score per era using micropayment vec
-        pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
-            for (server_id, balance, size) in micropayment_vec {
-                if size >= 1 {
-                    let balance_num =
-                        <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
-                    let mut score_delta: u64 = balance_num
-                        .checked_div(T::MicropaymentToCreditScoreFactor::get())
-                        .unwrap_or(0)
-                        .into();
+        pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>)>) {
+            for (server_id, balance) in micropayment_vec {
+                let balance_num =
+                    <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
+                let mut score_delta: u64 = balance_num
+                    .checked_div(T::MicropaymentToCreditScoreFactor::get())
+                    .unwrap_or(0)
+                    .into();
+                log!(
+                    info,
+                    "server_id: {:?}, balance_num: {}, score_delta:{}",
+                    server_id.clone(),
+                    balance_num,
+                    score_delta
+                );
+                let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
+                if score_delta > cap {
+                    score_delta = cap;
                     log!(
                         info,
-                        "server_id: {:?}, balance_num: {}, score_delta:{}",
+                        "server_id: {:?} score_delta capped at {}",
                         server_id.clone(),
-                        balance_num,
-                        score_delta
+                        cap
                     );
-                    let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
-                    if score_delta > cap {
-                        score_delta = cap;
+                }
+                if score_delta > 0 {
+                    let new_credit = Self::get_credit_score(&server_id)
+                        .unwrap_or(0)
+                        .saturating_add(score_delta);
+                    if !Self::_update_credit(&server_id, new_credit) {
                         log!(
-                            info,
-                            "server_id: {:?} score_delta capped at {}",
-                            server_id.clone(),
-                            cap
+                            error,
+                            "failed to update credit {} for server_id: {:?}",
+                            new_credit,
+                            server_id.clone()
                         );
-                    }
-                    if score_delta > 0 {
-                        let new_credit = Self::get_credit_score(&server_id)
-                            .unwrap_or(0)
-                            .saturating_add(score_delta);
-                        if !Self::_update_credit(&server_id, new_credit) {
-                            log!(
-                                error,
-                                "failed to update credit {} for server_id: {:?}",
-                                new_credit,
-                                server_id.clone()
-                            );
-                        }
                     }
                 }
             }
@@ -287,7 +284,7 @@ pub mod pallet {
             for device in devices {
                 let server_id = device.account_id;
                 let last_update_block =
-                    pallet_micropayment::Module::<T>::last_update_block(server_id.clone());
+                    pallet_micropayment::Module::<T>::last_update_block(&server_id);
                 if current_blocknumber - last_update_block > T::BlocksPerEra::get() {
                     Self::_attenuate_credit(server_id);
                 }

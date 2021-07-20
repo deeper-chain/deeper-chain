@@ -177,13 +177,13 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+    pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
-    type DayToBlocknum = DayToBlocknum;
+    type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
 }
 
@@ -191,6 +191,7 @@ parameter_types! {
     pub const MinLockAmt: u32 = 100;
     pub const MaxDurationDays: u8 = 7;
     pub const MaxIpLength: usize = 256;
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
 }
 impl pallet_deeper_node::Config for Test {
     type Event = Event;
