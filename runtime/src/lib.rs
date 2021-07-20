@@ -492,6 +492,7 @@ parameter_types! {
 impl pallet_staking::Config for Runtime {
     type Currency = Balances;
     type CreditInterface = Credit;
+    type NodeInterface = DeeperNode;
     type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
     type UnixTime = Timestamp;
     type CurrencyToVote = U128CurrencyToVote;
