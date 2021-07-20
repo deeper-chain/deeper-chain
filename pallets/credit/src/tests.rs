@@ -138,18 +138,18 @@ fn slash_credit() {
 fn update_credit() {
     new_test_ext().execute_with(|| {
         let mut micropayments = vec![
-            (1, 1_000 * 1_000_000_000_000_000, 1),
-            (2, 1 * 1_000_000_000_000_000, 3),
-            (3, 1 * 1_000_000_000_000_000, 0),
+            (1, 1_000 * 1_000_000_000_000_000, 3),
+            (2, 1 * 1_000_000_000_000_000, 1),
+            (3, 1 * 1_000_000_000_000_000, 2),
         ];
         Credit::update_credit(micropayments);
         assert_eq!(Credit::get_user_credit(&1).unwrap().credit, 5);
         assert_eq!(Credit::get_user_credit(&2).unwrap().credit, 1);
-        assert_eq!(Credit::get_user_credit(&3).unwrap().credit, 100);
+        assert_eq!(Credit::get_user_credit(&3).unwrap().credit, 101);
         micropayments = vec![
             (1, 4 * 1_000_000_000_000_000, 1),
-            (2, 2 * 1_000_000_000_000_000, 3),
-            (4, 1_000_000_000_000_000 / 10, 2),
+            (2, 2 * 1_000_000_000_000_000, 2),
+            (4, 1_000_000_000_000_000 / 10, 1),
         ];
         Credit::update_credit(micropayments);
         assert_eq!(Credit::get_user_credit(&1).unwrap().credit, 9); // 5 + 4
@@ -185,7 +185,7 @@ fn get_reward_with_update_credit_no_bonus() {
             Some((18000000000000000000, 3369858941948251800))
         );
 
-        let micropayments = vec![(6, 5 * 1_000_000_000_000_000, 3)];
+        let micropayments = vec![(6, 5 * 1_000_000_000_000_000, 5)];
         let mut i = 1;
         while i < 20 {
             // run 19 times
@@ -219,7 +219,7 @@ fn get_reward_with_update_credit_with_bonus() {
             Some((18000000000000000000 * 7, 97068450647875213020))
         );
 
-        let micropayments = vec![(7, 5 * 1_000_000_000_000_000, 3)];
+        let micropayments = vec![(7, 5 * 1_000_000_000_000_000, 5)];
         let mut i = 1;
         while i < 20 {
             // run 19 times

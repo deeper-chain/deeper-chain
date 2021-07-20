@@ -27,7 +27,7 @@ pub struct Node<AccountId, BlockNumber> {
 }
 
 pub trait NodeInterface<AccountId> {
-    /// This function will be used by credit pallet to 
+    /// This function will be used by credit pallet to
     /// re-calculate credit for accounts that have credit.
     fn im_offline(account_id: &AccountId) -> bool;
 }

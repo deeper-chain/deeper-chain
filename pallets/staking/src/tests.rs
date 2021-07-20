@@ -5580,11 +5580,11 @@ fn test_get_total_validator_score() {
     ExtBuilder::default()
         .existential_deposit(10)
         .build_and_execute(|| {
-            let micropayment_vec1 = vec![(1, 1 * 1_000_000_000_000_000, 5)];
+            let micropayment_vec1 = vec![(1, 1 * 1_000_000_000_000_000, 1)];
             Credit::update_credit(micropayment_vec1);
             assert_ok!(Staking::delegate(Origin::signed(1), vec![11, 21]));
 
-            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 5)];
+            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 2)];
             Credit::update_credit(micropayment_vec2);
             assert_ok!(Staking::delegate(Origin::signed(2), vec![11, 21]));
 
