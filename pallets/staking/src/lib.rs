@@ -1156,7 +1156,7 @@ decl_storage! {
 
         /// Candidate delegators info
         /// (candidateValidator) -> Vec<(delegator, score)>
-        CandidateDelegators get(fn candidate_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
+        CandidateDelegators get(fn get_candidate_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
 
         pub ErasValidatorPocReward get(fn eras_validator_poc_reward):
             map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
@@ -3090,7 +3090,7 @@ impl<T: Config> Module<T> {
                     );
                     Self::deposit_event(RawEvent::DelegatorReward(
                         delegator,
-                        daily_referee_reward + daily_poc_reward
+                        daily_referee_reward + daily_poc_reward,
                     ));
                 }
             }
@@ -3103,10 +3103,7 @@ impl<T: Config> Module<T> {
                 * (Perbill::from_rational_approximation(1, len as u32) * total_poc_reward);
             for (validator, _) in SelectedDelegators::<T>::iter_prefix(current_era) {
                 T::Currency::deposit_creating(&validator, validator_reward);
-                Self::deposit_event(RawEvent::ValidatorReward(
-                    validator,
-                    validator_reward
-                ));
+                Self::deposit_event(RawEvent::ValidatorReward(validator, validator_reward));
             }
         }
     }
@@ -3240,55 +3237,34 @@ impl<T: Config> Module<T> {
     ///
     /// This should only be called at the end of an era.
     fn select_and_update_validators(current_era: EraIndex) -> Option<Vec<T::AccountId>> {
-        if let Some(ElectionResult::<T::AccountId, BalanceOf<T>> {
-            elected_stashes,
-            exposures,
-            compute,
-        }) = Self::try_do_election()
-        {
-            // Totally close the election round and data.
-            Self::close_election_window();
+        let validator_whitelist = <ValidatorWhiteList<T>>::get();
+        let mut all_validators: Vec<(T::AccountId, u32)> = CandidateDelegators::<T>::iter()
+            .filter(|(candidate_validator, _)| {
+                validator_whitelist.len() == 0 || validator_whitelist.contains(&candidate_validator)
+            })
+            .map(|(candidate_validator, delegators)| (candidate_validator, delegators.len() as u32))
+            .collect();
 
-            // Populate Stakers and write slot stake.
-            let mut total_stake: BalanceOf<T> = Zero::zero();
-            exposures.into_iter().for_each(|(stash, exposure)| {
-                total_stake = total_stake.saturating_add(exposure.total);
-                <ErasStakers<T>>::insert(current_era, &stash, &exposure);
-
-                let mut exposure_clipped = exposure;
-                let clipped_max_len = T::MaxNominatorRewardedPerValidator::get() as usize;
-                if exposure_clipped.others.len() > clipped_max_len {
-                    exposure_clipped
-                        .others
-                        .sort_by(|a, b| a.value.cmp(&b.value).reverse());
-                    exposure_clipped.others.truncate(clipped_max_len);
-                }
-                <ErasStakersClipped<T>>::insert(&current_era, &stash, exposure_clipped);
-            });
-
-            // Insert current era staking information
-            <ErasTotalStake<T>>::insert(&current_era, total_stake);
-
-            // collect the pref of all winners
-            for stash in &elected_stashes {
-                let pref = Self::validators(stash);
-                <ErasValidatorPrefs<T>>::insert(&current_era, stash, pref);
-            }
-
-            // emit event
-            Self::deposit_event(RawEvent::StakingElection(compute));
-
+        if all_validators.len() < Self::minimum_validator_count().max(1) as usize {
+            // If we don't have enough candidates, nothing to do.
+            log!(
+                warn,
+                "💸 Chain does not have enough staking candidates to operate. Era {:?}.",
+                Self::current_era()
+            );
+            None
+        } else {
+            all_validators.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+            all_validators.truncate(Self::validator_count() as usize);
+            let elected_validators: Vec<T::AccountId> =
+                all_validators.iter().map(|(v, _)| (*v).clone()).collect();
             log!(
                 info,
-                "💸 new validator set of size {:?} has been elected via {:?} for era {:?}",
-                elected_stashes.len(),
-                compute,
+                "💸 new validator set of size {:?} has been elected for era {:?}",
+                elected_validators.len(),
                 current_era,
             );
-
-            Some(elected_stashes)
-        } else {
-            None
+            Some(elected_validators)
         }
     }
 
