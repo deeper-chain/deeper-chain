@@ -1136,7 +1136,7 @@ construct_runtime!(
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
+        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
