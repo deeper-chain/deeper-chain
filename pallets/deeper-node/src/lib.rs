@@ -27,9 +27,14 @@ pub struct Node<AccountId, BlockNumber> {
 }
 
 pub trait NodeInterface<AccountId> {
-    /// This function will be used by credit pallet to
-    /// re-calculate credit for accounts that have credit.
+    /// This function tells if the device has been offline for a day
     fn im_offline(account_id: &AccountId) -> bool;
+
+    /// This function tells if the device has ever been online
+    fn im_ever_online(account_id: &AccountId) -> bool;
+
+    /// This function returns how many days the device has been offline
+    fn get_days_offline(account_id: &AccountId) -> u32;
 }
 
 #[frame_support::pallet]
@@ -40,6 +45,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
+    use sp_std::convert::TryInto;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -92,7 +98,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn get_im_online)]
     pub(super) type ImOnline<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -745,9 +751,20 @@ pub mod pallet {
 
     impl<T: Config> NodeInterface<T::AccountId> for Module<T> {
         fn im_offline(account_id: &T::AccountId) -> bool {
-            let block = Self::get_im_online(account_id);
+            let block = Self::get_im_online(account_id).unwrap_or(T::BlockNumber::default());
             let current_block = <frame_system::Module<T>>::block_number();
-            current_block - block > T::BlockNumber::from(T::DayToBlocknum::get())
+            current_block - block >= T::DayToBlocknum::get().into()
+        }
+
+        fn im_ever_online(account_id: &T::AccountId) -> bool {
+            Self::get_im_online(account_id) != None
+        }
+
+        fn get_days_offline(account_id: &T::AccountId) -> u32 {
+            let block = Self::get_im_online(account_id).unwrap_or(T::BlockNumber::default());
+            let current_block = <frame_system::Module<T>>::block_number();
+            let days = (current_block - block) / T::DayToBlocknum::get().into();
+            TryInto::<u32>::try_into(days).ok().unwrap()
         }
     }
 }
