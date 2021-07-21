@@ -45,7 +45,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-    use std::convert::TryInto;
+    use sp_std::convert::TryInto;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
