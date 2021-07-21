@@ -207,5 +207,6 @@ fn get_days_offline() {
         assert_eq!(DeeperNode::get_days_offline(&1), 1);
         run_to_block(3 * 24 * 3600 * 1000 / 5000);
         assert_eq!(DeeperNode::get_days_offline(&1), 3);
+        assert_eq!(DeeperNode::get_days_offline(&2), 3);
     });
 }
