@@ -170,10 +170,10 @@ fn fn_update_server() {
 fn im_online() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
-        assert_eq!(DeeperNode::get_im_online(1), 0);
+        assert_eq!(DeeperNode::get_im_online(1), Some(0));
         run_to_block(1);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
-        assert_eq!(DeeperNode::get_im_online(1), 1);
+        assert_eq!(DeeperNode::get_im_online(1), Some(1));
     });
 }
 
@@ -183,7 +183,29 @@ fn im_offline() {
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         run_to_block(1);
         assert_eq!(DeeperNode::im_offline(&1), false);
-        run_to_block(24 * 3600 * 1000 / 5000 + 1);
+        run_to_block(24 * 3600 * 1000 / 5000);
         assert_eq!(DeeperNode::im_offline(&1), true);
+    });
+}
+
+#[test]
+fn im_ever_online() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(DeeperNode::im_ever_online(&1), false);
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_eq!(DeeperNode::im_ever_online(&1), true);
+    });
+}
+
+#[test]
+fn get_days_offline() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        run_to_block(24 * 3600 * 1000 / 5000 - 1);
+        assert_eq!(DeeperNode::get_days_offline(&1), 0);
+        run_to_block(24 * 3600 * 1000 / 5000);
+        assert_eq!(DeeperNode::get_days_offline(&1), 1);
+        run_to_block(3 * 24 * 3600 * 1000 / 5000);
+        assert_eq!(DeeperNode::get_days_offline(&1), 3);
     });
 }
