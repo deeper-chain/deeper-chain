@@ -8,14 +8,14 @@ Since Deeper Chain is built on top of [Substrate](https://github.com/paritytech/
 
 ![Testnet Endpoint](testnet-endpoint.png "Testnet Endpoint")
 
-2. Add custom types in [this file](pallets/types.json) to the Settings like below:
+2. add custom types in [this file](pallets/types.json) to the Settings like below:
 
 ![Custom Types](custom-types.png "Custom Types")
 
 ## Developer
 
 If you are a wallet developer, you only need to use the [Polkadot JS API library](https://polkadot.js.org/docs/).
-When you create the `APIPromise` instance, you need to add the [custom types](pallets/types.json) to the config object like this:
+When you create the `ApiPromise` instance, you need to add the [custom types](pallets/types.json) to the config object like this:
 
 ```Javascript
 // Import
