@@ -305,13 +305,10 @@ pub(crate) fn compute_slash<T: Config>(
         }
     }
 
-    let mut nominators_slashed = Vec::new();
-    reward_payout += slash_nominators::<T>(params, prior_slash_p, &mut nominators_slashed);
-
     Some(UnappliedSlash {
         validator: stash.clone(),
         own: val_slashed,
-        others: nominators_slashed,
+        others: Vec::default(),
         reporters: Vec::new(),
         payout: reward_payout,
     })
@@ -341,73 +338,6 @@ fn kick_out_if_recent<T: Config>(params: SlashParams<T>) {
             <Module<T>>::ensure_new_era()
         }
     }
-}
-
-/// Slash nominators. Accepts general parameters and the prior slash percentage of the validator.
-///
-/// Returns the amount of reward to pay out.
-fn slash_nominators<T: Config>(
-    params: SlashParams<T>,
-    prior_slash_p: Perbill,
-    nominators_slashed: &mut Vec<(T::AccountId, BalanceOf<T>)>,
-) -> BalanceOf<T> {
-    let SlashParams {
-        stash: _,
-        slash,
-        exposure,
-        slash_era,
-        window_start,
-        now,
-        reward_proportion,
-    } = params;
-
-    let mut reward_payout = Zero::zero();
-
-    nominators_slashed.reserve(exposure.others.len());
-    for nominator in &exposure.others {
-        let stash = &nominator.who;
-        let mut nom_slashed = Zero::zero();
-
-        // the era slash of a nominator always grows, if the validator
-        // had a new max slash for the era.
-        let era_slash = {
-            let own_slash_prior = prior_slash_p * nominator.value;
-            let own_slash_by_validator = slash * nominator.value;
-            let own_slash_difference = own_slash_by_validator.saturating_sub(own_slash_prior);
-
-            let mut era_slash = <Module<T> as Store>::NominatorSlashInEra::get(&slash_era, stash)
-                .unwrap_or_else(|| Zero::zero());
-
-            era_slash += own_slash_difference;
-
-            <Module<T> as Store>::NominatorSlashInEra::insert(&slash_era, stash, &era_slash);
-
-            era_slash
-        };
-
-        // compare the era slash against other eras in the same span.
-        {
-            let mut spans = fetch_spans::<T>(
-                stash,
-                window_start,
-                &mut reward_payout,
-                &mut nom_slashed,
-                reward_proportion,
-            );
-
-            let target_span = spans.compare_and_update_span_slash(slash_era, era_slash);
-
-            if target_span == Some(spans.span_index()) {
-                // End the span, but don't chill the nominator. its nomination
-                // on this validator will be ignored in the future.
-                spans.end_span(now);
-            }
-        }
-
-        nominators_slashed.push((stash.clone(), nom_slashed));
-    }
-
-    reward_payout
 }
 
 // helper struct for managing a set of spans we are currently inspecting.
@@ -545,7 +475,6 @@ impl<'a, T: 'a + Config> Drop for InspectingSpans<'a, T> {
 /// Clear slashing metadata for an obsolete era.
 pub(crate) fn clear_era_metadata<T: Config>(obsolete_era: EraIndex) {
     <Module<T> as Store>::ValidatorSlashInEra::remove_prefix(&obsolete_era);
-    <Module<T> as Store>::NominatorSlashInEra::remove_prefix(&obsolete_era);
 }
 
 /// Clear slashing metadata for a dead account.
