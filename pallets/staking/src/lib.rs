@@ -1180,10 +1180,6 @@ decl_storage! {
                     balance,
                     RewardDestination::Staked,
                 );
-                let _ = <Module<T>>::delegate(
-                    T::Origin::from(Some(controller.clone()).into()),
-                    vec![stash.clone()]
-                );
                 let _ = match status {
                     StakerStatus::Validator => {
                         <Module<T>>::validate(
@@ -1192,6 +1188,10 @@ decl_storage! {
                         )
                     }, _ => Ok(())
                 };
+                let _ = <Module<T>>::delegate(
+                    T::Origin::from(Some(controller.clone()).into()),
+                    vec![stash.clone()]
+                );
             }
         });
     }
