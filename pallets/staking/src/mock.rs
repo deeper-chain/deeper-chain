@@ -283,19 +283,9 @@ impl pallet_timestamp::Config for Test {
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
 }
-pallet_staking_reward_curve::build! {
-    const I_NPOS: PiecewiseLinear<'static> = curve!(
-        min_inflation: 0_025_000,
-        max_inflation: 0_100_000,
-        ideal_stake: 0_500_000,
-        falloff: 0_050_000,
-        max_piece_count: 40,
-        test_precision: 0_005_000,
-    );
-}
+
 parameter_types! {
     pub const BondingDuration: EraIndex = 3;
-    pub const RewardCurve: &'static PiecewiseLinear<'static> = &I_NPOS;
     pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const UnsignedPriority: u64 = 1 << 20;
     pub const MinSolutionScoreBump: Perbill = Perbill::zero();
@@ -342,7 +332,6 @@ impl Config for Test {
     type SlashCancelOrigin = frame_system::EnsureRoot<Self::AccountId>;
     type BondingDuration = BondingDuration;
     type SessionInterface = Self;
-    type RewardCurve = RewardCurve;
     type NextNewSession = Session;
     type ElectionLookahead = ElectionLookahead;
     type Call = Call;

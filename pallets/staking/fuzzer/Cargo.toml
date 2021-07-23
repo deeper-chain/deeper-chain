@@ -16,7 +16,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 honggfuzz = "0.5"
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 pallet-staking = { version = "3.0.0", path = "..", features = ["runtime-benchmarks"] }
-pallet-staking-reward-curve = { version = "3.0.0",  path = "../reward-curve" }
 pallet-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-indices = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-balances = { version = "3.0.0", path = "../../balances" }
