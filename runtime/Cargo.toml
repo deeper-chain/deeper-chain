@@ -71,7 +71,6 @@ pallet-recovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0
 pallet-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["historical"], default-features = false }
 pallet-session-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
 pallet-staking = { path = "../pallets/staking", version = "3.0.0", default-features = false }
-pallet-staking-reward-curve = { path = "../pallets/staking/reward-curve", version = "3.0.0", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-society = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }

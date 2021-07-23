@@ -3972,7 +3972,6 @@ dependencies = [
  "pallet-session-benchmarking",
  "pallet-society",
  "pallet-staking 3.0.0",
- "pallet-staking-reward-curve",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
@@ -4841,7 +4840,6 @@ dependencies = [
  "pallet-deeper-node",
  "pallet-micropayment",
  "pallet-session",
- "pallet-staking-reward-curve",
  "pallet-timestamp",
  "parity-scale-codec",
  "parking_lot 0.11.1",
@@ -4858,17 +4856,6 @@ dependencies = [
  "sp-tracing",
  "static_assertions",
  "substrate-test-utils",
-]
-
-[[package]]
-name = "pallet-staking-reward-curve"
-version = "3.0.0"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "sp-runtime",
- "syn",
 ]
 
 [[package]]

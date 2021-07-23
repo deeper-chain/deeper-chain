@@ -277,7 +277,6 @@ pub mod testing_utils;
 #[cfg(test)]
 mod tests;
 
-pub mod inflation;
 pub mod slashing;
 pub mod weights;
 
@@ -301,17 +300,16 @@ use pallet_credit::CreditInterface;
 use pallet_deeper_node::NodeInterface;
 use pallet_session::historical;
 use sp_npos_elections::{
-    generate_solution_type, is_score_better, to_support_map, Assignment, CompactSolution,
-    ElectionScore, EvaluateSupport, ExtendedBalance, SupportMap, VoteWeight,
+    generate_solution_type, is_score_better, CompactSolution, ElectionScore, ExtendedBalance,
+    SupportMap, VoteWeight,
 };
 use sp_runtime::{
-    curve::PiecewiseLinear,
     traits::{
         AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable, SaturatedConversion, Saturating,
         StaticLookup, Zero,
     },
     transaction_validity::TransactionPriority,
-    DispatchError, PerU16, Perbill, Percent, RuntimeDebug,
+    PerU16, Perbill, Percent, RuntimeDebug,
 };
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
@@ -324,7 +322,6 @@ use sp_std::{
     convert::{From, TryInto},
     mem::size_of,
     prelude::*,
-    result,
 };
 pub use weights::WeightInfo;
 
@@ -842,10 +839,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 
     /// Interface for interacting with a session module.
     type SessionInterface: self::SessionInterface<Self::AccountId>;
-
-    /// The NPoS reward curve used to define yearly inflation.
-    /// See [Era payout](./index.html#era-payout).
-    type RewardCurve: Get<&'static PiecewiseLinear<'static>>;
 
     /// Something that can estimate the next session change, accurately or as a best effort guess.
     type NextNewSession: EstimateNextNewSession<Self::BlockNumber>;
@@ -1718,9 +1711,8 @@ decl_module! {
             let stash = &ledger.stash;
             <Validators<T>>::insert(stash.clone(), prefs);
             //update cadidate validators for PoC
-            //let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
-            //Self::set_candidate_validators(candidate_validators);
-            <CandidateValidators<T>>::append(stash);
+            let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
+            <CandidateValidators<T>>::put(candidate_validators);
         }
 
         /// Declare no desire to either validate or nominate.
@@ -2198,8 +2190,7 @@ impl<T: Config> Module<T> {
         let num_validators = validators.len();
         add_db_reads_writes((num_validators) as Weight, 0);
 
-        if num_validators > MAX_VALIDATORS
-        {
+        if num_validators > MAX_VALIDATORS {
             log!(
                 warn,
                 "💸 Snapshot size too big [{} <> {}].",
@@ -2526,49 +2517,15 @@ impl<T: Config> Module<T> {
                 all_validators.iter().map(|(v, _)| (*v).clone()).collect();
             log!(
                 info,
-                "💸 new validator set of size {:?} has been elected for era {:?}",
+                "💸 new validator set of size {:?} has been elected for era {:?}\n 
+                all_validators: {:?}
+                ",
                 elected_validators.len(),
                 current_era,
+                elected_validators.clone()
             );
             Some(elected_validators)
         }
-    }
-
-    /// Consume a set of [`Supports`] from [`sp_npos_elections`] and collect them into a [`Exposure`]
-    fn collect_exposure(
-        supports: SupportMap<T::AccountId>,
-    ) -> Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)> {
-        let total_issuance = T::Currency::total_issuance();
-        let to_currency = |e: ExtendedBalance| T::CurrencyToVote::to_currency(e, total_issuance);
-
-        supports
-            .into_iter()
-            .map(|(validator, support)| {
-                // build `struct exposure` from `support`
-                let mut others = Vec::with_capacity(support.voters.len());
-                let mut own: BalanceOf<T> = Zero::zero();
-                let mut total: BalanceOf<T> = Zero::zero();
-                support
-                    .voters
-                    .into_iter()
-                    .map(|(nominator, weight)| (nominator, to_currency(weight)))
-                    .for_each(|(nominator, stake)| {
-                        if nominator == validator {
-                            own = own.saturating_add(stake);
-                        } else {
-                            others.push(IndividualExposure {
-                                who: nominator,
-                                value: stake,
-                            });
-                        }
-                        total = total.saturating_add(stake);
-                    });
-
-                let exposure = Exposure { own, others, total };
-
-                (validator, exposure)
-            })
-            .collect::<Vec<(T::AccountId, Exposure<_, _>)>>()
     }
 
     /// Remove all associated data of a stash account from the staking system.
@@ -2806,10 +2763,6 @@ impl<T: Config> Module<T> {
                 .collect();
             SelectedDelegators::<T>::insert(current_era, validator, selected_delegators);
         }
-    }
-
-    fn set_candidate_validators(candidate_validators: Vec<T::AccountId>) {
-        <CandidateValidators<T>>::put(candidate_validators);
     }
 
     fn delegated_score_of_validator(validator: &T::AccountId) -> Option<u64> {
