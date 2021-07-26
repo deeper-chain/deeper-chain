@@ -268,8 +268,6 @@
 #![recursion_limit = "128"]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-pub mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -287,7 +285,7 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{
-        Currency, CurrencyToVote, EnsureOrigin, EstimateNextNewSession, Get, IsSubType,
+        Currency, CurrencyToVote, EnsureOrigin, EstimateNextNewSession, Get, Imbalance, IsSubType,
         LockIdentifier, LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
     },
     weights::{
@@ -1127,10 +1125,7 @@ decl_storage! {
 
         /// Candidate delegators info
         /// (candidateValidator) -> Vec<(delegator, score)>
-        CandidateDelegators get(fn get_candidate_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
-
-        pub ErasValidatorPocReward get(fn eras_validator_poc_reward):
-            map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
+        CandidateDelegators get(fn candidate_delegators): map hasher(blake2_128_concat) T::AccountId => Vec<(T::AccountId, u64)>;
 
         /// (EraIndex, validatorId) -> Vec<(delegator, score, hasSlashed)>
         SelectedDelegators get(fn selected_delegators): double_map hasher(blake2_128_concat) EraIndex,
@@ -1142,13 +1137,13 @@ decl_storage! {
 
         /// current era validators
         /// new era  Return the potential new staking set.
-        pub CurrentEraValidators get(fn get_current_era_validators): Option<Vec<T::AccountId>>;
+        pub CurrentEraValidators get(fn current_era_validators): Option<Vec<T::AccountId>>;
 
         ///  candidate validator list: CandidateValidators == Validators
-        pub CandidateValidators get(fn get_candidate_validators): Option<Vec<T::AccountId>>;
+        pub CandidateValidators get(fn candidate_validators): Option<Vec<T::AccountId>>;
 
         /// reward of delegator
-        pub Reward get(fn get_reward): map hasher(blake2_128_concat) T::AccountId => Option<RewardData<BalanceOf<T>>>;
+        pub Reward get(fn reward): map hasher(blake2_128_concat) T::AccountId => Option<RewardData<BalanceOf<T>>>;
 
         /// True if network has been upgraded to this version.
         /// Storage version of the pallet.
@@ -1160,15 +1155,6 @@ decl_storage! {
         config(stakers):
             Vec<(T::AccountId, T::AccountId, BalanceOf<T>, StakerStatus<T::AccountId>)>;
         build(|config: &GenesisConfig<T>| {
-            <BlockReward>::put(T::RewardPerBlock::get());
-            <RemainderMiningReward>::put(T::RemainderMiningReward::get());
-
-            let candidate_validators : Vec<_> = (&config.stakers)
-                .iter()
-                .map(|&(ref stash, _, _, _)| (stash.clone()))
-                .collect();
-            <CandidateValidators<T>>::put(candidate_validators);
-
             for &(ref stash, ref controller, balance, ref status) in &config.stakers {
                 assert!(
                     T::Currency::free_balance(&stash) >= balance,
@@ -1400,6 +1386,15 @@ decl_module! {
             } else {
                 0
             }
+        }
+
+        /// sets `ElectionStatus` to `Open(now)` where `now` is the block number at which the
+        /// election window has opened, if we are at the last session and less blocks than
+        /// `T::ElectionLookahead` is remaining until the next new session schedule. The offchain
+        /// worker, if applicable, will execute at the end of the current block, and solutions may
+        /// be submitted.
+        fn on_initialize(now: T::BlockNumber) -> Weight {
+            T::DbWeight::get().reads_writes(4, 0)
         }
 
         fn on_finalize() {
@@ -2067,7 +2062,7 @@ decl_module! {
 
             // check credit pass threshold
             if T::CreditInterface::pass_threshold(&controller, 0) == false {
-                error!("Credit score is too low to delegating a validator!");
+                error!("Credit score {} of delegator {:?} is too low!", T::CreditInterface::get_credit_score(&controller).unwrap_or_default(), controller.clone());
                 Err(Error::<T>::CreditScoreTooLow)?
             }
             // check validators size
@@ -2084,10 +2079,11 @@ decl_module! {
             }
 
             // check target validators in candidate_validators
-            let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+            let candidate_validators = Self::candidate_validators().unwrap_or_default();
+            error!("candidate_validators= {:?}", candidate_validators);
             for validator in validators.clone() {
                 if !candidate_validators.contains(&validator){
-                    error!("Validator AccountId  isn't in candidateValidators");
+                    error!("Validator AccountId {:?} isn't in candidateValidators", &validator);
                     Err(Error::<T>::NotInCandidateValidator)?
                 }
             }
@@ -2427,7 +2423,7 @@ impl<T: Config> Module<T> {
         }
 
         // distribute validators
-        if let Some(current_era_validators) = Self::get_current_era_validators() {
+        if let Some(current_era_validators) = Self::current_era_validators() {
             let len = current_era_validators.len();
             let validator_reward = Percent::from_percent(5)
                 * (Perbill::from_rational_approximation(1, len as u32) * total_poc_reward);
@@ -2874,7 +2870,7 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
             validators
                 .into_iter()
                 .map(|v| {
-                    let exposure = Self::eras_stakers(current_era, &v);
+                    let exposure = Self::eras_stakers(current_era, &v); // TODO investigate inpact
                     (v, exposure)
                 })
                 .collect()

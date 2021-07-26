@@ -26,6 +26,9 @@ use sp_runtime::Percent;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
+
 #[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
@@ -492,5 +495,22 @@ pub mod pallet {
             }
             None
         }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<T: Config> GenesisConfig<T> {
+    /// Direct implementation of `GenesisBuild::build_storage`.
+    ///
+    /// Kept in order not to break dependency.
+    pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
+        <Self as GenesisBuild<T>>::build_storage(self)
+    }
+
+    /// Direct implementation of `GenesisBuild::assimilate_storage`.
+    ///
+    /// Kept in order not to break dependency.
+    pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
+        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
     }
 }

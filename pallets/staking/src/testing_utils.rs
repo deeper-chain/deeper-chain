@@ -34,7 +34,6 @@ const SEED: u32 = 0;
 /// This function removes all validators and nominators from storage.
 pub fn clear_validators_and_nominators<T: Config>() {
     Validators::<T>::remove_all();
-    Nominators::<T>::remove_all();
 }
 
 /// Grab a funded user.
@@ -128,6 +127,7 @@ pub fn create_validators<T: Config>(
 ///    Else, all of them are considered and `edge_per_nominator` random validators are voted for.
 ///
 /// Return the validators choosen to be nominated.
+/*
 pub fn create_validators_with_nominators_for_era<T: Config>(
     validators: u32,
     nominators: u32,
@@ -137,7 +137,7 @@ pub fn create_validators_with_nominators_for_era<T: Config>(
 ) -> Result<Vec<<T::Lookup as StaticLookup>::Source>, &'static str> {
     clear_validators_and_nominators::<T>();
 
-    let mut validators_stash: Vec<<T::Lookup as StaticLookup>::Source> =
+    let mut validators_stash: Vec<T::AccountId> =
         Vec::with_capacity(validators as usize);
     let mut rng = ChaChaRng::from_seed(SEED.using_encoded(blake2_256));
 
@@ -158,9 +158,9 @@ pub fn create_validators_with_nominators_for_era<T: Config>(
             RawOrigin::Signed(v_controller.clone()).into(),
             validator_prefs,
         )?;
-        let stash_lookup: <T::Lookup as StaticLookup>::Source =
-            T::Lookup::unlookup(v_stash.clone());
-        validators_stash.push(stash_lookup.clone());
+        //let stash_lookup: <T::Lookup as StaticLookup>::Source =
+        //    T::Lookup::unlookup(v_stash.clone());
+        validators_stash.push(v_stash.clone());
     }
 
     let to_nominate = to_nominate.unwrap_or(validators_stash.len() as u32) as usize;
@@ -181,7 +181,7 @@ pub fn create_validators_with_nominators_for_era<T: Config>(
 
         // Have them randomly validate
         let mut available_validators = validator_choosen.clone();
-        let mut selected_validators: Vec<<T::Lookup as StaticLookup>::Source> =
+        let mut selected_validators: Vec<T::AccountId> =
             Vec::with_capacity(edge_per_nominator);
 
         for _ in 0..validators.min(edge_per_nominator as u32) {
@@ -189,7 +189,7 @@ pub fn create_validators_with_nominators_for_era<T: Config>(
             let validator = available_validators.remove(selected);
             selected_validators.push(validator);
         }
-        Staking::<T>::nominate(
+        Staking::<T>::delegate(
             RawOrigin::Signed(n_controller.clone()).into(),
             selected_validators,
         )?;
@@ -198,10 +198,11 @@ pub fn create_validators_with_nominators_for_era<T: Config>(
     ValidatorCount::put(validators);
 
     Ok(validator_choosen)
-}
+}*/
 
 /// Build a _really bad_ but acceptable solution for election. This should always yield a solution
 /// which has a less score than the seq-phragmen.
+/*
 pub fn get_weak_solution<T: Config>(
     do_reduce: bool,
 ) -> (
@@ -309,10 +310,11 @@ pub fn get_weak_solution<T: Config>(
     };
 
     (winners, compact, score, size)
-}
+}*/
 
 /// Create a solution for seq-phragmen. This uses the same internal function as used by the offchain
 /// worker code.
+/*
 pub fn get_seq_phragmen_solution<T: Config>(
     do_reduce: bool,
 ) -> (
@@ -381,7 +383,7 @@ pub fn get_single_winner_solution<T: Config>(
 
     Ok((winners, compact, score, size))
 }
-
+*/
 /// get the active era.
 pub fn current_era<T: Config>() -> EraIndex {
     <Module<T>>::current_era().unwrap_or(0)
@@ -393,38 +395,4 @@ pub fn init_active_era() {
         index: 1,
         start: None,
     })
-}
-
-/// Create random assignments for the given list of winners. Each assignment will have
-/// MAX_NOMINATIONS edges.
-pub fn create_assignments_for_offchain<T: Config>(
-    num_assignments: u32,
-    winners: Vec<<T::Lookup as StaticLookup>::Source>,
-) -> Result<
-    (
-        Vec<(T::AccountId, ExtendedBalance)>,
-        Vec<Assignment<T::AccountId, OffchainAccuracy>>,
-    ),
-    &'static str,
-> {
-    let ratio = OffchainAccuracy::from_rational_approximation(1, MAX_NOMINATIONS);
-    let assignments: Vec<Assignment<T::AccountId, OffchainAccuracy>> = <Nominators<T>>::iter()
-        .take(num_assignments as usize)
-        .map(|(n, t)| Assignment {
-            who: n,
-            distribution: t.targets.iter().map(|v| (v.clone(), ratio)).collect(),
-        })
-        .collect();
-
-    ensure!(
-        assignments.len() == num_assignments as usize,
-        "must bench for `a` assignments"
-    );
-
-    let winners = winners
-        .into_iter()
-        .map(|v| (<T::Lookup as StaticLookup>::lookup(v).unwrap(), 0))
-        .collect();
-
-    Ok((winners, assignments))
 }
