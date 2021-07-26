@@ -108,7 +108,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        Staking: staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
+        Staking: staking::{Module, Call, Config<T>, Storage, Event<T>},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
@@ -342,6 +342,7 @@ impl Config for Test {
     type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
     type WeightInfo = ();
     type CreditInterface = Credit;
+    type NodeInterface = DeeperNode;
     type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
     type CurrencyToNumber = CurrencyToNumberHandler;
     type CreditToTokenFactor = CreditToTokenFactor;
@@ -476,7 +477,7 @@ impl ExtBuilder {
             .map(|x| ((x + 1) * 10 + 1) as AccountId)
             .collect::<Vec<_>>();
 
-        let _ = pallet_balances::GenesisConfig::<Test> {
+        pallet_balances::GenesisConfig::<Test> {
             balances: vec![
                 (1, 10 * balance_factor),
                 (2, 20 * balance_factor),
@@ -504,70 +505,11 @@ impl ExtBuilder {
                 (999, 1_000_000_000_000),
             ],
         }
-        .assimilate_storage(&mut storage);
-
-        let mut stakers = vec![];
-        if self.has_stakers {
-            let stake_21 = if self.fair { 1000 } else { 2000 };
-            let stake_31 = if self.validator_pool {
-                balance_factor * 1000
-            } else {
-                1
-            };
-            let status_41 = if self.validator_pool {
-                StakerStatus::<AccountId>::Validator
-            } else {
-                StakerStatus::<AccountId>::Idle
-            };
-            let nominated = if self.nominate { vec![11, 21] } else { vec![] };
-            stakers = vec![
-                // (stash, controller, staked_amount, status)
-                (
-                    11,
-                    10,
-                    balance_factor * 1000,
-                    StakerStatus::<AccountId>::Validator,
-                ),
-                (21, 20, stake_21, StakerStatus::<AccountId>::Validator),
-                (31, 30, stake_31, StakerStatus::<AccountId>::Validator),
-                (41, 40, balance_factor * 1000, status_41),
-                // nominator
-                (
-                    101,
-                    100,
-                    balance_factor * 500,
-                    StakerStatus::<AccountId>::Nominator(nominated),
-                ),
-            ];
-        }
-        let _ = staking::GenesisConfig::<Test> {
-            stakers: stakers,
-            validator_count: self.validator_count,
-            minimum_validator_count: self.minimum_validator_count,
-            invulnerables: self.invulnerables,
-            slash_reward_fraction: Perbill::from_percent(10),
-            ..Default::default()
-        }
-        .assimilate_storage(&mut storage);
-
-        let _ = pallet_session::GenesisConfig::<Test> {
-            keys: validators
-                .iter()
-                .map(|x| {
-                    (
-                        *x,
-                        *x,
-                        SessionKeys {
-                            other: UintAuthorityId(*x as u64),
-                        },
-                    )
-                })
-                .collect(),
-        }
-        .assimilate_storage(&mut storage);
+        .assimilate_storage(&mut storage)
+        .unwrap();
 
         pub const BLOCKS_PER_ERA: u64 = 178000 as u64;
-        let credit_genesis_config = pallet_credit::GenesisConfig::<Test> {
+        pallet_credit::GenesisConfig::<Test> {
             credit_settings: vec![],
             user_credit_data: vec![
                 (
@@ -641,6 +583,16 @@ impl ExtBuilder {
                     },
                 ),
                 (
+                    20,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
                     22,
                     CreditData {
                         credit: 100,
@@ -650,9 +602,102 @@ impl ExtBuilder {
                         expiration: BLOCKS_PER_ERA,
                     },
                 ),
+                (
+                    30,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    40,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
+                (
+                    100,
+                    CreditData {
+                        credit: 100,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                ),
             ],
-        };
-        GenesisBuild::<Test>::assimilate_storage(&credit_genesis_config, &mut storage).unwrap();
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
+
+        let mut stakers = vec![];
+        if self.has_stakers {
+            let stake_21 = if self.fair { 1000 } else { 2000 };
+            let stake_31 = if self.validator_pool {
+                balance_factor * 1000
+            } else {
+                1
+            };
+            let status_41 = if self.validator_pool {
+                StakerStatus::<AccountId>::Validator
+            } else {
+                StakerStatus::<AccountId>::Idle
+            };
+            let nominated = if self.nominate { vec![11, 21] } else { vec![] };
+            stakers = vec![
+                // (stash, controller, staked_amount, status)
+                (
+                    11,
+                    10,
+                    balance_factor * 1000,
+                    StakerStatus::<AccountId>::Validator,
+                ),
+                (21, 20, stake_21, StakerStatus::<AccountId>::Validator),
+                (31, 30, stake_31, StakerStatus::<AccountId>::Validator),
+                (41, 40, balance_factor * 1000, status_41),
+                (
+                    101,
+                    100,
+                    balance_factor * 500,
+                    StakerStatus::<AccountId>::Idle,
+                ),
+            ];
+        }
+
+        staking::GenesisConfig::<Test> {
+            stakers: stakers,
+            validator_count: self.validator_count,
+            minimum_validator_count: self.minimum_validator_count,
+            invulnerables: self.invulnerables,
+            slash_reward_fraction: Perbill::from_percent(10),
+            ..Default::default()
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
+
+        pallet_session::GenesisConfig::<Test> {
+            keys: validators
+                .iter()
+                .map(|x| {
+                    (
+                        *x,
+                        *x,
+                        SessionKeys {
+                            other: UintAuthorityId(*x as u64),
+                        },
+                    )
+                })
+                .collect(),
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
 
         let mut ext = sp_io::TestExternalities::from(storage);
         ext.execute_with(|| {
@@ -682,7 +727,7 @@ impl ExtBuilder {
 }
 
 fn post_conditions() {
-    check_nominators();
+    //check_nominators();
     check_exposures();
     check_ledgers();
 }
@@ -703,7 +748,7 @@ fn check_exposures() {
         );
     })
 }
-
+/*
 fn check_nominators() {
     // a check per nominator to ensure their entire stake is correctly distributed. Will only kick-
     // in if the nomination was submitted before the current era.
@@ -751,6 +796,7 @@ fn check_nominators() {
             assert!(diff < 100);
         });
 }
+*/
 
 fn assert_is_stash(acc: AccountId) {
     assert!(Staking::bonded(&acc).is_some(), "Not a stash.");
@@ -795,7 +841,7 @@ pub(crate) fn bond_validator(stash: AccountId, ctrl: AccountId, val: Balance) {
         ValidatorPrefs::default()
     ));
 }
-
+/*
 pub(crate) fn bond_nominator(
     stash: AccountId,
     ctrl: AccountId,
@@ -811,7 +857,7 @@ pub(crate) fn bond_nominator(
         RewardDestination::Controller,
     ));
     assert_ok!(Staking::nominate(Origin::signed(ctrl), target));
-}
+}*/
 
 /// Progress to the given block, triggering session and era changes as we progress.
 ///
@@ -864,6 +910,7 @@ pub(crate) fn start_active_era(era_index: EraIndex) {
     assert_eq!(current_era(), active_era());
 }
 
+/*
 pub(crate) fn current_total_payout_for_duration(duration: u64) -> Balance {
     let reward = inflation::compute_total_payout(
         <Test as Config>::RewardCurve::get(),
@@ -884,7 +931,7 @@ pub(crate) fn maximum_payout_for_duration(duration: u64) -> Balance {
         duration,
     )
     .1
-}
+}*/
 
 /// Time it takes to finish a session.
 ///
@@ -978,6 +1025,7 @@ pub(crate) fn add_slash(who: &AccountId) {
 
 // winners will be chosen by simply their unweighted total backing stake. Nominator stake is
 // distributed evenly.
+/*
 pub(crate) fn horrible_npos_solution(
     do_reduce: bool,
 ) -> (CompactAssignments, Vec<ValidatorIndex>, ElectionScore) {
@@ -1097,13 +1145,14 @@ pub(crate) fn horrible_npos_solution(
         .collect::<Vec<_>>();
 
     (compact, winners, score)
-}
+}*/
 
 /// Note: this should always logically reproduce [`offchain_election::prepare_submission`], yet we
 /// cannot do it since we want to have `tweak` injected into the process.
 ///
 /// If the input is being tweaked in a way that the score cannot be compute accurately,
 /// `compute_real_score` can be set to true. In this case a `Default` score is returned.
+/*
 pub(crate) fn prepare_submission_with(
     compute_real_score: bool,
     do_reduce: bool,
@@ -1178,9 +1227,10 @@ pub(crate) fn prepare_submission_with(
         .collect::<Vec<_>>();
 
     (compact, winners, score)
-}
+}*/
 
 /// Make all validator and nominator request their payment
+/*
 pub(crate) fn make_all_reward_payment(era: EraIndex) {
     let validators_with_reward = ErasRewardPoints::<Test>::get(era)
         .individual
@@ -1197,7 +1247,7 @@ pub(crate) fn make_all_reward_payment(era: EraIndex) {
             era
         ));
     }
-}
+}*/
 
 #[macro_export]
 macro_rules! assert_session_era {
