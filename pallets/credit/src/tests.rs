@@ -1,6 +1,6 @@
 use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
-use crate::{mock::*, CreditInterface};
-use frame_support::{assert_noop, assert_ok};
+use crate::{mock::*, CreditInterface, Error};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use frame_system::RawOrigin;
 use sp_runtime::traits::BadOrigin;
 use sp_runtime::Percent;
@@ -78,6 +78,87 @@ fn update_credit_setting() {
         assert_eq!(
             Credit::get_credit_setting(CreditLevel::One),
             credit_setting_updated
+        );
+    });
+}
+
+#[test]
+fn update_credit_data() {
+    new_test_ext().execute_with(|| {
+        let credit_data = CreditData {
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            expiration: 0,
+        };
+        // Only sudo can call update_credit_data
+        assert_noop!(
+            Credit::update_credit_data(Origin::signed(1), 2, credit_data.clone()),
+            BadOrigin
+        );
+
+        // update_credit_data works
+        assert_ok!(Credit::update_credit_data(
+            RawOrigin::Root.into(),
+            1,
+            credit_data.clone()
+        ));
+        assert_eq!(Credit::get_user_credit(1), Some(credit_data));
+
+        // credit_data invalid
+        let credit_data = CreditData {
+            credit: 100,
+            initial_credit_level: CreditLevel::Two,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            expiration: 0,
+        };
+        assert_eq!(
+            Credit::update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::InvalidCreditData
+            ))
+        );
+
+        let credit_data = CreditData {
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 10,
+            expiration: 100,
+        };
+        assert_eq!(
+            Credit::update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::InvalidCreditData
+            ))
+        );
+    });
+}
+
+#[test]
+fn initialize_credit() {
+    new_test_ext().execute_with(|| {
+        // Only sudo can call initialize_credit
+        assert_noop!(Credit::initialize_credit(Origin::signed(1), 2), BadOrigin);
+
+        //initialize_credit failed
+        assert_eq!(
+            Credit::initialize_credit(RawOrigin::Root.into(), 1),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::CreditDataInitialized
+            ))
+        );
+
+        // initialize_credit works
+        assert_ok!(Credit::initialize_credit(RawOrigin::Root.into(), 33));
+        assert_eq!(
+            Credit::get_user_credit(33),
+            Some(CreditData {
+                credit: 100,
+                ..Default::default()
+            })
         );
     });
 }

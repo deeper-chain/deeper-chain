@@ -29,7 +29,7 @@ use sp_runtime::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 
-#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq)]
+#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
     Zero,
@@ -86,7 +86,10 @@ pub trait CreditInterface<AccountId, Balance> {
 pub mod pallet {
     use super::*;
     use frame_support::traits::{Currency, Vec};
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+    use frame_support::{
+        dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
+        pallet_prelude::*,
+    };
     use frame_system::pallet_prelude::*;
     use sp_runtime::{
         traits::{Convert, Saturating, Zero},
@@ -182,6 +185,14 @@ pub mod pallet {
         KillCreditFailed(T::AccountId),
     }
 
+    #[pallet::error]
+    pub enum Error<T> {
+        /// invalid credit data
+        InvalidCreditData,
+        /// credit data has been initialized
+        CreditDataInitialized,
+    }
+
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_finalize(_n: T::BlockNumber) {
@@ -220,6 +231,47 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
             Self::_update_credit_setting(credit_setting);
+            Ok(().into())
+        }
+
+        /// update creditdata
+        #[pallet::weight(10_000)]
+        pub fn update_credit_data(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            mut credit_data: CreditData<T::BlockNumber>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            Self::check_credit_data(&credit_data)?;
+            credit_data.expiration = T::BlockNumber::default();
+
+            if UserCredit::<T>::contains_key(&account_id) {
+                UserCredit::<T>::mutate(&account_id, |d| match d {
+                    Some(data) => *data = credit_data,
+                    _ => (),
+                });
+            } else {
+                UserCredit::<T>::insert(&account_id, credit_data);
+            }
+            Ok(().into())
+        }
+
+        /// initialize credit score
+        #[pallet::weight(10_000)]
+        pub fn initialize_credit(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ensure!(
+                !UserCredit::<T>::contains_key(&account_id),
+                Error::<T>::CreditDataInitialized
+            );
+            let credit_data = CreditData {
+                credit: 100,
+                ..Default::default()
+            };
+            UserCredit::<T>::insert(&account_id, credit_data);
             Ok(().into())
         }
     }
@@ -317,6 +369,22 @@ pub mod pallet {
             } else {
                 false
             }
+        }
+
+        /// credit data check
+        fn check_credit_data(
+            data: &CreditData<T::BlockNumber>,
+        ) -> Result<(), DispatchErrorWithPostInfo> {
+            ensure!(
+                Self::get_credit_level(data.credit) == data.initial_credit_level,
+                Error::<T>::InvalidCreditData
+            );
+            let credit_setting = Self::get_credit_setting(data.initial_credit_level);
+            ensure!(
+                data.number_of_referees <= credit_setting.max_referees_with_rewards,
+                Error::<T>::InvalidCreditData
+            );
+            Ok(())
         }
     }
 
