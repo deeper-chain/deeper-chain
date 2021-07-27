@@ -85,22 +85,6 @@ fn update_credit_setting() {
 #[test]
 fn update_credit_data() {
     new_test_ext().execute_with(|| {
-        let credit_setting = CreditSetting {
-            credit_level: CreditLevel::One,
-            balance: 20_000,
-            base_apy: Percent::from_percent(39),
-            bonus_apy: Percent::from_percent(0),
-            max_rank_with_bonus: 1u32,
-            tax_rate: Percent::from_percent(10),
-            max_referees_with_rewards: 1,
-            reward_per_referee: 18,
-        };
-        assert_ok!(Credit::update_credit_setting(
-            RawOrigin::Root.into(),
-            credit_setting.clone()
-        ));
-        assert_eq!(Credit::get_credit_setting(CreditLevel::One), credit_setting);
-
         let credit_data = CreditData {
             credit: 100,
             initial_credit_level: CreditLevel::One,
