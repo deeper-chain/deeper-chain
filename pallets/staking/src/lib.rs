@@ -1704,7 +1704,7 @@ decl_module! {
             let controller = ensure_signed(origin)?;
             let ledger = Self::ledger(&controller).ok_or(Error::<T>::NotController)?;
             let stash = &ledger.stash;
-            <Validators<T>>::insert(stash.clone(), prefs);
+            <Validators<T>>::insert(stash, prefs);
             //update cadidate validators for PoC
             let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
             <CandidateValidators<T>>::put(candidate_validators);
@@ -2062,7 +2062,6 @@ decl_module! {
 
             // check credit pass threshold
             if T::CreditInterface::pass_threshold(&controller, 0) == false {
-                error!("Credit score {} of delegator {:?} is too low!", T::CreditInterface::get_credit_score(&controller).unwrap_or_default(), controller.clone());
                 Err(Error::<T>::CreditScoreTooLow)?
             }
             // check validators size
@@ -2080,10 +2079,8 @@ decl_module! {
 
             // check target validators in candidate_validators
             let candidate_validators = Self::candidate_validators().unwrap_or_default();
-            error!("candidate_validators= {:?}", candidate_validators);
             for validator in validators.clone() {
                 if !candidate_validators.contains(&validator){
-                    error!("Validator AccountId {:?} isn't in candidateValidators", &validator);
                     Err(Error::<T>::NotInCandidateValidator)?
                 }
             }
@@ -2108,11 +2105,11 @@ decl_module! {
         pub fn undelegate(origin) -> DispatchResult {
             let controller = ensure_signed(origin)?;
 
-            if !<DelegatedToValidators<T>>::contains_key(controller.clone()){
+            if !<DelegatedToValidators<T>>::contains_key(&controller){
                 Err(Error::<T>::NotDelegate)?
             }
-            Self::_undelegate(controller.clone());
-            <DelegatedToValidators<T>>::remove(controller.clone());
+            Self::_undelegate(&controller);
+            <DelegatedToValidators<T>>::remove(&controller);
 
             Self::deposit_event(RawEvent::UnDelegated(controller));
             Ok(())
@@ -2422,14 +2419,41 @@ impl<T: Config> Module<T> {
             }
         }
 
-        // distribute validators
+        // distribute pocr reward to validators
         if let Some(current_era_validators) = Self::current_era_validators() {
             let len = current_era_validators.len();
             let validator_reward = Percent::from_percent(5)
                 * (Perbill::from_rational_approximation(1, len as u32) * total_poc_reward);
             for (validator, _) in SelectedDelegators::<T>::iter_prefix(current_era) {
-                T::Currency::deposit_creating(&validator, validator_reward);
+                if let Some(imbalance) = Self::make_validator_payout(&validator, validator_reward) {
+                    Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
+                }
                 Self::deposit_event(RawEvent::ValidatorReward(validator, validator_reward));
+            }
+        }
+    }
+
+    /// Validators can set reward destination or payee, so we need to handle that.
+    fn make_validator_payout(
+        stash: &T::AccountId,
+        amount: BalanceOf<T>,
+    ) -> Option<PositiveImbalanceOf<T>> {
+        let dest = Self::payee(stash);
+        match dest {
+            RewardDestination::Controller => Self::bonded(stash)
+                .and_then(|controller| Some(T::Currency::deposit_creating(&controller, amount))),
+            RewardDestination::Stash => T::Currency::deposit_into_existing(stash, amount).ok(),
+            RewardDestination::Staked => Self::bonded(stash)
+                .and_then(|c| Self::ledger(&c).map(|l| (c, l)))
+                .and_then(|(controller, mut l)| {
+                    l.active += amount;
+                    l.total += amount;
+                    let r = T::Currency::deposit_into_existing(stash, amount).ok();
+                    Self::update_ledger(&controller, &l);
+                    r
+                }),
+            RewardDestination::Account(dest_account) => {
+                Some(T::Currency::deposit_creating(&dest_account, amount))
             }
         }
     }
@@ -2518,8 +2542,23 @@ impl<T: Config> Module<T> {
                 ",
                 elected_validators.len(),
                 current_era,
-                elected_validators.clone()
+                &elected_validators
             );
+            let mut total_stake: BalanceOf<T> = Zero::zero();
+            for v in &elected_validators {
+                let stake = Self::bonded(&v)
+                    .and_then(Self::ledger)
+                    .map(|l| l.active)
+                    .unwrap_or_default();
+                let exposure = Exposure {
+                    total: stake,
+                    own: stake,
+                    others: vec![],
+                };
+                ErasStakers::<T>::insert(current_era, &v, &exposure);
+                total_stake = total_stake.saturating_add(stake);
+            }
+            ErasTotalStake::<T>::insert(&current_era, total_stake);
             Some(elected_validators)
         }
     }
@@ -2660,7 +2699,7 @@ impl<T: Config> Module<T> {
         }
     }
 
-    fn _undelegate(delegator: T::AccountId) {
+    fn _undelegate(delegator: &T::AccountId) {
         for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(delegator.clone()) {
             if CandidateDelegators::<T>::contains_key(validator.clone()) {
                 let delegators = CandidateDelegators::<T>::take(validator.clone());
@@ -2725,20 +2764,20 @@ impl<T: Config> Module<T> {
             if T::CreditInterface::pass_threshold(&delegator, 0) == false
                 || next_target_validators.len() == 0
             {
-                Self::_undelegate(delegator.clone());
-                <DelegatedToValidators<T>>::remove(delegator.clone());
+                Self::_undelegate(&delegator);
+                <DelegatedToValidators<T>>::remove(&delegator);
             } else {
                 let total_score = T::CreditInterface::get_credit_score(&delegator).unwrap();
                 // score has update or target_validators changed
                 if total_score != credit_delegate_info.score || target_is_changed == true {
-                    Self::_undelegate(delegator.clone());
+                    Self::_undelegate(&delegator);
 
                     let validators_vec = Self::cut_credit_score(&delegator, next_target_validators);
                     Self::_delegate(delegator.clone(), validators_vec);
 
-                    let mut info = <DelegatedToValidators<T>>::take(delegator.clone());
+                    let mut info = <DelegatedToValidators<T>>::take(&delegator);
                     info.score = total_score;
-                    <DelegatedToValidators<T>>::insert(delegator.clone(), info);
+                    <DelegatedToValidators<T>>::insert(&delegator, info);
                 }
             }
         }
@@ -2800,16 +2839,17 @@ impl<T: Config> Module<T> {
 
     // poc credit slash
     fn poc_slash(validator: &T::AccountId, era_index: EraIndex) {
-        if <SelectedDelegators<T>>::contains_key(era_index, validator.clone()) {
+        if <SelectedDelegators<T>>::contains_key(era_index, &validator) {
             let delegators = <SelectedDelegators<T>>::take(era_index, validator);
             let update_delegators: Vec<_> = delegators
                 .iter()
                 .map(|(d, s, slashed)| {
-                    if *slashed == false && <DelegatedToValidators<T>>::contains_key((*d).clone()) {
+                    if *slashed == false && <DelegatedToValidators<T>>::contains_key(d) {
                         T::CreditInterface::slash_credit(d);
-                        // undelegate
-                        Self::_undelegate((*d).clone());
-                        <DelegatedToValidators<T>>::remove((*d).clone());
+                        if T::CreditInterface::pass_threshold(d, 0) == false {
+                            Self::_undelegate(d);
+                            <DelegatedToValidators<T>>::remove(d);
+                        }
                         ((*d).clone(), *s, true)
                     } else {
                         ((*d).clone(), *s, *slashed)

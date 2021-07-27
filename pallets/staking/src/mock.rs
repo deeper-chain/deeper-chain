@@ -212,7 +212,7 @@ parameter_types! {
     pub const CreditScoreCapPerEra: u8 = 5;
     pub const CreditScoreAttenuationLowerBound: u64 = 40;
     pub const CreditScoreAttenuationStep: u64 = 5;
-    pub const CreditScoreDelegatedPermitThreshold: u64 = 60;
+    pub const CreditScoreDelegatedPermitThreshold: u64 = 100;
     pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
@@ -515,7 +515,7 @@ impl ExtBuilder {
                 (
                     1,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -525,7 +525,7 @@ impl ExtBuilder {
                 (
                     2,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -535,7 +535,7 @@ impl ExtBuilder {
                 (
                     3,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -555,7 +555,7 @@ impl ExtBuilder {
                 (
                     10,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -565,7 +565,7 @@ impl ExtBuilder {
                 (
                     11,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -575,7 +575,7 @@ impl ExtBuilder {
                 (
                     19,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -585,7 +585,7 @@ impl ExtBuilder {
                 (
                     20,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -595,7 +595,7 @@ impl ExtBuilder {
                 (
                     22,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -605,7 +605,7 @@ impl ExtBuilder {
                 (
                     30,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -615,7 +615,7 @@ impl ExtBuilder {
                 (
                     40,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
@@ -625,7 +625,7 @@ impl ExtBuilder {
                 (
                     100,
                     CreditData {
-                        credit: 100,
+                        credit: 105,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
