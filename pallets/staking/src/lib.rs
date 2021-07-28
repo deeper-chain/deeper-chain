@@ -2462,6 +2462,7 @@ impl<T: Config> Module<T> {
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
         if let Some(_active_era_start) = active_era.start {
+            Self::check_and_adjust_delegated_score();
             Self::distribute_pocr_reward(active_era.index);
         }
     }
@@ -2515,14 +2516,17 @@ impl<T: Config> Module<T> {
     /// This should only be called at the end of an era.
     fn select_and_update_validators(current_era: EraIndex) -> Option<Vec<T::AccountId>> {
         let validator_whitelist = <ValidatorWhiteList<T>>::get();
-        let mut all_validators: Vec<(T::AccountId, u32)> = CandidateDelegators::<T>::iter()
-            .filter(|(candidate_validator, _)| {
-                validator_whitelist.len() == 0 || validator_whitelist.contains(&candidate_validator)
+        let candidate_validators = <CandidateValidators<T>>::get().unwrap();
+        let mut candidate_delegators: Vec<(T::AccountId, u32)> = CandidateDelegators::<T>::iter()
+            .filter(|(validator, _)| {
+                (validator_whitelist.len() == 0 || validator_whitelist.contains(&validator))
+                && candidate_validators.contains(&validator)
             })
-            .map(|(candidate_validator, delegators)| (candidate_validator, delegators.len() as u32))
+            .map(|(validator, delegators)| (validator, delegators.len() as u32))
             .collect();
+        
 
-        if all_validators.len() < Self::minimum_validator_count().max(1) as usize {
+        if candidate_delegators.len() < Self::minimum_validator_count().max(1) as usize {
             // If we don't have enough candidates, nothing to do.
             log!(
                 warn,
@@ -2531,14 +2535,14 @@ impl<T: Config> Module<T> {
             );
             None
         } else {
-            all_validators.sort_by(|a, b| a.1.cmp(&b.1).reverse());
-            all_validators.truncate(Self::validator_count() as usize);
+            candidate_delegators.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+            candidate_delegators.truncate(Self::validator_count() as usize);
             let elected_validators: Vec<T::AccountId> =
-                all_validators.iter().map(|(v, _)| (*v).clone()).collect();
+                candidate_delegators.iter().map(|(v, _)| (*v).clone()).collect();
             log!(
                 info,
                 "💸 new validator set of size {:?} has been elected for era {:?}\n 
-                all_validators: {:?}
+                candidate_delegators: {:?}
                 ",
                 elected_validators.len(),
                 current_era,
@@ -2668,21 +2672,10 @@ impl<T: Config> Module<T> {
     fn _delegate(delegator: T::AccountId, validators_vec: Vec<(T::AccountId, u64)>) {
         for (validator, score) in validators_vec {
             let has_delegated =
-                <HasDelegatedToValidator<T>>::get(delegator.clone(), validator.clone())
-                    .unwrap_or(false);
-            if has_delegated == false {
-                // delegate first times
-                if CandidateDelegators::<T>::contains_key(validator.clone()) {
-                    let mut delegators = CandidateDelegators::<T>::take(validator.clone());
-                    delegators.push((delegator.clone(), score));
-                    CandidateDelegators::<T>::insert(validator.clone(), delegators);
-                } else {
-                    let delegators = vec![(delegator.clone(), score)];
-                    CandidateDelegators::<T>::insert(validator.clone(), delegators);
-                }
-            } else {
+                <HasDelegatedToValidator<T>>::get(&delegator, &validator).unwrap_or(false);
+            if has_delegated {
                 // delegated, update score
-                let delegators = CandidateDelegators::<T>::take(validator.clone());
+                let delegators = CandidateDelegators::<T>::take(&validator);
                 let next_delegators: Vec<_> = delegators
                     .iter()
                     .map(|(d, s)| {
@@ -2693,22 +2686,32 @@ impl<T: Config> Module<T> {
                         }
                     })
                     .collect();
-                CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
+                CandidateDelegators::<T>::insert(&validator, next_delegators);
+            } else {
+                // delegate first time
+                if CandidateDelegators::<T>::contains_key(&validator) {
+                    let mut delegators = CandidateDelegators::<T>::take(&validator);
+                    delegators.push((delegator.clone(), score));
+                    CandidateDelegators::<T>::insert(&validator, delegators);
+                } else {
+                    let delegators = vec![(delegator.clone(), score)];
+                    CandidateDelegators::<T>::insert(&validator, delegators);
+                }
             }
-            <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), true);
+            <HasDelegatedToValidator<T>>::insert(&delegator, &validator, true);
         }
     }
 
     fn _undelegate(delegator: &T::AccountId) {
-        for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(delegator.clone()) {
-            if CandidateDelegators::<T>::contains_key(validator.clone()) {
-                let delegators = CandidateDelegators::<T>::take(validator.clone());
+        for (validator, _) in HasDelegatedToValidator::<T>::iter_prefix(&delegator) {
+            if CandidateDelegators::<T>::contains_key(&validator) {
+                let delegators = CandidateDelegators::<T>::take(&validator);
                 let next_delegators: Vec<_> = delegators
                     .iter()
                     .filter(|(d, _)| *d != delegator.clone())
                     .collect();
-                CandidateDelegators::<T>::insert(validator.clone(), next_delegators);
-                <HasDelegatedToValidator<T>>::insert(delegator.clone(), validator.clone(), false);
+                CandidateDelegators::<T>::insert(&validator, next_delegators);
+                <HasDelegatedToValidator<T>>::insert(&delegator, &validator, false);
             }
         }
     }
@@ -2769,7 +2772,7 @@ impl<T: Config> Module<T> {
             } else {
                 let total_score = T::CreditInterface::get_credit_score(&delegator).unwrap();
                 // score has update or target_validators changed
-                if total_score != credit_delegate_info.score || target_is_changed == true {
+                if total_score != credit_delegate_info.score || target_is_changed {
                     Self::_undelegate(&delegator);
 
                     let validators_vec = Self::cut_credit_score(&delegator, next_target_validators);
@@ -2788,12 +2791,12 @@ impl<T: Config> Module<T> {
         let current_era = Self::current_era().unwrap_or(0);
 
         for validator in validators {
-            let delegators = CandidateDelegators::<T>::get(validator.clone());
+            let delegators = CandidateDelegators::<T>::get(&validator);
             let selected_delegators: Vec<_> = delegators
                 .iter()
                 .map(|(d, s)| {
-                    Delegators::<T>::insert(current_era, (*d).clone(), true);
-                    ((*d).clone(), *s, false)
+                    Delegators::<T>::insert(current_era, d, true);
+                    (d, s, false)
                 })
                 .collect();
             SelectedDelegators::<T>::insert(current_era, validator, selected_delegators);
@@ -2902,6 +2905,8 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
     fn new_session(
         new_index: SessionIndex,
     ) -> Option<Vec<(T::AccountId, Exposure<T::AccountId, BalanceOf<T>>)>> {
+        let candidate_validators = <Validators<T>>::iter().map(|(v, _)| v).collect::<Vec<_>>();
+        <CandidateValidators<T>>::put(candidate_validators);
         <Self as pallet_session::SessionManager<_>>::new_session(new_index).map(|validators| {
             let current_era = Self::current_era()
                 // Must be some as a new era has been created.

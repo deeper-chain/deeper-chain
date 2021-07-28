@@ -679,15 +679,15 @@ fn bond_extra_and_withdraw_unbonded_works() {
                 claimed_rewards: vec![],
             })
         );
-        /*
+    
         assert_eq!(
             Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
             Exposure {
-                total: 500,
-                own: 500,
+                total: 1000,
+                own: 1000,
                 others: vec![]
             }
-        );*/
+        );
 
         // deposit the extra 100 units
         Staking::bond_extra(Origin::signed(11), 100).unwrap();
@@ -702,8 +702,6 @@ fn bond_extra_and_withdraw_unbonded_works() {
                 claimed_rewards: vec![],
             })
         );
-        // Exposure is a snapshot! only updated after the next era update.
-        /*
         assert_ne!(
             Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
             Exposure {
@@ -711,7 +709,7 @@ fn bond_extra_and_withdraw_unbonded_works() {
                 own: 1000 + 100,
                 others: vec![]
             }
-        );*/
+        );
 
         // trigger next era.
         mock::start_active_era(2);
@@ -728,8 +726,6 @@ fn bond_extra_and_withdraw_unbonded_works() {
                 claimed_rewards: vec![],
             })
         );
-        // Exposure is now updated.
-        /*
         assert_eq!(
             Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
             Exposure {
@@ -737,7 +733,7 @@ fn bond_extra_and_withdraw_unbonded_works() {
                 own: 1000 + 100,
                 others: vec![]
             }
-        );*/
+        );
 
         // Unbond almost all of the funds in stash.
         Staking::unbond(Origin::signed(10), 1000).unwrap();
@@ -1438,8 +1434,7 @@ fn offence_deselects_validator_even_when_slash_is_zero() {
 
         mock::start_active_era(1);
 
-        // TODO: fix me
-        // assert!(!Session::validators().contains(&11));
+        assert!(!Session::validators().contains(&11));
         assert!(!<Validators<Test>>::contains_key(11));
     });
 }
@@ -1475,8 +1470,6 @@ fn slashing_performed_according_exposure() {
     });
 }
 
-//TODO clarify the requirements, and update test
-/*
 #[test]
 fn slash_in_old_span_does_not_deselect() {
     ExtBuilder::default().build_and_execute(|| {
@@ -1547,7 +1540,6 @@ fn slash_in_old_span_does_not_deselect() {
         assert!(Session::validators().contains(&11));
     });
 }
-*/
 
 #[test]
 fn reporters_receive_their_slice() {
