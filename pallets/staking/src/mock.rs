@@ -20,22 +20,16 @@
 use crate as staking;
 use crate::*;
 use frame_support::{
-    assert_ok,
-    pallet_prelude::GenesisBuild,
-    parameter_types,
+    assert_ok, parameter_types,
     traits::{Currency, FindAuthor, Get, OnFinalize, OnInitialize, OneSessionHandler},
-    weights::{constants::RocksDbWeight, Weight},
-    IterableStorageMap, StorageDoubleMap, StorageMap, StorageValue,
+    weights::constants::RocksDbWeight,
+    IterableStorageMap, StorageDoubleMap, StorageValue,
 };
 use node_primitives::Moment;
-use pallet_credit::{CreditData, CreditLevel};
+use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use sp_core::H256;
 use sp_io;
-use sp_npos_elections::{
-    reduce, to_support_map, ElectionScore, EvaluateSupport, ExtendedBalance, StakedAssignment,
-};
 use sp_runtime::{
-    curve::PiecewiseLinear,
     testing::{Header, TestXt, UintAuthorityId},
     traits::{IdentityLookup, Zero},
 };
@@ -90,11 +84,6 @@ impl sp_runtime::BoundToRuntimeAppPublic for OtherSessionHandler {
     type Public = UintAuthorityId;
 }
 
-pub fn is_disabled(controller: AccountId) -> bool {
-    let stash = Staking::ledger(&controller).unwrap().stash;
-    SESSION.with(|d| d.borrow().1.contains(&stash))
-}
-
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -136,10 +125,8 @@ parameter_types! {
     pub static SessionsPerEra: SessionIndex = 3;
     pub static ExistentialDeposit: Balance = 1;
     pub static SlashDeferDuration: EraIndex = 0;
-    pub static ElectionLookahead: BlockNumber = 0;
     pub static Period: BlockNumber = 5;
     pub static Offset: BlockNumber = 0;
-    pub static MaxIterations: u32 = 0;
 }
 
 impl frame_system::Config for Test {
@@ -286,10 +273,8 @@ impl pallet_timestamp::Config for Test {
 
 parameter_types! {
     pub const BondingDuration: EraIndex = 3;
-    pub const MaxNominatorRewardedPerValidator: u32 = 64;
     pub const UnsignedPriority: u64 = 1 << 20;
     pub const MinSolutionScoreBump: Perbill = Perbill::zero();
-    pub OffchainSolutionWeightLimit: Weight = BlockWeights::get().max_block;
 }
 
 thread_local! {
@@ -307,16 +292,11 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for RewardRemainderMock {
     }
 }
 
-const GENESIS_BLOCK_REWARD: u128 = 90_000_000_000_000_000;
 const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 
 parameter_types! {
-    pub const RewardAdjustPeriod: u32 = 4;
-    pub const CreditToTokenFactor: u128 = 500_000_000_000_000;
-    pub const RewardAdjustFactor: u128 = 77_760_000;
-    pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD / 30;
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
-    pub const MaxValidatorsCanSelected: usize = 10;
+    pub const MaxDelegates: usize = 10;
 }
 
 impl Config for Test {
@@ -333,23 +313,13 @@ impl Config for Test {
     type BondingDuration = BondingDuration;
     type SessionInterface = Self;
     type NextNewSession = Session;
-    type ElectionLookahead = ElectionLookahead;
     type Call = Call;
-    type MaxIterations = MaxIterations;
     type MinSolutionScoreBump = MinSolutionScoreBump;
-    type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
-    type UnsignedPriority = UnsignedPriority;
-    type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
     type WeightInfo = ();
     type CreditInterface = Credit;
     type NodeInterface = DeeperNode;
-    type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
+    type MaxDelegates = MaxDelegates;
     type CurrencyToNumber = CurrencyToNumberHandler;
-    type CreditToTokenFactor = CreditToTokenFactor;
-    type RewardAdjustFactor = RewardAdjustFactor;
-    type RewardPerBlock = RewardPerBlock;
-    type RewardAdjustPeriod = RewardAdjustPeriod;
-    type BlocksPerEra = BlocksPerEra;
     type RemainderMiningReward = MiningReward;
 }
 
@@ -365,7 +335,6 @@ pub type Extrinsic = TestXt<Call, ()>;
 
 pub struct ExtBuilder {
     validator_pool: bool,
-    nominate: bool,
     validator_count: u32,
     minimum_validator_count: u32,
     fair: bool,
@@ -373,13 +342,14 @@ pub struct ExtBuilder {
     invulnerables: Vec<AccountId>,
     has_stakers: bool,
     initialize_first_session: bool,
+    delegate: bool,
+    num_delegators: Option<u32>,
 }
 
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             validator_pool: false,
-            nominate: true,
             validator_count: 2,
             minimum_validator_count: 0,
             fair: true,
@@ -387,6 +357,8 @@ impl Default for ExtBuilder {
             invulnerables: vec![],
             has_stakers: true,
             initialize_first_session: true,
+            delegate: false,
+            num_delegators: None,
         }
     }
 }
@@ -398,10 +370,6 @@ impl ExtBuilder {
     }
     pub fn validator_pool(mut self, validator_pool: bool) -> Self {
         self.validator_pool = validator_pool;
-        self
-    }
-    pub fn nominate(mut self, nominate: bool) -> Self {
-        self.nominate = nominate;
         self
     }
     pub fn validator_count(mut self, count: u32) -> Self {
@@ -432,10 +400,6 @@ impl ExtBuilder {
         SESSIONS_PER_ERA.with(|v| *v.borrow_mut() = length);
         self
     }
-    pub fn election_lookahead(self, look: BlockNumber) -> Self {
-        ELECTION_LOOKAHEAD.with(|v| *v.borrow_mut() = look);
-        self
-    }
     pub fn period(self, length: BlockNumber) -> Self {
         PERIOD.with(|v| *v.borrow_mut() = length);
         self
@@ -444,19 +408,20 @@ impl ExtBuilder {
         self.has_stakers = has;
         self
     }
-    pub fn max_offchain_iterations(self, iterations: u32) -> Self {
-        MAX_ITERATIONS.with(|v| *v.borrow_mut() = iterations);
-        self
-    }
-    pub fn offchain_election_ext(self) -> Self {
-        self.session_per_era(4).period(5).election_lookahead(3)
-    }
     pub fn initialize_first_session(mut self, init: bool) -> Self {
         self.initialize_first_session = init;
         self
     }
     pub fn offset(self, offset: BlockNumber) -> Self {
         OFFSET.with(|v| *v.borrow_mut() = offset);
+        self
+    }
+    pub fn delegate(mut self, delegate: bool) -> Self {
+        self.delegate = delegate;
+        self
+    }
+    pub fn num_delegators(mut self, num_delegators: u32) -> Self {
+        self.num_delegators = Some(num_delegators);
         self
     }
     pub fn build(self) -> sp_io::TestExternalities {
@@ -470,12 +435,135 @@ impl ExtBuilder {
             1
         };
 
-        let num_validators = self.num_validators.unwrap_or(self.validator_count);
-        // Check that the number of validators is sensible.
-        assert!(num_validators <= 8);
-        let validators = (0..num_validators)
-            .map(|x| ((x + 1) * 10 + 1) as AccountId)
+        let num_delegators = self.num_delegators.unwrap_or(1);
+        let mut user_credit_data = (0..num_delegators)
+            .map(|x| {
+                (
+                    (1001 + x) as AccountId,
+                    CreditData {
+                        credit: 105,
+                        initial_credit_level: CreditLevel::One,
+                        rank_in_initial_credit_level: 1u32,
+                        number_of_referees: 1,
+                        expiration: BLOCKS_PER_ERA,
+                    },
+                )
+            })
             .collect::<Vec<_>>();
+        user_credit_data.push(
+            (
+                1000, 
+                CreditData {
+                    credit: 99,
+                    initial_credit_level: CreditLevel::Zero,
+                    rank_in_initial_credit_level: 0u32,
+                    number_of_referees: 0,
+                    expiration: BLOCKS_PER_ERA,
+                }
+            )
+        );    
+        const BLOCKS_PER_ERA: u64 = 178000 as u64;
+        const MILLICENTS: Balance = 10_000_000_000_000;
+        const CENTS: Balance = 1_000 * MILLICENTS;
+        const DOLLARS: Balance = 100 * CENTS;
+        const DPR: Balance = DOLLARS;
+        pallet_credit::GenesisConfig::<Test> {
+            credit_settings: vec![
+                CreditSetting {
+                    credit_level: CreditLevel::Zero,
+                    balance: 0,
+                    base_apy: Percent::from_percent(0),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 0,
+                    reward_per_referee: 0,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::One,
+                    balance: 20_000 * DPR,
+                    base_apy: Percent::from_percent(39),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(10),
+                    max_referees_with_rewards: 1,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Two,
+                    balance: 46_800 * DPR,
+                    base_apy: Percent::from_percent(40),
+                    bonus_apy: Percent::from_percent(7),
+                    max_rank_with_bonus: 1200u32,
+                    tax_rate: Percent::from_percent(10),
+                    max_referees_with_rewards: 2,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Three,
+                    balance: 76_800 * DPR,
+                    base_apy: Percent::from_percent(42),
+                    bonus_apy: Percent::from_percent(11),
+                    max_rank_with_bonus: 1000u32,
+                    tax_rate: Percent::from_percent(9),
+                    max_referees_with_rewards: 3,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Four,
+                    balance: 138_000 * DPR,
+                    base_apy: Percent::from_percent(46),
+                    bonus_apy: Percent::from_percent(13),
+                    max_rank_with_bonus: 800u32,
+                    tax_rate: Percent::from_percent(9),
+                    max_referees_with_rewards: 7,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Five,
+                    balance: 218_000 * DPR,
+                    base_apy: Percent::from_percent(50),
+                    bonus_apy: Percent::from_percent(16),
+                    max_rank_with_bonus: 600u32,
+                    tax_rate: Percent::from_percent(8),
+                    max_referees_with_rewards: 12,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Six,
+                    balance: 288_000 * DPR,
+                    base_apy: Percent::from_percent(54),
+                    bonus_apy: Percent::from_percent(20),
+                    max_rank_with_bonus: 400u32,
+                    tax_rate: Percent::from_percent(7),
+                    max_referees_with_rewards: 18,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Seven,
+                    balance: 368_000 * DPR,
+                    base_apy: Percent::from_percent(57),
+                    bonus_apy: Percent::from_percent(25),
+                    max_rank_with_bonus: 200u32,
+                    tax_rate: Percent::from_percent(6),
+                    max_referees_with_rewards: 25,
+                    reward_per_referee: 18 * DPR,
+                },
+                CreditSetting {
+                    credit_level: CreditLevel::Eight,
+                    balance: 468_000 * DPR,
+                    base_apy: Percent::from_percent(60),
+                    bonus_apy: Percent::from_percent(30),
+                    max_rank_with_bonus: 100u32,
+                    tax_rate: Percent::from_percent(5),
+                    max_referees_with_rewards: 34,
+                    reward_per_referee: 18 * DPR,
+                },
+            ],
+            user_credit_data,
+        }
+        .assimilate_storage(&mut storage)
+        .unwrap();
 
         pallet_balances::GenesisConfig::<Test> {
             balances: vec![
@@ -508,134 +596,12 @@ impl ExtBuilder {
         .assimilate_storage(&mut storage)
         .unwrap();
 
-        pub const BLOCKS_PER_ERA: u64 = 178000 as u64;
-        pallet_credit::GenesisConfig::<Test> {
-            credit_settings: vec![],
-            user_credit_data: vec![
-                (
-                    1,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    2,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    3,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    4,
-                    CreditData {
-                        credit: 0,
-                        initial_credit_level: CreditLevel::Zero,
-                        rank_in_initial_credit_level: 0u32,
-                        number_of_referees: 0,
-                        expiration: 0,
-                    },
-                ),
-                (
-                    10,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    11,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    19,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    20,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    22,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    30,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    40,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-                (
-                    100,
-                    CreditData {
-                        credit: 105,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
-                    },
-                ),
-            ],
-        }
-        .assimilate_storage(&mut storage)
-        .unwrap();
+        let num_validators = self.num_validators.unwrap_or(self.validator_count);
+        // Check that the number of validators is sensible.
+        assert!(num_validators <= 8);
+        let validators = (0..num_validators)
+            .map(|x| ((x + 1) * 10 + 1) as AccountId)
+            .collect::<Vec<_>>();
 
         let mut stakers = vec![];
         if self.has_stakers {
@@ -646,33 +612,28 @@ impl ExtBuilder {
                 1
             };
             let status_41 = if self.validator_pool {
-                StakerStatus::<AccountId>::Validator
+                StakerStatus::Validator
             } else {
-                StakerStatus::<AccountId>::Idle
+                StakerStatus::Idle
             };
-            let nominated = if self.nominate { vec![11, 21] } else { vec![] };
             stakers = vec![
                 // (stash, controller, staked_amount, status)
-                (
-                    11,
-                    10,
-                    balance_factor * 1000,
-                    StakerStatus::<AccountId>::Validator,
-                ),
-                (21, 20, stake_21, StakerStatus::<AccountId>::Validator),
-                (31, 30, stake_31, StakerStatus::<AccountId>::Validator),
+                (11, 10, balance_factor * 1000, StakerStatus::Validator),
+                (21, 20, stake_21, StakerStatus::Validator),
+                (31, 30, stake_31, StakerStatus::Validator),
                 (41, 40, balance_factor * 1000, status_41),
-                (
-                    101,
-                    100,
-                    balance_factor * 500,
-                    StakerStatus::<AccountId>::Idle,
-                ),
+                (101, 100, balance_factor * 500, StakerStatus::Idle),
             ];
+        }
+
+        let mut delegations = vec![];
+        if self.has_stakers {
+            delegations.push((1001, vec![11, 21]));
         }
 
         staking::GenesisConfig::<Test> {
             stakers: stakers,
+            delegations: delegations,
             validator_count: self.validator_count,
             minimum_validator_count: self.minimum_validator_count,
             invulnerables: self.invulnerables,
@@ -727,7 +688,6 @@ impl ExtBuilder {
 }
 
 fn post_conditions() {
-    //check_nominators();
     check_exposures();
     check_ledgers();
 }
@@ -742,15 +702,10 @@ fn check_exposures() {
     let era = active_era();
     ErasStakers::<Test>::iter_prefix_values(era).for_each(|expo| {
         assert_eq!(
-            expo.total as u128,
-            expo.own as u128 + expo.others.iter().map(|e| e.value as u128).sum::<u128>(),
+            expo.total as u128, expo.own as u128,
             "wrong total exposure.",
         );
     })
-}
-
-fn assert_is_stash(acc: AccountId) {
-    assert!(Staking::bonded(&acc).is_some(), "Not a stash.");
 }
 
 fn assert_ledger_consistent(ctrl: AccountId) {
@@ -844,35 +799,6 @@ pub(crate) fn start_active_era(era_index: EraIndex) {
     assert_eq!(current_era(), active_era());
 }
 
-/// Time it takes to finish a session.
-///
-/// Note, if you see `time_per_session() - BLOCK_TIME`, it is fine. This is because we set the
-/// timestamp after on_initialize, so the timestamp is always one block old.
-pub(crate) fn time_per_session() -> u64 {
-    Period::get() * BLOCK_TIME
-}
-
-/// Time it takes to finish an era.
-///
-/// Note, if you see `time_per_era() - BLOCK_TIME`, it is fine. This is because we set the
-/// timestamp after on_initialize, so the timestamp is always one block old.
-pub(crate) fn time_per_era() -> u64 {
-    time_per_session() * SessionsPerEra::get() as u64
-}
-
-/// Time that will be calculated for the reward per era.
-pub(crate) fn reward_time_per_era() -> u64 {
-    time_per_era() - BLOCK_TIME
-}
-
-pub(crate) fn reward_all_elected() {
-    let rewards = <Test as Config>::SessionInterface::validators()
-        .into_iter()
-        .map(|v| (v, 1));
-
-    <Module<Test>>::reward_by_ids(rewards)
-}
-
 pub(crate) fn validator_controllers() -> Vec<AccountId> {
     Session::validators()
         .into_iter()
@@ -952,22 +878,4 @@ macro_rules! assert_session_era {
             $era,
         );
     };
-}
-
-pub(crate) fn staking_events() -> Vec<staking::Event<Test>> {
-    System::events()
-        .into_iter()
-        .map(|r| r.event)
-        .filter_map(|e| {
-            if let Event::staking(inner) = e {
-                Some(inner)
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-pub(crate) fn balances(who: &AccountId) -> (Balance, Balance) {
-    (Balances::free_balance(who), Balances::reserved_balance(who))
 }

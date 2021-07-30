@@ -59,6 +59,7 @@ use frame_support::{
     traits::{Currency, Imbalance, OnUnbalanced},
     StorageDoubleMap, StorageMap,
 };
+use pallet_credit::CreditInterface;
 use sp_runtime::{
     traits::{Saturating, Zero},
     DispatchResult, RuntimeDebug,
@@ -543,6 +544,13 @@ pub fn do_slash<T: Config>(
     }
 }
 
+pub fn do_credit_slash<T: Config>(delegator: &T::AccountId) {
+    T::CreditInterface::slash_credit(delegator);
+    if T::CreditInterface::pass_threshold(delegator, 0) == false {
+        <Module<T>>::_undelegate(delegator);
+    }
+}
+
 /// Apply a previously-unapplied slash.
 pub(crate) fn apply_slash<T: Config>(unapplied_slash: UnappliedSlash<T::AccountId, BalanceOf<T>>) {
     let mut slashed_imbalance = NegativeImbalanceOf::<T>::zero();
@@ -555,13 +563,8 @@ pub(crate) fn apply_slash<T: Config>(unapplied_slash: UnappliedSlash<T::AccountI
         &mut slashed_imbalance,
     );
 
-    for &(ref nominator, nominator_slash) in &unapplied_slash.others {
-        do_slash::<T>(
-            &nominator,
-            nominator_slash,
-            &mut reward_payout,
-            &mut slashed_imbalance,
-        );
+    for delegator in &unapplied_slash.others {
+        do_credit_slash::<T>(delegator);
     }
 
     pay_reporters::<T>(reward_payout, slashed_imbalance, &unapplied_slash.reporters);

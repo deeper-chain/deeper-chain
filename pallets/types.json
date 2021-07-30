@@ -23,7 +23,6 @@
         "expiration": "BlockNumber"
     },
     "CreditDelegateInfo": {
-        "delegator": "AccountId",
         "score": "u64",
         "validators": "Vec<AccountId>"
     },

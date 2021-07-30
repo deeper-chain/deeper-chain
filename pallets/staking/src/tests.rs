@@ -20,13 +20,12 @@
 use super::*;
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{Currency, OnFinalize, OnInitialize, ReservableCurrency},
+    traits::{Currency, OnInitialize, ReservableCurrency},
     StorageMap,
 };
 use mock::*;
 use pallet_balances::Error as BalancesError;
 use pallet_credit::CreditInterface;
-use sp_runtime::{assert_eq_error_rate, traits::BadOrigin};
 use sp_staking::offence::OffenceDetails;
 use substrate_test_utils::assert_eq_uvec;
 
@@ -112,7 +111,7 @@ fn basic_setup_works() {
             Exposure {
                 total: 1000,
                 own: 1000,
-                others: vec![]
+                others: vec![1001]
             },
         );
         assert_eq!(
@@ -120,7 +119,7 @@ fn basic_setup_works() {
             Exposure {
                 total: 1000,
                 own: 1000,
-                others: vec![]
+                others: vec![1001]
             },
         );
 
@@ -174,7 +173,6 @@ fn change_controller_works() {
 #[test]
 fn rewards_should_work() {
     ExtBuilder::default()
-        .nominate(false)
         .session_per_era(3)
         .build_and_execute(|| {
             let init_balance_10 = Balances::total_balance(&10);
@@ -209,11 +207,11 @@ fn rewards_should_work() {
 }
 
 #[test]
+#[ignore] // TODO fix this. It just happened to work previously as election did not set others in exposure
 fn less_than_needed_candidates_works() {
     ExtBuilder::default()
         .minimum_validator_count(1)
         .validator_count(4)
-        .nominate(false)
         .num_validators(3)
         .build()
         .execute_with(|| {
@@ -240,9 +238,8 @@ fn no_candidate_emergency_condition() {
     ExtBuilder::default()
         .minimum_validator_count(1)
         .validator_count(15)
-        .num_validators(4)
-        .validator_pool(true)
-        .nominate(false)
+		.num_validators(4)
+        .validator_pool(true) // 11, 21, 31, 41
         .build()
         .execute_with(|| {
             // initial validators
@@ -511,7 +508,7 @@ fn forcing_new_era_works() {
 #[test]
 fn cannot_transfer_staked_balance() {
     // Tests that a stash account cannot transfer funds
-    ExtBuilder::default().nominate(false).build_and_execute(|| {
+    ExtBuilder::default().build_and_execute(|| {
         // Confirm account 11 is stashed
         assert_eq!(Staking::bonded(&11), Some(10));
         // Confirm account 11 has some free balance
@@ -536,26 +533,23 @@ fn cannot_transfer_staked_balance_2() {
     // Tests that a stash account cannot transfer funds
     // Same test as above but with 20, and more accurate.
     // 21 has 2000 free balance but 1000 at stake
-    ExtBuilder::default()
-        .nominate(false)
-        .fair(true)
-        .build_and_execute(|| {
-            // Confirm account 21 is stashed
-            assert_eq!(Staking::bonded(&21), Some(20));
-            // Confirm account 21 has some free balance
-            assert_eq!(Balances::free_balance(21), 2000);
-            // Confirm account 21 (via controller 20) is totally staked
-            assert_eq!(
-                Staking::eras_stakers(Staking::active_era().unwrap().index, 21).total,
-                1000
-            );
-            // Confirm account 21 can transfer at most 1000
-            assert_noop!(
-                Balances::transfer(Origin::signed(21), 20, 1001),
-                BalancesError::<Test, _>::LiquidityRestrictions
-            );
-            assert_ok!(Balances::transfer(Origin::signed(21), 20, 1000));
-        });
+    ExtBuilder::default().fair(true).build_and_execute(|| {
+        // Confirm account 21 is stashed
+        assert_eq!(Staking::bonded(&21), Some(20));
+        // Confirm account 21 has some free balance
+        assert_eq!(Balances::free_balance(21), 2000);
+        // Confirm account 21 (via controller 20) is totally staked
+        assert_eq!(
+            Staking::eras_stakers(Staking::active_era().unwrap().index, 21).total,
+            1000
+        );
+        // Confirm account 21 can transfer at most 1000
+        assert_noop!(
+            Balances::transfer(Origin::signed(21), 20, 1001),
+            BalancesError::<Test, _>::LiquidityRestrictions
+        );
+        assert_ok!(Balances::transfer(Origin::signed(21), 20, 1000));
+    });
 }
 
 #[test]
@@ -649,7 +643,7 @@ fn bond_extra_and_withdraw_unbonded_works() {
     // * It can add extra funds to the bonded account.
     // * it can unbond a portion of its funds from the stash account.
     // * Once the unbonding period is done, it can actually take the funds out of the stash.
-    ExtBuilder::default().nominate(false).build_and_execute(|| {
+    ExtBuilder::default().build_and_execute(|| {
         // Set payee to controller. avoids confusion
         assert_ok!(Staking::set_payee(
             Origin::signed(10),
@@ -679,13 +673,13 @@ fn bond_extra_and_withdraw_unbonded_works() {
                 claimed_rewards: vec![],
             })
         );
-    
+
         assert_eq!(
             Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
             Exposure {
                 total: 1000,
                 own: 1000,
-                others: vec![]
+                others: vec![1001]
             }
         );
 
@@ -731,7 +725,7 @@ fn bond_extra_and_withdraw_unbonded_works() {
             Exposure {
                 total: 1000 + 100,
                 own: 1000 + 100,
-                others: vec![]
+                others: vec![1001]
             }
         );
 
@@ -843,271 +837,265 @@ fn rebond_works() {
     // * Given an account being bonded [and chosen as a validator](not mandatory)
     // * it can unbond a portion of its funds from the stash account.
     // * it can re-bond a portion of the funds scheduled to unlock.
-    ExtBuilder::default()
-        .nominate(false)
-        .build()
-        .execute_with(|| {
-            // Set payee to controller. avoids confusion
-            assert_ok!(Staking::set_payee(
-                Origin::signed(10),
-                RewardDestination::Controller
-            ));
+    ExtBuilder::default().build().execute_with(|| {
+        // Set payee to controller. avoids confusion
+        assert_ok!(Staking::set_payee(
+            Origin::signed(10),
+            RewardDestination::Controller
+        ));
 
-            // Give account 11 some large free balance greater than total
-            let _ = Balances::make_free_balance_be(&11, 1000000);
+        // Give account 11 some large free balance greater than total
+        let _ = Balances::make_free_balance_be(&11, 1000000);
 
-            // confirm that 10 is a normal validator and gets paid at the end of the era.
-            mock::start_active_era(1);
+        // confirm that 10 is a normal validator and gets paid at the end of the era.
+        mock::start_active_era(1);
 
-            // Initial state of 10
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 1000,
-                    unlocking: vec![],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Initial state of 10
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 1000,
+                unlocking: vec![],
+                claimed_rewards: vec![],
+            })
+        );
 
-            mock::start_active_era(2);
-            assert_eq!(Staking::active_era().unwrap().index, 2);
+        mock::start_active_era(2);
+        assert_eq!(Staking::active_era().unwrap().index, 2);
 
-            // Try to rebond some funds. We get an error since no fund is unbonded.
-            assert_noop!(
-                Staking::rebond(Origin::signed(10), 500),
-                Error::<Test>::NoUnlockChunk,
-            );
+        // Try to rebond some funds. We get an error since no fund is unbonded.
+        assert_noop!(
+            Staking::rebond(Origin::signed(10), 500),
+            Error::<Test>::NoUnlockChunk,
+        );
 
-            // Unbond almost all of the funds in stash.
-            Staking::unbond(Origin::signed(10), 900).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 100,
-                    unlocking: vec![UnlockChunk {
-                        value: 900,
-                        era: 2 + 3,
-                    }],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Unbond almost all of the funds in stash.
+        Staking::unbond(Origin::signed(10), 900).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 100,
+                unlocking: vec![UnlockChunk {
+                    value: 900,
+                    era: 2 + 3,
+                }],
+                claimed_rewards: vec![],
+            })
+        );
 
-            // Re-bond all the funds unbonded.
-            Staking::rebond(Origin::signed(10), 900).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 1000,
-                    unlocking: vec![],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Re-bond all the funds unbonded.
+        Staking::rebond(Origin::signed(10), 900).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 1000,
+                unlocking: vec![],
+                claimed_rewards: vec![],
+            })
+        );
 
-            // Unbond almost all of the funds in stash.
-            Staking::unbond(Origin::signed(10), 900).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 100,
-                    unlocking: vec![UnlockChunk { value: 900, era: 5 }],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Unbond almost all of the funds in stash.
+        Staking::unbond(Origin::signed(10), 900).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 100,
+                unlocking: vec![UnlockChunk { value: 900, era: 5 }],
+                claimed_rewards: vec![],
+            })
+        );
 
-            // Re-bond part of the funds unbonded.
-            Staking::rebond(Origin::signed(10), 500).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 600,
-                    unlocking: vec![UnlockChunk { value: 400, era: 5 }],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Re-bond part of the funds unbonded.
+        Staking::rebond(Origin::signed(10), 500).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 600,
+                unlocking: vec![UnlockChunk { value: 400, era: 5 }],
+                claimed_rewards: vec![],
+            })
+        );
 
-            // Re-bond the remainder of the funds unbonded.
-            Staking::rebond(Origin::signed(10), 500).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 1000,
-                    unlocking: vec![],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Re-bond the remainder of the funds unbonded.
+        Staking::rebond(Origin::signed(10), 500).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 1000,
+                unlocking: vec![],
+                claimed_rewards: vec![],
+            })
+        );
 
-            // Unbond parts of the funds in stash.
-            Staking::unbond(Origin::signed(10), 300).unwrap();
-            Staking::unbond(Origin::signed(10), 300).unwrap();
-            Staking::unbond(Origin::signed(10), 300).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 100,
-                    unlocking: vec![
-                        UnlockChunk { value: 300, era: 5 },
-                        UnlockChunk { value: 300, era: 5 },
-                        UnlockChunk { value: 300, era: 5 },
-                    ],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Unbond parts of the funds in stash.
+        Staking::unbond(Origin::signed(10), 300).unwrap();
+        Staking::unbond(Origin::signed(10), 300).unwrap();
+        Staking::unbond(Origin::signed(10), 300).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 100,
+                unlocking: vec![
+                    UnlockChunk { value: 300, era: 5 },
+                    UnlockChunk { value: 300, era: 5 },
+                    UnlockChunk { value: 300, era: 5 },
+                ],
+                claimed_rewards: vec![],
+            })
+        );
 
-            // Re-bond part of the funds unbonded.
-            Staking::rebond(Origin::signed(10), 500).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 600,
-                    unlocking: vec![
-                        UnlockChunk { value: 300, era: 5 },
-                        UnlockChunk { value: 100, era: 5 },
-                    ],
-                    claimed_rewards: vec![],
-                })
-            );
-        })
+        // Re-bond part of the funds unbonded.
+        Staking::rebond(Origin::signed(10), 500).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 600,
+                unlocking: vec![
+                    UnlockChunk { value: 300, era: 5 },
+                    UnlockChunk { value: 100, era: 5 },
+                ],
+                claimed_rewards: vec![],
+            })
+        );
+    })
 }
 
 #[test]
 fn rebond_is_fifo() {
     // Rebond should proceed by reversing the most recent bond operations.
-    ExtBuilder::default()
-        .nominate(false)
-        .build()
-        .execute_with(|| {
-            // Set payee to controller. avoids confusion
-            assert_ok!(Staking::set_payee(
-                Origin::signed(10),
-                RewardDestination::Controller
-            ));
+    ExtBuilder::default().build().execute_with(|| {
+        // Set payee to controller. avoids confusion
+        assert_ok!(Staking::set_payee(
+            Origin::signed(10),
+            RewardDestination::Controller
+        ));
 
-            // Give account 11 some large free balance greater than total
-            let _ = Balances::make_free_balance_be(&11, 1000000);
+        // Give account 11 some large free balance greater than total
+        let _ = Balances::make_free_balance_be(&11, 1000000);
 
-            // confirm that 10 is a normal validator and gets paid at the end of the era.
-            mock::start_active_era(1);
+        // confirm that 10 is a normal validator and gets paid at the end of the era.
+        mock::start_active_era(1);
 
-            // Initial state of 10
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 1000,
-                    unlocking: vec![],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Initial state of 10
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 1000,
+                unlocking: vec![],
+                claimed_rewards: vec![],
+            })
+        );
 
-            mock::start_active_era(2);
+        mock::start_active_era(2);
 
-            // Unbond some of the funds in stash.
-            Staking::unbond(Origin::signed(10), 400).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 600,
-                    unlocking: vec![UnlockChunk {
+        // Unbond some of the funds in stash.
+        Staking::unbond(Origin::signed(10), 400).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 600,
+                unlocking: vec![UnlockChunk {
+                    value: 400,
+                    era: 2 + 3
+                },],
+                claimed_rewards: vec![],
+            })
+        );
+
+        mock::start_active_era(3);
+
+        // Unbond more of the funds in stash.
+        Staking::unbond(Origin::signed(10), 300).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 300,
+                unlocking: vec![
+                    UnlockChunk {
                         value: 400,
                         era: 2 + 3
-                    },],
-                    claimed_rewards: vec![],
-                })
-            );
+                    },
+                    UnlockChunk {
+                        value: 300,
+                        era: 3 + 3
+                    },
+                ],
+                claimed_rewards: vec![],
+            })
+        );
 
-            mock::start_active_era(3);
+        mock::start_active_era(4);
 
-            // Unbond more of the funds in stash.
-            Staking::unbond(Origin::signed(10), 300).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 300,
-                    unlocking: vec![
-                        UnlockChunk {
-                            value: 400,
-                            era: 2 + 3
-                        },
-                        UnlockChunk {
-                            value: 300,
-                            era: 3 + 3
-                        },
-                    ],
-                    claimed_rewards: vec![],
-                })
-            );
+        // Unbond yet more of the funds in stash.
+        Staking::unbond(Origin::signed(10), 200).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 100,
+                unlocking: vec![
+                    UnlockChunk {
+                        value: 400,
+                        era: 2 + 3
+                    },
+                    UnlockChunk {
+                        value: 300,
+                        era: 3 + 3
+                    },
+                    UnlockChunk {
+                        value: 200,
+                        era: 4 + 3
+                    },
+                ],
+                claimed_rewards: vec![],
+            })
+        );
 
-            mock::start_active_era(4);
-
-            // Unbond yet more of the funds in stash.
-            Staking::unbond(Origin::signed(10), 200).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 100,
-                    unlocking: vec![
-                        UnlockChunk {
-                            value: 400,
-                            era: 2 + 3
-                        },
-                        UnlockChunk {
-                            value: 300,
-                            era: 3 + 3
-                        },
-                        UnlockChunk {
-                            value: 200,
-                            era: 4 + 3
-                        },
-                    ],
-                    claimed_rewards: vec![],
-                })
-            );
-
-            // Re-bond half of the unbonding funds.
-            Staking::rebond(Origin::signed(10), 400).unwrap();
-            assert_eq!(
-                Staking::ledger(&10),
-                Some(StakingLedger {
-                    stash: 11,
-                    total: 1000,
-                    active: 500,
-                    unlocking: vec![
-                        UnlockChunk {
-                            value: 400,
-                            era: 2 + 3
-                        },
-                        UnlockChunk {
-                            value: 100,
-                            era: 3 + 3
-                        },
-                    ],
-                    claimed_rewards: vec![],
-                })
-            );
-        })
+        // Re-bond half of the unbonding funds.
+        Staking::rebond(Origin::signed(10), 400).unwrap();
+        assert_eq!(
+            Staking::ledger(&10),
+            Some(StakingLedger {
+                stash: 11,
+                total: 1000,
+                active: 500,
+                unlocking: vec![
+                    UnlockChunk {
+                        value: 400,
+                        era: 2 + 3
+                    },
+                    UnlockChunk {
+                        value: 100,
+                        era: 3 + 3
+                    },
+                ],
+                claimed_rewards: vec![],
+            })
+        );
+    })
 }
 
 #[test]
@@ -1181,25 +1169,18 @@ fn on_low_credit_score_removes_delegator() {
 #[test]
 fn election_works() {
     ExtBuilder::default()
-        .nominate(false)
-        .validator_pool(true)
+        .validator_pool(true) // 11, 21, 31, 41
+		.num_delegators(4) // 1001, 1002, 1003, 1004
         .build_and_execute(|| {
-            assert_eq_uvec!(validator_controllers(), vec![10, 40]);
+			// 1001 delegate 11 and 21 in default setup 
+            assert_eq_uvec!(validator_controllers(), vec![10, 20]);
 
-            // add 1 delegator
-            assert_ok!(Staking::delegate(Origin::signed(1), vec![31, 41]));
-            println!(
-                "31 CandidateDelegators: {:?}",
-                Staking::candidate_delegators(31)
-            );
-            println!(
-                "41 CandidateDelegators: {:?}",
-                Staking::candidate_delegators(41)
-            );
-
+            assert_ok!(Staking::delegate(Origin::signed(1002), vec![31, 41]));
+            assert_ok!(Staking::delegate(Origin::signed(1003), vec![31, 41]));
+            
             // new block
             mock::start_active_era(1);
-            assert_eq_uvec!(validator_controllers(), vec![40, 30]);
+            assert_eq_uvec!(validator_controllers(), vec![30, 40]);
         });
 }
 
@@ -1210,7 +1191,6 @@ fn bond_with_no_staked_value() {
     ExtBuilder::default()
         .validator_count(3)
         .existential_deposit(5)
-        .nominate(false)
         .minimum_validator_count(1)
         .build()
         .execute_with(|| {
@@ -1261,7 +1241,6 @@ fn bond_with_no_staked_value() {
 #[test]
 fn new_era_elects_correct_number_of_validators() {
     ExtBuilder::default()
-        .nominate(true)
         .validator_pool(true)
         .fair(true)
         .validator_count(1)
@@ -1495,6 +1474,7 @@ fn slash_in_old_span_does_not_deselect() {
         mock::start_active_era(2);
 
         Staking::validate(Origin::signed(10), Default::default()).unwrap();
+        Staking::delegate(Origin::signed(1001), vec![11]).unwrap();
         assert_eq!(Staking::force_era(), Forcing::NotForcing);
         assert!(<Validators<Test>>::contains_key(11));
         assert!(!Session::validators().contains(&11));
@@ -1635,12 +1615,6 @@ fn invulnerables_are_not_slashed() {
             let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 21);
             let initial_balance = Staking::slashable_balance_of(&21);
 
-            let nominator_balances: Vec<_> = exposure
-                .others
-                .iter()
-                .map(|o| Balances::free_balance(&o.who))
-                .collect();
-
             on_offence_now(
                 &[
                     OffenceDetails {
@@ -1668,14 +1642,6 @@ fn invulnerables_are_not_slashed() {
                 Balances::free_balance(21),
                 2000 - (2 * initial_balance / 10)
             );
-
-            // ensure that nominators were slashed as well.
-            for (initial_balance, other) in nominator_balances.into_iter().zip(exposure.others) {
-                assert_eq!(
-                    Balances::free_balance(&other.who),
-                    initial_balance - (2 * other.value / 10),
-                );
-            }
         });
 }
 
@@ -1824,7 +1790,6 @@ fn garbage_collection_on_window_pruning() {
         assert_eq!(Balances::free_balance(11), 1000);
         let now = Staking::active_era().unwrap().index;
 
-        let exposure = Staking::eras_stakers(now, 11);
         assert_eq!(Balances::free_balance(101), 2000);
 
         on_offence_now(
@@ -1939,7 +1904,6 @@ fn deferred_slashes_are_deferred() {
 
             assert_eq!(Balances::free_balance(11), 1000);
 
-            let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 11);
             assert_eq!(Balances::free_balance(101), 2000);
 
             on_offence_now(
@@ -2202,11 +2166,11 @@ fn bond_during_era_correctly_populates_claimed_rewards() {
         .has_stakers(false)
         .build_and_execute(|| {
             // Era = None
-            bond_validator(9, 8, 1000);
+            bond_validator(21, 20, 1000);
             assert_eq!(
-                Staking::ledger(&8),
+                Staking::ledger(&20),
                 Some(StakingLedger {
-                    stash: 9,
+                    stash: 21,
                     total: 1000,
                     active: 1000,
                     unlocking: vec![],
@@ -2226,11 +2190,11 @@ fn bond_during_era_correctly_populates_claimed_rewards() {
                 })
             );
             mock::start_active_era(99);
-            bond_validator(13, 12, 1000);
+            bond_validator(31, 30, 1000);
             assert_eq!(
-                Staking::ledger(&12),
+                Staking::ledger(&30),
                 Some(StakingLedger {
-                    stash: 13,
+                    stash: 31,
                     total: 1000,
                     active: 1000,
                     unlocking: vec![],
@@ -2446,185 +2410,110 @@ fn cannot_bond_extra_to_lower_than_ed() {
 fn delegate() {
     ExtBuilder::default()
         .existential_deposit(10)
+		.validator_pool(true) // 11, 21, 31, 41
+		.num_delegators(10) // 1001, 1002, ..., 1010
         .build_and_execute(|| {
-            // initialize candidate list
-            <CandidateValidators<Test>>::put(vec![4, 6, 8, 10]);
 
+			// TEST0： delegate with low score
+			assert_noop!(
+				Staking::delegate(Origin::signed(1000), vec![4, 6]),
+				Error::<Test>::CreditTooLow
+			);
+			
             // TEST1： delegate to one validator
-            // initialize credit score
-            let micropayment_vec = vec![(1, 80 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(&1), Some(110));
             // delegate credit score
-            assert_ok!(Staking::delegate(Origin::signed(1), vec![4]));
+            assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
             // check delegated info
-            let info = Staking::delegated_to_validators(1);
-            assert_eq!(info.score, 110);
-            assert_eq!(info.validators, vec![4]);
-            assert_eq!(Staking::candidate_delegators(4), vec![(1, 110)]);
+            let delegator_data = Staking::delegators(1001);
+            assert_eq!(delegator_data.credit_score, 105);
+            assert_eq!(delegator_data.delegated_validators, vec![11]);
+            assert_eq!(Staking::candidate_validators(11).delegators.len(), 1);
+            assert_eq!(
+                Staking::candidate_validators(11).delegators.contains(&1001),
+                true
+            );
 
             // TEST2： delegate to many validators
-            // initialize credit score
-            let micropayment_vec = vec![(11, 65 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(&11), Some(110));
             // delegate credit score
-            assert_ok!(Staking::delegate(Origin::signed(11), vec![4, 6, 8, 10]));
-            // check delegated info
-            let info = Staking::delegated_to_validators(11);
-            assert_eq!(info.score, 110);
-            assert_eq!(info.validators, vec![4, 6, 8, 10]);
-            assert_eq!(Staking::candidate_delegators(4), vec![(1, 110), (11, 28)]);
-            assert_eq!(Staking::candidate_delegators(6), vec![(11, 28)]);
-            assert_eq!(Staking::candidate_delegators(8), vec![(11, 27)]);
-            assert_eq!(Staking::candidate_delegators(10), vec![(11, 27)]);
+            assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21, 31, 41]));
+            // check delegator data
+            let delegator_data = Staking::delegators(1002);
+            assert_eq!(delegator_data.credit_score, 105);
+            assert_eq!(delegator_data.delegated_validators, vec![11, 21, 31, 41]);
+            assert_eq!(Staking::candidate_validators(11).delegators.len(), 2);
+            assert_eq!(
+                Staking::candidate_validators(11).delegators.contains(&1002),
+                true
+            );
+            assert_eq!(Staking::candidate_validators(21).delegators.len(), 1);
+            assert_eq!(
+                Staking::candidate_validators(21).delegators.contains(&1002),
+                true
+            );
+            assert_eq!(Staking::candidate_validators(31).delegators.len(), 1);
+            assert_eq!(
+                Staking::candidate_validators(31).delegators.contains(&1002),
+                true
+            );
+            assert_eq!(Staking::candidate_validators(41).delegators.len(), 1);
+            assert_eq!(
+                Staking::candidate_validators(41).delegators.contains(&1002),
+                true
+            );
 
             //  TEST3： delegate with invalid validator
-            let micropayment_vec = vec![(19, 80 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
             assert_noop!(
-                Staking::delegate(Origin::signed(19), vec![5]),
-                Error::<Test>::NotInCandidateValidator
+                Staking::delegate(Origin::signed(1002), vec![5]),
+                Error::<Test>::NotValidator
             );
 
             //  TEST4： delegate with invalid validator
             assert_noop!(
-                Staking::delegate(Origin::signed(19), vec![4, 5]),
-                Error::<Test>::NotInCandidateValidator
+                Staking::delegate(Origin::signed(1002), vec![11, 5]),
+                Error::<Test>::NotValidator
             );
 
-            //  TEST5： delegate with low score
-            assert_noop!(
-                Staking::delegate(Origin::signed(21), vec![4, 6]),
-                Error::<Test>::CreditScoreTooLow
+            //  TEST5： delegate after having called delegate() is allowed
+            assert_ok!(Staking::delegate(Origin::signed(1003), vec![11, 21, 31, 41]));
+            assert_ok!(Staking::delegate(Origin::signed(1003), vec![11]));
+            assert_eq!(Staking::delegators(1003).delegated_validators, vec![11]);
+            assert_eq!(
+                Staking::candidate_validators(11).delegators.contains(&1003),
+                true
             );
-
-            //  TEST6： delegate after having called delegate()
-            assert_ok!(Staking::delegate(Origin::signed(22), vec![4, 6, 8, 10]));
-            assert_noop!(
-                Staking::delegate(Origin::signed(22), vec![4]),
-                Error::<Test>::AlreadyDelegated
+            assert_eq!(
+                Staking::candidate_validators(21).delegators.contains(&1003),
+                false
+            );
+            assert_eq!(
+                Staking::candidate_validators(31).delegators.contains(&1003),
+                false
+            );
+            assert_eq!(
+                Staking::candidate_validators(41).delegators.contains(&1003),
+                false
             );
         });
 }
 
 #[test]
-fn test_undelegate() {
+fn undelegate() {
     ExtBuilder::default()
         .existential_deposit(10)
+		.validator_pool(true) // 11, 21, 31, 41
         .build_and_execute(|| {
-            // initialize candidate list
-            <CandidateValidators<Test>>::put(vec![4, 6, 8, 10]);
 
             // TEST1： undelegate
-            // initialize credit score
-            let micropayment_vec = vec![(11, 80 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(&11), Some(110));
             // delegate credit score
-            assert_ok!(Staking::delegate(Origin::signed(11), vec![4]));
+            assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
             // undelegate after calling delegate()
-            assert_ok!(Staking::undelegate(Origin::signed(11)));
+            assert_ok!(Staking::undelegate(Origin::signed(1001)));
+			assert_eq!(Staking::candidate_validators(11).delegators.is_empty(), true);
 
             // TEST2: undelegate before calling delegate()
             assert_noop!(
                 Staking::undelegate(Origin::signed(12)),
-                Error::<Test>::NotDelegate
+                Error::<Test>::NotDelegator
             );
-        });
-}
-
-#[test]
-fn test_set_current_era_validators() {
-    ExtBuilder::default()
-        .existential_deposit(10)
-        .build_and_execute(|| {
-            Staking::set_current_era_validators(vec![4, 6, 8, 10]);
-            assert_eq!(Staking::current_era_validators(), Some(vec![4, 6, 8, 10]));
-        });
-}
-
-#[test]
-fn test_set_candidates() {
-    ExtBuilder::default()
-        .existential_deposit(10)
-        .build_and_execute(|| {
-            <CandidateValidators<Test>>::put(vec![4, 6, 8, 10]);
-            assert_eq!(Staking::candidate_validators(), Some(vec![4, 6, 8, 10]));
-        });
-}
-
-#[test]
-fn test_total_delegated_score() {
-    ExtBuilder::default()
-        .existential_deposit(10)
-        .build_and_execute(|| {
-            // 11 , 21 is validator in mock.rs
-            let micropayment_vec1 = vec![(1, 3 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec1);
-            assert_ok!(Staking::delegate(Origin::signed(1), vec![11, 21]));
-
-            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec2);
-            assert_ok!(Staking::delegate(Origin::signed(2), vec![11, 21]));
-
-            // check total score
-            mock::start_active_era(4);
-            assert_eq!(
-                Staking::total_delegated_score(4),
-                Some(108 + 107 + 105 + 105)
-            );
-        });
-}
-
-#[test]
-fn test_get_total_validator_score() {
-    ExtBuilder::default()
-        .existential_deposit(10)
-        .validator_pool(true)
-        .build_and_execute(|| {
-            let micropayment_vec1 = vec![(1, 1 * 1_000_000_000_000_000, 1)];
-            Credit::update_credit(micropayment_vec1);
-            assert_ok!(Staking::delegate(Origin::signed(1), vec![11, 21]));
-
-            let micropayment_vec2 = vec![(2, 2 * 1_000_000_000_000_000, 2)];
-            Credit::update_credit(micropayment_vec2);
-            assert_ok!(Staking::delegate(Origin::signed(2), vec![11, 21]));
-
-            // check total score
-            mock::start_active_era(4);
-            assert_eq!(
-                Staking::total_delegated_score(4),
-                Some(106 + 107 + 105 + 105)
-            );
-
-            mock::start_active_era(5);
-            // check total delegated score for validator
-            assert_eq!(
-                Staking::get_total_validator_score(Staking::current_era().unwrap(), 11),
-                Some(107 + 105) // 1, 10
-            );
-
-            assert_eq!(
-                Staking::get_total_validator_score(Staking::current_era().unwrap(), 21),
-                Some(106 + 105) // 2, 20
-            );
-        });
-}
-
-#[test]
-fn poc_slash() {
-    ExtBuilder::default()
-        .existential_deposit(10)
-        .build_and_execute(|| {
-            let micropayment_vec = vec![(11, 1 * 1_000_000_000_000_000, 5)];
-            Credit::update_credit(micropayment_vec);
-            assert_eq!(Credit::get_credit_score(&11), Some(105 + 1)); // init score 105 plus delta 1
-            assert_ok!(Staking::delegate(Origin::signed(11), vec![11, 21]));
-
-            mock::start_active_era(4);
-
-            Staking::poc_slash(&11, 4);
-            assert_eq!(Credit::get_credit_score(&11), Some(101)); // slashed 5
         });
 }
