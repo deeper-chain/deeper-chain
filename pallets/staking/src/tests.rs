@@ -27,7 +27,19 @@ use mock::*;
 use pallet_balances::Error as BalancesError;
 use pallet_credit::CreditInterface;
 use sp_staking::offence::OffenceDetails;
-use substrate_test_utils::assert_eq_uvec;
+
+macro_rules! assert_eq_uvec {
+	( $x:expr, $y:expr $(,)? ) => {
+        if $x.len() != $y.len() {
+            panic!("vectors not equal: {:?} != {:?}", $x, $y);
+        }
+		$x.iter().for_each(|e| {
+			if !$y.contains(e) {
+				panic!("vectors not equal: {:?} != {:?}", $x, $y);
+			}
+		});
+	};
+}
 
 #[test]
 fn kill_stash_works() {
@@ -179,13 +191,16 @@ fn rewards_should_work() {
             let init_balance_11 = Balances::total_balance(&11);
             let init_balance_20 = Balances::total_balance(&20);
             let init_balance_21 = Balances::total_balance(&21);
-            let init_balance_100 = Balances::total_balance(&100);
-            let init_balance_101 = Balances::total_balance(&101);
+            let init_balance_1001 = Balances::total_balance(&1001);
 
             // Set payees
             Payee::<Test>::insert(11, RewardDestination::Controller);
             Payee::<Test>::insert(21, RewardDestination::Controller);
-            Payee::<Test>::insert(101, RewardDestination::Controller);
+
+            <Module<Test>>::reward_by_ids(vec![(11, 50)]);
+		    <Module<Test>>::reward_by_ids(vec![(11, 50)]);
+		    // This is the second validator of the current elected set.
+		    <Module<Test>>::reward_by_ids(vec![(21, 50)]);
 
             start_session(1);
 
@@ -193,8 +208,7 @@ fn rewards_should_work() {
             assert_eq!(Balances::total_balance(&11), init_balance_11);
             assert_eq!(Balances::total_balance(&20), init_balance_20);
             assert_eq!(Balances::total_balance(&21), init_balance_21);
-            assert_eq!(Balances::total_balance(&100), init_balance_100);
-            assert_eq!(Balances::total_balance(&101), init_balance_101);
+            assert_eq!(Balances::total_balance(&1001), init_balance_1001);
             assert_eq_uvec!(Session::validators(), vec![11, 21]);
 
             start_session(2);
@@ -202,12 +216,15 @@ fn rewards_should_work() {
 
             assert_eq!(Staking::active_era().unwrap().index, 1);
 
-            // TODO implement the test
+            assert_eq!(Balances::total_balance(&10), init_balance_10 + 39999999960000000000);
+            assert_eq!(Balances::total_balance(&11), init_balance_11);
+            assert_eq!(Balances::total_balance(&20), init_balance_20 + 19999999980000000000);
+            assert_eq!(Balances::total_balance(&21), init_balance_21);
+            assert_eq!(Balances::total_balance(&1001), init_balance_1001 + 21369858941948251800);
         });
 }
 
 #[test]
-#[ignore] // TODO fix this. It just happened to work previously as election did not set others in exposure
 fn less_than_needed_candidates_works() {
     ExtBuilder::default()
         .minimum_validator_count(1)
@@ -238,7 +255,7 @@ fn no_candidate_emergency_condition() {
     ExtBuilder::default()
         .minimum_validator_count(1)
         .validator_count(15)
-		.num_validators(4)
+        .num_validators(4)
         .validator_pool(true) // 11, 21, 31, 41
         .build()
         .execute_with(|| {
@@ -266,25 +283,22 @@ fn no_candidate_emergency_condition() {
         });
 }
 
-// TODO
-/*
 #[test]
-fn nominators_also_get_slashed_pro_rata() {
+fn delegators_also_get_slashed() {
     ExtBuilder::default().build_and_execute(|| {
         mock::start_active_era(1);
         let slash_percent = Perbill::from_percent(5);
         let initial_exposure = Staking::eras_stakers(active_era(), 11);
-        // 101 is a nominator for 11
-        assert_eq!(initial_exposure.others.first().unwrap().who, 101,);
+        // 1001 is a delegator for 11
+        assert_eq!(initial_exposure.others.first().unwrap(), &1001);
+        let initial_credit = Credit::get_credit_score(&1001).unwrap_or(0);
+        assert_eq!(initial_credit, 105);
 
         // staked values;
-        let nominator_stake = Staking::ledger(100).unwrap().active;
-        let nominator_balance = balances(&101).0;
         let validator_stake = Staking::ledger(10).unwrap().active;
         let validator_balance = balances(&11).0;
         let exposed_stake = initial_exposure.total;
         let exposed_validator = initial_exposure.own;
-        let exposed_nominator = initial_exposure.others.first().unwrap().value;
 
         // 11 goes offline
         on_offence_now(
@@ -295,32 +309,20 @@ fn nominators_also_get_slashed_pro_rata() {
             &[slash_percent],
         );
 
-        // both stakes must have been decreased.
-        assert!(Staking::ledger(100).unwrap().active < nominator_stake);
+        // validator stake must have been decreased.
         assert!(Staking::ledger(10).unwrap().active < validator_stake);
 
         let slash_amount = slash_percent * exposed_stake;
         let validator_share =
             Perbill::from_rational_approximation(exposed_validator, exposed_stake) * slash_amount;
-        let nominator_share =
-            Perbill::from_rational_approximation(exposed_nominator, exposed_stake) * slash_amount;
 
-        // both slash amounts need to be positive for the test to make sense.
+        // slash amount need to be positive for the test to make sense.
         assert!(validator_share > 0);
-        assert!(nominator_share > 0);
 
-        // both stakes must have been decreased pro-rata.
-        assert_eq!(
-            Staking::ledger(100).unwrap().active,
-            nominator_stake - nominator_share,
-        );
+        // validator stake must have been decreased pro-rata.
         assert_eq!(
             Staking::ledger(10).unwrap().active,
             validator_stake - validator_share,
-        );
-        assert_eq!(
-            balances(&101).0, // free balance
-            nominator_balance - nominator_share,
         );
         assert_eq!(
             balances(&11).0, // free balance
@@ -328,8 +330,12 @@ fn nominators_also_get_slashed_pro_rata() {
         );
         // Because slashing happened.
         assert!(is_disabled(10));
+
+        // delegator credit is slashed
+        let credit_after_slashing = Credit::get_credit_score(&1001).unwrap_or(0);
+        assert!(credit_after_slashing < initial_credit);
     });
-}*/
+}
 
 #[test]
 fn double_controlling_should_fail() {
@@ -1157,27 +1163,57 @@ fn on_free_balance_zero_stash_removes_validator() {
 
 #[test]
 fn on_low_credit_score_removes_delegator() {
-    // Tests that nominator storage items are cleaned up when stash is empty
-    // Tests that storage items are untouched when controller is empty
-    ExtBuilder::default()
-        .existential_deposit(10)
-        .build_and_execute(|| {
-            //TODO
-        });
+    // Tests that delegator storage items are not cleaned up if credit is not too low
+    // Tests that delegator storage items are cleaned up if credit is too low
+    ExtBuilder::default().build_and_execute(|| {
+        // The setup is delegator 1001 delegates credit to validator 11 and 21
+
+        let initial_exposure = Staking::eras_stakers(active_era(), 11);
+        // 11 goes offline
+        on_offence_now(
+            &[OffenceDetails {
+                offender: (11, initial_exposure.clone()),
+                reporters: vec![],
+            }],
+            &[Perbill::from_percent(5)],
+        );
+
+        // delegator credit is slashed
+        let mut credit_after_slashing = Credit::get_credit_score(&1001).unwrap_or(0);
+        assert!(credit_after_slashing >= 100);
+        assert!(<Delegators<Test>>::contains_key(&1001));
+        assert!(Staking::candidate_validators(&11).delegators.contains(&1001));
+        assert!(Staking::candidate_validators(&21).delegators.contains(&1001));
+
+        // 21 goes offline
+        on_offence_now(
+            &[OffenceDetails {
+                offender: (21, initial_exposure.clone()),
+                reporters: vec![],
+            }],
+            &[Perbill::from_percent(5)],
+        );
+
+        credit_after_slashing = Credit::get_credit_score(&1001).unwrap_or(0);
+        assert!(credit_after_slashing < 100);
+        assert!(!<Delegators<Test>>::contains_key(&1001));
+        assert!(!Staking::candidate_validators(&11).delegators.contains(&1001));
+        assert!(!Staking::candidate_validators(&21).delegators.contains(&1001));
+    });
 }
 
 #[test]
 fn election_works() {
     ExtBuilder::default()
         .validator_pool(true) // 11, 21, 31, 41
-		.num_delegators(4) // 1001, 1002, 1003, 1004
+        .num_delegators(4) // 1001, 1002, 1003, 1004
         .build_and_execute(|| {
-			// 1001 delegate 11 and 21 in default setup 
+            // 1001 delegate 11 and 21 in default setup
             assert_eq_uvec!(validator_controllers(), vec![10, 20]);
 
             assert_ok!(Staking::delegate(Origin::signed(1002), vec![31, 41]));
             assert_ok!(Staking::delegate(Origin::signed(1003), vec![31, 41]));
-            
+
             // new block
             mock::start_active_era(1);
             assert_eq_uvec!(validator_controllers(), vec![30, 40]);
@@ -1612,7 +1648,7 @@ fn invulnerables_are_not_slashed() {
             assert_eq!(Balances::free_balance(11), 1000);
             assert_eq!(Balances::free_balance(21), 2000);
 
-            let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 21);
+            let _exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 21);
             let initial_balance = Staking::slashable_balance_of(&21);
 
             on_offence_now(
@@ -2410,16 +2446,15 @@ fn cannot_bond_extra_to_lower_than_ed() {
 fn delegate() {
     ExtBuilder::default()
         .existential_deposit(10)
-		.validator_pool(true) // 11, 21, 31, 41
-		.num_delegators(10) // 1001, 1002, ..., 1010
+        .validator_pool(true) // 11, 21, 31, 41
+        .num_delegators(10) // 1001, 1002, ..., 1010
         .build_and_execute(|| {
+            // TEST0： delegate with low score
+            assert_noop!(
+                Staking::delegate(Origin::signed(1000), vec![4, 6]),
+                Error::<Test>::CreditTooLow
+            );
 
-			// TEST0： delegate with low score
-			assert_noop!(
-				Staking::delegate(Origin::signed(1000), vec![4, 6]),
-				Error::<Test>::CreditTooLow
-			);
-			
             // TEST1： delegate to one validator
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
@@ -2428,38 +2463,26 @@ fn delegate() {
             assert_eq!(delegator_data.credit_score, 105);
             assert_eq!(delegator_data.delegated_validators, vec![11]);
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 1);
-            assert_eq!(
-                Staking::candidate_validators(11).delegators.contains(&1001),
-                true
-            );
+            assert!(Staking::candidate_validators(11).delegators.contains(&1001));
 
             // TEST2： delegate to many validators
             // delegate credit score
-            assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21, 31, 41]));
+            assert_ok!(Staking::delegate(
+                Origin::signed(1002),
+                vec![11, 21, 31, 41]
+            ));
             // check delegator data
             let delegator_data = Staking::delegators(1002);
             assert_eq!(delegator_data.credit_score, 105);
             assert_eq!(delegator_data.delegated_validators, vec![11, 21, 31, 41]);
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 2);
-            assert_eq!(
-                Staking::candidate_validators(11).delegators.contains(&1002),
-                true
-            );
+            assert!(Staking::candidate_validators(11).delegators.contains(&1002));
             assert_eq!(Staking::candidate_validators(21).delegators.len(), 1);
-            assert_eq!(
-                Staking::candidate_validators(21).delegators.contains(&1002),
-                true
-            );
+            assert!(Staking::candidate_validators(21).delegators.contains(&1002));
             assert_eq!(Staking::candidate_validators(31).delegators.len(), 1);
-            assert_eq!(
-                Staking::candidate_validators(31).delegators.contains(&1002),
-                true
-            );
+            assert!(Staking::candidate_validators(31).delegators.contains(&1002));
             assert_eq!(Staking::candidate_validators(41).delegators.len(), 1);
-            assert_eq!(
-                Staking::candidate_validators(41).delegators.contains(&1002),
-                true
-            );
+            assert!(Staking::candidate_validators(41).delegators.contains(&1002));
 
             //  TEST3： delegate with invalid validator
             assert_noop!(
@@ -2474,25 +2497,16 @@ fn delegate() {
             );
 
             //  TEST5： delegate after having called delegate() is allowed
-            assert_ok!(Staking::delegate(Origin::signed(1003), vec![11, 21, 31, 41]));
+            assert_ok!(Staking::delegate(
+                Origin::signed(1003),
+                vec![11, 21, 31, 41]
+            ));
             assert_ok!(Staking::delegate(Origin::signed(1003), vec![11]));
             assert_eq!(Staking::delegators(1003).delegated_validators, vec![11]);
-            assert_eq!(
-                Staking::candidate_validators(11).delegators.contains(&1003),
-                true
-            );
-            assert_eq!(
-                Staking::candidate_validators(21).delegators.contains(&1003),
-                false
-            );
-            assert_eq!(
-                Staking::candidate_validators(31).delegators.contains(&1003),
-                false
-            );
-            assert_eq!(
-                Staking::candidate_validators(41).delegators.contains(&1003),
-                false
-            );
+            assert!(Staking::candidate_validators(11).delegators.contains(&1003));
+            assert!(!Staking::candidate_validators(21).delegators.contains(&1003));
+            assert!(!Staking::candidate_validators(31).delegators.contains(&1003));
+            assert!(!Staking::candidate_validators(41).delegators.contains(&1003));
         });
 }
 
@@ -2500,15 +2514,17 @@ fn delegate() {
 fn undelegate() {
     ExtBuilder::default()
         .existential_deposit(10)
-		.validator_pool(true) // 11, 21, 31, 41
+        .validator_pool(true) // 11, 21, 31, 41
         .build_and_execute(|| {
-
             // TEST1： undelegate
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
             // undelegate after calling delegate()
             assert_ok!(Staking::undelegate(Origin::signed(1001)));
-			assert_eq!(Staking::candidate_validators(11).delegators.is_empty(), true);
+            assert_eq!(
+                Staking::candidate_validators(11).delegators.is_empty(),
+                true
+            );
 
             // TEST2: undelegate before calling delegate()
             assert_noop!(

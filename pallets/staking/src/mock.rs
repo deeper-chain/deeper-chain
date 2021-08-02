@@ -84,6 +84,11 @@ impl sp_runtime::BoundToRuntimeAppPublic for OtherSessionHandler {
     type Public = UintAuthorityId;
 }
 
+pub fn is_disabled(controller: AccountId) -> bool {
+	let stash = Staking::ledger(&controller).unwrap().stash;
+	SESSION.with(|d| d.borrow().1.contains(&stash))
+}
+
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -297,6 +302,7 @@ const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 parameter_types! {
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     pub const MaxDelegates: usize = 10;
+    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000; 
 }
 
 impl Config for Test {
@@ -304,6 +310,7 @@ impl Config for Test {
     type UnixTime = Timestamp;
     type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
     type RewardRemainder = RewardRemainderMock;
+    type EraValidatorReward = EraValidatorReward;
     type Event = Event;
     type Slash = ();
     type Reward = ();
@@ -342,7 +349,6 @@ pub struct ExtBuilder {
     invulnerables: Vec<AccountId>,
     has_stakers: bool,
     initialize_first_session: bool,
-    delegate: bool,
     num_delegators: Option<u32>,
 }
 
@@ -357,7 +363,6 @@ impl Default for ExtBuilder {
             invulnerables: vec![],
             has_stakers: true,
             initialize_first_session: true,
-            delegate: false,
             num_delegators: None,
         }
     }
@@ -416,10 +421,6 @@ impl ExtBuilder {
         OFFSET.with(|v| *v.borrow_mut() = offset);
         self
     }
-    pub fn delegate(mut self, delegate: bool) -> Self {
-        self.delegate = delegate;
-        self
-    }
     pub fn num_delegators(mut self, num_delegators: u32) -> Self {
         self.num_delegators = Some(num_delegators);
         self
@@ -450,18 +451,16 @@ impl ExtBuilder {
                 )
             })
             .collect::<Vec<_>>();
-        user_credit_data.push(
-            (
-                1000, 
-                CreditData {
-                    credit: 99,
-                    initial_credit_level: CreditLevel::Zero,
-                    rank_in_initial_credit_level: 0u32,
-                    number_of_referees: 0,
-                    expiration: BLOCKS_PER_ERA,
-                }
-            )
-        );    
+        user_credit_data.push((
+            1000,
+            CreditData {
+                credit: 99,
+                initial_credit_level: CreditLevel::Zero,
+                rank_in_initial_credit_level: 0u32,
+                number_of_referees: 0,
+                expiration: BLOCKS_PER_ERA,
+            },
+        ));
         const BLOCKS_PER_ERA: u64 = 178000 as u64;
         const MILLICENTS: Balance = 10_000_000_000_000;
         const CENTS: Balance = 1_000 * MILLICENTS;
@@ -858,6 +857,10 @@ pub(crate) fn add_slash(who: &AccountId) {
         }],
         &[Perbill::from_percent(10)],
     );
+}
+
+pub(crate) fn balances(who: &AccountId) -> (Balance, Balance) {
+	(Balances::free_balance(who), Balances::reserved_balance(who))
 }
 
 #[macro_export]

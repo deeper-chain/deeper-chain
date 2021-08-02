@@ -64,8 +64,7 @@ use sp_staking::{
     SessionIndex,
 };
 use sp_std::{
-    collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From,
-    prelude::*,
+    collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From, prelude::*,
 };
 pub use weights::WeightInfo;
 
@@ -484,6 +483,8 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// See [Era payout](./index.html#era-payout).
     type RewardRemainder: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
+    type EraValidatorReward: Get<BalanceOf<Self>>;
+
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
@@ -654,12 +655,6 @@ decl_storage! {
             double_map hasher(twox_64_concat) EraIndex, hasher(twox_64_concat) T::AccountId
             => ValidatorPrefs;
 
-        /// The total validator era payout for the last `HISTORY_DEPTH` eras.
-        ///
-        /// Eras that haven't finished yet or has been removed doesn't have reward.
-        pub ErasValidatorReward get(fn eras_validator_reward):
-            map hasher(twox_64_concat) EraIndex => Option<BalanceOf<T>>;
-
         /// Rewards for the last `HISTORY_DEPTH` eras.
         /// If reward hasn't been set or has been removed then 0 reward is returned.
         pub ErasRewardPoints get(fn eras_reward_points):
@@ -766,7 +761,7 @@ decl_storage! {
             }
             for &(ref delegator, ref validators) in &config.delegations {
                 <Module<T>>::delegate(
-                    T::Origin::from(Some(delegator.clone()).into()), 
+                    T::Origin::from(Some(delegator.clone()).into()),
                     (*validators).clone()
                 ).unwrap();
             }
@@ -1514,7 +1509,7 @@ decl_module! {
         ///     - Reads: Current Era, History Depth
         ///     - Writes: History Depth
         ///     - Clear Prefix Each: Era Stakers, EraStakersClipped, ErasValidatorPrefs
-        ///     - Writes Each: ErasValidatorReward, ErasRewardPoints, ErasTotalStake, ErasStartSessionIndex
+        ///     - Writes Each: ErasRewardPoints, ErasTotalStake, ErasStartSessionIndex
         /// # </weight>
         #[weight = T::WeightInfo::set_history_depth(*_era_items_deleted)]
         fn set_history_depth(origin,
@@ -1765,8 +1760,64 @@ impl<T: Config> Module<T> {
         Self::apply_unapplied_slashes(active_era);
     }
 
-    /// distribute pocr reward
-    fn distribute_pocr_reward(current_era: EraIndex) {
+    /// pay validator rewards based on their reward points
+    /// pay delegators rewards based on their credits
+    fn distribute_reward(current_era: EraIndex) {
+        Self::pay_validators(current_era);
+        Self::pay_delegators();
+    }
+
+    fn pay_validators(era: EraIndex) {
+        let era_payout = T::EraValidatorReward::get();
+        let era_reward_points = <ErasRewardPoints<T>>::get(&era);
+        let total_reward_points = era_reward_points.total;
+        for validator in Self::eras_validators(era) {
+            let validator_reward_points = era_reward_points
+                .individual
+                .get(&validator)
+                .map(|points| *points)
+                .unwrap_or_else(|| Zero::zero());
+            if !validator_reward_points.is_zero() {
+                let validator_total_reward_part = Perbill::from_rational_approximation(
+                    validator_reward_points,
+                    total_reward_points,
+                );
+                // This is how much validator is entitled to.
+                let validator_total_payout = validator_total_reward_part * era_payout;
+                if let Some(imbalance) = Self::make_validator_payout(&validator, validator_total_payout) {
+                    Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
+                }
+                Self::deposit_event(RawEvent::ValidatorReward(validator, validator_total_payout));
+            }
+        }
+    }
+
+    /// Validators can set reward destination or payee, so we need to handle that.
+    fn make_validator_payout(
+        stash: &T::AccountId,
+        amount: BalanceOf<T>,
+    ) -> Option<PositiveImbalanceOf<T>> {
+        let dest = Self::payee(stash);
+        match dest {
+            RewardDestination::Controller => Self::bonded(stash)
+                .and_then(|controller| Some(T::Currency::deposit_creating(&controller, amount))),
+            RewardDestination::Stash => T::Currency::deposit_into_existing(stash, amount).ok(),
+            RewardDestination::Staked => Self::bonded(stash)
+                .and_then(|c| Self::ledger(&c).map(|l| (c, l)))
+                .and_then(|(controller, mut l)| {
+                    l.active += amount;
+                    l.total += amount;
+                    let r = T::Currency::deposit_into_existing(stash, amount).ok();
+                    Self::update_ledger(&controller, &l);
+                    r
+                }),
+            RewardDestination::Account(dest_account) => {
+                Some(T::Currency::deposit_creating(&dest_account, amount))
+            }
+        }
+    }
+
+    fn pay_delegators() {
         let mut total_poc_reward = BalanceOf::<T>::zero();
         for (delegator, _) in Delegators::<T>::iter() {
             if let Some((daily_referee_reward, daily_poc_reward)) =
@@ -1804,51 +1855,13 @@ impl<T: Config> Module<T> {
                 ));
             }
         }
-
-        // TODO: distribute reward based on reward points
-        // if let Some(current_era_validators) = Self::current_era_validators() {
-        //     let len = current_era_validators.len();
-        //     let validator_reward = Percent::from_percent(5)
-        //         * (Perbill::from_rational_approximation(1, len as u32) * total_poc_reward);
-        //     for (validator, _) in SelectedDelegators::<T>::iter_prefix(current_era) {
-        //         if let Some(imbalance) = Self::make_validator_payout(&validator, validator_reward) {
-        //             Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
-        //         }
-        //         Self::deposit_event(RawEvent::ValidatorReward(validator, validator_reward));
-        //     }
-        // }
-    }
-
-    /// Validators can set reward destination or payee, so we need to handle that.
-    fn make_validator_payout(
-        stash: &T::AccountId,
-        amount: BalanceOf<T>,
-    ) -> Option<PositiveImbalanceOf<T>> {
-        let dest = Self::payee(stash);
-        match dest {
-            RewardDestination::Controller => Self::bonded(stash)
-                .and_then(|controller| Some(T::Currency::deposit_creating(&controller, amount))),
-            RewardDestination::Stash => T::Currency::deposit_into_existing(stash, amount).ok(),
-            RewardDestination::Staked => Self::bonded(stash)
-                .and_then(|c| Self::ledger(&c).map(|l| (c, l)))
-                .and_then(|(controller, mut l)| {
-                    l.active += amount;
-                    l.total += amount;
-                    let r = T::Currency::deposit_into_existing(stash, amount).ok();
-                    Self::update_ledger(&controller, &l);
-                    r
-                }),
-            RewardDestination::Account(dest_account) => {
-                Some(T::Currency::deposit_creating(&dest_account, amount))
-            }
-        }
     }
 
     /// Compute payout for era.
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
         if let Some(_active_era_start) = active_era.start {
-            Self::distribute_pocr_reward(active_era.index);
+            Self::distribute_reward(active_era.index);
         }
     }
 
@@ -1916,6 +1929,7 @@ impl<T: Config> Module<T> {
             None
         } else {
             validators.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+            let truncated = validators.len() > Self::validator_count() as usize;
             validators.truncate(Self::validator_count() as usize);
             let elected_validators: Vec<T::AccountId> =
                 validators.iter().map(|(v, _)| (*v).clone()).collect();
@@ -1934,11 +1948,16 @@ impl<T: Config> Module<T> {
                     .and_then(Self::ledger)
                     .map(|l| l.active)
                     .unwrap_or_default();
-                let others: Vec<T::AccountId> = Self::candidate_validators(v)
+                // expose delegators only if not all validators elected.
+                let others = if truncated { 
+                    Self::candidate_validators(v)
                     .delegators
                     .into_iter()
                     .map(|d| d)
-                    .collect();
+                    .collect()
+                } else {
+                    Vec::new()
+                };
                 let exposure = Exposure {
                     total: stake,
                     own: stake,
@@ -1979,7 +1998,6 @@ impl<T: Config> Module<T> {
     fn clear_era_information(era_index: EraIndex) {
         <ErasStakers<T>>::remove_prefix(era_index);
         <ErasValidatorPrefs<T>>::remove_prefix(era_index);
-        <ErasValidatorReward<T>>::remove(era_index);
         <ErasRewardPoints<T>>::remove(era_index);
         <ErasTotalStake<T>>::remove(era_index);
         <ErasValidators<T>>::remove(era_index);
