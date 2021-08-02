@@ -29,16 +29,16 @@ use pallet_credit::CreditInterface;
 use sp_staking::offence::OffenceDetails;
 
 macro_rules! assert_eq_uvec {
-	( $x:expr, $y:expr $(,)? ) => {
+    ( $x:expr, $y:expr $(,)? ) => {
         if $x.len() != $y.len() {
             panic!("vectors not equal: {:?} != {:?}", $x, $y);
         }
-		$x.iter().for_each(|e| {
-			if !$y.contains(e) {
-				panic!("vectors not equal: {:?} != {:?}", $x, $y);
-			}
-		});
-	};
+        $x.iter().for_each(|e| {
+            if !$y.contains(e) {
+                panic!("vectors not equal: {:?} != {:?}", $x, $y);
+            }
+        });
+    };
 }
 
 #[test]
@@ -198,9 +198,9 @@ fn rewards_should_work() {
             Payee::<Test>::insert(21, RewardDestination::Controller);
 
             <Module<Test>>::reward_by_ids(vec![(11, 50)]);
-		    <Module<Test>>::reward_by_ids(vec![(11, 50)]);
-		    // This is the second validator of the current elected set.
-		    <Module<Test>>::reward_by_ids(vec![(21, 50)]);
+            <Module<Test>>::reward_by_ids(vec![(11, 50)]);
+            // This is the second validator of the current elected set.
+            <Module<Test>>::reward_by_ids(vec![(21, 50)]);
 
             start_session(1);
 
@@ -216,11 +216,20 @@ fn rewards_should_work() {
 
             assert_eq!(Staking::active_era().unwrap().index, 1);
 
-            assert_eq!(Balances::total_balance(&10), init_balance_10 + 39999999960000000000);
+            assert_eq!(
+                Balances::total_balance(&10),
+                init_balance_10 + 39999999960000000000
+            );
             assert_eq!(Balances::total_balance(&11), init_balance_11);
-            assert_eq!(Balances::total_balance(&20), init_balance_20 + 19999999980000000000);
+            assert_eq!(
+                Balances::total_balance(&20),
+                init_balance_20 + 19999999980000000000
+            );
             assert_eq!(Balances::total_balance(&21), init_balance_21);
-            assert_eq!(Balances::total_balance(&1001), init_balance_1001 + 21369858941948251800);
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            );
         });
 }
 
@@ -1182,8 +1191,12 @@ fn on_low_credit_score_removes_delegator() {
         let mut credit_after_slashing = Credit::get_credit_score(&1001).unwrap_or(0);
         assert!(credit_after_slashing >= 100);
         assert!(<Delegators<Test>>::contains_key(&1001));
-        assert!(Staking::candidate_validators(&11).delegators.contains(&1001));
-        assert!(Staking::candidate_validators(&21).delegators.contains(&1001));
+        assert!(Staking::candidate_validators(&11)
+            .delegators
+            .contains(&1001));
+        assert!(Staking::candidate_validators(&21)
+            .delegators
+            .contains(&1001));
 
         // 21 goes offline
         on_offence_now(
@@ -1197,8 +1210,12 @@ fn on_low_credit_score_removes_delegator() {
         credit_after_slashing = Credit::get_credit_score(&1001).unwrap_or(0);
         assert!(credit_after_slashing < 100);
         assert!(!<Delegators<Test>>::contains_key(&1001));
-        assert!(!Staking::candidate_validators(&11).delegators.contains(&1001));
-        assert!(!Staking::candidate_validators(&21).delegators.contains(&1001));
+        assert!(!Staking::candidate_validators(&11)
+            .delegators
+            .contains(&1001));
+        assert!(!Staking::candidate_validators(&21)
+            .delegators
+            .contains(&1001));
     });
 }
 

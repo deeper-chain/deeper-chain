@@ -85,8 +85,8 @@ impl sp_runtime::BoundToRuntimeAppPublic for OtherSessionHandler {
 }
 
 pub fn is_disabled(controller: AccountId) -> bool {
-	let stash = Staking::ledger(&controller).unwrap().stash;
-	SESSION.with(|d| d.borrow().1.contains(&stash))
+    let stash = Staking::ledger(&controller).unwrap().stash;
+    SESSION.with(|d| d.borrow().1.contains(&stash))
 }
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -302,7 +302,7 @@ const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 parameter_types! {
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     pub const MaxDelegates: usize = 10;
-    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000; 
+    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000;
 }
 
 impl Config for Test {
@@ -860,7 +860,7 @@ pub(crate) fn add_slash(who: &AccountId) {
 }
 
 pub(crate) fn balances(who: &AccountId) -> (Balance, Balance) {
-	(Balances::free_balance(who), Balances::reserved_balance(who))
+    (Balances::free_balance(who), Balances::reserved_balance(who))
 }
 
 #[macro_export]

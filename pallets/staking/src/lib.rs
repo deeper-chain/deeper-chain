@@ -1784,7 +1784,9 @@ impl<T: Config> Module<T> {
                 );
                 // This is how much validator is entitled to.
                 let validator_total_payout = validator_total_reward_part * era_payout;
-                if let Some(imbalance) = Self::make_validator_payout(&validator, validator_total_payout) {
+                if let Some(imbalance) =
+                    Self::make_validator_payout(&validator, validator_total_payout)
+                {
                     Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
                 }
                 Self::deposit_event(RawEvent::ValidatorReward(validator, validator_total_payout));
@@ -1949,12 +1951,12 @@ impl<T: Config> Module<T> {
                     .map(|l| l.active)
                     .unwrap_or_default();
                 // expose delegators only if not all validators elected.
-                let others = if truncated { 
+                let others = if truncated {
                     Self::candidate_validators(v)
-                    .delegators
-                    .into_iter()
-                    .map(|d| d)
-                    .collect()
+                        .delegators
+                        .into_iter()
+                        .map(|d| d)
+                        .collect()
                 } else {
                     Vec::new()
                 };

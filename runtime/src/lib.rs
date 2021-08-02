@@ -460,7 +460,7 @@ parameter_types! {
     pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
     pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
-    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000; 
+    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000;
     // 0.05%. The higher the value, the more strict solution acceptance becomes.
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
