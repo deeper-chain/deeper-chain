@@ -694,6 +694,8 @@ impl ExtBuilder {
                 Timestamp::set_timestamp(INIT_TIMESTAMP);
             });
         }
+        
+        ext.execute_with(pre_conditions);
 
         ext
     }
@@ -701,6 +703,13 @@ impl ExtBuilder {
         let mut ext = self.build();
         ext.execute_with(test);
         ext.execute_with(post_conditions);
+    }
+}
+
+fn pre_conditions() {
+    // 21 delegators are enough for all the tests now
+    for account in 1000..1020 {
+        assert_ok!(DeeperNode::im_online(Origin::signed(account as u64)));
     }
 }
 
