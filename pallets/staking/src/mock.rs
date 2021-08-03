@@ -27,6 +27,7 @@ use frame_support::{
 };
 use node_primitives::Moment;
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
+use pallet_deeper_node::NodeInterface;
 use sp_core::H256;
 use sp_io;
 use sp_runtime::{
@@ -297,6 +298,23 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for RewardRemainderMock {
     }
 }
 
+pub struct DeeperNodeMock;
+
+impl NodeInterface<AccountId> for DeeperNodeMock {
+
+    fn im_offline(_account_id: &AccountId) -> bool {
+        false
+    }
+
+    fn im_ever_online(_account_id: &AccountId) -> bool {
+        true
+    }
+    
+    fn get_days_offline(_account_id: &AccountId) -> u32 {
+        0
+    }
+}
+
 const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 
 parameter_types! {
@@ -324,7 +342,7 @@ impl Config for Test {
     type MinSolutionScoreBump = MinSolutionScoreBump;
     type WeightInfo = ();
     type CreditInterface = Credit;
-    type NodeInterface = DeeperNode;
+    type NodeInterface = DeeperNodeMock;
     type MaxDelegates = MaxDelegates;
     type CurrencyToNumber = CurrencyToNumberHandler;
     type RemainderMiningReward = MiningReward;

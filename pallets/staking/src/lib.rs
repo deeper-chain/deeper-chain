@@ -1820,39 +1820,39 @@ impl<T: Config> Module<T> {
     fn pay_delegators() {
         let mut total_poc_reward = BalanceOf::<T>::zero();
         for (delegator, _) in Delegators::<T>::iter() {
-            if let Some((daily_referee_reward, daily_poc_reward)) =
-                T::CreditInterface::get_reward(&delegator)
-            {
-                // update RewardData
-                if Reward::<T>::contains_key(&delegator) {
-                    Reward::<T>::mutate(&delegator, |data| match data {
-                        Some(reward_data) => {
-                            reward_data.received_referee_reward += daily_referee_reward;
-                            reward_data.daily_referee_reward = daily_referee_reward;
-                            reward_data.received_pocr_reward += daily_poc_reward;
-                            reward_data.daily_poc_reward = daily_poc_reward;
-                        }
-                        _ => (),
-                    });
-                } else {
-                    let reward_data = RewardData::<BalanceOf<T>> {
-                        total_referee_reward: T::CreditInterface::get_top_referee_reward(
-                            &delegator,
-                        )
-                        .unwrap_or_default(),
-                        received_referee_reward: daily_referee_reward,
-                        daily_referee_reward: daily_referee_reward,
-                        received_pocr_reward: daily_poc_reward,
-                        daily_poc_reward: daily_poc_reward,
-                    };
-                    Reward::<T>::insert(&delegator, reward_data);
+            if T::NodeInterface::im_ever_online(&delegator) {
+                if let Some((daily_referee_reward, daily_poc_reward)) =
+                    T::CreditInterface::get_reward(&delegator)
+                {
+                    // update RewardData
+                    if Reward::<T>::contains_key(&delegator) {
+                        Reward::<T>::mutate(&delegator, |data| match data {
+                            Some(reward_data) => {
+                                reward_data.received_referee_reward += daily_referee_reward;
+                                reward_data.daily_referee_reward = daily_referee_reward;
+                                reward_data.received_pocr_reward += daily_poc_reward;
+                                reward_data.daily_poc_reward = daily_poc_reward;
+                            }
+                            _ => (),
+                        });
+                    } else {
+                        let reward_data = RewardData::<BalanceOf<T>> {
+                            total_referee_reward: T::CreditInterface::get_top_referee_reward(
+                                &delegator,
+                            )
+                            .unwrap_or_default(),
+                            received_referee_reward: daily_referee_reward,
+                            daily_referee_reward: daily_referee_reward,
+                            received_pocr_reward: daily_poc_reward,
+                            daily_poc_reward: daily_poc_reward,
+                        };
+                        Reward::<T>::insert(&delegator, reward_data);
+                    }
+                    total_poc_reward += daily_poc_reward;
+                    let daily_reward = daily_referee_reward + daily_poc_reward;
+                    T::Currency::deposit_creating(&delegator, daily_reward);
+                    Self::deposit_event(RawEvent::DelegatorReward(delegator, daily_reward));
                 }
-                total_poc_reward += daily_poc_reward;
-                T::Currency::deposit_creating(&delegator, daily_referee_reward + daily_poc_reward);
-                Self::deposit_event(RawEvent::DelegatorReward(
-                    delegator,
-                    daily_referee_reward + daily_poc_reward,
-                ));
             }
         }
     }
