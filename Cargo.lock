@@ -3972,7 +3972,6 @@ dependencies = [
  "pallet-session-benchmarking",
  "pallet-society",
  "pallet-staking 3.0.0",
- "pallet-staking-reward-curve",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
@@ -4841,7 +4840,6 @@ dependencies = [
  "pallet-deeper-node",
  "pallet-micropayment",
  "pallet-session",
- "pallet-staking-reward-curve",
  "pallet-timestamp",
  "parity-scale-codec",
  "parking_lot 0.11.1",
@@ -4857,18 +4855,6 @@ dependencies = [
  "sp-storage",
  "sp-tracing",
  "static_assertions",
- "substrate-test-utils",
-]
-
-[[package]]
-name = "pallet-staking-reward-curve"
-version = "3.0.0"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "sp-runtime",
- "syn",
 ]
 
 [[package]]
@@ -8522,26 +8508,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "substrate-test-utils"
-version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?tag=v3.0.0#49a4103f4bfef55be20a5c6d26e18ff3003c3353"
-dependencies = [
- "futures 0.3.12",
- "substrate-test-utils-derive",
- "tokio 0.2.25",
-]
-
-[[package]]
-name = "substrate-test-utils-derive"
-version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?tag=v3.0.0#49a4103f4bfef55be20a5c6d26e18ff3003c3353"
-dependencies = [
- "proc-macro-crate",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "substrate-wasm-builder"
 version = "4.0.0"
 source = "git+https://github.com/paritytech/substrate?tag=v3.0.0#49a4103f4bfef55be20a5c6d26e18ff3003c3353"
@@ -8785,7 +8751,6 @@ dependencies = [
  "pin-project-lite 0.1.11",
  "signal-hook-registry",
  "slab",
- "tokio-macros",
  "winapi 0.3.9",
 ]
 
@@ -8851,17 +8816,6 @@ dependencies = [
  "bytes 0.4.12",
  "futures 0.1.30",
  "log",
-]
-
-[[package]]
-name = "tokio-macros"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e44da00bfc73a25f814cd8d7e57a68a5c31b74b3152a0a1d1f590c97ed06265a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

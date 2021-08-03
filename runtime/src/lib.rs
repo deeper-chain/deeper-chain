@@ -57,7 +57,6 @@ use sp_core::{
     OpaqueMetadata,
 };
 use sp_inherents::{CheckInherentsResult, InherentData};
-use sp_runtime::curve::PiecewiseLinear;
 use sp_runtime::traits::{
     self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys,
     SaturatedConversion, StaticLookup,
@@ -456,47 +455,26 @@ impl pallet_session::historical::Config for Runtime {
     type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
 }
 
-pallet_staking_reward_curve::build! {
-    const REWARD_CURVE: PiecewiseLinear<'static> = curve!(
-        min_inflation: 0_025_000,
-        max_inflation: 0_100_000,
-        ideal_stake: 0_500_000,
-        falloff: 0_050_000,
-        max_piece_count: 40,
-        test_precision: 0_005_000,
-    );
-}
-
 parameter_types! {
     pub const SessionsPerEra: sp_staking::SessionIndex = 6;
     pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
     pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
-    pub const RewardCurve: &'static PiecewiseLinear<'static> = &REWARD_CURVE;
-    pub const MaxNominatorRewardedPerValidator: u32 = 256;
-    pub const ElectionLookahead: BlockNumber = EPOCH_DURATION_IN_BLOCKS / 4;
-    pub const MaxIterations: u32 = 10;
-    pub const RewardAdjustFactor: u128 = REWARD_ADJUST_FACTOR;
-    pub const RewardPerBlock: u128 = GENESIS_BLOCK_REWARD / 30;
-    pub const RewardAdjustPeriod: u32 = REWARD_ADJUST_PERIOD;
-    pub const BlockNumberPerEra: BlockNumber = BLOCKS_PER_ERA;
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
-    pub const CreditToTokenFactor: u128 = 500_000_000_000_000; //1unit = e15 todo
+    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000;
     // 0.05%. The higher the value, the more strict solution acceptance becomes.
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
-    pub OffchainSolutionWeightLimit: Weight = RuntimeBlockWeights::get()
-        .get(DispatchClass::Normal)
-        .max_extrinsic.expect("Normal extrinsics have a weight limit configured; qed")
-        .saturating_sub(BlockExecutionWeight::get());
 }
 
 impl pallet_staking::Config for Runtime {
     type Currency = Balances;
     type CreditInterface = Credit;
-    type MaxValidatorsCanSelected = MaxValidatorsCanSelected;
+    type NodeInterface = DeeperNode;
+    type MaxDelegates = MaxDelegates;
     type UnixTime = Timestamp;
     type CurrencyToVote = U128CurrencyToVote;
     type CurrencyToNumber = CurrencyToNumberHandler;
     type RewardRemainder = Treasury;
+    type EraValidatorReward = EraValidatorReward;
     type Event = Event;
     type Slash = Treasury; // send the slashed funds to the treasury.
     type Reward = (); // rewards are minted from the void
@@ -510,22 +488,11 @@ impl pallet_staking::Config for Runtime {
         pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
     >;
     type SessionInterface = Self;
-    type RewardCurve = RewardCurve;
     type NextNewSession = Session;
-    type ElectionLookahead = ElectionLookahead;
     type Call = Call;
-    type MaxIterations = MaxIterations;
     type MinSolutionScoreBump = MinSolutionScoreBump;
-    type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
-    type UnsignedPriority = StakingUnsignedPriority;
     // The unsigned solution weight targeted by the OCW. We set it to the maximum possible value of
     // a single extrinsic.
-    type OffchainSolutionWeightLimit = OffchainSolutionWeightLimit;
-    type CreditToTokenFactor = CreditToTokenFactor;
-    type RewardAdjustFactor = RewardAdjustFactor;
-    type RewardPerBlock = RewardPerBlock;
-    type RewardAdjustPeriod = RewardAdjustPeriod;
-    type BlocksPerEra = BlockNumberPerEra;
     type RemainderMiningReward = MiningReward;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 }
@@ -801,8 +768,6 @@ impl pallet_sudo::Config for Runtime {
 parameter_types! {
     pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
     pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
-    /// We prioritize im-online heartbeats over election solution submission.
-    pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
@@ -1117,7 +1082,7 @@ impl pallet_credit::Config for Runtime {
 }
 
 parameter_types! {
-    pub const MaxValidatorsCanSelected: usize = 10;
+    pub const MaxDelegates: usize = 10;
 }
 
 construct_runtime!(
@@ -1135,7 +1100,7 @@ construct_runtime!(
         Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
+        Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
         Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
         Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
