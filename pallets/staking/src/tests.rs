@@ -2477,7 +2477,6 @@ fn delegate() {
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
             // check delegated info
             let delegator_data = Staking::delegators(1001);
-            assert_eq!(delegator_data.credit_score, 105);
             assert_eq!(delegator_data.delegated_validators, vec![11]);
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 1);
             assert!(Staking::candidate_validators(11).delegators.contains(&1001));
@@ -2490,7 +2489,6 @@ fn delegate() {
             ));
             // check delegator data
             let delegator_data = Staking::delegators(1002);
-            assert_eq!(delegator_data.credit_score, 105);
             assert_eq!(delegator_data.delegated_validators, vec![11, 21, 31, 41]);
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 2);
             assert!(Staking::candidate_validators(11).delegators.contains(&1002));

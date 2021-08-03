@@ -529,7 +529,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 
 #[derive(Decode, Encode, Default)]
 pub struct DelegatorData<AccountId> {
-    pub credit_score: u64,
     pub delegated_validators: Vec<AccountId>,
 }
 
@@ -1575,7 +1574,6 @@ decl_module! {
             let old_delegator_data = Self::delegators(&delegator);
 
             let delegator_data = DelegatorData {
-                credit_score: T::CreditInterface::get_credit_score(&delegator).unwrap(),
                 delegated_validators: validators.clone(),
             };
             <Delegators<T>>::insert(&delegator, delegator_data);
