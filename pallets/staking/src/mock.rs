@@ -298,23 +298,6 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for RewardRemainderMock {
     }
 }
 
-pub struct DeeperNodeMock;
-
-impl NodeInterface<AccountId> for DeeperNodeMock {
-
-    fn im_offline(_account_id: &AccountId) -> bool {
-        false
-    }
-
-    fn im_ever_online(_account_id: &AccountId) -> bool {
-        true
-    }
-    
-    fn get_days_offline(_account_id: &AccountId) -> u32 {
-        0
-    }
-}
-
 const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 
 parameter_types! {
@@ -342,7 +325,7 @@ impl Config for Test {
     type MinSolutionScoreBump = MinSolutionScoreBump;
     type WeightInfo = ();
     type CreditInterface = Credit;
-    type NodeInterface = DeeperNodeMock;
+    type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type CurrencyToNumber = CurrencyToNumberHandler;
     type RemainderMiningReward = MiningReward;
@@ -694,7 +677,7 @@ impl ExtBuilder {
                 Timestamp::set_timestamp(INIT_TIMESTAMP);
             });
         }
-        
+
         ext.execute_with(pre_conditions);
 
         ext
