@@ -242,6 +242,7 @@ fn update_credit() {
 #[test]
 fn get_reward_work() {
     new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
         run_to_block(1);
         assert_eq!(
             Credit::get_reward(&3),
@@ -260,6 +261,7 @@ fn get_reward_work() {
 #[test]
 fn get_reward_with_update_credit_no_bonus() {
     new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(6)));
         assert_eq!(Credit::get_user_credit(&6).unwrap().credit, 100);
         assert_eq!(
             Credit::get_reward(&6),
@@ -294,6 +296,7 @@ fn get_reward_with_update_credit_no_bonus() {
 #[test]
 fn get_reward_with_update_credit_with_bonus() {
     new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(7)));
         assert_eq!(Credit::get_user_credit(&7).unwrap().credit, 400);
         assert_eq!(
             Credit::get_reward(&7),
@@ -328,6 +331,7 @@ fn get_reward_with_update_credit_with_bonus() {
 #[test]
 fn get_reward_with_slash_credit_with_bonus() {
     new_test_ext().execute_with(|| {
+        assert_ok!(DeeperNode::im_online(Origin::signed(7)));
         assert_eq!(Credit::get_user_credit(&7).unwrap().credit, 400);
         assert_eq!(
             Credit::get_reward(&7),

@@ -17,7 +17,7 @@ pub type IpV4 = Vec<u8>;
 pub type CountryRegion = Vec<u8>;
 pub type Duration = u8;
 
-// struct to store the registered Device Informatin
+// struct to store the registered Device Information
 #[derive(Decode, Encode, Default)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
@@ -99,6 +99,11 @@ pub mod pallet {
     #[pallet::getter(fn get_im_online)]
     pub(super) type ImOnline<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
+    
+    #[pallet::storage]
+     #[pallet::getter(fn get_onboard_time)]
+    pub(super) type OnboardTime<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;    
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -278,7 +283,10 @@ pub mod pallet {
         #[pallet::weight(10_000)]
         pub fn im_online(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ImOnline::<T>::insert(sender, <frame_system::Module<T>>::block_number());
+            ImOnline::<T>::insert(&sender, <frame_system::Module<T>>::block_number());
+            if !OnboardTime::<T>::contains_key(&sender) {
+                OnboardTime::<T>::insert(&sender, <frame_system::Module<T>>::block_number());
+            }
             Ok(().into())
         }
     }

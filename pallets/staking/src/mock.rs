@@ -27,6 +27,7 @@ use frame_support::{
 };
 use node_primitives::Moment;
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
+use pallet_deeper_node::NodeInterface;
 use sp_core::H256;
 use sp_io;
 use sp_runtime::{
@@ -677,12 +678,21 @@ impl ExtBuilder {
             });
         }
 
+        ext.execute_with(pre_conditions);
+
         ext
     }
     pub fn build_and_execute(self, test: impl FnOnce() -> ()) {
         let mut ext = self.build();
         ext.execute_with(test);
         ext.execute_with(post_conditions);
+    }
+}
+
+fn pre_conditions() {
+    // 21 delegators are enough for all the tests now
+    for account in 1000..1020 {
+        assert_ok!(DeeperNode::im_online(Origin::signed(account as u64)));
     }
 }
 

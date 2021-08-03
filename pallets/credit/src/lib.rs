@@ -75,7 +75,7 @@ pub struct CreditData<BlockNumber> {
 pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
     fn get_number_of_referees(account_id: &AccountId) -> Option<u8>;
-    fn pass_threshold(account_id: &AccountId, _ttype: u8) -> bool;
+    fn pass_threshold(account_id: &AccountId, _type: u8) -> bool;
     fn slash_credit(account_id: &AccountId);
     fn get_credit_level(credit_score: u64) -> CreditLevel;
     fn get_reward(account_id: &AccountId) -> Option<(Balance, Balance)>;
@@ -435,13 +435,11 @@ pub mod pallet {
             }
         }
 
-        /// check if account_id's credit score is pass threshold ttype
-        fn pass_threshold(account_id: &T::AccountId, _ttype: u8) -> bool {
-            if UserCredit::<T>::contains_key(account_id) {
-                if let Some(score) = Self::get_credit_score(account_id) {
-                    if score >= T::CreditScoreDelegatedPermitThreshold::get() {
-                        return true;
-                    }
+        /// check if account_id's credit score is pass threshold type
+        fn pass_threshold(account_id: &T::AccountId, _type: u8) -> bool {
+            if let Some(score) = Self::get_credit_score(account_id) {
+                if score >= T::CreditScoreDelegatedPermitThreshold::get() {
+                    return true;
                 }
             }
             false
@@ -476,77 +474,15 @@ pub mod pallet {
 
         fn get_reward(account_id: &T::AccountId) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
             // read storage
-            if let Some(credit_data) = Self::get_user_credit(account_id) {
-                if Self::pass_threshold(account_id, 0) {
-                    let current_block = <frame_system::Module<T>>::block_number();
-                    if current_block <= credit_data.expiration {
-                        // unexpirated
-                        let initial_credit_level = credit_data.initial_credit_level;
-                        let credit_setting = Self::get_credit_setting(initial_credit_level.clone());
-                        // referal reward
-                        let number_of_referees = if credit_data.number_of_referees
-                            <= credit_setting.max_referees_with_rewards
-                        {
-                            credit_data.number_of_referees
-                        } else {
-                            credit_setting.max_referees_with_rewards
-                        };
-                        let daily_referee_reward = credit_setting
-                            .reward_per_referee
-                            .saturating_mul(number_of_referees.into());
-
-                        // poc reward
-                        let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
-                        let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
-                            Self::get_daily_poc_reward(current_credit_level.clone());
-
-                        if current_credit_level == initial_credit_level {
-                            // level unchanged
-                            let daily_poc_reward = if credit_data.rank_in_initial_credit_level
-                                <= credit_setting.max_rank_with_bonus
-                            {
-                                daily_poc_reward_with_bonus
-                            } else {
-                                base_daily_poc_reward
-                            };
-                            Some((daily_referee_reward, daily_poc_reward))
-                        } else {
-                            // level changed
-                            let (
-                                initial_base_daily_poc_reward,
-                                initial_daily_poc_reward_with_bonus,
-                            ) = Self::get_daily_poc_reward(initial_credit_level);
-
-                            let daily_poc_reward = if credit_data.rank_in_initial_credit_level
-                                <= credit_setting.max_rank_with_bonus
-                            {
-                                base_daily_poc_reward
-                                    + (initial_daily_poc_reward_with_bonus
-                                        - initial_base_daily_poc_reward)
-                            } else {
-                                base_daily_poc_reward
-                            };
-                            Some((daily_referee_reward, daily_poc_reward))
-                        }
-                    } else {
-                        // expired
-                        // only daily_base_poc_reward
-                        let credit_level = Self::get_credit_level(credit_data.credit);
-                        let (base_daily_poc_reward, _) = Self::get_daily_poc_reward(credit_level);
-                        Some((BalanceOf::<T>::zero(), base_daily_poc_reward))
-                    }
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        }
-
-        fn get_top_referee_reward(account_id: &T::AccountId) -> Option<BalanceOf<T>> {
-            if let Some(credit_data) = Self::get_user_credit(account_id) {
-                if Self::pass_threshold(account_id, 0) {
-                    let credit_setting = Self::get_credit_setting(credit_data.initial_credit_level);
+            if Self::pass_threshold(account_id, 0) {
+                let credit_data = Self::get_user_credit(account_id).unwrap();
+                let current_block = <frame_system::Module<T>>::block_number();
+                let onboard_time = <pallet_deeper_node::Module<T>>::get_onboard_time(account_id).unwrap();
+                if current_block <= onboard_time + credit_data.expiration {
+                    // not expired
+                    let initial_credit_level = credit_data.initial_credit_level;
+                    let credit_setting = Self::get_credit_setting(initial_credit_level.clone());
+                    // referral reward
                     let number_of_referees = if credit_data.number_of_referees
                         <= credit_setting.max_referees_with_rewards
                     {
@@ -557,9 +493,65 @@ pub mod pallet {
                     let daily_referee_reward = credit_setting
                         .reward_per_referee
                         .saturating_mul(number_of_referees.into());
-                    let top_referee_reward = daily_referee_reward.saturating_mul((270u32).into());
-                    return Some(top_referee_reward);
+
+                    // poc reward
+                    let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
+                    let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
+                        Self::get_daily_poc_reward(current_credit_level.clone());
+
+                    if current_credit_level == initial_credit_level {
+                        // level unchanged
+                        let daily_poc_reward = if credit_data.rank_in_initial_credit_level
+                            <= credit_setting.max_rank_with_bonus
+                        {
+                            daily_poc_reward_with_bonus
+                        } else {
+                            base_daily_poc_reward
+                        };
+                        Some((daily_referee_reward, daily_poc_reward))
+                    } else {
+                        // level changed
+                        let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
+                            Self::get_daily_poc_reward(initial_credit_level);
+
+                        let daily_poc_reward = if credit_data.rank_in_initial_credit_level
+                            <= credit_setting.max_rank_with_bonus
+                        {
+                            base_daily_poc_reward
+                                + (initial_daily_poc_reward_with_bonus
+                                    - initial_base_daily_poc_reward)
+                        } else {
+                            base_daily_poc_reward
+                        };
+                        Some((daily_referee_reward, daily_poc_reward))
+                    }
+                } else {
+                    // expired
+                    // only daily_base_poc_reward
+                    let credit_level = Self::get_credit_level(credit_data.credit);
+                    let (base_daily_poc_reward, _) = Self::get_daily_poc_reward(credit_level);
+                    Some((BalanceOf::<T>::zero(), base_daily_poc_reward))
                 }
+            } else {
+                None
+            }
+        }
+
+        fn get_top_referee_reward(account_id: &T::AccountId) -> Option<BalanceOf<T>> {
+            if Self::pass_threshold(account_id, 0) {
+                let credit_data = Self::get_user_credit(account_id).unwrap();
+                let credit_setting = Self::get_credit_setting(credit_data.initial_credit_level);
+                let number_of_referees =
+                    if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
+                        credit_data.number_of_referees
+                    } else {
+                        credit_setting.max_referees_with_rewards
+                    };
+                let daily_referee_reward = credit_setting
+                    .reward_per_referee
+                    .saturating_mul(number_of_referees.into());
+                let top_referee_reward = daily_referee_reward.saturating_mul((270u32).into());
+                return Some(top_referee_reward);
             }
             None
         }
