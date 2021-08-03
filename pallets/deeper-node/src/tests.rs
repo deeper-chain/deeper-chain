@@ -169,11 +169,14 @@ fn fn_update_server() {
 #[test]
 fn im_online() {
     new_test_ext().execute_with(|| {
+        assert_eq!(DeeperNode::get_onboard_time(1), None);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(0));
+        assert_eq!(DeeperNode::get_onboard_time(1), Some(0));
         run_to_block(1);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(1));
+        assert_eq!(DeeperNode::get_onboard_time(1), Some(0));
     });
 }
 

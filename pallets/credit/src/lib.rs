@@ -477,7 +477,8 @@ pub mod pallet {
             if Self::pass_threshold(account_id, 0) {
                 let credit_data = Self::get_user_credit(account_id).unwrap();
                 let current_block = <frame_system::Module<T>>::block_number();
-                if current_block <= credit_data.expiration {
+                let onboard_time = <pallet_deeper_node::Module<T>>::get_onboard_time(account_id).unwrap();
+                if current_block <= onboard_time + credit_data.expiration {
                     // not expired
                     let initial_credit_level = credit_data.initial_credit_level;
                     let credit_setting = Self::get_credit_setting(initial_credit_level.clone());
