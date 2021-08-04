@@ -209,22 +209,9 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
-pub struct CurrencyToNumberHandler;
-impl Convert<Balance, u64> for CurrencyToNumberHandler {
-    fn convert(x: Balance) -> u64 {
-        x as u64
-    }
-}
-impl Convert<u128, Balance> for CurrencyToNumberHandler {
-    fn convert(x: u128) -> Balance {
-        x
-    }
-}
-
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
-    type CurrencyToVote = CurrencyToNumberHandler;
     type CreditInitScore = CreditInitScore;
     type MaxCreditScore = MaxCreditScore;
     type CreditScoreCapPerEra = CreditScoreCapPerEra;
@@ -297,7 +284,14 @@ impl OnUnbalanced<NegativeImbalanceOf<Test>> for RewardRemainderMock {
     }
 }
 
-const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
+pub struct NumberCurrencyConverter;
+impl Convert<u128, Balance> for NumberCurrencyConverter {
+    fn convert(x: u128) -> Balance {
+        x
+    }
+}
+
+pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 
 parameter_types! {
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
@@ -324,8 +318,8 @@ impl Config for Test {
     type CreditInterface = Credit;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
-    type CurrencyToNumber = CurrencyToNumberHandler;
-    type RemainderMiningReward = MiningReward;
+    type NumberToCurrency = NumberCurrencyConverter;
+    type TotalMiningReward = MiningReward;
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test

@@ -38,8 +38,8 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{
-        Currency, EnsureOrigin, Get, Imbalance, IsSubType,
-        LockIdentifier, LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
+        Currency, EnsureOrigin, Get, Imbalance, IsSubType, LockIdentifier, LockableCurrency,
+        OnUnbalanced, UnixTime, WithdrawReasons,
     },
     weights::{
         constants::{WEIGHT_PER_MICROS, WEIGHT_PER_NANOS},
@@ -64,7 +64,8 @@ use sp_staking::{
     SessionIndex,
 };
 use sp_std::{
-    collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From, prelude::*,
+    cmp, collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From,
+    convert::TryInto, prelude::*,
 };
 pub use weights::WeightInfo;
 
@@ -469,7 +470,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// is not used.
     type UnixTime: UnixTime;
 
-    type CurrencyToNumber: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
+    type NumberToCurrency: Convert<u128, BalanceOf<Self>>;
 
     /// Tokens have been minted and are unused for validator-reward.
     /// See [Era payout](./index.html#era-payout).
@@ -513,7 +514,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
 
-    type RemainderMiningReward: Get<u128>;
+    type TotalMiningReward: Get<u128>;
 }
 
 #[derive(Decode, Encode, Default)]
@@ -1405,6 +1406,13 @@ decl_module! {
             ForceEra::put(Forcing::ForceAlways);
         }
 
+        #[weight = 10000]
+        fn increase_mining_reward(origin, additional_reward: u128) {
+            ensure_root(origin)?;
+            let remainder = Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get());
+            RemainderMiningReward::put(remainder + additional_reward);
+        }
+
         /// Cancel enactment of a deferred slash.
         ///
         /// Can be called by the `T::SlashCancelOrigin`.
@@ -1749,7 +1757,14 @@ impl<T: Config> Module<T> {
     }
 
     fn pay_validators(era: EraIndex) {
-        let era_payout = T::EraValidatorReward::get();
+        let remainder_mining_reward = T::NumberToCurrency::convert(
+            Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
+        );
+        if remainder_mining_reward < Zero::zero() {
+            return;
+        }
+        let era_payout = cmp::min(T::EraValidatorReward::get(), remainder_mining_reward);
+        let mut total_payout = Zero::zero();
         let era_reward_points = <ErasRewardPoints<T>>::get(&era);
         let total_reward_points = era_reward_points.total;
         for validator in Self::eras_validators(era) {
@@ -1765,6 +1780,7 @@ impl<T: Config> Module<T> {
                 );
                 // This is how much validator is entitled to.
                 let validator_total_payout = validator_total_reward_part * era_payout;
+                total_payout += validator_total_payout;
                 if let Some(imbalance) =
                     Self::make_validator_payout(&validator, validator_total_payout)
                 {
@@ -1773,6 +1789,11 @@ impl<T: Config> Module<T> {
                 Self::deposit_event(RawEvent::ValidatorReward(validator, validator_total_payout));
             }
         }
+        RemainderMiningReward::put(
+            TryInto::<u128>::try_into(remainder_mining_reward - total_payout)
+                .ok()
+                .unwrap(),
+        );
     }
 
     /// Validators can set reward destination or payee, so we need to handle that.
@@ -1801,6 +1822,12 @@ impl<T: Config> Module<T> {
     }
 
     fn pay_delegators() {
+        let mut remainder_mining_reward = T::NumberToCurrency::convert(
+            Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
+        );
+        if remainder_mining_reward < Zero::zero() {
+            return;
+        }
         let mut total_poc_reward = BalanceOf::<T>::zero();
         for (delegator, _) in Delegators::<T>::iter() {
             if T::NodeInterface::im_ever_online(&delegator) {
@@ -1832,12 +1859,25 @@ impl<T: Config> Module<T> {
                         Reward::<T>::insert(&delegator, reward_data);
                     }
                     total_poc_reward += daily_poc_reward;
-                    let daily_reward = daily_referee_reward + daily_poc_reward;
-                    T::Currency::deposit_creating(&delegator, daily_reward);
+                    let daily_reward = cmp::min(
+                        remainder_mining_reward,
+                        daily_referee_reward + daily_poc_reward,
+                    );
+                    let imbalance = T::Currency::deposit_creating(&delegator, daily_reward);
+                    Self::deposit_event(RawEvent::Reward(delegator.clone(), imbalance.peek()));
                     Self::deposit_event(RawEvent::DelegatorReward(delegator, daily_reward));
+                    remainder_mining_reward -= daily_reward;
+                    if remainder_mining_reward < Zero::zero() {
+                        break;
+                    }
                 }
             }
         }
+        RemainderMiningReward::put(
+            TryInto::<u128>::try_into(remainder_mining_reward)
+                .ok()
+                .unwrap(),
+        );
     }
 
     /// Compute payout for era.

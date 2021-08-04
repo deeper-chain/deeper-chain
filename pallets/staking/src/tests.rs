@@ -23,9 +23,11 @@ use frame_support::{
     traits::{Currency, OnInitialize, ReservableCurrency},
     StorageMap,
 };
+use frame_system::RawOrigin;
 use mock::*;
 use pallet_balances::Error as BalancesError;
 use pallet_credit::CreditInterface;
+use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
 
 macro_rules! assert_eq_uvec {
@@ -230,6 +232,11 @@ fn rewards_should_work() {
                 Balances::total_balance(&1001),
                 init_balance_1001 + 21369858941948251800
             );
+            let remainder = TOTAL_MINING_REWARD
+                - 39999999960000000000
+                - 19999999980000000000
+                - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
         });
 }
 
@@ -2547,4 +2554,22 @@ fn undelegate() {
                 Error::<Test>::NotDelegator
             );
         });
+}
+
+#[test]
+fn increase_mining_reward() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Staking::increase_mining_reward(Origin::signed(1), 10000),
+            BadOrigin
+        );
+        assert_ok!(Staking::increase_mining_reward(
+            RawOrigin::Root.into(),
+            10000
+        ));
+        assert_eq!(
+            Staking::remainder_mining_reward().unwrap(),
+            TOTAL_MINING_REWARD + 10000
+        );
+    });
 }

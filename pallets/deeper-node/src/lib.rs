@@ -99,11 +99,11 @@ pub mod pallet {
     #[pallet::getter(fn get_im_online)]
     pub(super) type ImOnline<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
-    
+
     #[pallet::storage]
-     #[pallet::getter(fn get_onboard_time)]
+    #[pallet::getter(fn get_onboard_time)]
     pub(super) type OnboardTime<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;    
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
