@@ -471,7 +471,6 @@ impl pallet_staking::Config for Runtime {
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type UnixTime = Timestamp;
-    type CurrencyToVote = U128CurrencyToVote;
     type CurrencyToNumber = CurrencyToNumberHandler;
     type RewardRemainder = Treasury;
     type EraValidatorReward = EraValidatorReward;
@@ -488,7 +487,6 @@ impl pallet_staking::Config for Runtime {
         pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
     >;
     type SessionInterface = Self;
-    type NextNewSession = Session;
     type Call = Call;
     type MinSolutionScoreBump = MinSolutionScoreBump;
     // The unsigned solution weight targeted by the OCW. We set it to the maximum possible value of

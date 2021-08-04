@@ -27,7 +27,6 @@ use frame_support::{
 };
 use node_primitives::Moment;
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
-use pallet_deeper_node::NodeInterface;
 use sp_core::H256;
 use sp_io;
 use sp_runtime::{
@@ -309,7 +308,6 @@ parameter_types! {
 impl Config for Test {
     type Currency = Balances;
     type UnixTime = Timestamp;
-    type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
     type RewardRemainder = RewardRemainderMock;
     type EraValidatorReward = EraValidatorReward;
     type Event = Event;
@@ -320,7 +318,6 @@ impl Config for Test {
     type SlashCancelOrigin = frame_system::EnsureRoot<Self::AccountId>;
     type BondingDuration = BondingDuration;
     type SessionInterface = Self;
-    type NextNewSession = Session;
     type Call = Call;
     type MinSolutionScoreBump = MinSolutionScoreBump;
     type WeightInfo = ();

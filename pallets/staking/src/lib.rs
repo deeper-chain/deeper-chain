@@ -38,7 +38,7 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{
-        Currency, CurrencyToVote, EnsureOrigin, EstimateNextNewSession, Get, Imbalance, IsSubType,
+        Currency, EnsureOrigin, Get, Imbalance, IsSubType,
         LockIdentifier, LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
     },
     weights::{
@@ -470,13 +470,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// is not used.
     type UnixTime: UnixTime;
 
-    /// Convert a balance into a number used for election calculation. This must fit into a `u64`
-    /// but is allowed to be sensibly lossy. The `u64` is used to communicate with the
-    /// [`sp_npos_elections`] crate which accepts u64 numbers and does operations in 128.
-    /// Consequently, the backward convert is used convert the u128s from sp-elections back to a
-    /// [`BalanceOf`].
-    type CurrencyToVote: CurrencyToVote<BalanceOf<Self>>;
-
     type CurrencyToNumber: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
 
     /// Tokens have been minted and are unused for validator-reward.
@@ -511,9 +504,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 
     /// Interface for interacting with a session module.
     type SessionInterface: self::SessionInterface<Self::AccountId>;
-
-    /// Something that can estimate the next session change, accurately or as a best effort guess.
-    type NextNewSession: EstimateNextNewSession<Self::BlockNumber>;
 
     /// The overarching call type.
     type Call: Dispatchable + From<Call<Self>> + IsSubType<Call<Self>> + Clone;
