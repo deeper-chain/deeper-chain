@@ -115,7 +115,7 @@ pub struct ActiveEraInfo {
 
 /// Reward points of an era. Used to split era total payout between validators.
 ///
-/// This points will be used to reward validators and their respective nominators.
+/// This points will be used to reward validators.
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug)]
 pub struct EraRewardPoints<AccountId: Ord> {
     /// Total number of points. Equals the sum of reward points for each validator.
@@ -165,13 +165,12 @@ pub struct RewardData<Balance: HasCompact> {
 /// Preference of what happens regarding validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct ValidatorPrefs {
-    /// Reward that validator takes up-front; only the rest is split between themselves and
-    /// nominators.
+    /// not used. It may be removed in future.
     #[codec(compact)]
     pub commission: Perbill,
-    /// Whether or not this validator is accepting more nominations. If `true`, then no nominator
-    /// who is not already nominating this validator may nominate them. By default, validators
-    /// are accepting nominations.
+    /// Whether or not this validator is accepting more delegations. If `true`, then no delegator
+    /// who is not already delegating this validator may delegate them. By default, validators
+    /// are accepting delegations.
     pub blocked: bool,
 }
 
@@ -789,7 +788,7 @@ decl_event!(
         EraPayout(EraIndex, Balance, Balance),
         /// The staker has been rewarded by this amount. \[stash, amount\]
         Reward(AccountId, Balance),
-        /// One validator (and its nominators) has been slashed by the given amount.
+        /// One validator has been slashed by the given amount.
         /// \[validator, amount\]
         Slash(AccountId, Balance),
         /// An old slashing report from a prior era was discarded because it could
@@ -809,8 +808,6 @@ decl_event!(
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue. \[stash, amount\]
         Withdrawn(AccountId, Balance),
-        /// A nominator has been kicked from a validator. \[nominator, stash\]
-        Kicked(AccountId, AccountId),
         /// Delegated to a set of validators
         Delegated(AccountId, Vec<AccountId>),
         /// Undelegate from a validator
@@ -865,9 +862,9 @@ decl_error! {
         IncorrectSlashingSpans,
         /// Internal state has become somehow corrupted and the operation cannot continue.
         BadState,
-        /// Too many nomination targets supplied.
+        /// Too many delegation targets supplied.
         TooManyTargets,
-        /// A nomination target was supplied that was blocked or otherwise not a validator.
+        /// A delegation target was supplied that was blocked or otherwise not a validator.
         BadTarget,
         /// Have not been delegated to a validator
         NotDelegator,
@@ -978,7 +975,7 @@ decl_module! {
             system::Module::<T>::inc_consumers(&stash).map_err(|_| Error::<T>::BadState)?;
 
             // You're auto-bonded forever, here. We might improve this by only bonding when
-            // you actually validate/nominate and remove once you unbond __everything__.
+            // you actually validate and remove once you unbond __everything__.
             <Bonded<T>>::insert(&stash, &controller);
             <Payee<T>>::insert(&stash, payee);
 
@@ -1197,7 +1194,7 @@ decl_module! {
             <Validators<T>>::insert(stash, prefs);
         }
 
-        /// Declare no desire to either validate or nominate.
+        /// Declare no desire to either validate.
         ///
         /// Effects will be felt at the beginning of the next era.
         ///
@@ -1384,7 +1381,7 @@ decl_module! {
         /// # <weight>
         /// O(S) where S is the number of slashing spans to be removed
         /// Reads: Bonded, Slashing Spans, Account, Locks
-        /// Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Nominators, Account, Locks
+        /// Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Account, Locks
         /// Writes Each: SpanSlash * S
         /// # </weight>
         #[weight = T::WeightInfo::force_unstake(*num_slashing_spans)]
@@ -1530,7 +1527,7 @@ decl_module! {
         /// Complexity: O(S) where S is the number of slashing spans on the account.
         /// DB Weight:
         /// - Reads: Stash Account, Bonded, Slashing Spans, Locks
-        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Nominators, Stash Account, Locks
+        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Stash Account, Locks
         /// - Writes Each: SpanSlash * S
         /// # </weight>
         #[weight = T::WeightInfo::reap_stash(*num_slashing_spans)]
@@ -2168,9 +2165,6 @@ impl<T: Config> Convert<T::AccountId, Option<T::AccountId>> for StashOf<T> {
     }
 }
 
-/// A typed conversion from stash account ID to the active exposure of nominators
-/// on that account.
-///
 /// Active exposure is the exposure of the validator set currently validating, i.e. in
 /// `active_era`. It can differ from the latest planned exposure in `current_era`.
 pub struct ExposureOf<T>(sp_std::marker::PhantomData<T>);
@@ -2294,12 +2288,12 @@ where
             });
 
             if let Some(mut unapplied) = unapplied {
-                let nominators_len = unapplied.others.len() as u64;
+                let delegators_len = unapplied.others.len() as u64;
                 let reporters_len = details.reporters.len() as u64;
 
                 {
                     let upper_bound = 1 /* Validator/NominatorSlashInEra */ + 2 /* fetch_spans */;
-                    let rw = upper_bound + nominators_len * upper_bound;
+                    let rw = upper_bound + delegators_len * upper_bound;
                     add_db_reads_writes(rw, rw);
                 }
                 unapplied.reporters = details.reporters.clone();
@@ -2310,8 +2304,8 @@ where
                         let slash_cost = (6, 5);
                         let reward_cost = (2, 2);
                         add_db_reads_writes(
-                            (1 + nominators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
-                            (1 + nominators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
+                            (1 + delegators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
+                            (1 + delegators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
                         );
                     }
                 } else {
