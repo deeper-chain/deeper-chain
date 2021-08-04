@@ -25,10 +25,13 @@
 #[cfg(test)]
 mod mock;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+pub mod slashing;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod testing_utils;
 #[cfg(test)]
 mod tests;
-
-pub mod slashing;
 pub mod weights;
 
 use codec::{Decode, Encode, HasCompact};
