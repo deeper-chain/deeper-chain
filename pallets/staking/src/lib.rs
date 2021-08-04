@@ -862,10 +862,6 @@ decl_error! {
         IncorrectSlashingSpans,
         /// Internal state has become somehow corrupted and the operation cannot continue.
         BadState,
-        /// Too many delegation targets supplied.
-        TooManyTargets,
-        /// A delegation target was supplied that was blocked or otherwise not a validator.
-        BadTarget,
         /// Have not been delegated to a validator
         NotDelegator,
         /// Credit score of delegator is too low
