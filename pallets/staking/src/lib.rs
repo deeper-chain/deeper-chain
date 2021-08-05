@@ -813,11 +813,9 @@ decl_event!(
         Delegated(AccountId, Vec<AccountId>),
         /// Undelegate from a validator
         UnDelegated(AccountId),
-        /// PoCr Reward
-        PocReward(AccountId, Balance),
-        /// The delegator  has been rewarded by this amount. \[accountid, amount\]
+        /// The delegator  has been rewarded by this amount. \[account_id, amount\]
         DelegatorReward(AccountId, Balance),
-        /// The validator  has been rewarded by this amount. \[accountid, amount\]
+        /// The validator  has been rewarded by this amount. \[account_id, amount\]
         ValidatorReward(AccountId, Balance),
     }
 );
