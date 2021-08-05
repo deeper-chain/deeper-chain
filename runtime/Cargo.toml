@@ -64,12 +64,10 @@ pallet-membership = { git = "https://github.com/paritytech/substrate", tag = "v3
 pallet-mmr = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
 pallet-offences = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
-pallet-offences-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-recovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
 pallet-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["historical"], default-features = false }
-pallet-session-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, optional = true }
 pallet-staking = { path = "../pallets/staking", version = "3.0.0", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-society = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
@@ -190,8 +188,6 @@ runtime-benchmarks = [
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
-	"pallet-offences-benchmarking",
-	"pallet-session-benchmarking",
 	"frame-system-benchmarking",
 	"hex-literal",
 ]

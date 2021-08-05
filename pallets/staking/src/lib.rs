@@ -25,10 +25,13 @@
 #[cfg(test)]
 mod mock;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+pub mod slashing;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod testing_utils;
 #[cfg(test)]
 mod tests;
-
-pub mod slashing;
 pub mod weights;
 
 use codec::{Decode, Encode, HasCompact};
@@ -1404,7 +1407,7 @@ decl_module! {
             ForceEra::put(Forcing::ForceAlways);
         }
 
-        #[weight = 10000]
+        #[weight = T::WeightInfo::increase_mining_reward(1)]
         fn increase_mining_reward(origin, additional_reward: u128) {
             ensure_root(origin)?;
             let remainder = Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get());
@@ -1541,7 +1544,7 @@ decl_module! {
         }
 
         /// delegate credit to a set of validators
-        #[weight = 10_000]
+        #[weight = T::WeightInfo::delegate(1, validators.len() as u32)]
         pub fn delegate(origin, validators: Vec<T::AccountId>) -> DispatchResult {
             ensure!(Self::era_election_status().is_closed(), Error::<T>::CallNotAllowed);
             let delegator = ensure_signed(origin)?;
@@ -1589,7 +1592,7 @@ decl_module! {
         }
 
         /// undelegate credit from the validators
-        #[weight = 10_000]
+        #[weight = T::WeightInfo::undelegate(T::MaxDelegates::get() as u32)]
         pub fn undelegate(origin) -> DispatchResult {
             let delegator = ensure_signed(origin)?;
             ensure!(<Delegators<T>>::contains_key(&delegator), Error::<T>::NotDelegator);
