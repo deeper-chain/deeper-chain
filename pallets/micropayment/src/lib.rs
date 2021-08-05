@@ -75,7 +75,7 @@ pub mod pallet {
 
     // get channel info
     #[pallet::storage]
-    #[pallet::getter(fn get_channel)]
+    #[pallet::getter(fn channel)]
     pub(super) type Channel<T: Config> = StorageDoubleMap<
         _,
         Blake2_128Concat,
@@ -88,13 +88,13 @@ pub mod pallet {
 
     // nonce indicates the next available value; increase by one whenever open a new channel for an account pair
     #[pallet::storage]
-    #[pallet::getter(fn get_nonce)]
+    #[pallet::getter(fn nonce)]
     pub(super) type Nonce<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u64, ValueQuery>;
 
     // session id
     #[pallet::storage]
-    #[pallet::getter(fn get_session_id)]
+    #[pallet::getter(fn session_id)]
     pub(super) type SessionId<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u32, OptionQuery>;
 
@@ -112,12 +112,12 @@ pub mod pallet {
 
     // record payment by server
     #[pallet::storage]
-    #[pallet::getter(fn get_payment_by_server)]
+    #[pallet::getter(fn payment_by_server)]
     pub(super) type PaymentByServer<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_clients_by_server)]
+    #[pallet::getter(fn clients_by_server)]
     pub(super) type ClientsByServer<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BTreeSet<T::AccountId>, ValueQuery>;
 
@@ -355,7 +355,7 @@ pub mod pallet {
             }
 
             if SessionId::<T>::contains_key((&client, &server))
-                && session_id != Self::get_session_id((&client, &server)).unwrap_or(0) + 1
+                && session_id != Self::session_id((&client, &server)).unwrap_or(0) + 1
             {
                 Err(Error::<T>::SessionError)?
             }
@@ -470,7 +470,7 @@ pub mod pallet {
                 client,
                 server
             );
-            let balance = Self::get_payment_by_server(server);
+            let balance = Self::payment_by_server(server);
             PaymentByServer::<T>::insert(server, balance + amount);
             log!(info, "micro-payment info updated at block {:?} for server:{:?}, with old balance {:?}, new balance {:?}",
                     block_number, server, balance, balance + amount);

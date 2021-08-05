@@ -67,16 +67,16 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    #[pallet::getter(fn get_map_init)]
+    #[pallet::getter(fn map_init)]
     pub type RegionMapInit<T: Config> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_region_code)]
+    #[pallet::getter(fn region_code)]
     pub(super) type RegionMap<T: Config> =
         StorageMap<_, Blake2_128Concat, CountryRegion, CountryRegion, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_device_info)]
+    #[pallet::getter(fn device_info)]
     pub(super) type DeviceInfo<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
@@ -86,12 +86,12 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_servers_by_country)]
+    #[pallet::getter(fn servers_by_country)]
     pub(super) type ServersByCountry<T: Config> =
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_servers_by_region)]
+    #[pallet::getter(fn servers_by_region)]
     pub(super) type ServersByRegion<T: Config> =
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
 
@@ -101,7 +101,7 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_onboard_time)]
+    #[pallet::getter(fn onboard_time)]
     pub(super) type OnboardTime<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
@@ -750,10 +750,6 @@ pub mod pallet {
             <RegionMap<T>>::insert("PW".as_bytes().to_vec(), "OCN".as_bytes().to_vec());
 
             <RegionMapInit<T>>::put(true);
-        }
-
-        pub fn registered_devices() -> Vec<Node<T::AccountId, T::BlockNumber>> {
-            DeviceInfo::<T>::iter_values().collect::<Vec<_>>()
         }
     }
 

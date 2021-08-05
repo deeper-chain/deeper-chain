@@ -2,7 +2,7 @@ use crate::{mock::*, Error, NodeInterface};
 use frame_support::{assert_ok, dispatch::DispatchErrorWithPostInfo};
 
 #[test]
-fn fn_register_device() {
+fn register_device() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device
@@ -11,7 +11,7 @@ fn fn_register_device() {
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
-        let node = DeeperNode::get_device_info(1);
+        let node = DeeperNode::device_info(1);
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
 
@@ -42,14 +42,14 @@ fn fn_register_device() {
             vec![1, 3, 4, 5],
             "CA".as_bytes().to_vec()
         ));
-        let node = DeeperNode::get_device_info(4);
+        let node = DeeperNode::device_info(4);
         assert_eq!(node.ipv4, vec![1, 3, 4, 5]);
         assert_eq!(node.country, "CA".as_bytes().to_vec());
     });
 }
 
 #[test]
-fn fn_unregister_device() {
+fn unregister_device() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // unregister a registered device
@@ -71,7 +71,7 @@ fn fn_unregister_device() {
 }
 
 #[test]
-fn fn_register_server() {
+fn register_server() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device, then register server
@@ -81,7 +81,7 @@ fn fn_register_server() {
             "US".as_bytes().to_vec()
         ));
         assert_ok!(DeeperNode::register_server(Origin::signed(1), 1));
-        let servers = DeeperNode::get_servers_by_country("US".as_bytes().to_vec());
+        let servers = DeeperNode::servers_by_country("US".as_bytes().to_vec());
         let index = servers.iter().position(|x| *x == 1);
         assert_eq!(index, Some(0));
 
@@ -109,7 +109,7 @@ fn fn_register_server() {
 }
 
 #[test]
-fn fn_unregister_server() {
+fn unregister_server() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device, then register server
@@ -132,7 +132,7 @@ fn fn_unregister_server() {
 }
 
 #[test]
-fn fn_update_server() {
+fn update_server() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device, then update server
@@ -169,14 +169,14 @@ fn fn_update_server() {
 #[test]
 fn im_online() {
     new_test_ext().execute_with(|| {
-        assert_eq!(DeeperNode::get_onboard_time(1), None);
+        assert_eq!(DeeperNode::onboard_time(1), None);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(0));
-        assert_eq!(DeeperNode::get_onboard_time(1), Some(0));
+        assert_eq!(DeeperNode::onboard_time(1), Some(0));
         run_to_block(1);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(1));
-        assert_eq!(DeeperNode::get_onboard_time(1), Some(0));
+        assert_eq!(DeeperNode::onboard_time(1), Some(0));
     });
 }
 
