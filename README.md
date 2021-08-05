@@ -50,3 +50,24 @@ If you want to see the multi-node consensus algorithm in action, refer to
 ## Wallet Integration
 
 See [this doc](wallet-integration.md)
+
+## Update weights.rs in pallet
+1. Build deeper-chain with `--features runtime-benchmarks`
+```
+cd cli/
+cargo build --release --features runtime-benchmarks
+```
+2. Run shell command to update weights.rs
+```
+./target/release/deeper-chain benchmark  \
+--chain=dev \
+--steps=50 \
+--repeat=20 \
+--pallet=pallet_staking \
+--extrinsic=* \
+--execution=wasm \
+--wasm-execution=compiled \
+--heap-pages=4096 \
+--output=./pallets/staking/src/weights.rs \
+--template=./.maintain/frame-weight-template.hbs 
+```

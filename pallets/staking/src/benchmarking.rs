@@ -325,8 +325,8 @@ benchmarks! {
     }
 
     new_era {
-        let v in 1 .. 100;
-        let d in 1 .. 10000;
+        let v in 1 .. 10;
+        let d in 1 .. 1000;
 
         create_validators_with_delegators_for_era::<T>(v, d, MAX_DELEGATES as usize, false, None)?;
         let session_index = SessionIndex::one();
