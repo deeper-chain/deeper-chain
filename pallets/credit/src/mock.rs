@@ -9,7 +9,7 @@ use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, Convert, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup},
 };
 
 use node_primitives::{Balance, BlockNumber, Moment};
@@ -118,22 +118,9 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
-pub struct CurrencyToNumberHandler;
-impl Convert<Balance, u64> for CurrencyToNumberHandler {
-    fn convert(x: Balance) -> u64 {
-        x as u64
-    }
-}
-impl Convert<u128, Balance> for CurrencyToNumberHandler {
-    fn convert(x: u128) -> Balance {
-        x
-    }
-}
-
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
-    type CurrencyToVote = CurrencyToNumberHandler;
     type CreditInitScore = CreditInitScore;
     type MaxCreditScore = MaxCreditScore;
     type CreditScoreCapPerEra = CreditScoreCapPerEra;

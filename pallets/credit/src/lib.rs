@@ -92,9 +92,10 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use sp_runtime::{
-        traits::{Convert, Saturating, Zero},
+        traits::{Saturating, Zero},
         Perbill,
     };
+    use sp_std::convert::TryInto;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -105,8 +106,6 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Number of sessions per era.
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
-        //type Currency: Currency<Self::AccountId>;
-        type CurrencyToVote: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
         /// Credit init score
         type CreditInitScore: Get<u64>;
         /// Credit score threshold
@@ -280,12 +279,10 @@ pub mod pallet {
         /// update credit score per era using micropayment vec
         pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
             for (server_id, balance, _num_of_clients) in micropayment_vec {
-                let balance_num =
-                    <T::CurrencyToVote as Convert<BalanceOf<T>, u64>>::convert(balance);
+                let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
                 let mut score_delta: u64 = balance_num
-                    .checked_div(T::MicropaymentToCreditScoreFactor::get())
-                    .unwrap_or(0)
-                    .into();
+                    .checked_div(T::MicropaymentToCreditScoreFactor::get() as u128)
+                    .unwrap_or(0) as u64;
                 log!(
                     info,
                     "server_id: {:?}, balance_num: {}, score_delta:{}",
@@ -477,7 +474,8 @@ pub mod pallet {
             if Self::pass_threshold(account_id, 0) {
                 let credit_data = Self::get_user_credit(account_id).unwrap();
                 let current_block = <frame_system::Module<T>>::block_number();
-                let onboard_time = <pallet_deeper_node::Module<T>>::get_onboard_time(account_id).unwrap();
+                let onboard_time =
+                    <pallet_deeper_node::Module<T>>::get_onboard_time(account_id).unwrap();
                 if current_block <= onboard_time + credit_data.expiration {
                     // not expired
                     let initial_credit_level = credit_data.initial_credit_level;

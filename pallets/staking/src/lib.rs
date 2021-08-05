@@ -38,8 +38,8 @@ use frame_support::{
     ensure,
     storage::IterableStorageMap,
     traits::{
-        Currency, CurrencyToVote, EnsureOrigin, EstimateNextNewSession, Get, Imbalance, IsSubType,
-        LockIdentifier, LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
+        Currency, EnsureOrigin, Get, Imbalance, IsSubType, LockIdentifier, LockableCurrency,
+        OnUnbalanced, UnixTime, WithdrawReasons,
     },
     weights::{
         constants::{WEIGHT_PER_MICROS, WEIGHT_PER_NANOS},
@@ -64,7 +64,8 @@ use sp_staking::{
     SessionIndex,
 };
 use sp_std::{
-    collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From, prelude::*,
+    cmp, collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From,
+    convert::TryInto, prelude::*,
 };
 pub use weights::WeightInfo;
 
@@ -115,7 +116,7 @@ pub struct ActiveEraInfo {
 
 /// Reward points of an era. Used to split era total payout between validators.
 ///
-/// This points will be used to reward validators and their respective nominators.
+/// This points will be used to reward validators.
 #[derive(PartialEq, Encode, Decode, Default, RuntimeDebug)]
 pub struct EraRewardPoints<AccountId: Ord> {
     /// Total number of points. Equals the sum of reward points for each validator.
@@ -165,13 +166,12 @@ pub struct RewardData<Balance: HasCompact> {
 /// Preference of what happens regarding validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct ValidatorPrefs {
-    /// Reward that validator takes up-front; only the rest is split between themselves and
-    /// nominators.
+    /// not used. It may be removed in future.
     #[codec(compact)]
     pub commission: Perbill,
-    /// Whether or not this validator is accepting more nominations. If `true`, then no nominator
-    /// who is not already nominating this validator may nominate them. By default, validators
-    /// are accepting nominations.
+    /// Whether or not this validator is accepting more delegations. If `true`, then no delegator
+    /// who is not already delegating this validator may delegate them. By default, validators
+    /// are accepting delegations.
     pub blocked: bool,
 }
 
@@ -470,14 +470,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// is not used.
     type UnixTime: UnixTime;
 
-    /// Convert a balance into a number used for election calculation. This must fit into a `u64`
-    /// but is allowed to be sensibly lossy. The `u64` is used to communicate with the
-    /// [`sp_npos_elections`] crate which accepts u64 numbers and does operations in 128.
-    /// Consequently, the backward convert is used convert the u128s from sp-elections back to a
-    /// [`BalanceOf`].
-    type CurrencyToVote: CurrencyToVote<BalanceOf<Self>>;
-
-    type CurrencyToNumber: Convert<BalanceOf<Self>, u64> + Convert<u128, BalanceOf<Self>>;
+    type NumberToCurrency: Convert<u128, BalanceOf<Self>>;
 
     /// Tokens have been minted and are unused for validator-reward.
     /// See [Era payout](./index.html#era-payout).
@@ -512,9 +505,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// Interface for interacting with a session module.
     type SessionInterface: self::SessionInterface<Self::AccountId>;
 
-    /// Something that can estimate the next session change, accurately or as a best effort guess.
-    type NextNewSession: EstimateNextNewSession<Self::BlockNumber>;
-
     /// The overarching call type.
     type Call: Dispatchable + From<Call<Self>> + IsSubType<Call<Self>> + Clone;
 
@@ -524,7 +514,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
 
-    type RemainderMiningReward: Get<u128>;
+    type TotalMiningReward: Get<u128>;
 }
 
 #[derive(Decode, Encode, Default)]
@@ -799,7 +789,7 @@ decl_event!(
         EraPayout(EraIndex, Balance, Balance),
         /// The staker has been rewarded by this amount. \[stash, amount\]
         Reward(AccountId, Balance),
-        /// One validator (and its nominators) has been slashed by the given amount.
+        /// One validator has been slashed by the given amount.
         /// \[validator, amount\]
         Slash(AccountId, Balance),
         /// An old slashing report from a prior era was discarded because it could
@@ -819,17 +809,13 @@ decl_event!(
         /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `Balance`
         /// from the unlocking queue. \[stash, amount\]
         Withdrawn(AccountId, Balance),
-        /// A nominator has been kicked from a validator. \[nominator, stash\]
-        Kicked(AccountId, AccountId),
         /// Delegated to a set of validators
         Delegated(AccountId, Vec<AccountId>),
         /// Undelegate from a validator
         UnDelegated(AccountId),
-        /// PoCr Reward
-        PocReward(AccountId, Balance),
-        /// The delegator  has been rewarded by this amount. \[accountid, amount\]
+        /// The delegator  has been rewarded by this amount. \[account_id, amount\]
         DelegatorReward(AccountId, Balance),
-        /// The validator  has been rewarded by this amount. \[accountid, amount\]
+        /// The validator  has been rewarded by this amount. \[account_id, amount\]
         ValidatorReward(AccountId, Balance),
     }
 );
@@ -875,10 +861,6 @@ decl_error! {
         IncorrectSlashingSpans,
         /// Internal state has become somehow corrupted and the operation cannot continue.
         BadState,
-        /// Too many nomination targets supplied.
-        TooManyTargets,
-        /// A nomination target was supplied that was blocked or otherwise not a validator.
-        BadTarget,
         /// Have not been delegated to a validator
         NotDelegator,
         /// Credit score of delegator is too low
@@ -988,7 +970,7 @@ decl_module! {
             system::Module::<T>::inc_consumers(&stash).map_err(|_| Error::<T>::BadState)?;
 
             // You're auto-bonded forever, here. We might improve this by only bonding when
-            // you actually validate/nominate and remove once you unbond __everything__.
+            // you actually validate and remove once you unbond __everything__.
             <Bonded<T>>::insert(&stash, &controller);
             <Payee<T>>::insert(&stash, payee);
 
@@ -1207,7 +1189,7 @@ decl_module! {
             <Validators<T>>::insert(stash, prefs);
         }
 
-        /// Declare no desire to either validate or nominate.
+        /// Declare no desire to either validate.
         ///
         /// Effects will be felt at the beginning of the next era.
         ///
@@ -1394,7 +1376,7 @@ decl_module! {
         /// # <weight>
         /// O(S) where S is the number of slashing spans to be removed
         /// Reads: Bonded, Slashing Spans, Account, Locks
-        /// Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Nominators, Account, Locks
+        /// Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Account, Locks
         /// Writes Each: SpanSlash * S
         /// # </weight>
         #[weight = T::WeightInfo::force_unstake(*num_slashing_spans)]
@@ -1420,6 +1402,13 @@ decl_module! {
         fn force_new_era_always(origin) {
             ensure_root(origin)?;
             ForceEra::put(Forcing::ForceAlways);
+        }
+
+        #[weight = 10000]
+        fn increase_mining_reward(origin, additional_reward: u128) {
+            ensure_root(origin)?;
+            let remainder = Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get());
+            RemainderMiningReward::put(remainder + additional_reward);
         }
 
         /// Cancel enactment of a deferred slash.
@@ -1540,7 +1529,7 @@ decl_module! {
         /// Complexity: O(S) where S is the number of slashing spans on the account.
         /// DB Weight:
         /// - Reads: Stash Account, Bonded, Slashing Spans, Locks
-        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Nominators, Stash Account, Locks
+        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Stash Account, Locks
         /// - Writes Each: SpanSlash * S
         /// # </weight>
         #[weight = T::WeightInfo::reap_stash(*num_slashing_spans)]
@@ -1766,7 +1755,14 @@ impl<T: Config> Module<T> {
     }
 
     fn pay_validators(era: EraIndex) {
-        let era_payout = T::EraValidatorReward::get();
+        let remainder_mining_reward = T::NumberToCurrency::convert(
+            Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
+        );
+        if remainder_mining_reward < Zero::zero() {
+            return;
+        }
+        let era_payout = cmp::min(T::EraValidatorReward::get(), remainder_mining_reward);
+        let mut total_payout = Zero::zero();
         let era_reward_points = <ErasRewardPoints<T>>::get(&era);
         let total_reward_points = era_reward_points.total;
         for validator in Self::eras_validators(era) {
@@ -1782,6 +1778,7 @@ impl<T: Config> Module<T> {
                 );
                 // This is how much validator is entitled to.
                 let validator_total_payout = validator_total_reward_part * era_payout;
+                total_payout += validator_total_payout;
                 if let Some(imbalance) =
                     Self::make_validator_payout(&validator, validator_total_payout)
                 {
@@ -1790,6 +1787,11 @@ impl<T: Config> Module<T> {
                 Self::deposit_event(RawEvent::ValidatorReward(validator, validator_total_payout));
             }
         }
+        RemainderMiningReward::put(
+            TryInto::<u128>::try_into(remainder_mining_reward - total_payout)
+                .ok()
+                .unwrap(),
+        );
     }
 
     /// Validators can set reward destination or payee, so we need to handle that.
@@ -1818,6 +1820,12 @@ impl<T: Config> Module<T> {
     }
 
     fn pay_delegators() {
+        let mut remainder_mining_reward = T::NumberToCurrency::convert(
+            Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
+        );
+        if remainder_mining_reward < Zero::zero() {
+            return;
+        }
         let mut total_poc_reward = BalanceOf::<T>::zero();
         for (delegator, _) in Delegators::<T>::iter() {
             if T::NodeInterface::im_ever_online(&delegator) {
@@ -1849,12 +1857,25 @@ impl<T: Config> Module<T> {
                         Reward::<T>::insert(&delegator, reward_data);
                     }
                     total_poc_reward += daily_poc_reward;
-                    let daily_reward = daily_referee_reward + daily_poc_reward;
-                    T::Currency::deposit_creating(&delegator, daily_reward);
+                    let daily_reward = cmp::min(
+                        remainder_mining_reward,
+                        daily_referee_reward + daily_poc_reward,
+                    );
+                    let imbalance = T::Currency::deposit_creating(&delegator, daily_reward);
+                    Self::deposit_event(RawEvent::Reward(delegator.clone(), imbalance.peek()));
                     Self::deposit_event(RawEvent::DelegatorReward(delegator, daily_reward));
+                    remainder_mining_reward -= daily_reward;
+                    if remainder_mining_reward < Zero::zero() {
+                        break;
+                    }
                 }
             }
         }
+        RemainderMiningReward::put(
+            TryInto::<u128>::try_into(remainder_mining_reward)
+                .ok()
+                .unwrap(),
+        );
     }
 
     /// Compute payout for era.
@@ -2178,9 +2199,6 @@ impl<T: Config> Convert<T::AccountId, Option<T::AccountId>> for StashOf<T> {
     }
 }
 
-/// A typed conversion from stash account ID to the active exposure of nominators
-/// on that account.
-///
 /// Active exposure is the exposure of the validator set currently validating, i.e. in
 /// `active_era`. It can differ from the latest planned exposure in `current_era`.
 pub struct ExposureOf<T>(sp_std::marker::PhantomData<T>);
@@ -2304,12 +2322,12 @@ where
             });
 
             if let Some(mut unapplied) = unapplied {
-                let nominators_len = unapplied.others.len() as u64;
+                let delegators_len = unapplied.others.len() as u64;
                 let reporters_len = details.reporters.len() as u64;
 
                 {
                     let upper_bound = 1 /* Validator/NominatorSlashInEra */ + 2 /* fetch_spans */;
-                    let rw = upper_bound + nominators_len * upper_bound;
+                    let rw = upper_bound + delegators_len * upper_bound;
                     add_db_reads_writes(rw, rw);
                 }
                 unapplied.reporters = details.reporters.clone();
@@ -2320,8 +2338,8 @@ where
                         let slash_cost = (6, 5);
                         let reward_cost = (2, 2);
                         add_db_reads_writes(
-                            (1 + nominators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
-                            (1 + nominators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
+                            (1 + delegators_len) * slash_cost.0 + reward_cost.0 * reporters_len,
+                            (1 + delegators_len) * slash_cost.1 + reward_cost.1 * reporters_len,
                         );
                     }
                 } else {

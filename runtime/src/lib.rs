@@ -465,14 +465,20 @@ parameter_types! {
     pub MinSolutionScoreBump: Perbill = Perbill::from_rational_approximation(5u32, 10_000);
 }
 
+pub struct NumberCurrencyConverter;
+impl Convert<u128, Balance> for NumberCurrencyConverter {
+    fn convert(x: u128) -> Balance {
+        x
+    }
+}
+
 impl pallet_staking::Config for Runtime {
     type Currency = Balances;
     type CreditInterface = Credit;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type UnixTime = Timestamp;
-    type CurrencyToVote = U128CurrencyToVote;
-    type CurrencyToNumber = CurrencyToNumberHandler;
+    type NumberToCurrency = NumberCurrencyConverter;
     type RewardRemainder = Treasury;
     type EraValidatorReward = EraValidatorReward;
     type Event = Event;
@@ -488,12 +494,11 @@ impl pallet_staking::Config for Runtime {
         pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
     >;
     type SessionInterface = Self;
-    type NextNewSession = Session;
     type Call = Call;
     type MinSolutionScoreBump = MinSolutionScoreBump;
     // The unsigned solution weight targeted by the OCW. We set it to the maximum possible value of
     // a single extrinsic.
-    type RemainderMiningReward = MiningReward;
+    type TotalMiningReward = MiningReward;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1056,22 +1061,9 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber = BLOCKS_PER_ERA;
 }
 
-pub struct CurrencyToNumberHandler;
-impl Convert<Balance, u64> for CurrencyToNumberHandler {
-    fn convert(x: Balance) -> u64 {
-        x as u64
-    }
-}
-impl Convert<u128, Balance> for CurrencyToNumberHandler {
-    fn convert(x: u128) -> Balance {
-        x
-    }
-}
-
 impl pallet_credit::Config for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
-    type CurrencyToVote = CurrencyToNumberHandler;
     type CreditInitScore = CreditInitScore;
     type MaxCreditScore = MaxCreditScore;
     type CreditScoreCapPerEra = CreditScoreCapPerEra;
