@@ -211,7 +211,7 @@ fn slash_credit() {
             },
         );
         Credit::slash_credit(&1);
-        assert_eq!(Credit::get_credit_score(&1).unwrap(), 95);
+        assert_eq!(Credit::get_credit_score(&1).unwrap(), 100 - CREDIT_ATTENUATION_STEP);
     });
 }
 
@@ -339,7 +339,7 @@ fn get_reward_with_slash_credit_with_bonus() {
         );
 
         Credit::slash_credit(&7);
-        assert_eq!(Credit::get_user_credit(&7).unwrap().credit, 400 - 5);
+        assert_eq!(Credit::get_user_credit(&7).unwrap().credit, 400 - CREDIT_ATTENUATION_STEP);
         assert_eq!(
             Credit::get_reward(&7),
             Some((18000000000000000000 * 7, 83523261467953134276))

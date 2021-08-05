@@ -107,19 +107,17 @@ pub mod pallet {
         /// Number of sessions per era.
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Credit init score
-        type CreditInitScore: Get<u64>;
-        /// Credit score threshold
-        type MaxCreditScore: Get<u64>;
-        /// Credit score cap per Era
-        type CreditScoreCapPerEra: Get<u8>;
-        /// credit score attenuation low threshold
-        type CreditScoreAttenuationLowerBound: Get<u64>;
-        /// credit score attenuation step
-        type CreditScoreAttenuationStep: Get<u64>;
-        /// Credit score delegated threshold
-        type CreditScoreDelegatedPermitThreshold: Get<u64>;
-        /// mircropayment size to credit factor:
-        type MicropaymentToCreditScoreFactor: Get<u64>;
+        type InitialCredit: Get<u64>;
+        /// Credit cap per Era
+        type CreditCapPerEra: Get<u8>;
+        /// credit attenuation low bound
+        type CreditAttenuationLowerBound: Get<u64>;
+        /// credit attenuation step
+        type CreditAttenuationStep: Get<u64>;
+        /// Minimum credit to delegate
+        type MinCreditToDelegate: Get<u64>;
+        /// mircropayment to credit factor:
+        type MicropaymentToCreditFactor: Get<u64>;
     }
 
     pub type BalanceOf<T> = <<T as pallet_micropayment::Config>::Currency as Currency<
@@ -194,14 +192,14 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: T::BlockNumber) {
+        fn on_finalize(n: T::BlockNumber) {
             // We update credit score of account per era
             // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
             // to aggregate total payment and number of clients first before pass it into update_credit's input
-            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
+            if n % T::BlocksPerEra::get() == T::BlockNumber::default() {
                 // update credit score per era
-                let from = _n.saturating_sub(T::BlocksPerEra::get());
-                let to = _n.saturating_sub(T::BlockNumber::from(1u32));
+                let from = n.saturating_sub(T::BlocksPerEra::get());
+                let to = n.saturating_sub(T::BlockNumber::from(1u32));
                 log!(
                     info,
                     "micropayment_statistics block number from {:?} - to {:?}",
@@ -267,7 +265,7 @@ pub mod pallet {
                 Error::<T>::CreditDataInitialized
             );
             let credit_data = CreditData {
-                credit: 100,
+                credit: T::InitialCredit::get(),
                 ..Default::default()
             };
             UserCredit::<T>::insert(&account_id, credit_data);
@@ -281,7 +279,7 @@ pub mod pallet {
             for (server_id, balance, _num_of_clients) in micropayment_vec {
                 let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
                 let mut score_delta: u64 = balance_num
-                    .checked_div(T::MicropaymentToCreditScoreFactor::get() as u128)
+                    .checked_div(T::MicropaymentToCreditFactor::get() as u128)
                     .unwrap_or(0) as u64;
                 log!(
                     info,
@@ -290,7 +288,7 @@ pub mod pallet {
                     balance_num,
                     score_delta
                 );
-                let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
+                let cap: u64 = T::CreditCapPerEra::get() as u64;
                 if score_delta > cap {
                     score_delta = cap;
                     log!(
@@ -347,9 +345,9 @@ pub mod pallet {
         /// inner: attenuate credit score
         fn _attenuate_credit(account_id: T::AccountId) {
             let score = Self::get_credit_score(&account_id).unwrap_or(0);
-            let lower_bound = T::CreditScoreAttenuationLowerBound::get();
+            let lower_bound = T::CreditAttenuationLowerBound::get();
             if score > lower_bound {
-                let attenuated_score = score - T::CreditScoreAttenuationStep::get();
+                let attenuated_score = score - T::CreditAttenuationStep::get();
                 if attenuated_score > lower_bound {
                     Self::_update_credit(&account_id, attenuated_score);
                 } else {
@@ -435,7 +433,7 @@ pub mod pallet {
         /// check if account_id's credit score is pass threshold type
         fn pass_threshold(account_id: &T::AccountId, _type: u8) -> bool {
             if let Some(score) = Self::get_credit_score(account_id) {
-                if score >= T::CreditScoreDelegatedPermitThreshold::get() {
+                if score >= T::MinCreditToDelegate::get() {
                     return true;
                 }
             }
@@ -444,7 +442,7 @@ pub mod pallet {
 
         fn slash_credit(account_id: &T::AccountId) {
             if UserCredit::<T>::contains_key(account_id.clone()) {
-                let penalty = T::CreditScoreAttenuationStep::get();
+                let penalty = T::CreditAttenuationStep::get();
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty)

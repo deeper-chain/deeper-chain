@@ -107,27 +107,27 @@ pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 pub const BLOCKS_PER_ERA: u64 = (6 * EPOCH_DURATION_IN_BLOCKS) as u64;
+pub const CREDIT_ATTENUATION_STEP: u64 = 1;
+
 parameter_types! {
-    pub const CreditInitScore: u64 = 0;
-    pub const MaxCreditScore: u64 = u64::MAX;
-    pub const CreditScoreCapPerEra: u8 = 5;
-    pub const CreditScoreAttenuationLowerBound: u64 = 40;
-    pub const CreditScoreAttenuationStep: u64 = 5;
-    pub const CreditScoreDelegatedPermitThreshold: u64 = 100;
-    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
+    pub const InitialCredit: u64 = 100;
+    pub const CreditCapPerEra: u8 = 5;
+    pub const CreditAttenuationLowerBound: u64 = 40;
+    pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
+    pub const MinCreditToDelegate: u64 = 100;
+    pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
-    type CreditInitScore = CreditInitScore;
-    type MaxCreditScore = MaxCreditScore;
-    type CreditScoreCapPerEra = CreditScoreCapPerEra;
-    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
-    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
-    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
-    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
+    type InitialCredit = InitialCredit;
+    type CreditCapPerEra = CreditCapPerEra;
+    type CreditAttenuationLowerBound = CreditAttenuationLowerBound;
+    type CreditAttenuationStep = CreditAttenuationStep;
+    type MinCreditToDelegate = MinCreditToDelegate;
+    type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
 }
 
 // Build genesis storage according to the mock runtime.

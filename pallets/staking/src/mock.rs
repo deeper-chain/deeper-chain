@@ -197,28 +197,28 @@ impl pallet_deeper_node::Config for Test {
 pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+pub const INITIAL_CREDIT: u64 = 100;
+pub const CREDIT_ATTENUATION_STEP: u64 = 1;
 
 parameter_types! {
-    pub const CreditInitScore: u64 = 60;
-    pub const MaxCreditScore: u64 = 800;
-    pub const CreditScoreCapPerEra: u8 = 5;
-    pub const CreditScoreAttenuationLowerBound: u64 = 40;
-    pub const CreditScoreAttenuationStep: u64 = 5;
-    pub const CreditScoreDelegatedPermitThreshold: u64 = 100;
-    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
+    pub const InitialCredit: u64 = INITIAL_CREDIT;
+    pub const CreditCapPerEra: u8 = 5;
+    pub const CreditAttenuationLowerBound: u64 = 40;
+    pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
+    pub const MinCreditToDelegate: u64 = 100;
+    pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
-    type CreditInitScore = CreditInitScore;
-    type MaxCreditScore = MaxCreditScore;
-    type CreditScoreCapPerEra = CreditScoreCapPerEra;
-    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
-    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
-    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
-    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
+    type InitialCredit = InitialCredit;
+    type CreditCapPerEra = CreditCapPerEra;
+    type CreditAttenuationLowerBound = CreditAttenuationLowerBound;
+    type CreditAttenuationStep = CreditAttenuationStep;
+    type MinCreditToDelegate = MinCreditToDelegate;
+    type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
 }
 
 parameter_types! {
@@ -434,7 +434,8 @@ impl ExtBuilder {
                 (
                     (1001 + x) as AccountId,
                     CreditData {
-                        credit: 105,
+                        // some tests require delegators to survive one slash
+                        credit: INITIAL_CREDIT + CREDIT_ATTENUATION_STEP,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,

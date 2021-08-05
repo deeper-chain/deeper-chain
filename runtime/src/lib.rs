@@ -1051,26 +1051,24 @@ impl pallet_deeper_node::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CreditInitScore: u64 = 0;
-    pub const MaxCreditScore: u64 = u64::MAX;
-    pub const CreditScoreCapPerEra: u8 = 5;
-    pub const CreditScoreAttenuationLowerBound: u64 = 40;
-    pub const CreditScoreAttenuationStep: u64 = 5;
-    pub const CreditScoreDelegatedPermitThreshold: u64 = 100;
-    pub const MicropaymentToCreditScoreFactor: u64 = 1_000_000_000_000_000;
+    pub const InitialCredit: u64 = 100;
+    pub const CreditCapPerEra: u8 = 5;
+    pub const CreditAttenuationLowerBound: u64 = 40;
+    pub const CreditAttenuationStep: u64 = 1;
+    pub const MinCreditToDelegate: u64 = 100;
+    pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber = BLOCKS_PER_ERA;
 }
 
 impl pallet_credit::Config for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
-    type CreditInitScore = CreditInitScore;
-    type MaxCreditScore = MaxCreditScore;
-    type CreditScoreCapPerEra = CreditScoreCapPerEra;
-    type CreditScoreAttenuationLowerBound = CreditScoreAttenuationLowerBound;
-    type CreditScoreAttenuationStep = CreditScoreAttenuationStep;
-    type CreditScoreDelegatedPermitThreshold = CreditScoreDelegatedPermitThreshold;
-    type MicropaymentToCreditScoreFactor = MicropaymentToCreditScoreFactor;
+    type InitialCredit = InitialCredit;
+    type CreditCapPerEra = CreditCapPerEra;
+    type CreditAttenuationLowerBound = CreditAttenuationLowerBound;
+    type CreditAttenuationStep = CreditAttenuationStep;
+    type MinCreditToDelegate = MinCreditToDelegate;
+    type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
 }
 
 parameter_types! {
