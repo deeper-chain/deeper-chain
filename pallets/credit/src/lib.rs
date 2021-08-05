@@ -91,6 +91,7 @@ pub mod pallet {
         pallet_prelude::*,
     };
     use frame_system::pallet_prelude::*;
+    use pallet_deeper_node::NodeInterface;
     use sp_runtime::{
         traits::{Saturating, Zero},
         Perbill,
@@ -107,19 +108,17 @@ pub mod pallet {
         /// Number of sessions per era.
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Credit init score
-        type CreditInitScore: Get<u64>;
-        /// Credit score threshold
-        type MaxCreditScore: Get<u64>;
-        /// Credit score cap per Era
-        type CreditScoreCapPerEra: Get<u8>;
-        /// credit score attenuation low threshold
-        type CreditScoreAttenuationLowerBound: Get<u64>;
-        /// credit score attenuation step
-        type CreditScoreAttenuationStep: Get<u64>;
-        /// Credit score delegated threshold
-        type CreditScoreDelegatedPermitThreshold: Get<u64>;
-        /// mircropayment size to credit factor:
-        type MicropaymentToCreditScoreFactor: Get<u64>;
+        type InitialCredit: Get<u64>;
+        /// Credit cap per Era
+        type CreditCapPerEra: Get<u8>;
+        /// credit attenuation step
+        type CreditAttenuationStep: Get<u64>;
+        /// Minimum credit to delegate
+        type MinCreditToDelegate: Get<u64>;
+        /// mircropayment to credit factor:
+        type MicropaymentToCreditFactor: Get<u64>;
+        /// NodeInterface of deeper-node pallet
+        type NodeInterface: NodeInterface<Self::AccountId>;
     }
 
     pub type BalanceOf<T> = <<T as pallet_micropayment::Config>::Currency as Currency<
@@ -131,18 +130,18 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    #[pallet::getter(fn get_user_credit)]
+    #[pallet::getter(fn user_credit)]
     pub type UserCredit<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, CreditData<T::BlockNumber>, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn get_credit_setting)]
+    #[pallet::getter(fn credit_settings)]
     pub type CreditSettings<T: Config> =
         StorageMap<_, Identity, CreditLevel, CreditSetting<BalanceOf<T>>, ValueQuery>;
 
     /// (daily_base_poc_reward, daily_poc_reward_with_bonus)
     #[pallet::storage]
-    #[pallet::getter(fn get_daily_poc_reward)]
+    #[pallet::getter(fn daily_poc_reward)]
     pub type DailyPocReward<T: Config> =
         StorageMap<_, Identity, CreditLevel, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
@@ -180,8 +179,6 @@ pub mod pallet {
     pub enum Event<T: Config> {
         CreditUpdateSuccess(T::AccountId, u64),
         CreditUpdateFailed(T::AccountId, u64),
-        KillCreditSuccess(T::AccountId),
-        KillCreditFailed(T::AccountId),
     }
 
     #[pallet::error]
@@ -194,14 +191,14 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: T::BlockNumber) {
+        fn on_finalize(n: T::BlockNumber) {
             // We update credit score of account per era
             // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
             // to aggregate total payment and number of clients first before pass it into update_credit's input
-            if _n % T::BlocksPerEra::get() == T::BlockNumber::default() {
+            if n % T::BlocksPerEra::get() == T::BlockNumber::default() {
                 // update credit score per era
-                let from = _n.saturating_sub(T::BlocksPerEra::get());
-                let to = _n.saturating_sub(T::BlockNumber::from(1u32));
+                let from = n.saturating_sub(T::BlocksPerEra::get());
+                let to = n.saturating_sub(T::BlockNumber::from(1u32));
                 log!(
                     info,
                     "micropayment_statistics block number from {:?} - to {:?}",
@@ -210,9 +207,7 @@ pub mod pallet {
                 );
                 let micropayment_vec = pallet_micropayment::Module::<T>::micropayment_statistics();
                 Self::update_credit(micropayment_vec);
-
-                // attenuate credit score per era
-                // Self::attenuate_credit(_n);
+                Self::slash_offline_devices_credit();
             }
         }
     }
@@ -267,7 +262,7 @@ pub mod pallet {
                 Error::<T>::CreditDataInitialized
             );
             let credit_data = CreditData {
-                credit: 100,
+                credit: T::InitialCredit::get(),
                 ..Default::default()
             };
             UserCredit::<T>::insert(&account_id, credit_data);
@@ -281,7 +276,7 @@ pub mod pallet {
             for (server_id, balance, _num_of_clients) in micropayment_vec {
                 let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
                 let mut score_delta: u64 = balance_num
-                    .checked_div(T::MicropaymentToCreditScoreFactor::get() as u128)
+                    .checked_div(T::MicropaymentToCreditFactor::get() as u128)
                     .unwrap_or(0) as u64;
                 log!(
                     info,
@@ -290,7 +285,7 @@ pub mod pallet {
                     balance_num,
                     score_delta
                 );
-                let cap: u64 = T::CreditScoreCapPerEra::get() as u64;
+                let cap: u64 = T::CreditCapPerEra::get() as u64;
                 if score_delta > cap {
                     score_delta = cap;
                     log!(
@@ -331,43 +326,6 @@ pub mod pallet {
             }
         }
 
-        /// attenuate credit score per era
-        fn attenuate_credit(current_blocknumber: T::BlockNumber) {
-            let devices = pallet_deeper_node::Module::<T>::registered_devices();
-            for device in devices {
-                let server_id = device.account_id;
-                let last_update_block =
-                    pallet_micropayment::Module::<T>::last_update_block(&server_id);
-                if current_blocknumber - last_update_block > T::BlocksPerEra::get() {
-                    Self::_attenuate_credit(server_id);
-                }
-            }
-        }
-
-        /// inner: attenuate credit score
-        fn _attenuate_credit(account_id: T::AccountId) {
-            let score = Self::get_credit_score(&account_id).unwrap_or(0);
-            let lower_bound = T::CreditScoreAttenuationLowerBound::get();
-            if score > lower_bound {
-                let attenuated_score = score - T::CreditScoreAttenuationStep::get();
-                if attenuated_score > lower_bound {
-                    Self::_update_credit(&account_id, attenuated_score);
-                } else {
-                    Self::_update_credit(&account_id, lower_bound);
-                }
-            }
-        }
-
-        /// clear credit
-        fn _kill_credit(account_id: T::AccountId) -> bool {
-            if UserCredit::<T>::contains_key(account_id.clone()) {
-                UserCredit::<T>::remove(account_id);
-                true
-            } else {
-                false
-            }
-        }
-
         /// credit data check
         fn check_credit_data(
             data: &CreditData<T::BlockNumber>,
@@ -376,12 +334,21 @@ pub mod pallet {
                 Self::get_credit_level(data.credit) == data.initial_credit_level,
                 Error::<T>::InvalidCreditData
             );
-            let credit_setting = Self::get_credit_setting(data.initial_credit_level);
+            let credit_setting = Self::credit_settings(data.initial_credit_level);
             ensure!(
                 data.number_of_referees <= credit_setting.max_referees_with_rewards,
                 Error::<T>::InvalidCreditData
             );
             Ok(())
+        }
+
+        pub fn slash_offline_devices_credit() {
+            for device in <pallet_deeper_node::Module<T>>::devices_onboard() {
+                let days = T::NodeInterface::get_days_offline(&device);
+                if days > 0 && days % 3 == 0 { // slash one credit for being offline every 3 days
+                    Self::slash_credit(&device);
+                }
+            }            
         }
     }
 
@@ -417,7 +384,7 @@ pub mod pallet {
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Module<T> {
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
-            if let Some(credit_data) = Self::get_user_credit(account_id) {
+            if let Some(credit_data) = Self::user_credit(account_id) {
                 Some(credit_data.credit)
             } else {
                 None
@@ -425,7 +392,7 @@ pub mod pallet {
         }
 
         fn get_number_of_referees(account_id: &T::AccountId) -> Option<u8> {
-            if let Some(credit_data) = Self::get_user_credit(account_id) {
+            if let Some(credit_data) = Self::user_credit(account_id) {
                 Some(credit_data.number_of_referees)
             } else {
                 None
@@ -435,7 +402,7 @@ pub mod pallet {
         /// check if account_id's credit score is pass threshold type
         fn pass_threshold(account_id: &T::AccountId, _type: u8) -> bool {
             if let Some(score) = Self::get_credit_score(account_id) {
-                if score >= T::CreditScoreDelegatedPermitThreshold::get() {
+                if score >= T::MinCreditToDelegate::get() {
                     return true;
                 }
             }
@@ -444,7 +411,7 @@ pub mod pallet {
 
         fn slash_credit(account_id: &T::AccountId) {
             if UserCredit::<T>::contains_key(account_id.clone()) {
-                let penalty = T::CreditScoreAttenuationStep::get();
+                let penalty = T::CreditAttenuationStep::get();
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty)
@@ -472,14 +439,14 @@ pub mod pallet {
         fn get_reward(account_id: &T::AccountId) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
             // read storage
             if Self::pass_threshold(account_id, 0) {
-                let credit_data = Self::get_user_credit(account_id).unwrap();
+                let credit_data = Self::user_credit(account_id).unwrap();
                 let current_block = <frame_system::Module<T>>::block_number();
                 let onboard_time =
-                    <pallet_deeper_node::Module<T>>::get_onboard_time(account_id).unwrap();
+                    <pallet_deeper_node::Module<T>>::onboard_time(account_id).unwrap();
                 if current_block <= onboard_time + credit_data.expiration {
                     // not expired
                     let initial_credit_level = credit_data.initial_credit_level;
-                    let credit_setting = Self::get_credit_setting(initial_credit_level.clone());
+                    let credit_setting = Self::credit_settings(initial_credit_level.clone());
                     // referral reward
                     let number_of_referees = if credit_data.number_of_referees
                         <= credit_setting.max_referees_with_rewards
@@ -495,7 +462,7 @@ pub mod pallet {
                     // poc reward
                     let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
                     let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
-                        Self::get_daily_poc_reward(current_credit_level.clone());
+                        Self::daily_poc_reward(current_credit_level.clone());
 
                     if current_credit_level == initial_credit_level {
                         // level unchanged
@@ -510,7 +477,7 @@ pub mod pallet {
                     } else {
                         // level changed
                         let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
-                            Self::get_daily_poc_reward(initial_credit_level);
+                            Self::daily_poc_reward(initial_credit_level);
 
                         let daily_poc_reward = if credit_data.rank_in_initial_credit_level
                             <= credit_setting.max_rank_with_bonus
@@ -527,7 +494,7 @@ pub mod pallet {
                     // expired
                     // only daily_base_poc_reward
                     let credit_level = Self::get_credit_level(credit_data.credit);
-                    let (base_daily_poc_reward, _) = Self::get_daily_poc_reward(credit_level);
+                    let (base_daily_poc_reward, _) = Self::daily_poc_reward(credit_level);
                     Some((BalanceOf::<T>::zero(), base_daily_poc_reward))
                 }
             } else {
@@ -537,8 +504,8 @@ pub mod pallet {
 
         fn get_top_referee_reward(account_id: &T::AccountId) -> Option<BalanceOf<T>> {
             if Self::pass_threshold(account_id, 0) {
-                let credit_data = Self::get_user_credit(account_id).unwrap();
-                let credit_setting = Self::get_credit_setting(credit_data.initial_credit_level);
+                let credit_data = Self::user_credit(account_id).unwrap();
+                let credit_setting = Self::credit_settings(credit_data.initial_credit_level);
                 let number_of_referees =
                     if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
                         credit_data.number_of_referees

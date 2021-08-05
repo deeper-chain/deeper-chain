@@ -13,7 +13,7 @@ fn open_channel() {
         // OK
         assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
         assert_eq!(
-            Micropayment::get_channel(&1, &2),
+            Micropayment::channel(&1, &2),
             Chan {
                 client: 1,
                 server: 2,
@@ -202,21 +202,21 @@ fn test_signature() {
 fn update_micropayment_information() {
     new_test_ext().execute_with(|| {
         Micropayment::update_micropayment_information(&2, &1, 5);
-        let mut balance = Micropayment::get_payment_by_server(&1);
+        let mut balance = Micropayment::payment_by_server(&1);
         assert_eq!(balance, 5);
         assert_eq!(Micropayment::last_updated(&1), 0);
         assert_eq!(Micropayment::last_updated(&2), 0);
 
         run_to_block(1);
         Micropayment::update_micropayment_information(&2, &1, 6);
-        balance = Micropayment::get_payment_by_server(&1);
+        balance = Micropayment::payment_by_server(&1);
         assert_eq!(balance, 11);
         assert_eq!(Micropayment::last_updated(&1), 1);
         assert_eq!(Micropayment::last_updated(&2), 1);
 
         run_to_block(2);
         Micropayment::update_micropayment_information(&3, &1, 4);
-        balance = Micropayment::get_payment_by_server(&1);
+        balance = Micropayment::payment_by_server(&1);
         assert_eq!(balance, 15);
         assert_eq!(Micropayment::last_updated(&1), 2);
         assert_eq!(Micropayment::last_updated(&2), 1);

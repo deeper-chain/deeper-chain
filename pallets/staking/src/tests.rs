@@ -308,7 +308,7 @@ fn delegators_also_get_slashed() {
         // 1001 is a delegator for 11
         assert_eq!(initial_exposure.others.first().unwrap(), &1001);
         let initial_credit = Credit::get_credit_score(&1001).unwrap_or(0);
-        assert_eq!(initial_credit, 105);
+        assert_eq!(initial_credit, INITIAL_CREDIT + CREDIT_ATTENUATION_STEP);
 
         // staked values;
         let validator_stake = Staking::ledger(10).unwrap().active;
