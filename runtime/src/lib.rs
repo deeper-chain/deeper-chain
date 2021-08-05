@@ -1069,6 +1069,7 @@ impl pallet_credit::Config for Runtime {
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
+    type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1457,6 +1458,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_treasury, Treasury);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
+            add_benchmark!(params, batches, pallet_credit, Credit);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

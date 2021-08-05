@@ -4410,6 +4410,7 @@ dependencies = [
 name = "pallet-credit"
 version = "3.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

@@ -8,6 +8,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+pub mod weights;
 pub(crate) const LOG_TARGET: &'static str = "credit";
 
 // syntactic sugar for logging.
@@ -28,6 +31,9 @@ use sp_runtime::{Deserialize, Serialize};
 
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
+
+use sp_std::prelude::*;
+pub use weights::WeightInfo;
 
 #[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -88,7 +94,7 @@ pub mod pallet {
     use frame_support::traits::{Currency, Vec};
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-        pallet_prelude::*,
+        pallet_prelude::*
     };
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
@@ -119,6 +125,8 @@ pub mod pallet {
         type MicropaymentToCreditFactor: Get<u64>;
         /// NodeInterface of deeper-node pallet
         type NodeInterface: NodeInterface<Self::AccountId>;
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
     }
 
     pub type BalanceOf<T> = <<T as pallet_micropayment::Config>::Currency as Currency<
@@ -223,7 +231,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// This operation requires sudo now and it will be decentralized in future
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::update_credit_setting())]
         pub fn update_credit_setting(
             origin: OriginFor<T>,
             credit_setting: CreditSetting<BalanceOf<T>>,
@@ -233,8 +241,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// update credit data
-        #[pallet::weight(10_000)]
+        /// update creditdata
+        #[pallet::weight(T::WeightInfo::update_credit_data())]
         pub fn update_credit_data(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -256,7 +264,7 @@ pub mod pallet {
         }
 
         /// initialize credit score
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::initialize_credit())]
         pub fn initialize_credit(
             origin: OriginFor<T>,
             account_id: T::AccountId,
