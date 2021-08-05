@@ -91,6 +91,7 @@ pub mod pallet {
         pallet_prelude::*,
     };
     use frame_system::pallet_prelude::*;
+    use pallet_deeper_node::NodeInterface;
     use sp_runtime::{
         traits::{Saturating, Zero},
         Perbill,
@@ -116,6 +117,8 @@ pub mod pallet {
         type MinCreditToDelegate: Get<u64>;
         /// mircropayment to credit factor:
         type MicropaymentToCreditFactor: Get<u64>;
+        /// NodeInterface of deeper-node pallet
+        type NodeInterface: NodeInterface<Self::AccountId>;
     }
 
     pub type BalanceOf<T> = <<T as pallet_micropayment::Config>::Currency as Currency<
@@ -176,8 +179,6 @@ pub mod pallet {
     pub enum Event<T: Config> {
         CreditUpdateSuccess(T::AccountId, u64),
         CreditUpdateFailed(T::AccountId, u64),
-        KillCreditSuccess(T::AccountId),
-        KillCreditFailed(T::AccountId),
     }
 
     #[pallet::error]
@@ -206,6 +207,7 @@ pub mod pallet {
                 );
                 let micropayment_vec = pallet_micropayment::Module::<T>::micropayment_statistics();
                 Self::update_credit(micropayment_vec);
+                Self::slash_offline_devices_credit();
             }
         }
     }
@@ -338,6 +340,15 @@ pub mod pallet {
                 Error::<T>::InvalidCreditData
             );
             Ok(())
+        }
+
+        pub fn slash_offline_devices_credit() {
+            for device in <pallet_deeper_node::Module<T>>::devices_onboard() {
+                let days = T::NodeInterface::get_days_offline(&device);
+                if days > 0 && days % 3 == 0 { // slash one credit for being offline every 3 days
+                    Self::slash_credit(&device);
+                }
+            }            
         }
     }
 

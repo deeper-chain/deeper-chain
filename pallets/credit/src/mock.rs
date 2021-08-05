@@ -108,6 +108,7 @@ pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 pub const BLOCKS_PER_ERA: u64 = (6 * EPOCH_DURATION_IN_BLOCKS) as u64;
 pub const CREDIT_ATTENUATION_STEP: u64 = 1;
+pub const BLOCKS_PER_DAY: u64 = 24 * 60 * 60 / SECS_PER_BLOCK;
 
 parameter_types! {
     pub const InitialCredit: u64 = 100;
@@ -126,6 +127,7 @@ impl pallet_credit::Config for Test {
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
+    type NodeInterface = DeeperNode;
 }
 
 // Build genesis storage according to the mock runtime.

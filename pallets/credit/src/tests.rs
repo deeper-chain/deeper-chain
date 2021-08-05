@@ -355,3 +355,35 @@ fn get_reward_failed() {
         assert_eq!(Credit::get_reward(&8), None); // 8 not contains in storage
     });
 }
+
+#[test]
+fn slash_offline_devices_credit() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
+        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+
+        run_to_block(BLOCKS_PER_DAY);
+        Credit::slash_offline_devices_credit();
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
+
+        run_to_block(BLOCKS_PER_DAY * 3);
+        Credit::slash_offline_devices_credit();
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
+
+        run_to_block(BLOCKS_PER_DAY * 5);
+        Credit::slash_offline_devices_credit();
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
+
+        run_to_block(BLOCKS_PER_DAY * 6);
+        Credit::slash_offline_devices_credit();
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
+
+        run_to_block(BLOCKS_PER_DAY * 8);
+        Credit::slash_offline_devices_credit();
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
+        
+        run_to_block(BLOCKS_PER_DAY * 9);
+        Credit::slash_offline_devices_credit();
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
+    });
+}

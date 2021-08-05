@@ -105,6 +105,10 @@ pub mod pallet {
     pub(super) type OnboardTime<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn devices_onboard)]
+    pub(super) type DevicesOnboard<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;    
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub tmp: BalanceOf<T>,
@@ -286,6 +290,7 @@ pub mod pallet {
             ImOnline::<T>::insert(&sender, <frame_system::Module<T>>::block_number());
             if !OnboardTime::<T>::contains_key(&sender) {
                 OnboardTime::<T>::insert(&sender, <frame_system::Module<T>>::block_number());
+                DevicesOnboard::<T>::mutate(|devices| devices.push(sender));
             }
             Ok(().into())
         }

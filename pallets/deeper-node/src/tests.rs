@@ -173,10 +173,18 @@ fn im_online() {
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(0));
         assert_eq!(DeeperNode::onboard_time(1), Some(0));
+        assert_eq!(DeeperNode::devices_onboard(), vec![1]);
         run_to_block(1);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(1));
         assert_eq!(DeeperNode::onboard_time(1), Some(0));
+        assert_eq!(DeeperNode::devices_onboard(), vec![1]);
+        run_to_block(2);
+        assert_ok!(DeeperNode::im_online(Origin::signed(2)));
+        assert_eq!(DeeperNode::get_im_online(1), Some(1));
+        assert_eq!(DeeperNode::get_im_online(2), Some(2));
+        assert_eq!(DeeperNode::onboard_time(2), Some(2));
+        assert_eq!(DeeperNode::devices_onboard(), vec![1, 2]);
     });
 }
 

@@ -217,6 +217,7 @@ impl pallet_credit::Config for Test {
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
+    type NodeInterface = DeeperNode;
 }
 
 parameter_types! {
