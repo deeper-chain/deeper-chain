@@ -53,7 +53,7 @@ pub trait WeightInfo {
     fn withdraw_unbonded_kill(s: u32) -> Weight;
     fn validate() -> Weight;
     fn kick(k: u32) -> Weight;
-    fn nominate(n: u32) -> Weight;
+    fn delegate(n: u32) -> Weight;
     fn chill() -> Weight;
     fn set_payee() -> Weight;
     fn set_controller() -> Weight;
@@ -120,7 +120,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads((1 as Weight).saturating_mul(k as Weight)))
             .saturating_add(T::DbWeight::get().writes((1 as Weight).saturating_mul(k as Weight)))
     }
-    fn nominate(n: u32) -> Weight {
+    fn delegate(n: u32) -> Weight {
         (33_494_000 as Weight)
             // Standard Error: 23_000
             .saturating_add((5_253_000 as Weight).saturating_mul(n as Weight))
@@ -296,7 +296,7 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads((1 as Weight).saturating_mul(k as Weight)))
             .saturating_add(RocksDbWeight::get().writes((1 as Weight).saturating_mul(k as Weight)))
     }
-    fn nominate(n: u32) -> Weight {
+    fn delegate(n: u32) -> Weight {
         (33_494_000 as Weight)
             // Standard Error: 23_000
             .saturating_add((5_253_000 as Weight).saturating_mul(n as Weight))
