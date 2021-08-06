@@ -1021,6 +1021,7 @@ impl pallet_template::Config for Runtime {
 impl pallet_eth_sub_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type WeightInfo = pallet_eth_sub_bridge::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1459,6 +1460,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, pallet_credit, Credit);
+            add_benchmark!(params, batches, pallet_eth_sub_bridge, Bridge);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

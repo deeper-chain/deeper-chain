@@ -88,6 +88,7 @@ impl pallet_timestamp::Config for Test {
 impl pallet_eth_sub_bridge::Config for Test {
     type Event = Event;
     type Currency = Balances;
+    type WeightInfo = ();
 }
 
 const V1: u64 = 1;

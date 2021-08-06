@@ -21,23 +21,9 @@ use super::*;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_system::RawOrigin;
 use sp_runtime::Percent;
-use frame_support::traits::Currency;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
-/// Grab a funded user.
-pub fn create_funded_user<T: Config>(
-    string: &'static str,
-    n: u32,
-    balance_factor: u32,
-) -> T::AccountId {
-    let user = account(string, n, SEED);
-    let balance = <T as pallet_deeper_node::Config>::Currency::minimum_balance() * balance_factor.into();
-    <T as pallet_deeper_node::Config>::Currency::make_free_balance_be(&user, balance);
-    // ensure T::CurrencyToVote will work correctly.
-    <T as pallet_deeper_node::Config>::Currency::issue(balance);
-    user
-}
 
 benchmarks! {
     update_credit_setting {

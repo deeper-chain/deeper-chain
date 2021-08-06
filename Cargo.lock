@@ -4477,8 +4477,10 @@ dependencies = [
 name = "pallet-eth-sub-bridge"
 version = "3.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "node-primitives",
  "pallet-balances 3.0.0",
  "pallet-timestamp",
