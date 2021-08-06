@@ -13,6 +13,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+pub mod weights;
+use sp_std::prelude::*;
+pub use weights::WeightInfo;
+
 pub type IpV4 = Vec<u8>;
 pub type CountryRegion = Vec<u8>;
 pub type Duration = u8;
@@ -57,6 +63,8 @@ pub mod pallet {
         type MaxDurationDays: Get<u8>;
         type DayToBlocknum: Get<u32>;
         type MaxIpLength: Get<usize>;
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
     }
 
     type BalanceOf<T> =
@@ -178,7 +186,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::register_device())]
         pub fn register_device(
             origin: OriginFor<T>,
             ip: IpV4,
@@ -218,7 +226,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::unregister_device())]
         pub fn unregister_device(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
@@ -232,7 +240,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::unregister_device())]
         pub fn register_server(
             origin: OriginFor<T>,
             duration: Duration,
@@ -251,7 +259,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::update_server())]
         pub fn update_server(
             origin: OriginFor<T>,
             duration: Duration,
@@ -273,7 +281,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::unregister_server())]
         pub fn unregister_server(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
@@ -284,7 +292,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::im_online())]
         pub fn im_online(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ImOnline::<T>::insert(&sender, <frame_system::Module<T>>::block_number());

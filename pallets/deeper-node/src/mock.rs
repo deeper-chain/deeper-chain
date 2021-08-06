@@ -86,6 +86,7 @@ impl pallet_deeper_node::Config for Test {
     type MaxDurationDays = MaxDurationDays;
     type DayToBlocknum = DayToBlocknum;
     type MaxIpLength = MaxIpLength;
+    type WeightInfo = ();
 }
 
 // Build genesis storage according to the mock runtime.

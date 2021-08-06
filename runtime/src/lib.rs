@@ -1050,6 +1050,7 @@ impl pallet_deeper_node::Config for Runtime {
     type MaxDurationDays = MaxDurationDays;
     type DayToBlocknum = DayToBlocknum;
     type MaxIpLength = MaxIpLength;
+    type WeightInfo = pallet_deeper_node::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1461,6 +1462,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, pallet_credit, Credit);
             add_benchmark!(params, batches, pallet_eth_sub_bridge, Bridge);
+            add_benchmark!(params, batches, pallet_deeper_node, DeeperNode);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

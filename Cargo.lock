@@ -4431,6 +4431,7 @@ dependencies = [
 name = "pallet-deeper-node"
 version = "3.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",

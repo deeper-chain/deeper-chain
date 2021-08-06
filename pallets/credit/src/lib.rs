@@ -231,7 +231,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// This operation requires sudo now and it will be decentralized in future
-        #[pallet::weight(T::WeightInfo::update_credit_setting())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_credit_setting())]
         pub fn update_credit_setting(
             origin: OriginFor<T>,
             credit_setting: CreditSetting<BalanceOf<T>>,
@@ -242,7 +242,7 @@ pub mod pallet {
         }
 
         /// update creditdata
-        #[pallet::weight(T::WeightInfo::update_credit_data())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_credit_data())]
         pub fn update_credit_data(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -264,7 +264,7 @@ pub mod pallet {
         }
 
         /// initialize credit score
-        #[pallet::weight(T::WeightInfo::initialize_credit())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::initialize_credit())]
         pub fn initialize_credit(
             origin: OriginFor<T>,
             account_id: T::AccountId,
