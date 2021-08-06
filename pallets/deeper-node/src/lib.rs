@@ -107,7 +107,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn devices_onboard)]
-    pub(super) type DevicesOnboard<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;    
+    pub(super) type DevicesOnboard<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {

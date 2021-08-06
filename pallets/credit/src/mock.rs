@@ -109,10 +109,11 @@ pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockN
 pub const BLOCKS_PER_ERA: u64 = (6 * EPOCH_DURATION_IN_BLOCKS) as u64;
 pub const CREDIT_ATTENUATION_STEP: u64 = 1;
 pub const BLOCKS_PER_DAY: u64 = 24 * 60 * 60 / SECS_PER_BLOCK;
+pub const CREDIT_CAP_TWO_ERAS: u8 = 1;
 
 parameter_types! {
     pub const InitialCredit: u64 = 100;
-    pub const CreditCapPerEra: u8 = 5;
+    pub const CreditCapTwoEras: u8 = CREDIT_CAP_TWO_ERAS;
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
@@ -123,7 +124,7 @@ impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type InitialCredit = InitialCredit;
-    type CreditCapPerEra = CreditCapPerEra;
+    type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;

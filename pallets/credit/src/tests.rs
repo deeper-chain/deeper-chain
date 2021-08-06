@@ -211,7 +211,10 @@ fn slash_credit() {
             },
         );
         Credit::slash_credit(&1);
-        assert_eq!(Credit::get_credit_score(&1).unwrap(), 100 - CREDIT_ATTENUATION_STEP);
+        assert_eq!(
+            Credit::get_credit_score(&1).unwrap(),
+            100 - CREDIT_ATTENUATION_STEP
+        );
     });
 }
 
@@ -224,7 +227,7 @@ fn update_credit() {
             (3, 1 * 1_000_000_000_000_000, 2),
         ];
         Credit::update_credit(micropayments);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 5);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1);
         assert_eq!(Credit::user_credit(&2).unwrap().credit, 1);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 101);
         micropayments = vec![
@@ -233,8 +236,8 @@ fn update_credit() {
             (4, 1_000_000_000_000_000 / 10, 1),
         ];
         Credit::update_credit(micropayments);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 9); // 5 + 4
-        assert_eq!(Credit::user_credit(&2).unwrap().credit, 3); // 1 + 2
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
+        assert_eq!(Credit::user_credit(&2).unwrap().credit, 2); // 1 + 1
         assert_eq!(Credit::user_credit(&4).unwrap().credit, 0);
     });
 }
@@ -269,13 +272,13 @@ fn get_reward_with_update_credit_no_bonus() {
         );
 
         let micropayments = vec![(6, 5 * 1_000_000_000_000_000, 5)];
-        let mut i = 1;
+        let mut i: u64 = 1;
         while i < 20 {
             // run 19 times
             run_to_block(BLOCKS_PER_ERA * i + 1);
 
             Credit::update_credit(micropayments.clone());
-            assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + 5 * i);
+            assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + i);
             assert_eq!(
                 Credit::get_reward(&6),
                 Some((18000000000000000000, 3369858941948251800))
@@ -283,9 +286,10 @@ fn get_reward_with_update_credit_no_bonus() {
             i += 1;
         }
 
-        run_to_block(BLOCKS_PER_ERA * 20 + 1);
+        let micropayments = vec![(6, 190 * 1_000_000_000_000_000, 5)];
+        run_to_block(BLOCKS_PER_ERA * 183);
         Credit::update_credit(micropayments.clone());
-        assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + 5 * 20);
+        assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + 100);
         assert_eq!(
             Credit::get_reward(&6),
             Some((18000000000000000000, 15287661460675804320))
@@ -304,13 +308,13 @@ fn get_reward_with_update_credit_with_bonus() {
         );
 
         let micropayments = vec![(7, 5 * 1_000_000_000_000_000, 5)];
-        let mut i = 1;
+        let mut i: u64 = 1;
         while i < 20 {
             // run 19 times
             run_to_block(BLOCKS_PER_ERA * i + 1);
 
             Credit::update_credit(micropayments.clone());
-            assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + 5 * i);
+            assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + i);
             assert_eq!(
                 Credit::get_reward(&7),
                 Some((18000000000000000000 * 7, 97068450647875213020))
@@ -318,9 +322,10 @@ fn get_reward_with_update_credit_with_bonus() {
             i += 1;
         }
 
-        run_to_block(BLOCKS_PER_ERA * 20 + 1);
+        let micropayments = vec![(7, 190 * 1_000_000_000_000_000, 5)];
+        run_to_block(BLOCKS_PER_ERA * 183);
         Credit::update_credit(micropayments.clone());
-        assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + 5 * 20);
+        assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + 100);
         assert_eq!(
             Credit::get_reward(&7),
             Some((18000000000000000000 * 7, 131780755652680908140))
@@ -339,7 +344,10 @@ fn get_reward_with_slash_credit_with_bonus() {
         );
 
         Credit::slash_credit(&7);
-        assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 - CREDIT_ATTENUATION_STEP);
+        assert_eq!(
+            Credit::user_credit(&7).unwrap().credit,
+            400 - CREDIT_ATTENUATION_STEP
+        );
         assert_eq!(
             Credit::get_reward(&7),
             Some((18000000000000000000 * 7, 83523261467953134276))
@@ -381,7 +389,7 @@ fn slash_offline_devices_credit() {
         run_to_block(BLOCKS_PER_DAY * 8);
         Credit::slash_offline_devices_credit();
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
-        
+
         run_to_block(BLOCKS_PER_DAY * 9);
         Credit::slash_offline_devices_credit();
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);

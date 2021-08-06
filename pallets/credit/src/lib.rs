@@ -96,7 +96,7 @@ pub mod pallet {
         traits::{Saturating, Zero},
         Perbill,
     };
-    use sp_std::convert::TryInto;
+    use sp_std::{cmp, convert::TryInto};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -110,7 +110,7 @@ pub mod pallet {
         /// Credit init score
         type InitialCredit: Get<u64>;
         /// Credit cap per Era
-        type CreditCapPerEra: Get<u8>;
+        type CreditCapTwoEras: Get<u8>;
         /// credit attenuation step
         type CreditAttenuationStep: Get<u64>;
         /// Minimum credit to delegate
@@ -144,6 +144,11 @@ pub mod pallet {
     #[pallet::getter(fn daily_poc_reward)]
     pub type DailyPocReward<T: Config> =
         StorageMap<_, Identity, CreditLevel, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn last_credit_update)]
+    pub type LastCreditUpdate<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -228,7 +233,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// update creditdata
+        /// update credit data
         #[pallet::weight(10_000)]
         pub fn update_credit_data(
             origin: OriginFor<T>,
@@ -285,21 +290,35 @@ pub mod pallet {
                     balance_num,
                     score_delta
                 );
-                let cap: u64 = T::CreditCapPerEra::get() as u64;
-                if score_delta > cap {
-                    score_delta = cap;
-                    log!(
-                        info,
-                        "server_id: {:?} score_delta capped at {}",
-                        server_id.clone(),
-                        cap
-                    );
-                }
                 if score_delta > 0 {
+                    let current_block = <frame_system::Module<T>>::block_number();
+                    let last_credit_update = Self::last_credit_update(&server_id).unwrap_or(
+                        <pallet_deeper_node::Module<T>>::onboard_time(&server_id)
+                            .unwrap_or(current_block),
+                    );
+                    let eras = TryInto::<u64>::try_into(
+                        (current_block - last_credit_update) / T::BlocksPerEra::get(),
+                    )
+                    .ok()
+                    .unwrap();
+                    let cap: u64 = T::CreditCapTwoEras::get() as u64;
+                    let total_cap = cmp::max(1, cap * eras / 2); // at least 1
+                    if score_delta > total_cap {
+                        score_delta = total_cap;
+                        log!(
+                            info,
+                            "server_id: {:?} score_delta capped at {}",
+                            server_id.clone(),
+                            total_cap
+                        );
+                    }
+
                     let new_credit = Self::get_credit_score(&server_id)
                         .unwrap_or(0)
                         .saturating_add(score_delta);
-                    if !Self::_update_credit(&server_id, new_credit) {
+                    if Self::_update_credit(&server_id, new_credit) {
+                        LastCreditUpdate::<T>::insert(&server_id, current_block);
+                    } else {
                         log!(
                             error,
                             "failed to update credit {} for server_id: {:?}",
@@ -345,10 +364,11 @@ pub mod pallet {
         pub fn slash_offline_devices_credit() {
             for device in <pallet_deeper_node::Module<T>>::devices_onboard() {
                 let days = T::NodeInterface::get_days_offline(&device);
-                if days > 0 && days % 3 == 0 { // slash one credit for being offline every 3 days
+                if days > 0 && days % 3 == 0 {
+                    // slash one credit for being offline every 3 days
                     Self::slash_credit(&device);
                 }
-            }            
+            }
         }
     }
 

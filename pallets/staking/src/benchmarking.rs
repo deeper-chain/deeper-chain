@@ -53,7 +53,7 @@ fn add_slashing_spans<T: Config>(who: &T::AccountId, spans: u32) {
 const USER_SEED: u32 = 999666;
 
 benchmarks! {
-    where_clause {  where T: Config, T: pallet_credit::Config} 
+    where_clause {  where T: Config, T: pallet_credit::Config}
     bond {
         let stash = create_funded_user::<T>("stash", USER_SEED, 100);
         let controller = create_funded_user::<T>("controller", USER_SEED, 100);
@@ -201,7 +201,7 @@ benchmarks! {
     verify {
         assert_eq!(ValidatorCount::get(), pre_v_number + n);
     }
-    
+
     scale_validator_count {
         let n in 1 .. 100;
         let pre_v_number = ValidatorCount::get();
@@ -334,7 +334,7 @@ benchmarks! {
         let validators = Staking::<T>::new_era(session_index).ok_or("`new_era` failed")?;
         assert!(validators.len() == v as usize);
     }
-    
+
     #[extra]
     do_slash {
         let l in 1 .. MAX_UNLOCKING_CHUNKS as u32;
@@ -371,45 +371,62 @@ mod tests {
 
     #[test]
     fn create_validators_with_delegators_for_era_works() {
-        ExtBuilder::default().has_stakers(true).build().execute_with(|| {
-            let v = 10;
-            let d = 100;
+        ExtBuilder::default()
+            .has_stakers(true)
+            .build()
+            .execute_with(|| {
+                let v = 10;
+                let d = 100;
 
-            create_validators_with_delegators_for_era::<Test>(v, d, MAX_DELEGATES as usize, false, None)
+                create_validators_with_delegators_for_era::<Test>(
+                    v,
+                    d,
+                    MAX_DELEGATES as usize,
+                    false,
+                    None,
+                )
                 .unwrap();
 
-            let count_validators = Validators::<Test>::iter().count();
-            let count_delegators = Delegators::<Test>::iter().count();
+                let count_validators = Validators::<Test>::iter().count();
+                let count_delegators = Delegators::<Test>::iter().count();
 
-            assert_eq!(count_validators, v as usize);
-            assert_eq!(count_delegators, d as usize);
-        });
+                assert_eq!(count_validators, v as usize);
+                assert_eq!(count_delegators, d as usize);
+            });
     }
 
     #[test]
     fn add_slashing_spans_works() {
-        ExtBuilder::default().has_stakers(true).build().execute_with(|| {
-            let n = 10;
+        ExtBuilder::default()
+            .has_stakers(true)
+            .build()
+            .execute_with(|| {
+                let n = 10;
 
-            if let Ok((validator_stash, _)) = create_stash_controller::<Test>(n, 100, Default::default()){
-                // Add 20 slashing spans
-                let num_of_slashing_spans = 20;
-                add_slashing_spans::<Test>(&validator_stash, num_of_slashing_spans);
+                if let Ok((validator_stash, _)) =
+                    create_stash_controller::<Test>(n, 100, Default::default())
+                {
+                    // Add 20 slashing spans
+                    let num_of_slashing_spans = 20;
+                    add_slashing_spans::<Test>(&validator_stash, num_of_slashing_spans);
 
-                let slashing_spans = SlashingSpans::<Test>::get(&validator_stash).unwrap();
-                assert_eq!(slashing_spans.iter().count(), num_of_slashing_spans as usize);
-                for i in 0 .. num_of_slashing_spans {
-                    assert!(SpanSlash::<Test>::contains_key((&validator_stash, i)));
+                    let slashing_spans = SlashingSpans::<Test>::get(&validator_stash).unwrap();
+                    assert_eq!(
+                        slashing_spans.iter().count(),
+                        num_of_slashing_spans as usize
+                    );
+                    for i in 0..num_of_slashing_spans {
+                        assert!(SpanSlash::<Test>::contains_key((&validator_stash, i)));
+                    }
+
+                    // Test everything is cleaned up
+                    assert_ok!(Staking::kill_stash(&validator_stash, num_of_slashing_spans));
+                    assert!(SlashingSpans::<Test>::get(&validator_stash).is_none());
+                    for i in 0..num_of_slashing_spans {
+                        assert!(!SpanSlash::<Test>::contains_key((&validator_stash, i)));
+                    }
                 }
-
-                // Test everything is cleaned up
-                assert_ok!(Staking::kill_stash(&validator_stash, num_of_slashing_spans));
-                assert!(SlashingSpans::<Test>::get(&validator_stash).is_none());
-                for i in 0 .. num_of_slashing_spans {
-                    assert!(!SpanSlash::<Test>::contains_key((&validator_stash, i)));
-                }
-            }
-        });
+            });
     }
 
     #[test]

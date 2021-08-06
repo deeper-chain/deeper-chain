@@ -1053,7 +1053,7 @@ impl pallet_deeper_node::Config for Runtime {
 
 parameter_types! {
     pub const InitialCredit: u64 = 100;
-    pub const CreditCapPerEra: u8 = 5;
+    pub const CreditCapTwoEras: u8 = 1;
     pub const CreditAttenuationStep: u64 = 1;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
@@ -1064,7 +1064,7 @@ impl pallet_credit::Config for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type InitialCredit = InitialCredit;
-    type CreditCapPerEra = CreditCapPerEra;
+    type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
