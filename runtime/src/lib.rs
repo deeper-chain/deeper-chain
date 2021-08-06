@@ -499,6 +499,7 @@ impl pallet_staking::Config for Runtime {
     // The unsigned solution weight targeted by the OCW. We set it to the maximum possible value of
     // a single extrinsic.
     type TotalMiningReward = MiningReward;
+    type ExistentialDeposit = ExistentialDeposit;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
 }
 
