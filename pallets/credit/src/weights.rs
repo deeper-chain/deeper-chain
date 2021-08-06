@@ -35,53 +35,53 @@
 // --output=./pallets/credit/src/weights.rs
 // --template=./.maintain/frame-weight-template.hbs
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_credit.
 pub trait WeightInfo {
-	fn update_credit_setting() -> Weight;
-	fn update_credit_data() -> Weight;
-	fn initialize_credit() -> Weight;
+    fn update_credit_setting() -> Weight;
+    fn update_credit_data() -> Weight;
+    fn initialize_credit() -> Weight;
 }
 
 /// Weights for pallet_credit using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
-	fn update_credit_setting() -> Weight {
-		(9_772_000 as Weight)
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-	fn update_credit_data() -> Weight {
-		(20_621_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
-	fn initialize_credit() -> Weight {
-		(13_501_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
-	}
+    fn update_credit_setting() -> Weight {
+        (9_772_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    fn update_credit_data() -> Weight {
+        (20_621_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn initialize_credit() -> Weight {
+        (13_501_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn update_credit_setting() -> Weight {
-		(9_772_000 as Weight)
-			.saturating_add(RocksDbWeight::get().writes(2 as Weight))
-	}
-	fn update_credit_data() -> Weight {
-		(20_621_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(2 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
-	}
-	fn initialize_credit() -> Weight {
-		(13_501_000 as Weight)
-			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
-			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
-	}
+    fn update_credit_setting() -> Weight {
+        (9_772_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
+    }
+    fn update_credit_data() -> Weight {
+        (20_621_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(2 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn initialize_credit() -> Weight {
+        (13_501_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
 }

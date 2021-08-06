@@ -73,9 +73,9 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-                assert_ok!(test_benchmark_update_credit_setting::<Test>());
-                assert_ok!(test_benchmark_update_credit_data::<Test>());
-                assert_ok!(test_benchmark_initialize_credit::<Test>());
-            });
+            assert_ok!(test_benchmark_update_credit_setting::<Test>());
+            assert_ok!(test_benchmark_update_credit_data::<Test>());
+            assert_ok!(test_benchmark_initialize_credit::<Test>());
+        });
     }
 }

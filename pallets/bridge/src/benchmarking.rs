@@ -18,16 +18,16 @@
 //! Staking pallet benchmarking.
 
 use super::*;
-pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
-use frame_system::RawOrigin;
-use frame_support::traits::Currency;
-use sp_core::{H160, Hasher, sr25519};
-use codec::Encode;
-use sp_runtime::traits::{Verify, IdentifyAccount};
-use hex_literal::hex;
 use crate::Module as Bridge;
-use types::Status;
+use codec::Encode;
+pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+use frame_support::traits::Currency;
+use frame_system::RawOrigin;
+use hex_literal::hex;
 pub use node_primitives::{AccountId, Signature};
+use sp_core::{sr25519, Hasher, H160};
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use types::Status;
 type AccountPublic = <Signature as Verify>::Signer;
 
 const SEED: u32 = 0;
@@ -88,7 +88,7 @@ benchmarks! {
         //let account_id = AccountPublic::from(pair.public()).into_account();
         Bridge::<T>::update_limits(
             RawOrigin::Signed(validator1).into(),
-            max_tx_value.into(), 
+            max_tx_value.into(),
             day_max_limit.into(), day_max_limit_for_one_address.into(), max_pending_tx_limit.into(), min_tx_value.into())?;
     }:  _(RawOrigin::Signed(validator2), max_tx_value.into(), day_max_limit.into(), day_max_limit_for_one_address.into(), max_pending_tx_limit.into(), min_tx_value.into())
     verify {
@@ -122,8 +122,8 @@ benchmarks! {
         let user4 = create_funded_user::<T>("user",USER_SEED+5, 100);
 
         Bridge::<T>::update_validator_list(
-            RawOrigin::Signed(validator1).into(), 
-            eth_message_id, QUORUM, 
+            RawOrigin::Signed(validator1).into(),
+            eth_message_id, QUORUM,
             vec![user1.clone(), user2.clone(), user3.clone(), user4.clone()])?;
         let id = Bridge::<T>::message_id_by_transfer_id(0);
         let mut message = Bridge::<T>::validator_history(id);
@@ -134,7 +134,7 @@ benchmarks! {
         assert_eq!(message.status, Status::Confirmed);
         assert_eq!(Bridge::<T>::validators_count(), 4);
     }
-    
+
     pause_bridge {
         let validator1 = create_funded_user::<T>("user",USER_SEED, 100);
         let validator2 = create_funded_user::<T>("user",USER_SEED+1, 100);
@@ -166,7 +166,7 @@ benchmarks! {
     verify {
         assert_eq!(Bridge::<T>::bridge_is_operational(), true);
     }
-    
+
     confirm_transfer {
         let eth_address = H160::from(ETH_ADDRESS);
         let amount = T::Currency::minimum_balance() * 49u32.into();

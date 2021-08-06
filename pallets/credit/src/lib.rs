@@ -94,7 +94,7 @@ pub mod pallet {
     use frame_support::traits::{Currency, Vec};
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-        pallet_prelude::*
+        pallet_prelude::*,
     };
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
