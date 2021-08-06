@@ -98,12 +98,6 @@ pub mod pallet {
     pub(super) type SessionId<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u32, OptionQuery>;
 
-    // the last block that an account has micro-payment transaction involved
-    #[pallet::storage]
-    #[pallet::getter(fn last_updated)]
-    pub(super) type LastUpdated<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, ValueQuery>;
-
     // record total micro-payment channel balance of accountId
     #[pallet::storage]
     #[pallet::getter(fn total_micropayment_chanel_balance)]
@@ -461,8 +455,6 @@ pub mod pallet {
         ) {
             // update last block
             let block_number = <frame_system::Module<T>>::block_number();
-            LastUpdated::<T>::insert(client, block_number);
-            LastUpdated::<T>::insert(server, block_number);
             log!(
                 info,
                 "last updated block is {:?} for accounts: {:?}, {:?}",
@@ -496,11 +488,6 @@ pub mod pallet {
             }
             ClientsByServer::<T>::drain(); // it should be empty already, but let's drain it for safety
             stats
-        }
-
-        // return the last blocknumber for an account join micro-payment activity
-        pub fn last_update_block(account: &T::AccountId) -> T::BlockNumber {
-            LastUpdated::<T>::get(account)
         }
 
         // TODO: take ExistentialDeposit into account

@@ -202,25 +202,28 @@ fn test_signature() {
 fn update_micropayment_information() {
     new_test_ext().execute_with(|| {
         Micropayment::update_micropayment_information(&2, &1, 5);
-        let mut balance = Micropayment::payment_by_server(&1);
+        let balance = Micropayment::payment_by_server(&1);
         assert_eq!(balance, 5);
-        assert_eq!(Micropayment::last_updated(&1), 0);
-        assert_eq!(Micropayment::last_updated(&2), 0);
+        let clients = Micropayment::clients_by_server(&1);
+        assert_eq!(clients.len(), 1);
+        assert!(clients.contains(&2));
 
         run_to_block(1);
         Micropayment::update_micropayment_information(&2, &1, 6);
-        balance = Micropayment::payment_by_server(&1);
+        let balance = Micropayment::payment_by_server(&1);
         assert_eq!(balance, 11);
-        assert_eq!(Micropayment::last_updated(&1), 1);
-        assert_eq!(Micropayment::last_updated(&2), 1);
+        let clients = Micropayment::clients_by_server(&1);
+        assert_eq!(clients.len(), 1);
+        assert!(clients.contains(&2));
 
         run_to_block(2);
         Micropayment::update_micropayment_information(&3, &1, 4);
-        balance = Micropayment::payment_by_server(&1);
+        let balance = Micropayment::payment_by_server(&1);
         assert_eq!(balance, 15);
-        assert_eq!(Micropayment::last_updated(&1), 2);
-        assert_eq!(Micropayment::last_updated(&2), 1);
-        assert_eq!(Micropayment::last_updated(&3), 2);
+        let clients = Micropayment::clients_by_server(&1);
+        assert_eq!(clients.len(), 2);
+        assert!(clients.contains(&2));
+        assert!(clients.contains(&3));
     });
 }
 

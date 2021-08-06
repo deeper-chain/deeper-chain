@@ -319,6 +319,7 @@ impl Config for Test {
     type MaxDelegates = MaxDelegates;
     type NumberToCurrency = NumberCurrencyConverter;
     type TotalMiningReward = MiningReward;
+    type ExistentialDeposit = ExistentialDeposit;
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test

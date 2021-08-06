@@ -518,6 +518,8 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type WeightInfo: WeightInfo;
 
     type TotalMiningReward: Get<u128>;
+
+    type ExistentialDeposit: Get<BalanceOf<Self>>;
 }
 
 #[derive(Decode, Encode, Default)]
@@ -1761,7 +1763,7 @@ impl<T: Config> Module<T> {
         let remainder_mining_reward = T::NumberToCurrency::convert(
             Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
         );
-        if remainder_mining_reward < Zero::zero() {
+        if remainder_mining_reward <= T::ExistentialDeposit::get() {
             return;
         }
         let era_payout = cmp::min(T::EraValidatorReward::get(), remainder_mining_reward);
@@ -1826,7 +1828,7 @@ impl<T: Config> Module<T> {
         let mut remainder_mining_reward = T::NumberToCurrency::convert(
             Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
         );
-        if remainder_mining_reward < Zero::zero() {
+        if remainder_mining_reward <= T::ExistentialDeposit::get() {
             return;
         }
         let mut total_poc_reward = BalanceOf::<T>::zero();

@@ -18,11 +18,11 @@
 //! Testing utils for staking. Provides some common functions to setup staking state, such as
 //! bonding validators, nominators, and generating different types of solutions.
 
-use crate:: {Module as Staking, Config as StakingConfig};
-use pallet_credit::{Module as Credit, Config as CreditConfig};
 use crate::*;
+use crate::{Config as StakingConfig, Module as Staking};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
+use pallet_credit::{Config as CreditConfig, Module as Credit};
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaChaRng,
@@ -32,7 +32,6 @@ use sp_std::cmp;
 
 const SEED: u32 = 0;
 const MAX_VALIDATORS: u32 = 1000;
-
 
 /// This function removes all validators and delegators from storage.
 pub fn clear_validators_and_delegators<T: Config>() {
@@ -149,20 +148,29 @@ pub fn create_validators_with_delegators_for_era<T: Config + pallet_credit::Conf
 ) -> Result<Vec<<T::Lookup as StaticLookup>::Source>, &'static str> {
     clear_validators_and_delegators::<T>();
 
-    let mut validators_stash: Vec<<T::Lookup as StaticLookup>::Source>
-        = Vec::with_capacity(validators as usize);
+    let mut validators_stash: Vec<<T::Lookup as StaticLookup>::Source> =
+        Vec::with_capacity(validators as usize);
     let mut rng = ChaChaRng::from_seed(SEED.using_encoded(blake2_256));
 
     // Create validators
-    for i in 0 .. validators {
-        let balance_factor = if randomize_stake { rng.next_u32() % 255 + 10 } else { 100u32 };
-        let (v_stash, v_controller) = create_stash_controller::<T>(i, balance_factor, RewardDestination::Staked)?;
+    for i in 0..validators {
+        let balance_factor = if randomize_stake {
+            rng.next_u32() % 255 + 10
+        } else {
+            100u32
+        };
+        let (v_stash, v_controller) =
+            create_stash_controller::<T>(i, balance_factor, RewardDestination::Staked)?;
         let validator_prefs = ValidatorPrefs {
             commission: Perbill::from_percent(50),
-            .. Default::default()
+            ..Default::default()
         };
-        Staking::<T>::validate(RawOrigin::Signed(v_controller.clone()).into(), validator_prefs)?;
-        let stash_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(v_stash.clone());
+        Staking::<T>::validate(
+            RawOrigin::Signed(v_controller.clone()).into(),
+            validator_prefs,
+        )?;
+        let stash_lookup: <T::Lookup as StaticLookup>::Source =
+            T::Lookup::unlookup(v_stash.clone());
         validators_stash.push(stash_lookup.clone());
     }
 
@@ -170,23 +178,29 @@ pub fn create_validators_with_delegators_for_era<T: Config + pallet_credit::Conf
     let validator_choosen = validators_stash[0..to_delegate].to_vec();
 
     // Create delegators
-    for j in 0 .. delegators {
-        let balance_factor = if randomize_stake { rng.next_u32() % 255 + 10 } else { 100u32 };
+    for j in 0..delegators {
+        let balance_factor = if randomize_stake {
+            rng.next_u32() % 255 + 10
+        } else {
+            100u32
+        };
         let delegator = create_delegator::<T>(j + 1, balance_factor)?;
 
         // Have them randomly validate
         let mut available_validators = validator_choosen.clone();
-        let mut selected_validators: Vec<T::AccountId> =
-            Vec::with_capacity(edge_per_delegator);
+        let mut selected_validators: Vec<T::AccountId> = Vec::with_capacity(edge_per_delegator);
 
-        for _ in 0 .. validators.min(edge_per_delegator as u32) {
+        for _ in 0..validators.min(edge_per_delegator as u32) {
             let selected = rng.next_u32() as usize % available_validators.len();
             let validator = available_validators.remove(selected);
-            if let Ok(validator_acccount_id) = T::Lookup::lookup(validator){
+            if let Ok(validator_acccount_id) = T::Lookup::lookup(validator) {
                 selected_validators.push(validator_acccount_id);
             }
         }
-        Staking::<T>::delegate(RawOrigin::Signed(delegator.clone()).into(), selected_validators)?;
+        Staking::<T>::delegate(
+            RawOrigin::Signed(delegator.clone()).into(),
+            selected_validators,
+        )?;
     }
 
     ValidatorCount::put(validators);
