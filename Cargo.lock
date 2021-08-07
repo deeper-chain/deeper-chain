@@ -4601,6 +4601,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "log",
  "node-primitives",
  "pallet-balances 3.0.0",
