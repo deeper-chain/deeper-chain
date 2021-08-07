@@ -13,6 +13,9 @@ mod tests;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod testing_utils;
+
 //pub mod weights;
 use sp_std::prelude::*;
 //pub use weights::WeightInfo;
@@ -29,8 +32,15 @@ macro_rules! log {
 	};
 }
 
+/// This is for benchmarking
+pub trait AccountCreator<AccountId> {
+    /// Get the validators from session.
+    fn create_account(string: &'static str) -> AccountId;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
+    use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
     use frame_support::traits::{Currency, Get, Vec};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
@@ -53,6 +63,8 @@ pub mod pallet {
         /// data traffic to DPR ratio
         #[pallet::constant]
         type DataPerDPR: Get<u64>;
+
+        type AccountCreator: AccountCreator<Self::AccountId>;
     }
 
     type BalanceOf<T> =
@@ -439,7 +451,7 @@ pub mod pallet {
         }
 
         // construct data from |server_addr|session_id|amount| and hash it
-        fn construct_byte_array_and_hash(
+        pub fn construct_byte_array_and_hash(
             address: &T::AccountId,
             nonce: u64,
             session_id: u32,

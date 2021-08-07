@@ -19,55 +19,36 @@
 
 use super::*;
 use crate::pallet::ChannelOf;
+use crate::testing_utils::*;
 use crate::Module as Micropayment;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::Module as System;
 use frame_system::RawOrigin;
 use sp_core::sr25519;
-use sp_io::crypto::{sr25519_generate, sr25519_sign};
-use sp_runtime::{MultiSignature, MultiSigner};
-use sp_std::{convert::TryFrom, vec};
-
-const SEED: u32 = 0;
-const USER_SEED: u32 = 999666;
+use sp_core::sr25519::Signature;
+use sp_io::crypto::sr25519_sign;
+use sp_std::vec;
 
 /// Grab a funded user with balance_factor DPR.
-pub fn create_funded_user<T: Config>(
-    string: &'static str,
-    n: u32,
-    balance_factor: u32,
-) -> T::AccountId {
-    let user = account(string, n, SEED);
+pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
+    let user = T::AccountCreator::create_account(string);
     let balance = T::Currency::minimum_balance() * balance_factor.into();
     T::Currency::make_free_balance_be(&user, balance);
     T::Currency::issue(balance);
     user
 }
 
-pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
-    sr25519_generate(0.into(), Some(seed)).into()
-}
-
-pub fn create_sr25519_signature(payload: &[u8], pubkey: MultiSigner) -> MultiSignature {
-    let srpubkey = sr25519::Public::try_from(pubkey).unwrap();
-    let srsig = sr25519_sign(0.into(), &srpubkey, payload).unwrap();
+pub fn create_sr25519_signature(payload: &[u8], ac: &'static str) -> Signature {
+    let signer = get_from_seed::<sr25519::Public>(ac);
+    let srsig = sr25519_sign(0.into(), &signer, payload).unwrap();
     srsig.into()
 }
 
-/*
-pub fn run_to_block(n: u64) {
-    while System::block_number() < n {
-        System::on_finalize(System::block_number());
-        System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
-    }
-}*/
-
 benchmarks! {
     open_channel {
-        let client = create_funded_user::<T>("user",USER_SEED, 100);
-        let server = create_funded_user::<T>("user",USER_SEED+1, 100);
+        let client = create_funded_user::<T>("Alice", 100);
+        let server = create_funded_user::<T>("Bob", 100);
         let amount = T::Currency::minimum_balance() * 30u32.into();
     }: _(RawOrigin::Signed(client.clone()), server.clone(), amount, 3600)
     verify {
@@ -85,8 +66,8 @@ benchmarks! {
     }
 
     close_channel {
-        let client = create_funded_user::<T>("user",USER_SEED, 100);
-        let server = create_funded_user::<T>("user",USER_SEED+1, 100);
+        let client = create_funded_user::<T>("Alice", 100);
+        let server = create_funded_user::<T>("Bob", 100);
         let amount = T::Currency::minimum_balance() * 30u32.into();
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
@@ -97,8 +78,8 @@ benchmarks! {
                 server: server.clone(),
                 balance: amount,
                 nonce: 0,
-                opened: 1u32.into(),
-                expiration: 721u32.into()
+                opened: 0u32.into(),
+                expiration: 720u32.into()
             }
         );
     }: _(RawOrigin::Signed(server.clone()), client.clone())
@@ -107,8 +88,8 @@ benchmarks! {
     }
 
     close_expired_channels {
-        let client = create_funded_user::<T>("user",USER_SEED, 100);
-        let server = create_funded_user::<T>("user",USER_SEED+1, 100);
+        let client = create_funded_user::<T>("Alice", 100);
+        let server = create_funded_user::<T>("Bob", 100);
         let amount = T::Currency::minimum_balance() * 30u32.into();
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
@@ -119,8 +100,8 @@ benchmarks! {
                 server: server.clone(),
                 balance: amount,
                 nonce: 0,
-                opened: 1u32.into(),
-                expiration: 721u32.into()
+                opened: 0u32.into(),
+                expiration: 720u32.into()
             }
         );
         System::<T>::set_block_number(722u32.into());
@@ -130,8 +111,8 @@ benchmarks! {
     }
 
     add_balance {
-        let client = create_funded_user::<T>("user",USER_SEED, 100);
-        let server = create_funded_user::<T>("user",USER_SEED+1, 100);
+        let client = create_funded_user::<T>("Alice", 100);
+        let server = create_funded_user::<T>("Bob", 100);
         let amount = T::Currency::minimum_balance() * 30u32.into();
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
@@ -142,8 +123,8 @@ benchmarks! {
                 server: server.clone(),
                 balance: amount,
                 nonce: 0,
-                opened: 1u32.into(),
-                expiration: 721u32.into()
+                opened: 0u32.into(),
+                expiration: 720u32.into()
             }
         );
 
@@ -157,46 +138,41 @@ benchmarks! {
                 server: server.clone(),
                 balance: amount + add_amount,
                 nonce: 0,
-                opened: 1u32.into(),
-                expiration: 721u32.into()
+                opened: 0u32.into(),
+                expiration: 720u32.into()
             }
         );
     }
-    /*
+
     claim_payment {
-        let client = create_funded_user::<T>("user",USER_SEED, 100);
-        let server = create_funded_user::<T>("user",USER_SEED+1, 100);
+        let client = create_funded_user::<T>("Alice", 100);
+        let server = create_funded_user::<T>("Bob", 100);
         let amount = T::Currency::minimum_balance() * 30u32.into();
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
         assert_eq!(
             Micropayment::<T>::channel(&client, &server),
             ChannelOf::<T> {
-                client: server.clone(),
+                client: client.clone(),
                 server: server.clone(),
                 balance: amount,
                 nonce: 0,
-                opened: 1u32.into(),
-                expiration: 721u32.into()
+                opened: 0u32.into(),
+                expiration: 720u32.into()
             }
         );
 
         let session_id: u32 = 1;
         let nonce: u64 = 0;
         let claim_amount = T::Currency::minimum_balance() * 10u32.into();
-
-        let mut data = Vec::new();
-        data.extend_from_slice(server.pub_key());
-        data.extend_from_slice(&nonce.to_be_bytes());
-        data.extend_from_slice(&session_id.to_be_bytes());
-        data.extend_from_slice(&amount.to_be_bytes());
-        let hash = sp_io::hashing::blake2_256(&data);
-        let client_pair = create_sr25519_pubkey(b"//client".to_vec());
-        let signature = create_sr25519_signature(hash, client_pair);
-    }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, amount, signature)
+        let msg = Micropayment::<T>::construct_byte_array_and_hash(&server, nonce, session_id, amount);
+        println!("msg {:?}", msg);
+        let sig = create_sr25519_signature(&msg, "Bob");
+        let signature: [u8; 64] = sig.into();
+    }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, amount, signature.into())
     verify {
-
-    }*/
+        // TODO
+    }
 }
 
 #[cfg(test)]

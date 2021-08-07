@@ -1,16 +1,16 @@
 use crate as pallet_micropayment;
+use crate::testing_utils::*;
 use frame_support::{
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system as system;
-use sp_core::H256;
+use node_primitives::Balance;
+use sp_core::{crypto::AccountId32, sr25519, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
-
-use node_primitives::Balance;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -33,6 +33,8 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
+type AccountId = AccountId32;
+
 impl system::Config for Test {
     type BaseCallFilter = ();
     type BlockWeights = ();
@@ -44,7 +46,7 @@ impl system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -73,6 +75,14 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+pub struct AccountCreatorMock;
+
+impl crate::AccountCreator<AccountId> for AccountCreatorMock {
+    fn create_account(string: &'static str) -> AccountId {
+        get_account_id_from_seed::<sr25519::Public>(string)
+    }
+}
+
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
@@ -82,6 +92,7 @@ impl pallet_micropayment::Config for Test {
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
+    type AccountCreator = AccountCreatorMock;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -90,7 +101,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
     let _ = pallet_balances::GenesisConfig::<Test> {
-        balances: vec![(1, 500), (2, 500), (3, 500), (4, 500), (5, 500)],
+        balances: vec![
+            (alice(), 500),
+            (bob(), 500),
+            (charlie(), 500),
+            (dave(), 500),
+        ],
     }
     .assimilate_storage(&mut storage);
 

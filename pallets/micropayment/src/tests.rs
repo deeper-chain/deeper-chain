@@ -1,5 +1,5 @@
 use super::Chan;
-use crate::{mock::*, Error};
+use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{
     assert_ok,
     dispatch::{DispatchError, DispatchErrorWithPostInfo},
@@ -11,12 +11,19 @@ use sp_io::crypto::sr25519_verify;
 fn open_channel() {
     new_test_ext().execute_with(|| {
         // OK
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
+        let alice = alice();
+        let bob = bob();
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice.clone()),
+            bob.clone(),
+            300,
+            3600
+        ));
         assert_eq!(
-            Micropayment::channel(&1, &2),
+            Micropayment::channel(&alice, &bob),
             Chan {
-                client: 1,
-                server: 2,
+                client: alice.clone(),
+                server: bob.clone(),
                 balance: 300,
                 nonce: 0,
                 opened: 0,
@@ -26,7 +33,7 @@ fn open_channel() {
 
         // Channel already opened
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(1), 2, 1000, 3600),
+            Micropayment::open_channel(Origin::signed(alice.clone()), bob.clone(), 1000, 3600),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::ChannelAlreadyOpened
             ))
@@ -34,7 +41,7 @@ fn open_channel() {
 
         // Channel should connect two different accounts
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(2), 2, 1000, 3600),
+            Micropayment::open_channel(Origin::signed(bob.clone()), bob.clone(), 1000, 3600),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::SameChannelEnds
             ))
@@ -42,13 +49,13 @@ fn open_channel() {
 
         //  duration should > 0
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(3), 4, 200, 0),
+            Micropayment::open_channel(Origin::signed(charlie()), dave(), 200, 0),
             Ok(().into())
         );
 
         // balance of 2 is 500, but channel balance experted is 1000
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::open_channel(Origin::signed(2), 3, 1000, 3600)
+            Micropayment::open_channel(Origin::signed(bob.clone()), charlie(), 1000, 3600)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -66,30 +73,43 @@ fn open_channel() {
 fn fn_close_channel() {
     new_test_ext().execute_with(|| {
         // OK
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
-        assert_ok!(Micropayment::close_channel(Origin::signed(2), 1));
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            bob(),
+            300,
+            3600
+        ));
+        assert_ok!(Micropayment::close_channel(Origin::signed(bob()), alice()));
 
         // Ok close by sender
         run_to_block(1);
-        assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 1)); // 1 day = (24 * 3600 * 1000 / 5000)
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(charlie()),
+            dave(),
+            300,
+            1
+        )); // 1 day = (24 * 3600 * 1000 / 5000)
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(3), 4),
+            Micropayment::close_channel(Origin::signed(charlie()), dave()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::UnexpiredChannelCannotBeClosedBySender
             ))
         );
         run_to_block(24 * 720 + 2);
-        assert_ok!(Micropayment::close_channel(Origin::signed(3), 4));
+        assert_ok!(Micropayment::close_channel(
+            Origin::signed(charlie()),
+            dave()
+        ));
 
         // Channel not exists
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(2), 3),
+            Micropayment::close_channel(Origin::signed(bob()), charlie()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::ChannelNotExist
             ))
         );
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(1), 2),
+            Micropayment::close_channel(Origin::signed(alice()), bob()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::ChannelNotExist
             ))
@@ -101,12 +121,29 @@ fn fn_close_channel() {
 fn fn_close_expired_channels() {
     new_test_ext().execute_with(|| {
         // OK
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 100, 1)); // 1 day = (24 * 3600 * 1000 / 5000)
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 3, 100, 1));
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 4, 100, 2));
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            bob(),
+            100,
+            1
+        )); // 1 day = (24 * 3600 * 1000 / 5000)
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            charlie(),
+            100,
+            1
+        ));
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            dave(),
+            100,
+            2
+        ));
 
         run_to_block(24 * 720 + 1);
-        assert_ok!(Micropayment::close_expired_channels(Origin::signed(1)));
+        assert_ok!(Micropayment::close_expired_channels(
+            Origin::signed(alice())
+        ));
     });
 }
 
@@ -114,12 +151,21 @@ fn fn_close_expired_channels() {
 fn fn_add_balance() {
     new_test_ext().execute_with(|| {
         // OK
-        assert_ok!(Micropayment::open_channel(Origin::signed(1), 2, 300, 3600));
-        assert_ok!(Micropayment::add_balance(Origin::signed(1), 2, 100));
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            bob(),
+            300,
+            3600
+        ));
+        assert_ok!(Micropayment::add_balance(
+            Origin::signed(alice()),
+            bob(),
+            100
+        ));
 
         // Channel not exists
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::add_balance(Origin::signed(2), 3, 100)
+            Micropayment::add_balance(Origin::signed(bob()), charlie(), 100)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -132,9 +178,14 @@ fn fn_add_balance() {
         }
 
         // NotEnoughBalance 500-300 = 200, but add_balance 500
-        assert_ok!(Micropayment::open_channel(Origin::signed(3), 4, 300, 3600));
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(charlie()),
+            dave(),
+            300,
+            3600
+        ));
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::add_balance(Origin::signed(3), 4, 500)
+            Micropayment::add_balance(Origin::signed(charlie()), dave(), 500)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -201,47 +252,54 @@ fn test_signature() {
 #[test]
 fn update_micropayment_information() {
     new_test_ext().execute_with(|| {
-        Micropayment::update_micropayment_information(&2, &1, 5);
-        let balance = Micropayment::payment_by_server(&1);
+        let alice = alice();
+        let bob = bob();
+        let charlie = charlie();
+        Micropayment::update_micropayment_information(&bob, &alice, 5);
+        let balance = Micropayment::payment_by_server(&alice);
         assert_eq!(balance, 5);
-        let clients = Micropayment::clients_by_server(&1);
+        let clients = Micropayment::clients_by_server(&alice);
         assert_eq!(clients.len(), 1);
-        assert!(clients.contains(&2));
+        assert!(clients.contains(&bob));
 
         run_to_block(1);
-        Micropayment::update_micropayment_information(&2, &1, 6);
-        let balance = Micropayment::payment_by_server(&1);
+        Micropayment::update_micropayment_information(&bob, &alice, 6);
+        let balance = Micropayment::payment_by_server(&alice);
         assert_eq!(balance, 11);
-        let clients = Micropayment::clients_by_server(&1);
+        let clients = Micropayment::clients_by_server(&alice);
         assert_eq!(clients.len(), 1);
-        assert!(clients.contains(&2));
+        assert!(clients.contains(&bob));
 
         run_to_block(2);
-        Micropayment::update_micropayment_information(&3, &1, 4);
-        let balance = Micropayment::payment_by_server(&1);
+        Micropayment::update_micropayment_information(&charlie, &alice, 4);
+        let balance = Micropayment::payment_by_server(&alice);
         assert_eq!(balance, 15);
-        let clients = Micropayment::clients_by_server(&1);
+        let clients = Micropayment::clients_by_server(&alice);
         assert_eq!(clients.len(), 2);
-        assert!(clients.contains(&2));
-        assert!(clients.contains(&3));
+        assert!(clients.contains(&bob));
+        assert!(clients.contains(&charlie));
     });
 }
 
 #[test]
 fn micropayment_statistics() {
     new_test_ext().execute_with(|| {
-        Micropayment::update_micropayment_information(&2, &1, 7);
-        Micropayment::update_micropayment_information(&4, &1, 3);
+        let alice = alice();
+        let bob = bob();
+        let charlie = charlie();
+        let dave = dave();
+        Micropayment::update_micropayment_information(&bob, &alice, 7);
+        Micropayment::update_micropayment_information(&dave, &alice, 3);
         run_to_block(3);
-        Micropayment::update_micropayment_information(&1, &2, 1);
-        Micropayment::update_micropayment_information(&3, &1, 8);
+        Micropayment::update_micropayment_information(&alice, &bob, 1);
+        Micropayment::update_micropayment_information(&charlie, &alice, 8);
         run_to_block(6);
-        Micropayment::update_micropayment_information(&3, &2, 9);
+        Micropayment::update_micropayment_information(&charlie, &bob, 9);
         run_to_block(9);
         let mut stats = Micropayment::micropayment_statistics();
-        stats.sort_by(|a, b| (*a).0.cmp(&(*b).0));
-        assert_eq!(stats[0], (1, 18, 3));
-        assert_eq!(stats[1], (2, 10, 2));
+        stats.sort_by(|a, b| (*a).1.cmp(&(*b).1));
+        assert_eq!(stats[0], (bob.clone(), 10, 2));
+        assert_eq!(stats[1], (alice.clone(), 18, 3));
         stats = Micropayment::micropayment_statistics();
         assert_eq!(stats.len(), 0); // the data should have been drained
     });

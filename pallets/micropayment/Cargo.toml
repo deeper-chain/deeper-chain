@@ -30,6 +30,7 @@ frame-benchmarking = { default-features = false, git = "https://github.com/parit
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 serde = { version = "1.0.101" }
+hex-literal = "0.3.1"
 
 [features]
 default = ['std']
