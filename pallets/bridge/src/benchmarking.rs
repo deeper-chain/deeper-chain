@@ -26,7 +26,10 @@ use frame_system::RawOrigin;
 use hex_literal::hex;
 pub use node_primitives::{AccountId, Signature};
 use sp_core::{sr25519, Hasher, H160};
+use sp_io::crypto::{sr25519_generate, sr25519_sign};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::{MultiSignature, MultiSigner};
+use sp_std::{convert::TryFrom, vec::Vec};
 use types::Status;
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -45,6 +48,18 @@ pub fn create_funded_user<T: Config>(
     T::Currency::make_free_balance_be(&user, balance);
     T::Currency::issue(balance);
     user
+}
+
+pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
+    //use sp_core::sr25519::Public;
+    // return
+    sr25519_generate(0.into(), Some(seed)).into()
+}
+
+pub fn create_sr25519_signature(payload: &[u8], pubkey: MultiSigner) -> MultiSignature {
+    let srpubkey = sr25519::Public::try_from(pubkey).unwrap();
+    let srsig = sr25519_sign(0.into(), &srpubkey, payload).unwrap();
+    srsig.into()
 }
 
 benchmarks! {
@@ -67,8 +82,9 @@ benchmarks! {
         let user = create_funded_user::<T>("user",USER_SEED, 100);
         let validator1 = create_funded_user::<T>("user",USER_SEED, 100);
         // TODO Create Account by using private of validator in bridge
-        //let pair = sr25519::Pair::from_seed(&hex!("73e79288db1c1b7d0ed3cb38d149f1de6c0a771406a3fee330c38b4e37643a9a"));
-        //let account_id = AccountPublic::from(pair.public()).into_account();
+        let signer = create_sr25519_pubkey(hex!("73e79288db1c1b7d0ed3cb38d149f1de6c0a771406a3fee330c38b4e37643a9a").to_vec());
+        let account_id: AccountId = AccountPublic::from(signer).into_account();
+        assert_eq!(account_id, validator1);
     }:  _(RawOrigin::Signed(validator1), message_id, eth_address, user,amount)
     verify {
         let message = Bridge::<T>::messages(message_id);

@@ -4598,6 +4598,7 @@ name = "pallet-micropayment"
 version = "3.0.0"
 dependencies = [
  "blake2-rfc",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

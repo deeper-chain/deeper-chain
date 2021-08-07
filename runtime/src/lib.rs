@@ -1463,6 +1463,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_credit, Credit);
             add_benchmark!(params, batches, pallet_eth_sub_bridge, Bridge);
             add_benchmark!(params, batches, pallet_deeper_node, DeeperNode);
+            add_benchmark!(params, batches, pallet_micropayment, Micropayment);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

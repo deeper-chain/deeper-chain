@@ -191,6 +191,7 @@ runtime-benchmarks = [
 	"pallet-credit/runtime-benchmarks",
 	"pallet-eth-sub-bridge/runtime-benchmarks",
 	"pallet-deeper-node/runtime-benchmarks",
+	"pallet-micropayment/runtime-benchmarks",
 	"frame-system-benchmarking",
 	"hex-literal",
 ]

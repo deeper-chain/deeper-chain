@@ -11,6 +11,12 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+//pub mod weights;
+use sp_std::prelude::*;
+//pub use weights::WeightInfo;
+
 pub(crate) const LOG_TARGET: &'static str = "micropayment";
 // syntactic sugar for logging.
 #[macro_export]
@@ -52,7 +58,7 @@ pub mod pallet {
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    type ChannelOf<T> = Chan<
+    pub type ChannelOf<T> = Chan<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         BalanceOf<T>,
