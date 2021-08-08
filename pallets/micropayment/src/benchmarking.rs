@@ -25,9 +25,7 @@ pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted
 use frame_support::traits::Currency;
 use frame_system::Module as System;
 use frame_system::RawOrigin;
-use sp_core::sr25519;
-use sp_core::sr25519::Signature;
-use sp_io::crypto::sr25519_sign;
+use hex_literal::hex;
 use sp_std::vec;
 
 /// Grab a funded user with balance_factor DPR.
@@ -37,12 +35,6 @@ pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) 
     T::Currency::make_free_balance_be(&user, balance);
     T::Currency::issue(balance);
     user
-}
-
-pub fn create_sr25519_signature(payload: &[u8], ac: &'static str) -> Signature {
-    let signer = get_from_seed::<sr25519::Public>(ac);
-    let srsig = sr25519_sign(0.into(), &signer, payload).unwrap();
-    srsig.into()
 }
 
 benchmarks! {
@@ -166,9 +158,7 @@ benchmarks! {
         let nonce: u64 = 0;
         let claim_amount = T::Currency::minimum_balance() * 10u32.into();
         let msg = Micropayment::<T>::construct_byte_array_and_hash(&server, nonce, session_id, amount);
-        println!("msg {:?}", msg);
-        let sig = create_sr25519_signature(&msg, "Bob");
-        let signature: [u8; 64] = sig.into();
+        let signature: [u8; 64] = hex!("eac2d8d9bc0c1a8b9b909fd42280a2687081ad02f5669e0efc0532073b90e1776252b8035bdb94863aae0cc99f507c69a12e5028387d33421cdbe4d7a9edcd85");
     }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, amount, signature.into())
     verify {
         // TODO

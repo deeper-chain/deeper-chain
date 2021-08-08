@@ -1029,11 +1029,20 @@ parameter_types! {
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
+pub struct DefaultAccountCreator;
+
+impl pallet_micropayment::AccountCreator<AccountId> for DefaultAccountCreator {
+    fn create_account(_s: &'static str) -> AccountId {
+        AccountId::default()
+    }
+}
+
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
+    type AccountCreator = DefaultAccountCreator;
 }
 
 parameter_types! {

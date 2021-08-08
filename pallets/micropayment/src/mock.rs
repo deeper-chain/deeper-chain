@@ -75,9 +75,9 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
-pub struct AccountCreatorMock;
+pub struct TestAccountCreator;
 
-impl crate::AccountCreator<AccountId> for AccountCreatorMock {
+impl crate::AccountCreator<AccountId> for TestAccountCreator {
     fn create_account(string: &'static str) -> AccountId {
         get_account_id_from_seed::<sr25519::Public>(string)
     }
@@ -92,7 +92,7 @@ impl pallet_micropayment::Config for Test {
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
-    type AccountCreator = AccountCreatorMock;
+    type AccountCreator = TestAccountCreator;
 }
 
 // Build genesis storage according to the mock runtime.
