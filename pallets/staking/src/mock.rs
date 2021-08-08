@@ -202,7 +202,7 @@ pub const CREDIT_ATTENUATION_STEP: u64 = 1;
 
 parameter_types! {
     pub const InitialCredit: u64 = INITIAL_CREDIT;
-    pub const CreditCapPerEra: u8 = 5;
+    pub const CreditCapTwoEras: u8 = 5;
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
@@ -213,7 +213,7 @@ impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type InitialCredit = InitialCredit;
-    type CreditCapPerEra = CreditCapPerEra;
+    type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
