@@ -19,7 +19,6 @@
 
 use super::*;
 use crate::pallet::ChannelOf;
-use crate::testing_utils::*;
 use crate::Module as Micropayment;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;

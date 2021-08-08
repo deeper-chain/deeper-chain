@@ -3765,6 +3765,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-indices",
+ "pallet-micropayment",
  "pallet-staking",
  "pallet-timestamp",
  "pallet-transaction-payment",

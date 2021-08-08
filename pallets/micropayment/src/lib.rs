@@ -13,7 +13,7 @@ mod tests;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
-#[cfg(any(feature = "runtime-benchmarks", test))]
+#[cfg(test)]
 pub mod testing_utils;
 
 //pub mod weights;
