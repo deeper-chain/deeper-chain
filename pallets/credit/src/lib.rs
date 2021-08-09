@@ -122,7 +122,7 @@ pub mod pallet {
         /// Minimum credit to delegate
         type MinCreditToDelegate: Get<u64>;
         /// mircropayment to credit factor:
-        type MicropaymentToCreditFactor: Get<u64>;
+        type MicropaymentToCreditFactor: Get<u128>;
         /// NodeInterface of deeper-node pallet
         type NodeInterface: NodeInterface<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
@@ -289,7 +289,7 @@ pub mod pallet {
             for (server_id, balance, _num_of_clients) in micropayment_vec {
                 let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
                 let mut score_delta: u64 = balance_num
-                    .checked_div(T::MicropaymentToCreditFactor::get() as u128)
+                    .checked_div(T::MicropaymentToCreditFactor::get())
                     .unwrap_or(0) as u64;
                 log!(
                     info,

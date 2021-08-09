@@ -178,13 +178,11 @@ impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
 
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
-    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
-    type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
 }
@@ -216,7 +214,7 @@ parameter_types! {
     pub const CreditCapTwoEras: u8 = 5;
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
-    pub const MicropaymentToCreditFactor: u64 = 1_000_000_000_000_000;
+    pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
@@ -277,7 +275,6 @@ impl pallet_timestamp::Config for Test {
 parameter_types! {
     pub const BondingDuration: EraIndex = 3;
     pub const UnsignedPriority: u64 = 1 << 20;
-    pub const MinSolutionScoreBump: Perbill = Perbill::zero();
 }
 
 thread_local! {
@@ -324,7 +321,6 @@ impl Config for Test {
     type BondingDuration = BondingDuration;
     type SessionInterface = Self;
     type Call = Call;
-    type MinSolutionScoreBump = MinSolutionScoreBump;
     type WeightInfo = ();
     type CreditInterface = Credit;
     type NodeInterface = DeeperNode;
