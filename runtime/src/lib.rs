@@ -1023,6 +1023,7 @@ impl pallet_eth_sub_bridge::Config for Runtime {
 
 parameter_types! {
     pub const SecsPerBlock: u32 = MILLISECS_PER_BLOCK as u32 / 1000;
+    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
 pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
@@ -1044,6 +1045,7 @@ impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
+    type DataPerDPR = DataPerDPR;
     type AccountCreator = DefaultAccountCreator;
     type WeightInfo = pallet_micropayment::weights::SubstrateWeight<Runtime>;
 }

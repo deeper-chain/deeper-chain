@@ -60,6 +60,11 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
         type SecsPerBlock: Get<u32>;
+
+        /// data traffic to DPR ratio
+        #[pallet::constant]
+        type DataPerDPR: Get<u64>;
+        
         /// Create Account trait for benchmarking
         type AccountCreator: AccountCreator<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.

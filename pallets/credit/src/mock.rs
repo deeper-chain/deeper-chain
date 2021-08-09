@@ -87,11 +87,13 @@ impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
 
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
+    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
+    type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
 }
