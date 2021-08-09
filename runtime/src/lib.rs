@@ -77,7 +77,6 @@ use static_assertions::const_assert;
 pub use pallet_eth_sub_bridge as bridge;
 pub use pallet_eth_sub_bridge::Call as BridgeCall;
 pub use pallet_micropayment;
-pub use pallet_template;
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
@@ -1020,10 +1019,6 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_template::Config for Runtime {
-    type Event = Event;
-}
-
 impl pallet_eth_sub_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
@@ -1036,8 +1031,6 @@ parameter_types! {
 }
 
 pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
-    //use sp_core::sr25519::Public;
-    // return
     sr25519_generate(0.into(), Some(seed)).into()
 }
 
@@ -1146,7 +1139,6 @@ construct_runtime!(
         Assets: pallet_assets::{Module, Call, Storage, Event<T>},
         Mmr: pallet_mmr::{Module, Storage},
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
-        TemplateModule: pallet_template::{Module, Call, Storage, Event<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
         Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>}
