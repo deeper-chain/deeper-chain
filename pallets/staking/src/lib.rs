@@ -511,9 +511,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// The overarching call type.
     type Call: Dispatchable + From<Call<Self>> + IsSubType<Call<Self>> + Clone;
 
-    /// The threshold of improvement that should be provided for a new solution to be accepted.
-    type MinSolutionScoreBump: Get<Perbill>;
-
     /// Weight information for extrinsics in this pallet.
     type WeightInfo: WeightInfo;
 
@@ -893,9 +890,6 @@ decl_module! {
         /// Set to 0 if slashes should be applied immediately, without opportunity for
         /// intervention.
         const SlashDeferDuration: EraIndex = T::SlashDeferDuration::get();
-
-        /// The threshold of improvement that should be provided for a new solution to be accepted.
-        const MinSolutionScoreBump: Perbill = T::MinSolutionScoreBump::get();
 
         type Error = Error<T>;
 

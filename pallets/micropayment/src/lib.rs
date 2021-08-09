@@ -64,7 +64,7 @@ pub mod pallet {
         /// data traffic to DPR ratio
         #[pallet::constant]
         type DataPerDPR: Get<u64>;
-
+        
         /// Create Account trait for benchmarking
         type AccountCreator: AccountCreator<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.

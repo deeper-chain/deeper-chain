@@ -25,6 +25,9 @@ pub mod currency {
     pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
     pub const DOLLARS: Balance = 100 * CENTS;
     pub const DPR: Balance = DOLLARS;
+    pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000 * DPR; // 6 billion DPR
+    pub const ERA_VALIDATOR_REWARD: u128 = 600 * DPR; // validator reward per era
+    pub const MICROPAYMENT_TO_CREDIT_FACTOR: u128 = DPR / 100_000; // 1 credit per 10 MB or 0.00001 DPR
 
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
         items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
@@ -36,7 +39,7 @@ pub mod time {
     use node_primitives::{BlockNumber, Moment};
 
     /// Since BABE is probabilistic this is the average expected block time that
-    /// we are targetting. Blocks will be produced at a minimum duration defined
+    /// we are targeting. Blocks will be produced at a minimum duration defined
     /// by `SLOT_DURATION`, but some slots will not be allocated to any
     /// authority and hence no block will be produced. We expect to have this
     /// block time on average following the defined slot duration and the value
@@ -55,26 +58,23 @@ pub mod time {
     pub const MILLISECS_PER_BLOCK: Moment = 5000;
     pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 
+    // These time units are defined in number of blocks.
+    pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+    pub const HOURS: BlockNumber = MINUTES * 60;
+    pub const DAYS: BlockNumber = HOURS * 24;
+
     pub const SLOT_DURATION: Moment = MILLISECS_PER_BLOCK;
 
-    pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
-    pub const GENESIS_BLOCK_REWARD: u128 = 90_000_000_000_000_000;
-    pub const REWARD_ADJUST_FACTOR: u128 = 77_760_000;
-    pub const REWARD_ADJUST_PERIOD: u32 = 4;
-    pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
-
-    // 1 in 4 blocks (on average, not counting collisions) will be primary BABE blocks.
-    pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-
     pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 240 * MINUTES;
+    
     pub const EPOCH_DURATION_IN_SLOTS: u64 = {
         const SLOT_FILL_RATE: f64 = MILLISECS_PER_BLOCK as f64 / SLOT_DURATION as f64;
 
         (EPOCH_DURATION_IN_BLOCKS as f64 * SLOT_FILL_RATE) as u64
     };
 
-    // These time units are defined in number of blocks.
-    pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
-    pub const HOURS: BlockNumber = MINUTES * 60;
-    pub const DAYS: BlockNumber = HOURS * 24;
+    pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+
+    // 1 in 4 blocks (on average, not counting collisions) will be primary BABE blocks.
+    pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 }
