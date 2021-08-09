@@ -24,9 +24,11 @@ pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted
 use frame_support::traits::Currency;
 use frame_system::Module as System;
 use frame_system::RawOrigin;
-use hex_literal::hex;
+//use hex_literal::hex;
+use codec::Encode;
+use sp_core::sr25519;
+use sp_io::crypto::sr25519_sign;
 use sp_std::vec;
-
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
     let user = T::AccountCreator::create_account(string);
@@ -156,11 +158,28 @@ benchmarks! {
         let session_id: u32 = 1;
         let nonce: u64 = 0;
         let claim_amount = T::Currency::minimum_balance() * 10u32.into();
-        let msg = Micropayment::<T>::construct_byte_array_and_hash(&server, nonce, session_id, amount);
-        let signature: [u8; 64] = hex!("eac2d8d9bc0c1a8b9b909fd42280a2687081ad02f5669e0efc0532073b90e1776252b8035bdb94863aae0cc99f507c69a12e5028387d33421cdbe4d7a9edcd85");
-    }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, amount, signature.into())
+        let msg = Micropayment::<T>::construct_byte_array_and_hash(&server, nonce, session_id, claim_amount);
+
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(&client.encode());
+        let pub_key = sr25519::Public::from_raw(pk);
+
+        let signature: [u8; 64] = sr25519_sign(0.into(), &pub_key, &msg).unwrap().into();
+    }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, claim_amount, signature.into())
     verify {
-        // TODO
+        let balance_of_chain = T::Currency::minimum_balance() * 20u32.into();
+        assert_eq!(
+            Micropayment::<T>::channel(&client, &server),
+            ChannelOf::<T> {
+                client: client.clone(),
+                server: server.clone(),
+                balance: balance_of_chain,
+                nonce: 0,
+                opened: 0u32.into(),
+                expiration: 720u32.into()
+            }
+        );
+
     }
 }
 
@@ -177,7 +196,7 @@ mod tests {
             assert_ok!(test_benchmark_close_channel::<Test>());
             assert_ok!(test_benchmark_close_expired_channels::<Test>());
             assert_ok!(test_benchmark_add_balance::<Test>());
-            assert_ok!(test_benchmark_claim_payment::<Test>());
+            //assert_ok!(test_benchmark_claim_payment::<Test>()); // Move to test.rs
         });
     }
 }

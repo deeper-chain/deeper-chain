@@ -88,6 +88,12 @@ pub use pallet_staking::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+type AccountPublic = <Signature as Verify>::Signer;
+use sp_io::crypto::sr25519_generate;
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::MultiSigner;
+use sp_std::{borrow::ToOwned, vec::Vec};
+
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
 use impls::Author;
@@ -1029,11 +1035,20 @@ parameter_types! {
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
+pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
+    //use sp_core::sr25519::Public;
+    // return
+    sr25519_generate(0.into(), Some(seed)).into()
+}
+
 pub struct DefaultAccountCreator;
 
 impl pallet_micropayment::AccountCreator<AccountId> for DefaultAccountCreator {
-    fn create_account(_s: &'static str) -> AccountId {
-        AccountId::default()
+    fn create_account(s: &'static str) -> AccountId {
+        let seed = "//".to_owned() + &s;
+        let signer = create_sr25519_pubkey(seed.as_bytes().to_vec());
+        let account_id: AccountId = AccountPublic::from(signer).into_account();
+        account_id
     }
 }
 
@@ -1043,6 +1058,7 @@ impl pallet_micropayment::Config for Runtime {
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
     type AccountCreator = DefaultAccountCreator;
+    type WeightInfo = pallet_micropayment::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {

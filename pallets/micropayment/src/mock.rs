@@ -93,6 +93,7 @@ impl pallet_micropayment::Config for Test {
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
+    type WeightInfo = ();
 }
 
 // Build genesis storage according to the mock runtime.

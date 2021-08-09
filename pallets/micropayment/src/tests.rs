@@ -4,6 +4,7 @@ use frame_support::{
     assert_ok,
     dispatch::{DispatchError, DispatchErrorWithPostInfo},
 };
+use hex_literal::hex;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
 
@@ -196,6 +197,29 @@ fn fn_add_balance() {
                 }
             );
         }
+    });
+}
+
+#[test]
+fn fn_claim_payment() {
+    new_test_ext().execute_with(|| {
+        // OK
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            bob(),
+            300,
+            3600
+        ));
+        let session_id: u32 = 1;
+        let nonce: u64 = 0;
+        let claim_amount = 30;
+        let msg = Micropayment::construct_byte_array_and_hash(&bob(), nonce, session_id, claim_amount);
+        println!("{:#02x?}", msg);
+        let signature: [u8; 64] = hex!("1a2157be0e159a600502c5c6435539672bcbce956355a1ca35201762fd1fb72e0b48e853e812011919e5d25b07e4056b9b98e6b2de612652d450bd14063a6185");
+        assert_ok!(Micropayment::claim_payment(
+            Origin::signed(bob()),
+            alice(), session_id, claim_amount, signature.into()
+        ));
     });
 }
 
