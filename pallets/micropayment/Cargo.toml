@@ -24,8 +24,12 @@ sp-core = {default-features = false, git = "https://github.com/paritytech/substr
 sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-std = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+# Optional imports for benchmarking
+frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0", optional = true }
+hex-literal = "0.3.1"
 
 [dev-dependencies]
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 serde = { version = "1.0.101" }
 
 [features]
@@ -42,4 +46,7 @@ std = [
     'node-primitives/std',
 	'pallet-balances/std',
 	'log/std',
+]
+runtime-benchmarks = [
+	"frame-benchmarking",
 ]

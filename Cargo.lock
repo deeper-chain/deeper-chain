@@ -3765,6 +3765,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-im-online",
  "pallet-indices",
+ "pallet-micropayment",
  "pallet-staking",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -4410,6 +4411,7 @@ dependencies = [
 name = "pallet-credit"
 version = "3.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
@@ -4430,6 +4432,7 @@ dependencies = [
 name = "pallet-deeper-node"
 version = "3.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -4476,8 +4479,10 @@ dependencies = [
 name = "pallet-eth-sub-bridge"
 version = "3.0.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "node-primitives",
  "pallet-balances 3.0.0",
  "pallet-timestamp",
@@ -4594,8 +4599,10 @@ name = "pallet-micropayment"
 version = "3.0.0"
 dependencies = [
  "blake2-rfc",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "hex-literal",
  "log",
  "node-primitives",
  "pallet-balances 3.0.0",

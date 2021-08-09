@@ -88,6 +88,12 @@ pub use pallet_staking::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+type AccountPublic = <Signature as Verify>::Signer;
+use sp_io::crypto::sr25519_generate;
+use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::MultiSigner;
+use sp_std::{borrow::ToOwned, vec::Vec};
+
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
 use impls::Author;
@@ -1021,6 +1027,7 @@ impl pallet_template::Config for Runtime {
 impl pallet_eth_sub_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type WeightInfo = pallet_eth_sub_bridge::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1028,11 +1035,30 @@ parameter_types! {
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 
+pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
+    //use sp_core::sr25519::Public;
+    // return
+    sr25519_generate(0.into(), Some(seed)).into()
+}
+
+pub struct DefaultAccountCreator;
+
+impl pallet_micropayment::AccountCreator<AccountId> for DefaultAccountCreator {
+    fn create_account(s: &'static str) -> AccountId {
+        let seed = "//".to_owned() + &s;
+        let signer = create_sr25519_pubkey(seed.as_bytes().to_vec());
+        let account_id: AccountId = AccountPublic::from(signer).into_account();
+        account_id
+    }
+}
+
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
+    type AccountCreator = DefaultAccountCreator;
+    type WeightInfo = pallet_micropayment::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1049,6 +1075,7 @@ impl pallet_deeper_node::Config for Runtime {
     type MaxDurationDays = MaxDurationDays;
     type DayToBlocknum = DayToBlocknum;
     type MaxIpLength = MaxIpLength;
+    type WeightInfo = pallet_deeper_node::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1069,6 +1096,7 @@ impl pallet_credit::Config for Runtime {
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
+    type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1457,6 +1485,10 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_treasury, Treasury);
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
+            add_benchmark!(params, batches, pallet_credit, Credit);
+            add_benchmark!(params, batches, pallet_eth_sub_bridge, Bridge);
+            add_benchmark!(params, batches, pallet_deeper_node, DeeperNode);
+            add_benchmark!(params, batches, pallet_micropayment, Micropayment);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

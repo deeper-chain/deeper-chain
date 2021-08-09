@@ -11,6 +11,15 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+pub mod testing_utils;
+
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+use sp_std::prelude::*; // for runtime-benchmarks
+
+pub mod weights;
+
 pub(crate) const LOG_TARGET: &'static str = "micropayment";
 // syntactic sugar for logging.
 #[macro_export]
@@ -23,8 +32,16 @@ macro_rules! log {
 	};
 }
 
+/// This is for benchmarking
+pub trait AccountCreator<AccountId> {
+    /// Get the validators from session.
+    fn create_account(string: &'static str) -> AccountId;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
+    use crate::weights::WeightInfo;
+    use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
     use frame_support::traits::{Currency, Get, Vec};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
@@ -47,12 +64,17 @@ pub mod pallet {
         /// data traffic to DPR ratio
         #[pallet::constant]
         type DataPerDPR: Get<u64>;
+
+        /// Create Account trait for benchmarking
+        type AccountCreator: AccountCreator<Self::AccountId>;
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
     }
 
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    type ChannelOf<T> = Chan<
+    pub type ChannelOf<T> = Chan<
         <T as frame_system::Config>::AccountId,
         <T as frame_system::Config>::BlockNumber,
         BalanceOf<T>,
@@ -160,7 +182,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::open_channel())]
         // duration is in units of second
         pub fn open_channel(
             origin: OriginFor<T>,
@@ -211,7 +233,7 @@ pub mod pallet {
         }
 
         // make sure claim your payment before close the channel
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::close_channel())]
         pub fn close_channel(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -263,7 +285,7 @@ pub mod pallet {
         }
 
         // client close all expired channels on chain
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::close_expired_channels())]
         pub fn close_expired_channels(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             // client can only close expired channel.
             let client = ensure_signed(origin)?;
@@ -287,7 +309,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::add_balance())]
         pub fn add_balance(
             origin: OriginFor<T>,
             server: T::AccountId,
@@ -314,7 +336,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::claim_payment())]
         // TODO: instead of transfer from client, transfer from client's reserved token
         pub fn claim_payment(
             origin: OriginFor<T>,
@@ -433,7 +455,7 @@ pub mod pallet {
         }
 
         // construct data from |server_addr|session_id|amount| and hash it
-        fn construct_byte_array_and_hash(
+        pub fn construct_byte_array_and_hash(
             address: &T::AccountId,
             nonce: u64,
             session_id: u32,

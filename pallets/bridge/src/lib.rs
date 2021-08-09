@@ -13,6 +13,12 @@ mod tests;
 
 mod types;
 
+#[cfg(any(feature = "runtime-benchmarks", test))]
+pub mod benchmarking;
+use sp_std::prelude::*;
+pub mod weights;
+use weights::WeightInfo;
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -40,6 +46,8 @@ pub mod pallet {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        /// Weight information for extrinsics in this pallet.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -246,7 +254,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         // initiate substrate -> ethereum transfer.
         // create transfer and emit the RelayMessage event
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_transfer())]
         pub fn set_transfer(
             origin: OriginFor<T>,
             to: H160,
@@ -279,7 +287,7 @@ pub mod pallet {
         }
 
         // ethereum-side multi-signed mint operation
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::multi_signed_mint())]
         pub fn multi_signed_mint(
             origin: OriginFor<T>,
             message_id: T::Hash,
@@ -313,7 +321,7 @@ pub mod pallet {
         }
 
         // change maximum tx limit
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_limits())]
         pub fn update_limits(
             origin: OriginFor<T>,
             max_tx_value: BalanceOf<T>,
@@ -351,7 +359,7 @@ pub mod pallet {
         }
 
         // validator`s response to RelayMessage
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::approve_transfer())]
         pub fn approve_transfer(
             origin: OriginFor<T>,
             message_id: T::Hash,
@@ -366,7 +374,7 @@ pub mod pallet {
         }
 
         // each validator calls it to update whole set of validators
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_validator_list())]
         pub fn update_validator_list(
             origin: OriginFor<T>,
             message_id: T::Hash,
@@ -394,7 +402,7 @@ pub mod pallet {
         }
 
         // each validator calls it to pause the bridge
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::pause_bridge())]
         pub fn pause_bridge(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let validator = ensure_signed(origin)?;
             Self::check_validator(validator.clone())?;
@@ -423,7 +431,7 @@ pub mod pallet {
         }
 
         // each validator calls it to resume the bridge
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::resume_bridge())]
         pub fn resume_bridge(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let validator = ensure_signed(origin)?;
             Self::check_validator(validator.clone())?;
@@ -448,7 +456,7 @@ pub mod pallet {
         }
 
         //confirm burn from validator
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::confirm_transfer())]
         pub fn confirm_transfer(
             origin: OriginFor<T>,
             message_id: T::Hash,
@@ -470,7 +478,7 @@ pub mod pallet {
         }
 
         //cancel burn from validator
-        #[pallet::weight(10_1000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::cancel_transfer())]
         pub fn cancel_transfer(
             origin: OriginFor<T>,
             message_id: T::Hash,
@@ -837,7 +845,6 @@ pub mod pallet {
         fn check_validator(validator: T::AccountId) -> Result<(), &'static str> {
             let is_trusted = <Validators<T>>::contains_key(validator);
             ensure!(is_trusted, "Only validators can call this function");
-
             Ok(())
         }
 

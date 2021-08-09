@@ -129,6 +129,7 @@ impl pallet_credit::Config for Test {
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
+    type WeightInfo = ();
 }
 
 // Build genesis storage according to the mock runtime.

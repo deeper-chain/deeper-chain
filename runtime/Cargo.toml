@@ -35,6 +35,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", 
 sp-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 sp-version = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
+sp-io ={ default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"  }
 
 # frame dependencies
 frame-executive = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
@@ -133,6 +134,7 @@ std = [
 	"serde",
 	"pallet-session/std",
 	"sp-api/std",
+	"sp-io/std",
 	"sp-runtime/std",
 	"sp-staking/std",
 	"pallet-staking/std",
@@ -188,6 +190,10 @@ runtime-benchmarks = [
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
+	"pallet-credit/runtime-benchmarks",
+	"pallet-eth-sub-bridge/runtime-benchmarks",
+	"pallet-deeper-node/runtime-benchmarks",
+	"pallet-micropayment/runtime-benchmarks",
 	"frame-system-benchmarking",
 	"hex-literal",
 ]
