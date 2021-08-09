@@ -77,6 +77,14 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+pub struct TestAccountCreator;
+
+impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
+    fn create_account(_string: &'static str) -> u64 {
+        0
+    }
+}
+
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
@@ -86,6 +94,8 @@ impl pallet_micropayment::Config for Test {
     type Currency = Balances;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
+    type AccountCreator = TestAccountCreator;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -101,6 +111,7 @@ impl pallet_deeper_node::Config for Test {
     type MaxDurationDays = MaxDurationDays;
     type DayToBlocknum = DayToBlocknum;
     type MaxIpLength = MaxIpLength;
+    type WeightInfo = ();
 }
 
 pub const MILLISECS_PER_BLOCK: Moment = 5000;

@@ -3972,7 +3972,6 @@ dependencies = [
  "pallet-society",
  "pallet-staking",
  "pallet-sudo",
- "pallet-template",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-transaction-payment",
@@ -4817,19 +4816,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "pallet-template"
-version = "2.0.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
 ]
 
 [[package]]
