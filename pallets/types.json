@@ -120,5 +120,11 @@
     "rank_in_initial_credit_level": "u32",
     "number_of_referees": "u8",
     "expiration": "BlockNumber"
+  },
+  "DelegatorData": {
+    "delegated_validators": "Vec<AccountId>"
+  },
+  "ValidatorData": {
+    "delegators": "Vec<AccountId>"
   }
 }
