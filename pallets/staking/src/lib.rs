@@ -479,8 +479,6 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     /// See [Era payout](./index.html#era-payout).
     type RewardRemainder: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
-    type EraValidatorReward: Get<BalanceOf<Self>>;
-
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
@@ -580,6 +578,9 @@ decl_storage! {
 
         /// The ideal number of staking participants.
         pub ValidatorCount get(fn validator_count) config(): u32;
+
+        /// Validator Reward Per Era
+        pub EraValidatorReward get(fn era_validator_reward) config(): BalanceOf<T>;
 
         /// Minimum number of staking participants before emergency conditions are imposed.
         pub MinimumValidatorCount get(fn minimum_validator_count) config(): u32;
@@ -1760,7 +1761,7 @@ impl<T: Config> Module<T> {
         if remainder_mining_reward <= T::ExistentialDeposit::get() {
             return;
         }
-        let era_payout = cmp::min(T::EraValidatorReward::get(), remainder_mining_reward);
+        let era_payout = cmp::min(Self::era_validator_reward(), remainder_mining_reward);
         let mut total_payout = Zero::zero();
         let era_reward_points = <ErasRewardPoints<T>>::get(&era);
         let total_reward_points = era_reward_points.total;

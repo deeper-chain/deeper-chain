@@ -306,14 +306,12 @@ pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 parameter_types! {
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     pub const MaxDelegates: usize = 10;
-    pub const EraValidatorReward: Balance = TOTAL_MINING_REWARD / 100_000;
 }
 
 impl Config for Test {
     type Currency = Balances;
     type UnixTime = Timestamp;
     type RewardRemainder = RewardRemainderMock;
-    type EraValidatorReward = EraValidatorReward;
     type Event = Event;
     type Slash = ();
     type Reward = ();
@@ -637,6 +635,7 @@ impl ExtBuilder {
             stakers: stakers,
             delegations: delegations,
             validator_count: self.validator_count,
+            era_validator_reward: TOTAL_MINING_REWARD / 100_000,
             minimum_validator_count: self.minimum_validator_count,
             invulnerables: self.invulnerables,
             slash_reward_fraction: Perbill::from_percent(10),
