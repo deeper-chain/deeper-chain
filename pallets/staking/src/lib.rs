@@ -1270,6 +1270,20 @@ decl_module! {
             }
         }
 
+        /// Sets the validator reward per era.
+        ///
+        /// The dispatch origin must be Root.
+        ///
+        /// # <weight>
+        /// Weight: O(1)
+        /// Write: EraValidatorReward
+        /// # </weight>
+        #[weight = T::WeightInfo::set_era_validator_reward()]
+        fn set_era_validator_reward(origin, #[compact] value: BalanceOf<T>) {
+            ensure_root(origin)?;
+            EraValidatorReward::<T>::put(value);
+        }
+
         /// Sets the ideal number of validators.
         ///
         /// The dispatch origin must be Root.

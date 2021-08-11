@@ -57,6 +57,7 @@ pub trait WeightInfo {
     fn chill() -> Weight;
     fn set_payee() -> Weight;
     fn set_controller() -> Weight;
+    fn set_era_validator_reward() -> Weight;
     fn set_validator_count() -> Weight;
     fn increase_validator_count(n: u32) -> Weight;
     fn scale_validator_count(n: u32) -> Weight;
@@ -144,6 +145,9 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
         (37_572_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
+    fn set_era_validator_reward() -> Weight {
+        (3_030_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_validator_count() -> Weight {
         (3_030_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -306,6 +310,9 @@ impl WeightInfo for () {
         (37_572_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
+    }
+    fn set_era_validator_reward() -> Weight {
+        (3_030_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_validator_count() -> Weight {
         (3_030_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
