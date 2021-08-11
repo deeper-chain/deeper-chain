@@ -465,7 +465,6 @@ parameter_types! {
     pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
     pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
-    pub const EraValidatorReward: Balance = ERA_VALIDATOR_REWARD;
     pub const MaxDelegates: usize = 10;
 }
 
@@ -484,7 +483,6 @@ impl pallet_staking::Config for Runtime {
     type UnixTime = Timestamp;
     type NumberToCurrency = NumberCurrencyConverter;
     type RewardRemainder = Treasury;
-    type EraValidatorReward = EraValidatorReward;
     type Event = Event;
     type Slash = Treasury; // send the slashed funds to the treasury.
     type Reward = (); // rewards are minted from the void

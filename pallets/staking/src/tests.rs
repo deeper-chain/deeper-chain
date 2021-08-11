@@ -2571,5 +2571,23 @@ fn increase_mining_reward() {
             Staking::remainder_mining_reward().unwrap(),
             TOTAL_MINING_REWARD + 10000
         );
+    });  
+}
+
+#[test]
+fn set_era_validator_reward() {
+    ExtBuilder::default().build().execute_with(|| {
+        assert_noop!(
+            Staking::set_era_validator_reward(Origin::signed(1), 10000),
+            BadOrigin
+        );
+        assert_ok!(Staking::set_era_validator_reward(
+            RawOrigin::Root.into(),
+            10000
+        ));
+        assert_eq!(
+            Staking::era_validator_reward(),
+            10000
+        );
     });
 }
