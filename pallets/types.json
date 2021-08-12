@@ -124,7 +124,9 @@
   "DelegatorData": {
     "delegated_validators": "Vec<AccountId>"
   },
+  "EraIndex": "u32",
   "ValidatorData": {
-    "delegators": "Vec<AccountId>"
+    "delegators": "Vec<AccountId>",
+    "elected_era": "EraIndex"
   }
 }

@@ -67,8 +67,8 @@ use sp_staking::{
     SessionIndex,
 };
 use sp_std::{
-    cmp, collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, convert::From,
-    convert::TryInto, prelude::*,
+    cmp, cmp::Ordering, collections::btree_map::BTreeMap, collections::btree_set::BTreeSet,
+    convert::From, convert::TryInto, prelude::*,
 };
 pub use weights::WeightInfo;
 
@@ -525,6 +525,7 @@ pub struct DelegatorData<AccountId> {
 #[derive(Decode, Encode, Default)]
 pub struct ValidatorData<AccountId: Ord> {
     pub delegators: BTreeSet<AccountId>,
+    pub elected_era: EraIndex,
 }
 
 /// Mode of era-forcing.
@@ -1594,7 +1595,8 @@ decl_module! {
                 } else {
                     let mut delegators = BTreeSet::new();
                     delegators.insert(delegator.clone());
-                    <CandidateValidators<T>>::insert(validator, ValidatorData { delegators });
+                    let elected_era = EraIndex::default();
+                    <CandidateValidators<T>>::insert(validator, ValidatorData { delegators, elected_era });
                 }
             }
 
@@ -1945,12 +1947,14 @@ impl<T: Config> Module<T> {
     ///
     /// If the election has been successful, It passes the new set upwards.
     fn elect(current_era: EraIndex) -> Option<Vec<T::AccountId>> {
-        let mut validators: Vec<(T::AccountId, u32)> = Validators::<T>::iter()
+        let mut validators: Vec<(T::AccountId, u32, EraIndex)> = Validators::<T>::iter()
             .filter(|(validator, _)| Self::trusted_validator(&validator))
             .map(|(validator, _)| {
+                let candidate_validator = Self::candidate_validators(&validator);
                 (
                     validator.clone(),
-                    Self::candidate_validators(validator).delegators.len() as u32,
+                    candidate_validator.delegators.len() as u32,
+                    candidate_validator.elected_era,
                 )
             })
             .collect();
@@ -1963,11 +1967,16 @@ impl<T: Config> Module<T> {
             );
             None
         } else {
-            validators.sort_by(|a, b| a.1.cmp(&b.1).reverse());
+            validators.sort_by(|a, b| Self::compare(&(a.1, a.2), &(b.1, b.2)));
             let truncated = validators.len() > Self::validator_count() as usize;
             validators.truncate(Self::validator_count() as usize);
             let elected_validators: Vec<T::AccountId> =
-                validators.iter().map(|(v, _)| (*v).clone()).collect();
+                validators.iter().map(|(v, _, _)| (*v).clone()).collect();
+            for elected_validator in &elected_validators {
+                <CandidateValidators<T>>::mutate(&elected_validator, |validator_data| {
+                    validator_data.elected_era = current_era + 1; // makes sure it's not 0
+                });
+            }
             log!(
                 info,
                 "💸 new validator set of size {:?} has been elected for era {:?}\n 
@@ -2003,6 +2012,14 @@ impl<T: Config> Module<T> {
             }
             ErasTotalStake::<T>::insert(&current_era, total_stake);
             Some(elected_validators)
+        }
+    }
+
+    fn compare(a: &(u32, EraIndex), b: &(u32, EraIndex)) -> Ordering {
+        match a.1.cmp(&b.1) {
+            Ordering::Less => Ordering::Less,
+            Ordering::Greater => Ordering::Greater,
+            Ordering::Equal => b.0.cmp(&a.0),
         }
     }
 
