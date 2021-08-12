@@ -2467,10 +2467,14 @@ fn delegate() {
                 Staking::delegate(Origin::signed(1000), vec![4, 6]),
                 Error::<Test>::CreditTooLow
             );
+            // 1001 is the only delegator
+            assert_eq!(Staking::delegator_count(), 1);
 
             // TEST1： delegate to one validator
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
+            // delegator count does not change since 1001 is the existing one
+            assert_eq!(Staking::delegator_count(), 1);
             // check delegated info
             let delegator_data = Staking::delegators(1001);
             assert_eq!(delegator_data.delegated_validators, vec![11]);
@@ -2483,6 +2487,8 @@ fn delegate() {
                 Origin::signed(1002),
                 vec![11, 21, 31, 41]
             ));
+            // 1001 and 1002 are both delegators now
+            assert_eq!(Staking::delegator_count(), 2);
             // check delegator data
             let delegator_data = Staking::delegators(1002);
             assert_eq!(delegator_data.delegated_validators, vec![11, 21, 31, 41]);
@@ -2513,6 +2519,8 @@ fn delegate() {
                 vec![11, 21, 31, 41]
             ));
             assert_ok!(Staking::delegate(Origin::signed(1003), vec![11]));
+            // 1001, 1002 and 1003 are all delegators now
+            assert_eq!(Staking::delegator_count(), 3);
             assert_eq!(Staking::delegators(1003).delegated_validators, vec![11]);
             assert!(Staking::candidate_validators(11).delegators.contains(&1003));
             assert!(!Staking::candidate_validators(21).delegators.contains(&1003));
@@ -2530,8 +2538,10 @@ fn undelegate() {
             // TEST1： undelegate
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
+            assert_eq!(Staking::delegator_count(), 1);
             // undelegate after calling delegate()
             assert_ok!(Staking::undelegate(Origin::signed(1001)));
+            assert_eq!(Staking::delegator_count(), 0);
             assert_eq!(
                 Staking::candidate_validators(11).delegators.is_empty(),
                 true

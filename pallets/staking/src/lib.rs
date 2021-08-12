@@ -714,6 +714,9 @@ decl_storage! {
         /// delegator -> DelegatorData
         Delegators get(fn delegators): map hasher(blake2_128_concat) T::AccountId => DelegatorData<T::AccountId>;
 
+        /// delegator count
+        DelegatorCount get (fn delegator_count): u32;
+
         /// EraIndex -> validators
         ErasValidators get(fn eras_validators): map hasher(blake2_128_concat) EraIndex => Vec<T::AccountId>;
 
@@ -1575,12 +1578,16 @@ decl_module! {
                 ensure!(<Validators<T>>::contains_key(&validator), Error::<T>::NotValidator);
             }
 
+            let delegator_existing = <Delegators<T>>::contains_key(&delegator);
             let old_delegator_data = Self::delegators(&delegator);
 
             let delegator_data = DelegatorData {
                 delegated_validators: validators.clone(),
             };
             <Delegators<T>>::insert(&delegator, delegator_data);
+            if !delegator_existing {
+                DelegatorCount::mutate(|count| *count = *count + 1);
+            }
 
             for validator in &old_delegator_data.delegated_validators {
                 <CandidateValidators<T>>::mutate(validator, |v| v.delegators.remove(&delegator));
@@ -2125,6 +2132,7 @@ impl<T: Config> Module<T> {
     }
 
     fn _undelegate(delegator: &T::AccountId) {
+        let delegator_existing = <Delegators<T>>::contains_key(&delegator);
         for validator in Self::delegators(delegator).delegated_validators {
             <CandidateValidators<T>>::mutate(&validator, |validator_data| {
                 validator_data.delegators.remove(delegator);
@@ -2135,6 +2143,9 @@ impl<T: Config> Module<T> {
             }
         }
         <Delegators<T>>::remove(delegator);
+        if delegator_existing {
+            DelegatorCount::mutate(|count| *count = *count - 1);
+        }
     }
 }
 

@@ -305,7 +305,7 @@ pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 
 parameter_types! {
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
-    pub const MaxDelegates: usize = 1;
+    pub const MaxDelegates: usize = 10;
 }
 
 impl Config for Test {
