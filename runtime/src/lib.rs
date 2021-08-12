@@ -465,7 +465,7 @@ parameter_types! {
     pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
     pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
-    pub const MaxDelegates: usize = 10;
+    pub const MaxDelegates: usize = 1;
 }
 
 pub struct NumberCurrencyConverter;

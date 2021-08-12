@@ -155,6 +155,8 @@ pub mod pallet {
         ServerRegionAdded(T::AccountId, CountryRegion, T::BlockNumber, u64),
         // remove account from a region's server list
         ServerRegionRemoved(T::AccountId, CountryRegion),
+
+        ImOnline(T::AccountId, T::BlockNumber),
     }
 
     // Errors inform users that something went wrong.
@@ -295,11 +297,13 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::im_online())]
         pub fn im_online(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ImOnline::<T>::insert(&sender, <frame_system::Module<T>>::block_number());
+            let current_block = <frame_system::Module<T>>::block_number();
+            ImOnline::<T>::insert(&sender, current_block.clone());
             if !OnboardTime::<T>::contains_key(&sender) {
-                OnboardTime::<T>::insert(&sender, <frame_system::Module<T>>::block_number());
-                DevicesOnboard::<T>::mutate(|devices| devices.push(sender));
+                OnboardTime::<T>::insert(&sender, current_block.clone());
+                DevicesOnboard::<T>::mutate(|devices| devices.push(sender.clone()));
             }
+            Self::deposit_event(Event::ImOnline(sender, current_block));
             Ok(().into())
         }
     }
