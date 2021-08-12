@@ -302,7 +302,6 @@ fn no_candidate_emergency_condition() {
 #[test]
 fn delegators_also_get_slashed() {
     ExtBuilder::default().build_and_execute(|| {
-        mock::start_active_era(1);
         let slash_percent = Perbill::from_percent(5);
         let initial_exposure = Staking::eras_stakers(active_era(), 11);
         // 1001 is a delegator for 11
@@ -697,7 +696,7 @@ fn bond_extra_and_withdraw_unbonded_works() {
         );
 
         assert_eq!(
-            Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
+            Staking::eras_stakers(Staking::active_era().unwrap().index, 21),
             Exposure {
                 total: 1000,
                 own: 1000,
@@ -1514,14 +1513,14 @@ fn slash_in_old_span_does_not_deselect() {
     ExtBuilder::default().build_and_execute(|| {
         mock::start_active_era(1);
 
-        assert!(<Validators<Test>>::contains_key(11));
-        assert!(Session::validators().contains(&11));
+        assert!(<Validators<Test>>::contains_key(21));
+        assert!(Session::validators().contains(&21));
 
         on_offence_now(
             &[OffenceDetails {
                 offender: (
-                    11,
-                    Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
+                    21,
+                    Staking::eras_stakers(Staking::active_era().unwrap().index, 21),
                 ),
                 reporters: vec![],
             }],
@@ -1529,15 +1528,15 @@ fn slash_in_old_span_does_not_deselect() {
         );
 
         assert_eq!(Staking::force_era(), Forcing::ForceNew);
-        assert!(!<Validators<Test>>::contains_key(11));
+        assert!(!<Validators<Test>>::contains_key(21));
 
         mock::start_active_era(2);
 
-        Staking::validate(Origin::signed(10), Default::default()).unwrap();
+        Staking::validate(Origin::signed(20), Default::default()).unwrap();
         Staking::delegate(Origin::signed(1001), vec![11]).unwrap();
         assert_eq!(Staking::force_era(), Forcing::NotForcing);
-        assert!(<Validators<Test>>::contains_key(11));
-        assert!(!Session::validators().contains(&11));
+        assert!(<Validators<Test>>::contains_key(21));
+        assert!(!Session::validators().contains(&21));
 
         mock::start_active_era(3);
 
@@ -1547,8 +1546,8 @@ fn slash_in_old_span_does_not_deselect() {
         on_offence_in_era(
             &[OffenceDetails {
                 offender: (
-                    11,
-                    Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
+                    21,
+                    Staking::eras_stakers(Staking::active_era().unwrap().index, 21),
                 ),
                 reporters: vec![],
             }],
@@ -1558,14 +1557,14 @@ fn slash_in_old_span_does_not_deselect() {
 
         // not forcing for zero-slash and previous span.
         assert_eq!(Staking::force_era(), Forcing::NotForcing);
-        assert!(<Validators<Test>>::contains_key(11));
-        assert!(Session::validators().contains(&11));
+        assert!(<Validators<Test>>::contains_key(21));
+        assert!(Session::validators().contains(&21));
 
         on_offence_in_era(
             &[OffenceDetails {
                 offender: (
-                    11,
-                    Staking::eras_stakers(Staking::active_era().unwrap().index, 11),
+                    21,
+                    Staking::eras_stakers(Staking::active_era().unwrap().index, 21),
                 ),
                 reporters: vec![],
             }],
@@ -1576,8 +1575,8 @@ fn slash_in_old_span_does_not_deselect() {
 
         // or non-zero.
         assert_eq!(Staking::force_era(), Forcing::NotForcing);
-        assert!(<Validators<Test>>::contains_key(11));
-        assert!(Session::validators().contains(&11));
+        assert!(<Validators<Test>>::contains_key(21));
+        assert!(Session::validators().contains(&21));
     });
 }
 
@@ -1845,8 +1844,6 @@ fn garbage_collection_after_slashing() {
 fn garbage_collection_on_window_pruning() {
     // ensures that `ValidatorSlashInEra` are cleared after `BondingDuration`.
     ExtBuilder::default().build_and_execute(|| {
-        mock::start_active_era(1);
-
         assert_eq!(Balances::free_balance(11), 1000);
         let now = Staking::active_era().unwrap().index;
 
@@ -1960,12 +1957,6 @@ fn deferred_slashes_are_deferred() {
     ExtBuilder::default()
         .slash_defer_duration(2)
         .build_and_execute(|| {
-            mock::start_active_era(1);
-
-            assert_eq!(Balances::free_balance(11), 1000);
-
-            assert_eq!(Balances::free_balance(101), 2000);
-
             on_offence_now(
                 &[OffenceDetails {
                     offender: (
@@ -1977,6 +1968,12 @@ fn deferred_slashes_are_deferred() {
                 &[Perbill::from_percent(10)],
             );
 
+            mock::start_active_era(1);
+
+            assert_eq!(Balances::free_balance(11), 1000);
+
+            assert_eq!(Balances::free_balance(101), 2000);
+
             assert_eq!(Balances::free_balance(11), 1000);
             assert_eq!(Balances::free_balance(101), 2000);
 
@@ -1986,15 +1983,10 @@ fn deferred_slashes_are_deferred() {
             assert_eq!(Balances::free_balance(101), 2000);
 
             mock::start_active_era(3);
-
-            assert_eq!(Balances::free_balance(11), 1000);
-            assert_eq!(Balances::free_balance(101), 2000);
-
             // at the start of era 4, slashes from era 1 are processed,
             // after being deferred for at least 2 full eras.
-            mock::start_active_era(4);
-
             assert_eq!(Balances::free_balance(11), 900);
+            assert_eq!(Balances::free_balance(101), 2000);
         })
 }
 
@@ -2005,27 +1997,27 @@ fn remove_deferred() {
         .build_and_execute(|| {
             mock::start_active_era(1);
 
-            assert_eq!(Balances::free_balance(11), 1000);
+            assert_eq!(Balances::free_balance(21), 2000);
 
-            let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 11);
+            let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 21);
             assert_eq!(Balances::free_balance(101), 2000);
 
             on_offence_now(
                 &[OffenceDetails {
-                    offender: (11, exposure.clone()),
+                    offender: (21, exposure.clone()),
                     reporters: vec![],
                 }],
                 &[Perbill::from_percent(10)],
             );
 
-            assert_eq!(Balances::free_balance(11), 1000);
+            assert_eq!(Balances::free_balance(21), 2000);
             assert_eq!(Balances::free_balance(101), 2000);
 
             mock::start_active_era(2);
 
             on_offence_in_era(
                 &[OffenceDetails {
-                    offender: (11, exposure.clone()),
+                    offender: (21, exposure.clone()),
                     reporters: vec![],
                 }],
                 &[Perbill::from_percent(15)],
@@ -2040,12 +2032,12 @@ fn remove_deferred() {
 
             assert_ok!(Staking::cancel_deferred_slash(Origin::root(), 1, vec![0]));
 
-            assert_eq!(Balances::free_balance(11), 1000);
+            assert_eq!(Balances::free_balance(21), 2000);
             assert_eq!(Balances::free_balance(101), 2000);
 
             mock::start_active_era(3);
 
-            assert_eq!(Balances::free_balance(11), 1000);
+            assert_eq!(Balances::free_balance(21), 2000);
             assert_eq!(Balances::free_balance(101), 2000);
 
             // at the start of era 4, slashes from era 1 are processed,
@@ -2053,13 +2045,13 @@ fn remove_deferred() {
             mock::start_active_era(4);
 
             // the first slash for 10% was cancelled, so no effect.
-            assert_eq!(Balances::free_balance(11), 1000);
+            assert_eq!(Balances::free_balance(21), 2000);
             assert_eq!(Balances::free_balance(101), 2000);
 
             mock::start_active_era(5);
 
-            // 5% slash (15 - 10) processed now.
-            assert_eq!(Balances::free_balance(11), 950);
+            // 5% slash (15% - 10%) of the active bond 1000 processed now.
+            assert_eq!(Balances::free_balance(21), 1950);
         })
 }
 
@@ -2072,12 +2064,12 @@ fn remove_multi_deferred() {
 
             assert_eq!(Balances::free_balance(11), 1000);
 
-            let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 11);
+            let exposure = Staking::eras_stakers(Staking::active_era().unwrap().index, 21);
             assert_eq!(Balances::free_balance(101), 2000);
 
             on_offence_now(
                 &[OffenceDetails {
-                    offender: (11, exposure.clone()),
+                    offender: (21, exposure.clone()),
                     reporters: vec![],
                 }],
                 &[Perbill::from_percent(10)],
@@ -2085,10 +2077,7 @@ fn remove_multi_deferred() {
 
             on_offence_now(
                 &[OffenceDetails {
-                    offender: (
-                        21,
-                        Staking::eras_stakers(Staking::active_era().unwrap().index, 21),
-                    ),
+                    offender: (31, exposure.clone()),
                     reporters: vec![],
                 }],
                 &[Perbill::from_percent(10)],
@@ -2096,7 +2085,7 @@ fn remove_multi_deferred() {
 
             on_offence_now(
                 &[OffenceDetails {
-                    offender: (11, exposure.clone()),
+                    offender: (21, exposure.clone()),
                     reporters: vec![],
                 }],
                 &[Perbill::from_percent(25)],
@@ -2144,7 +2133,7 @@ fn remove_multi_deferred() {
 
             let slashes = <Staking as Store>::UnappliedSlashes::get(&1);
             assert_eq!(slashes.len(), 2);
-            assert_eq!(slashes[0].validator, 21);
+            assert_eq!(slashes[0].validator, 31);
             assert_eq!(slashes[1].validator, 42);
         })
 }
@@ -2165,7 +2154,7 @@ fn six_session_delay() {
                 <Staking as SessionManager<_>>::new_session(init_session + 2),
                 None
             );
-            assert_eq!(
+            assert_ne!(
                 <Staking as SessionManager<_>>::new_session(init_session + 3),
                 Some(val_set.clone())
             );
@@ -2177,7 +2166,7 @@ fn six_session_delay() {
                 <Staking as SessionManager<_>>::new_session(init_session + 5),
                 None
             );
-            assert_eq!(
+            assert_ne!(
                 <Staking as SessionManager<_>>::new_session(init_session + 6),
                 Some(val_set.clone())
             );
@@ -2571,7 +2560,7 @@ fn increase_mining_reward() {
             Staking::remainder_mining_reward().unwrap(),
             TOTAL_MINING_REWARD + 10000
         );
-    });  
+    });
 }
 
 #[test]
@@ -2585,9 +2574,23 @@ fn set_era_validator_reward() {
             RawOrigin::Root.into(),
             10000
         ));
-        assert_eq!(
-            Staking::era_validator_reward(),
-            10000
-        );
+        assert_eq!(Staking::era_validator_reward(), 10000);
     });
+}
+
+#[test]
+fn elected_validators_should_rotate() {
+    ExtBuilder::default()
+        .validator_pool(true)
+        .build_and_execute(|| {
+            assert_eq_uvec!(Session::validators(), vec![11, 21]);
+            mock::start_active_era(1);
+            assert_eq_uvec!(Session::validators(), vec![31, 41]);
+            mock::start_active_era(2);
+            assert_eq_uvec!(Session::validators(), vec![11, 21]);
+            mock::start_active_era(3);
+            assert_eq_uvec!(Session::validators(), vec![31, 41]);
+            mock::start_active_era(4);
+            assert_eq_uvec!(Session::validators(), vec![11, 21]);
+        });
 }
