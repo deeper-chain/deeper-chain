@@ -71,7 +71,6 @@ pub struct BridgeTransfer<Hash> {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-//#[cfg_attr(feature = "std", derive(Debug))]
 pub enum Status {
     Revoked,
     Pending,
@@ -86,8 +85,7 @@ pub enum Status {
     Confirmed,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub enum Kind {
     Transfer,
     Limits,
