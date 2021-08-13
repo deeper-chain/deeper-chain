@@ -1805,9 +1805,8 @@ impl<T: Config> Module<T> {
                 if let Some(imbalance) =
                     Self::make_validator_payout(&validator, validator_total_payout)
                 {
-                    Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
+                    Self::deposit_event(RawEvent::ValidatorReward(validator, imbalance.peek()));
                 }
-                Self::deposit_event(RawEvent::ValidatorReward(validator, validator_total_payout));
             }
         }
         RemainderMiningReward::put(
@@ -1885,8 +1884,7 @@ impl<T: Config> Module<T> {
                         daily_referee_reward + daily_poc_reward,
                     );
                     let imbalance = T::Currency::deposit_creating(&delegator, daily_reward);
-                    Self::deposit_event(RawEvent::Reward(delegator.clone(), imbalance.peek()));
-                    Self::deposit_event(RawEvent::DelegatorReward(delegator, daily_reward));
+                    Self::deposit_event(RawEvent::DelegatorReward(delegator, imbalance.peek()));
                     remainder_mining_reward -= daily_reward;
                     if remainder_mining_reward < Zero::zero() {
                         break;
