@@ -1919,6 +1919,7 @@ impl<T: Config> Module<T> {
             remainder_mining_reward = remainder_mining_reward.saturating_sub(payout);
             if remainder_mining_reward == Zero::zero() {
                 break;
+
             }
             last_key = next_key.clone();
             next_key = Self::next_delegators_key(&last_key); // 1 read

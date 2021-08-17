@@ -16,7 +16,8 @@ pub mod testing_utils;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
-use sp_std::prelude::*; // for runtime-benchmarks
+#[cfg(any(feature = "runtime-benchmarks"))]
+use sp_std::prelude::*;
 
 pub mod weights;
 
