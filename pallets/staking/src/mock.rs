@@ -448,7 +448,7 @@ impl ExtBuilder {
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
-                        expiration: 1,
+                        expiration: 1 + x,
                     },
                 )
             })
@@ -691,8 +691,8 @@ impl ExtBuilder {
 }
 
 fn pre_conditions() {
-    // 21 delegators are enough for all the tests now
-    for account in 1000..1020 {
+    // (BLOCKS_PER_ERA + 1) delegators are enough for all the tests now
+    for account in 1000..1001 + BLOCKS_PER_ERA {
         assert_ok!(DeeperNode::im_online(Origin::signed(account as u64)));
     }
 }

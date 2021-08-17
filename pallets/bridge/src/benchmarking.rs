@@ -142,11 +142,11 @@ benchmarks! {
             eth_message_id, QUORUM,
             vec![user1.clone(), user2.clone(), user3.clone(), user4.clone()])?;
         let id = Bridge::<T>::message_id_by_transfer_id(0);
-        let mut message = Bridge::<T>::validator_history(id);
+        let message = Bridge::<T>::validator_history(id);
         assert_eq!(message.status, Status::Pending);
     }: _(RawOrigin::Signed(validator2), eth_message_id, QUORUM, vec![user1, user2, user3, user4])
     verify {
-        message = Bridge::<T>::validator_history(id);
+        let message = Bridge::<T>::validator_history(id);
         assert_eq!(message.status, Status::Confirmed);
         assert_eq!(Bridge::<T>::validators_count(), 4);
     }
@@ -159,12 +159,12 @@ benchmarks! {
         assert_eq!(Bridge::<T>::bridge_transfers_count(), 1);
         assert_eq!(Bridge::<T>::bridge_is_operational(), true);
         let id = Bridge::<T>::message_id_by_transfer_id(0);
-        let mut message = Bridge::<T>::bridge_messages(id);
+        let message = Bridge::<T>::bridge_messages(id);
         assert_eq!(message.status, Status::Pending);
     }: _(RawOrigin::Signed(validator2))
     verify {
         assert_eq!(Bridge::<T>::bridge_is_operational(), false);
-        message = Bridge::<T>::bridge_messages(id);
+        let message = Bridge::<T>::bridge_messages(id);
         assert_eq!(message.status, Status::Confirmed);
     }
 
@@ -223,7 +223,7 @@ benchmarks! {
         let sub_message_id = Bridge::<T>::message_id_by_transfer_id(0);
         Bridge::<T>::approve_transfer(RawOrigin::Signed(validator1.clone()).into(), sub_message_id)?;
         Bridge::<T>::approve_transfer(RawOrigin::Signed(validator2.clone()).into(), sub_message_id)?;
-        let mut message = Bridge::<T>::messages(sub_message_id);
+        let message = Bridge::<T>::messages(sub_message_id);
         assert_eq!(message.status, Status::Approved);
 
         // TODO Delete validator3,validator4
@@ -233,7 +233,7 @@ benchmarks! {
         Bridge::<T>::cancel_transfer(RawOrigin::Signed(validator3.clone()).into(), sub_message_id)?;
     }: _(RawOrigin::Signed(validator4), sub_message_id)
     verify {
-        message = Bridge::<T>::messages(sub_message_id);
+        let message = Bridge::<T>::messages(sub_message_id);
         assert_eq!(message.status, Status::Canceled);
     }
 }

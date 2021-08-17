@@ -352,14 +352,15 @@ pub mod pallet {
                         break;
                     }
                 }
-                // either credit_history[i].0 >= era or i >= credit_history.len()
-                if i >= credit_history.len() {
-                    // we have exhausted the credit_history
-                    break;
-                } else if credit_history[i].0 > era && i == 0 {
+                // either credit_history[i].0 >= era or i == credit_history.len()
+                if credit_history[0].0 > era {
+                    // if the first historical credit data is after the era paid for,
+                    // then the device came onboard after the era paid for.
+                    // we simply ignore the era paid for and continue to the next era
                     continue;
                 } else {
-                    let credit_data = if credit_history[i].0 == era {
+                    // we get the credit data at the era or the closed one before the era
+                    let credit_data = if i < credit_history.len() && credit_history[i].0 == era {
                         credit_history[i].1.clone()
                     } else {
                         credit_history[i - 1].1.clone()
@@ -517,7 +518,11 @@ pub mod pallet {
             }
 
             let onboard_era = credit_history[0].0;
-            let expiry_era = onboard_era + credit_data.expiration;
+            let expiry_era = if credit_data.expiration > 0 {
+                onboard_era + credit_data.expiration - 1
+            } else {
+                EraIndex::MAX // 0 means "never" expire
+            };
             if from > expiry_era {
                 return (None, weight);
             }
