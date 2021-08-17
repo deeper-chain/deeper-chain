@@ -279,6 +279,16 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            let days = T::NodeInterface::get_days_offline(&account_id);
+            if days > 0 && days % 3 == 0 {
+                // slash one credit for being offline every 3 days
+                weight = weight.saturating_add(Self::slash_credit(&account_id));
+            }
+            weight
+        }
+
         /// inner: update credit score
         fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
             if UserCredit::<T>::contains_key(account_id) {
@@ -326,7 +336,7 @@ pub mod pallet {
             weight
         }
 
-        /// get all the credit data that is passing the threshold and between the "from" and the "to"
+        /// get all the credit data passing the threshold for the eras between "from" and "to"
         fn get_credit_map(
             credit_history: Vec<(EraIndex, CreditData)>,
             from: EraIndex,
@@ -354,13 +364,15 @@ pub mod pallet {
                     } else {
                         credit_history[i - 1].1.clone()
                     };
-                    if credit_map.contains_key(&credit_data) {
-                        credit_map.insert(
-                            credit_data.clone(),
-                            credit_map.get(&credit_data).unwrap() + 1,
-                        );
-                    } else {
-                        credit_map.insert(credit_data, 1);
+                    if Self::_pass_threshold(&credit_data) {
+                        if credit_map.contains_key(&credit_data) {
+                            credit_map.insert(
+                                credit_data.clone(),
+                                credit_map.get(&credit_data).unwrap() + 1,
+                            );
+                        } else {
+                            credit_map.insert(credit_data, 1);
+                        }
                     }
                 }
             }
@@ -369,10 +381,6 @@ pub mod pallet {
 
         fn _pass_threshold(credit_data: &CreditData) -> bool {
             credit_data.credit >= T::MinCreditToDelegate::get()
-        }
-
-        fn not_pass_threshold(account_id: &T::AccountId) -> bool {
-            !Self::pass_threshold(account_id)
         }
 
         fn get_current_era() -> EraIndex {
@@ -399,19 +407,6 @@ pub mod pallet {
             Ok(())
         }
 
-        pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            let days = T::NodeInterface::get_days_offline(&account_id);
-            if days > 0 && days % 3 == 0 {
-                // TODO: turn 3 into Runtime config
-                // slash one credit for being offline every 3 days
-                weight = weight.saturating_add(Self::slash_credit(&account_id));
-            }
-            weight
-        }
-    }
-
-    impl<T: Config> Module<T> {
         fn _update_credit_setting(credit_setting: CreditSetting<BalanceOf<T>>) {
             let daily_referee_reward = credit_setting
                 .reward_per_referee
@@ -587,8 +582,9 @@ pub mod pallet {
         }
 
         fn get_top_referee_reward(account_id: &T::AccountId) -> (BalanceOf<T>, Weight) {
-            let mut weight = T::DbWeight::get().reads_writes(1, 0); // 1 db read for not_pass_threshold
-            if Self::not_pass_threshold(account_id) {
+            let mut weight = T::DbWeight::get().reads_writes(1, 0); // 1 db read for pass_threshold
+            if !Self::pass_threshold(account_id) {
+                // if not passing threshold
                 return (BalanceOf::<T>::zero(), weight);
             }
             let credit_data = Self::user_credit(account_id).unwrap(); // 1 db read
