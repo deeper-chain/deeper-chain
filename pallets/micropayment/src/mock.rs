@@ -5,7 +5,7 @@ use frame_support::{
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system as system;
-use node_primitives::Balance;
+use node_primitives::{Balance, Moment};
 use sp_core::{crypto::AccountId32, sr25519, H256};
 use sp_runtime::{
     testing::Header,
@@ -24,6 +24,8 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
+        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
+        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
     }
 );
@@ -75,6 +77,53 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+type BlockNumber = u64;
+
+const MILLISECS_PER_BLOCK: Moment = 5000;
+const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+const INITIAL_CREDIT: u64 = 100;
+const CREDIT_ATTENUATION_STEP: u64 = 1;
+const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+
+parameter_types! {
+    pub const InitialCredit: u64 = INITIAL_CREDIT;
+    pub const CreditCapTwoEras: u8 = 5;
+    pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
+    pub const MinCreditToDelegate: u64 = 100;
+    pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
+    pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
+}
+
+impl pallet_credit::Config for Test {
+    type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
+    type Currency = Balances;
+    type InitialCredit = InitialCredit;
+    type CreditCapTwoEras = CreditCapTwoEras;
+    type CreditAttenuationStep = CreditAttenuationStep;
+    type MinCreditToDelegate = MinCreditToDelegate;
+    type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
+    type NodeInterface = DeeperNode;
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationDays: u8 = 7;
+    pub const MaxIpLength: usize = 256;
+    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+}
+impl pallet_deeper_node::Config for Test {
+    type Event = Event;
+    type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationDays = MaxDurationDays;
+    type DayToBlocknum = DayToBlocknum;
+    type MaxIpLength = MaxIpLength;
+    type WeightInfo = ();
+}
+
 pub struct TestAccountCreator;
 
 impl crate::AccountCreator<AccountId> for TestAccountCreator {
@@ -90,6 +139,7 @@ parameter_types! {
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
+    type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;

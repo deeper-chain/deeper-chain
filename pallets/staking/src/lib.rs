@@ -39,6 +39,7 @@ use frame_support::{
     decl_error, decl_event, decl_module, decl_storage,
     dispatch::{DispatchResult, DispatchResultWithPostInfo},
     ensure,
+    storage::generator::StorageMap,
     storage::IterableStorageMap,
     traits::{
         Currency, EnsureOrigin, Get, Imbalance, IsSubType, LockIdentifier, LockableCurrency,
@@ -161,9 +162,9 @@ impl<AccountId> Default for RewardDestination<AccountId> {
 pub struct RewardData<Balance: HasCompact> {
     pub total_referee_reward: Balance,
     pub received_referee_reward: Balance,
-    pub daily_referee_reward: Balance,
+    pub referee_reward: Balance,
     pub received_pocr_reward: Balance,
-    pub daily_poc_reward: Balance,
+    pub poc_reward: Balance,
 }
 
 /// Preference of what happens regarding validation.
@@ -455,6 +456,8 @@ where
 }
 
 pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
+    /// Number of blocks per era.
+    type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
     /// The staking balance.
     type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
 
@@ -475,18 +478,11 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
 
     type NumberToCurrency: Convert<u128, BalanceOf<Self>>;
 
-    /// Tokens have been minted and are unused for validator-reward.
-    /// See [Era payout](./index.html#era-payout).
-    type RewardRemainder: OnUnbalanced<NegativeImbalanceOf<Self>>;
-
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// Handler for the unbalanced reduction when slashing a staker.
     type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
-
-    /// Handler for the unbalanced increment when rewarding a staker.
-    type Reward: OnUnbalanced<PositiveImbalanceOf<Self>>;
 
     /// Number of sessions per era.
     type SessionsPerEra: Get<SessionIndex>;
@@ -517,9 +513,16 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type ExistentialDeposit: Get<BalanceOf<Self>>;
 }
 
-#[derive(Decode, Encode, Default)]
+#[derive(Decode, Encode, Default, Debug)]
 pub struct DelegatorData<AccountId> {
+    // delegator itself
+    pub delegator: AccountId,
+    // current delegated validators
     pub delegated_validators: Vec<AccountId>,
+    // unrewarded since which era
+    pub unrewarded_since: Option<EraIndex>,
+    // currently delegating or not
+    pub delegating: bool,
 }
 
 #[derive(Decode, Encode, Default)]
@@ -714,8 +717,18 @@ decl_storage! {
         /// delegator -> DelegatorData
         Delegators get(fn delegators): map hasher(blake2_128_concat) T::AccountId => DelegatorData<T::AccountId>;
 
-        /// delegator count
+        /// active delegator count
+        ActiveDelegatorCount get (fn active_delegator_count): u32;
+
         DelegatorCount get (fn delegator_count): u32;
+
+        /// delegators key prefix
+        DelegatorsKeyPrefix get (fn delegators_key_prefix): Vec<u8>;
+
+        /// delegators last key
+        DelegatorsLastKey get (fn delegators_last_key): Vec<u8>;
+
+        DelegatorPayoutsPerBlock get (fn delegator_payouts_per_block): u32;
 
         /// EraIndex -> validators
         ErasValidators get(fn eras_validators): map hasher(blake2_128_concat) EraIndex => Vec<T::AccountId>;
@@ -794,8 +807,6 @@ decl_event!(
         /// the remainder from the maximum amount of reward.
         /// \[era_index, validator_payout, remainder\]
         EraPayout(EraIndex, Balance, Balance),
-        /// The staker has been rewarded by this amount. \[stash, amount\]
-        Reward(AccountId, Balance),
         /// One validator has been slashed by the given amount.
         /// \[validator, amount\]
         Slash(AccountId, Balance),
@@ -909,8 +920,29 @@ decl_module! {
             }
         }
 
-        fn on_initialize(_now: T::BlockNumber) -> Weight {
-            T::DbWeight::get().reads_writes(4, 0)
+        fn on_initialize(now: T::BlockNumber) -> Weight {
+            // payout delegators only after the first era
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            if CurrentEra::get().unwrap_or(0) > 0 {
+                let remainder = now % T::BlocksPerEra::get();
+                if remainder == T::BlockNumber::default() { // first block of the era
+                    let blocks_per_era = TryInto::<u32>::try_into(T::BlocksPerEra::get()).ok().unwrap();
+                    // figure out how many payouts to make per block, excluding the first and last block of each era
+                    let mut delegator_payouts_per_block = Self::delegator_count() / (blocks_per_era - 2);
+                    if Self::delegator_count() % (blocks_per_era - 2) > 0 {
+                        delegator_payouts_per_block += 1;
+                    }
+                    DelegatorPayoutsPerBlock::put(delegator_payouts_per_block);
+                    let prefix = Self::get_delegators_prefix_hash();
+                    DelegatorsKeyPrefix::put(prefix.clone());
+                    DelegatorsLastKey::put(prefix);
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 1));
+                } else {
+                    weight = weight.saturating_add(Self::pay_delegators());
+                }
+            }
+            let finalize_weight = T::DbWeight::get().reads_writes(1, 1);
+            weight.saturating_add(finalize_weight)
         }
 
         fn on_finalize() {
@@ -1566,7 +1598,7 @@ decl_module! {
 
             ensure!(!<Validators<T>>::contains_key(&delegator), Error::<T>::CallNotAllowed);
 
-            let enough_credit = T::CreditInterface::pass_threshold(&delegator, 0);
+            let enough_credit = T::CreditInterface::pass_threshold(&delegator);
             ensure!(enough_credit, Error::<T>::CreditTooLow);
 
             ensure!(!validators.is_empty(), Error::<T>::NoValidators);
@@ -1578,23 +1610,42 @@ decl_module! {
                 ensure!(<Validators<T>>::contains_key(&validator), Error::<T>::NotValidator);
             }
 
-            let delegator_existing = <Delegators<T>>::contains_key(&delegator);
-            let old_delegator_data = Self::delegators(&delegator);
-
-            let delegator_data = DelegatorData {
-                delegated_validators: validators.clone(),
-            };
-            <Delegators<T>>::insert(&delegator, delegator_data);
-            if !delegator_existing {
-                DelegatorCount::mutate(|count| *count = *count + 1);
-            }
-
-            for validator in &old_delegator_data.delegated_validators {
-                <CandidateValidators<T>>::mutate(validator, |v| v.delegators.remove(&delegator));
-                if Self::candidate_validators(validator).delegators.is_empty() {
-                    <CandidateValidators<T>>::remove(validator);
+            let current_era = CurrentEra::get().unwrap_or(0);
+            if <Delegators<T>>::contains_key(&delegator) {
+                let old_delegator_data = Self::delegators(&delegator);
+                if !old_delegator_data.delegating { // the delegator was not delegating
+                    // the delegator delegates again
+                    ActiveDelegatorCount::mutate(|count| *count = *count + 1);
                 }
-            }
+                let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
+                    Some(unrewarded_era) => unrewarded_era,
+                    None => current_era,
+                };
+                let delegator_data = DelegatorData {
+                    delegator: delegator.clone(),
+                    delegated_validators: validators.clone(),
+                    unrewarded_since: Some(earliest_unrewarded_era),
+                    delegating: true,
+                };
+                <Delegators<T>>::insert(&delegator, delegator_data);
+
+                for validator in &old_delegator_data.delegated_validators {
+                    <CandidateValidators<T>>::mutate(validator, |v| v.delegators.remove(&delegator));
+                    if Self::candidate_validators(validator).delegators.is_empty() {
+                        <CandidateValidators<T>>::remove(validator);
+                    }
+                }
+            } else {
+                let delegator_data = DelegatorData {
+                    delegator: delegator.clone(),
+                    delegated_validators: validators.clone(),
+                    unrewarded_since: Some(current_era),
+                    delegating: true,
+                };
+                <Delegators<T>>::insert(&delegator, delegator_data);
+                ActiveDelegatorCount::mutate(|count| *count = *count + 1);
+                DelegatorCount::mutate(|count| *count = *count + 1);
+            };
 
             for validator in &validator_set {
                 if <CandidateValidators<T>>::contains_key(validator) {
@@ -1771,17 +1822,11 @@ impl<T: Config> Module<T> {
     }
 
     /// pay validator rewards based on their reward points
-    /// pay delegators rewards based on their credits
-    fn distribute_reward(current_era: EraIndex) {
-        Self::pay_validators(current_era);
-        Self::pay_delegators();
-    }
-
     fn pay_validators(era: EraIndex) {
         let remainder_mining_reward = T::NumberToCurrency::convert(
             Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
         );
-        if remainder_mining_reward <= T::ExistentialDeposit::get() {
+        if remainder_mining_reward == Zero::zero() {
             return;
         }
         let era_payout = cmp::min(Self::era_validator_reward(), remainder_mining_reward);
@@ -1805,13 +1850,15 @@ impl<T: Config> Module<T> {
                 if let Some(imbalance) =
                     Self::make_validator_payout(&validator, validator_total_payout)
                 {
-                    Self::deposit_event(RawEvent::Reward(validator.clone(), imbalance.peek()));
+                    Self::deposit_event(RawEvent::ValidatorReward(
+                        validator.clone(),
+                        imbalance.peek(),
+                    ));
                 }
-                Self::deposit_event(RawEvent::ValidatorReward(validator, validator_total_payout));
             }
         }
         RemainderMiningReward::put(
-            TryInto::<u128>::try_into(remainder_mining_reward - total_payout)
+            TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(total_payout))
                 .ok()
                 .unwrap(),
         );
@@ -1842,70 +1889,127 @@ impl<T: Config> Module<T> {
         }
     }
 
-    fn pay_delegators() {
+    /// Pay delegators based on their credit
+    fn pay_delegators() -> Weight {
         let mut remainder_mining_reward = T::NumberToCurrency::convert(
             Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
         );
-        if remainder_mining_reward <= T::ExistentialDeposit::get() {
-            return;
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        if remainder_mining_reward == Zero::zero() {
+            return weight;
         }
-        let mut total_poc_reward = BalanceOf::<T>::zero();
-        for (delegator, _) in Delegators::<T>::iter() {
-            if T::NodeInterface::im_ever_online(&delegator) {
-                if let Some((daily_referee_reward, daily_poc_reward)) =
-                    T::CreditInterface::get_reward(&delegator)
-                {
-                    // update RewardData
-                    if Reward::<T>::contains_key(&delegator) {
-                        Reward::<T>::mutate(&delegator, |data| match data {
-                            Some(reward_data) => {
-                                reward_data.received_referee_reward += daily_referee_reward;
-                                reward_data.daily_referee_reward = daily_referee_reward;
-                                reward_data.received_pocr_reward += daily_poc_reward;
-                                reward_data.daily_poc_reward = daily_poc_reward;
-                            }
-                            _ => (),
-                        });
-                    } else {
-                        let reward_data = RewardData::<BalanceOf<T>> {
-                            total_referee_reward: T::CreditInterface::get_top_referee_reward(
-                                &delegator,
-                            )
-                            .unwrap_or_default(),
-                            received_referee_reward: daily_referee_reward,
-                            daily_referee_reward: daily_referee_reward,
-                            received_pocr_reward: daily_poc_reward,
-                            daily_poc_reward: daily_poc_reward,
-                        };
-                        Reward::<T>::insert(&delegator, reward_data);
-                    }
-                    total_poc_reward += daily_poc_reward;
-                    let daily_reward = cmp::min(
-                        remainder_mining_reward,
-                        daily_referee_reward + daily_poc_reward,
-                    );
-                    let imbalance = T::Currency::deposit_creating(&delegator, daily_reward);
-                    Self::deposit_event(RawEvent::Reward(delegator.clone(), imbalance.peek()));
-                    Self::deposit_event(RawEvent::DelegatorReward(delegator, daily_reward));
-                    remainder_mining_reward -= daily_reward;
-                    if remainder_mining_reward < Zero::zero() {
-                        break;
-                    }
-                }
+        let prefix = Self::delegators_key_prefix(); // 1 read
+        let mut last_key = Self::delegators_last_key(); // 1 read
+        let mut next_key = Self::next_delegators_key(&last_key); // 1 read
+        let mut counter = 0;
+        let delegator_payouts_per_block = Self::delegator_payouts_per_block(); // 1 read
+        let current_era = Self::active_era().unwrap().index; // 1 read
+
+        weight = weight.saturating_add(T::DbWeight::get().reads_writes(5, 0));
+        while next_key.starts_with(&prefix) && counter < delegator_payouts_per_block {
+            let optional_delegator_data = Self::get_delegator_data(&next_key); // 1 read
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+            if optional_delegator_data.is_none() {
+                break;
             }
+            let delegator_data = optional_delegator_data.unwrap();
+            let (payout, payout_weight) =
+                Self::pay_delegator(&delegator_data, current_era, remainder_mining_reward);   
+            weight = weight.saturating_add(payout_weight);
+            remainder_mining_reward = remainder_mining_reward.saturating_sub(payout);
+            if remainder_mining_reward == Zero::zero() {
+                break;
+            }
+            last_key = next_key.clone();
+            next_key = Self::next_delegators_key(&last_key); // 1 read
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+            counter += 1;
+        }
+        if counter == delegator_payouts_per_block {
+            // might not be over yet
+            DelegatorsLastKey::put(last_key); // persist the last key for next block
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
         }
         RemainderMiningReward::put(
             TryInto::<u128>::try_into(remainder_mining_reward)
                 .ok()
                 .unwrap(),
         );
+        weight.saturating_add(T::DbWeight::get().reads_writes(0, 1))
+    }
+
+    fn pay_delegator(
+        delegator_data: &DelegatorData<T::AccountId>,
+        current_era: EraIndex,
+        remainder_mining_reward: BalanceOf<T>,
+    ) -> (BalanceOf<T>, Weight) {
+        if delegator_data.unrewarded_since == None {
+            return (BalanceOf::<T>::zero(), Weight::zero());
+        }
+        let earliest_unrewarded_era = delegator_data.unrewarded_since.unwrap();
+        if earliest_unrewarded_era == current_era {
+            return (BalanceOf::<T>::zero(), Weight::zero());
+        }
+        let delegator = &delegator_data.delegator;
+        let mut payout = BalanceOf::<T>::zero();
+        let mut weight = T::DbWeight::get().reads_writes(1, 0); // for im_ever_online
+        if T::NodeInterface::im_ever_online(delegator) {
+            let result =
+                T::CreditInterface::get_reward(delegator, earliest_unrewarded_era, current_era - 1);
+            weight = weight.saturating_add(result.1);
+            if let Some((referee_reward, poc_reward)) = result.0 {
+                // update RewardData
+                if Reward::<T>::contains_key(delegator) {
+                    // 1 read
+                    Reward::<T>::mutate(delegator, |data| match data {
+                        // 1 write
+                        Some(reward_data) => {
+                            reward_data.received_referee_reward += referee_reward;
+                            reward_data.referee_reward = referee_reward;
+                            reward_data.received_pocr_reward += poc_reward;
+                            reward_data.poc_reward = poc_reward;
+                        }
+                        _ => (),
+                    });
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+                } else {
+                    let result = T::CreditInterface::get_top_referee_reward(delegator);
+                    weight = weight.saturating_add(result.1);
+                    let reward_data = RewardData::<BalanceOf<T>> {
+                        total_referee_reward: result.0,
+                        received_referee_reward: referee_reward,
+                        referee_reward: referee_reward,
+                        received_pocr_reward: poc_reward,
+                        poc_reward: poc_reward,
+                    };
+                    Reward::<T>::insert(delegator, reward_data); // 1 write
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                }
+                let reward = cmp::min(
+                    remainder_mining_reward,
+                    referee_reward + poc_reward,
+                );
+                let imbalance = T::Currency::deposit_creating(delegator, reward); // 1 write
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                Self::deposit_event(RawEvent::DelegatorReward(
+                    (*delegator).clone(),
+                    imbalance.peek(),
+                ));
+                payout = reward;
+            }
+            Delegators::<T>::mutate(delegator, |data| {
+                data.unrewarded_since = None;
+            });
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+        }
+        (payout, weight)
     }
 
     /// Compute payout for era.
     fn end_era(active_era: ActiveEraInfo, _session_index: SessionIndex) {
         // Note: active_era_start can be None if end era is called during genesis config.
         if let Some(_active_era_start) = active_era.start {
-            Self::distribute_reward(active_era.index);
+            Self::pay_validators(active_era.index);
         }
     }
 
@@ -2132,7 +2236,6 @@ impl<T: Config> Module<T> {
     }
 
     fn _undelegate(delegator: &T::AccountId) {
-        let delegator_existing = <Delegators<T>>::contains_key(&delegator);
         for validator in Self::delegators(delegator).delegated_validators {
             <CandidateValidators<T>>::mutate(&validator, |validator_data| {
                 validator_data.delegators.remove(delegator);
@@ -2142,10 +2245,30 @@ impl<T: Config> Module<T> {
                 _ => (),
             }
         }
-        <Delegators<T>>::remove(delegator);
-        if delegator_existing {
-            DelegatorCount::mutate(|count| *count = *count - 1);
-        }
+        <Delegators<T>>::mutate(delegator, |delegator_data| {
+            match delegator_data.unrewarded_since {
+                Some(earliest_unrewarded_era) => {
+                    if earliest_unrewarded_era == CurrentEra::get().unwrap_or(0) {
+                        delegator_data.unrewarded_since = None;
+                    }
+                }
+                None => (),
+            }
+            delegator_data.delegating = false;
+        });
+        ActiveDelegatorCount::mutate(|count| *count = *count - 1);
+    }
+
+    fn get_delegators_prefix_hash() -> Vec<u8> {
+        Delegators::<T>::prefix_hash()
+    }
+
+    fn next_delegators_key(last_key: &Vec<u8>) -> Vec<u8> {
+        sp_io::storage::next_key(last_key).unwrap_or(Vec::<u8>::new())
+    }
+
+    fn get_delegator_data(next_key: &Vec<u8>) -> Option<DelegatorData<T::AccountId>> {
+        frame_support::storage::unhashed::get::<DelegatorData<T::AccountId>>(next_key)
     }
 }
 
@@ -2198,7 +2321,7 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
             validators
                 .into_iter()
                 .map(|v| {
-                    let exposure = Self::eras_stakers(current_era, &v); // TODO investigate inpact
+                    let exposure = Self::eras_stakers(current_era, &v);
                     (v, exposure)
                 })
                 .collect()

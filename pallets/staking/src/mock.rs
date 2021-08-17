@@ -37,7 +37,7 @@ use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use std::{cell::RefCell, collections::HashSet};
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
-pub const BLOCK_TIME: u64 = 1000;
+pub const BLOCK_TIME: u64 = 5000;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
@@ -104,7 +104,7 @@ frame_support::construct_runtime!(
         Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
         Staking: staking::{Module, Call, Config<T>, Storage, Event<T>},
         Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
+        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
     }
 );
@@ -130,7 +130,7 @@ parameter_types! {
     pub static SessionsPerEra: SessionIndex = 3;
     pub static ExistentialDeposit: Balance = 1;
     pub static SlashDeferDuration: EraIndex = 0;
-    pub static Period: BlockNumber = 5;
+    pub static Period: BlockNumber = EPOCH_DURATION_IN_BLOCKS;
     pub static Offset: BlockNumber = 0;
 }
 
@@ -183,6 +183,7 @@ parameter_types! {
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
+    type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
@@ -210,6 +211,7 @@ pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 pub const INITIAL_CREDIT: u64 = 100;
 pub const CREDIT_ATTENUATION_STEP: u64 = 1;
+pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 
 parameter_types! {
     pub const InitialCredit: u64 = INITIAL_CREDIT;
@@ -217,12 +219,13 @@ parameter_types! {
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
-    pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
+    pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
 }
 
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
+    type Currency = Balances;
     type InitialCredit = InitialCredit;
     type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
@@ -276,7 +279,6 @@ impl pallet_timestamp::Config for Test {
 
 parameter_types! {
     pub const BondingDuration: EraIndex = 3;
-    pub const UnsignedPriority: u64 = 1 << 20;
 }
 
 thread_local! {
@@ -309,12 +311,11 @@ parameter_types! {
 }
 
 impl Config for Test {
+    type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type UnixTime = Timestamp;
-    type RewardRemainder = RewardRemainderMock;
     type Event = Event;
     type Slash = ();
-    type Reward = ();
     type SessionsPerEra = SessionsPerEra;
     type SlashDeferDuration = SlashDeferDuration;
     type SlashCancelOrigin = frame_system::EnsureRoot<Self::AccountId>;
@@ -447,7 +448,7 @@ impl ExtBuilder {
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
-                        expiration: BLOCKS_PER_ERA,
+                        expiration: 1,
                     },
                 )
             })
@@ -459,10 +460,9 @@ impl ExtBuilder {
                 initial_credit_level: CreditLevel::Zero,
                 rank_in_initial_credit_level: 0u32,
                 number_of_referees: 0,
-                expiration: BLOCKS_PER_ERA,
+                expiration: 1,
             },
         ));
-        const BLOCKS_PER_ERA: u64 = 178000 as u64;
         const MILLICENTS: Balance = 10_000_000_000_000;
         const CENTS: Balance = 1_000 * MILLICENTS;
         const DOLLARS: Balance = 100 * CENTS;

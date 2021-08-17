@@ -160,7 +160,7 @@ benchmarks! {
         whitelist_account!(delegator);
     }: _(RawOrigin::Signed(delegator.clone()))
     verify {
-        assert!(!Delegators::<T>::contains_key(delegator));
+        assert!(!Delegators::<T>::get(delegator).delegating);
     }
 
     chill {

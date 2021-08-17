@@ -514,7 +514,7 @@ pub fn do_slash<T: Config>(
 
 pub fn do_credit_slash<T: Config>(delegator: &T::AccountId) {
     T::CreditInterface::slash_credit(delegator);
-    if T::CreditInterface::pass_threshold(delegator, 0) == false {
+    if !T::CreditInterface::pass_threshold(delegator) {
         <Module<T>>::_undelegate(delegator);
     }
 }
