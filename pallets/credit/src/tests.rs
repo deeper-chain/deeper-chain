@@ -173,27 +173,10 @@ fn get_credit_score() {
                 initial_credit_level: CreditLevel::One,
                 rank_in_initial_credit_level: 1u32,
                 number_of_referees: 1,
-                expiration: BLOCKS_PER_ERA,
+                expiration: 1,
             },
         );
         assert_eq!(Credit::get_credit_score(&1).unwrap(), 100);
-    });
-}
-
-#[test]
-fn get_number_of_referees() {
-    new_test_ext().execute_with(|| {
-        UserCredit::<Test>::insert(
-            1,
-            CreditData {
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1u32,
-                number_of_referees: 1,
-                expiration: BLOCKS_PER_ERA,
-            },
-        );
-        assert_eq!(Credit::get_number_of_referees(&1).unwrap(), 1);
     });
 }
 
@@ -207,7 +190,7 @@ fn slash_credit() {
                 initial_credit_level: CreditLevel::One,
                 rank_in_initial_credit_level: 1u32,
                 number_of_referees: 1,
-                expiration: BLOCKS_PER_ERA,
+                expiration: 1,
             },
         );
         Credit::slash_credit(&1);
@@ -221,23 +204,23 @@ fn slash_credit() {
 #[test]
 fn update_credit() {
     new_test_ext().execute_with(|| {
-        let mut micropayments = vec![
-            (1, 1_000 * 1_000_000_000_000_000, 3),
-            (2, 1 * 1_000_000_000_000_000, 1),
-            (3, 1 * 1_000_000_000_000_000, 2),
-        ];
-        Credit::update_credit(micropayments);
+        Credit::update_credit((1, 1_000 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 1);
+
+        Credit::update_credit((2, 1 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&2).unwrap().credit, 1);
+
+        Credit::update_credit((3, 1 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 101);
-        micropayments = vec![
-            (1, 4 * 1_000_000_000_000_000, 1),
-            (2, 2 * 1_000_000_000_000_000, 2),
-            (4, 1_000_000_000_000_000 / 10, 1),
-        ];
-        Credit::update_credit(micropayments);
+
+        run_to_block(BLOCKS_PER_ERA * 2);
+        Credit::update_credit((1, 4 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
+
+        Credit::update_credit((2, 2 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&2).unwrap().credit, 2); // 1 + 1
+
+        Credit::update_credit((4, 1_000_000_000_000_000 / 10));
         assert_eq!(Credit::user_credit(&4).unwrap().credit, 0);
     });
 }
@@ -246,18 +229,14 @@ fn update_credit() {
 fn get_reward_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(3)));
-        run_to_block(1);
+        assert_eq!(Credit::get_reward(&3, 0, 0).0, None);
+        run_to_block(BLOCKS_PER_ERA); // era 1
         assert_eq!(
-            Credit::get_reward(&3),
+            Credit::get_reward(&3, 0, 0).0,
             Some((18000000000000000000, 3369858941948251800))
         );
-        run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(
-            Credit::get_reward(&3),
-            Some((18000000000000000000, 3369858941948251800))
-        );
-        run_to_block(BLOCKS_PER_ERA + 1);
-        assert_eq!(Credit::get_reward(&3), Some((0, 3369858941948251800)));
+        run_to_block(BLOCKS_PER_ERA * 2); // era 2, credit expires at era 1
+        assert_eq!(Credit::get_reward(&3, 1, 1).0, None);
     });
 }
 
@@ -266,32 +245,34 @@ fn get_reward_with_update_credit_no_bonus() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(6)));
         assert_eq!(Credit::user_credit(&6).unwrap().credit, 100);
+        run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
-            Credit::get_reward(&6),
+            Credit::get_reward(&6, 0, 0).0,
             Some((18000000000000000000, 3369858941948251800))
         );
 
-        let micropayments = vec![(6, 5 * 1_000_000_000_000_000, 5)];
-        let mut i: u64 = 1;
+        let mut i: u32 = 1;
         while i < 20 {
             // run 19 times
-            run_to_block(BLOCKS_PER_ERA * i + 1);
-
-            Credit::update_credit(micropayments.clone());
-            assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + i);
+            run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
+            Credit::update_credit((6, 5 * 1_000_000_000_000_000));
             assert_eq!(
-                Credit::get_reward(&6),
+                Credit::user_credit(&6).unwrap().credit,
+                100 + (i as u64 + 1) / 2
+            );
+            assert_eq!(
+                Credit::get_reward(&6, i - 1, i - 1).0,
                 Some((18000000000000000000, 3369858941948251800))
             );
             i += 1;
         }
 
-        let micropayments = vec![(6, 190 * 1_000_000_000_000_000, 5)];
-        run_to_block(BLOCKS_PER_ERA * 183);
-        Credit::update_credit(micropayments.clone());
+        run_to_block(BLOCKS_PER_ERA * 200);
+        Credit::update_credit((6, 190 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + 100);
+        run_to_block(BLOCKS_PER_ERA * 201);
         assert_eq!(
-            Credit::get_reward(&6),
+            Credit::get_reward(&6, 200, 200).0,
             Some((18000000000000000000, 15287661460675804320))
         );
     });
@@ -302,32 +283,34 @@ fn get_reward_with_update_credit_with_bonus() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(7)));
         assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
+        run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
-            Credit::get_reward(&7),
+            Credit::get_reward(&7, 0, 0).0,
             Some((18000000000000000000 * 7, 97068450647875213020))
         );
 
-        let micropayments = vec![(7, 5 * 1_000_000_000_000_000, 5)];
-        let mut i: u64 = 1;
+        let mut i: u32 = 1;
         while i < 20 {
             // run 19 times
-            run_to_block(BLOCKS_PER_ERA * i + 1);
-
-            Credit::update_credit(micropayments.clone());
-            assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + i);
+            run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
+            Credit::update_credit((7, 5 * 1_000_000_000_000_000));
             assert_eq!(
-                Credit::get_reward(&7),
+                Credit::user_credit(&7).unwrap().credit,
+                400 + (i as u64 + 1) / 2
+            );
+            assert_eq!(
+                Credit::get_reward(&7, i - 1, i - 1).0,
                 Some((18000000000000000000 * 7, 97068450647875213020))
             );
             i += 1;
         }
 
-        let micropayments = vec![(7, 190 * 1_000_000_000_000_000, 5)];
-        run_to_block(BLOCKS_PER_ERA * 183);
-        Credit::update_credit(micropayments.clone());
+        run_to_block(BLOCKS_PER_ERA * 200);
+        Credit::update_credit((7, 190 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + 100);
+        run_to_block(BLOCKS_PER_ERA * 201);
         assert_eq!(
-            Credit::get_reward(&7),
+            Credit::get_reward(&7, 200, 200).0,
             Some((18000000000000000000 * 7, 131780755652680908140))
         );
     });
@@ -338,8 +321,9 @@ fn get_reward_with_slash_credit_with_bonus() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(7)));
         assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
+        run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
-            Credit::get_reward(&7),
+            Credit::get_reward(&7, 0, 0).0,
             Some((18000000000000000000 * 7, 97068450647875213020))
         );
 
@@ -348,8 +332,9 @@ fn get_reward_with_slash_credit_with_bonus() {
             Credit::user_credit(&7).unwrap().credit,
             400 - CREDIT_ATTENUATION_STEP
         );
+        run_to_block(BLOCKS_PER_ERA * 2);
         assert_eq!(
-            Credit::get_reward(&7),
+            Credit::get_reward(&7, 1, 1).0,
             Some((18000000000000000000 * 7, 83523261467953134276))
         );
     });
@@ -358,9 +343,9 @@ fn get_reward_with_slash_credit_with_bonus() {
 #[test]
 fn get_reward_failed() {
     new_test_ext().execute_with(|| {
-        run_to_block(1);
-        assert_eq!(Credit::get_reward(&5), None); // 5 credit 0
-        assert_eq!(Credit::get_reward(&8), None); // 8 not contains in storage
+        run_to_block(BLOCKS_PER_ERA);
+        assert_eq!(Credit::get_reward(&5, 0, 0).0, None); // 5 credit 0
+        assert_eq!(Credit::get_reward(&8, 0, 0).0, None); // 8 not contains in storage
     });
 }
 
@@ -371,27 +356,27 @@ fn slash_offline_devices_credit() {
         assert_ok!(DeeperNode::im_online(Origin::signed(3)));
 
         run_to_block(BLOCKS_PER_DAY);
-        Credit::slash_offline_devices_credit();
+        Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
 
         run_to_block(BLOCKS_PER_DAY * 3);
-        Credit::slash_offline_devices_credit();
+        Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
 
         run_to_block(BLOCKS_PER_DAY * 5);
-        Credit::slash_offline_devices_credit();
+        Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
 
         run_to_block(BLOCKS_PER_DAY * 6);
-        Credit::slash_offline_devices_credit();
+        Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
 
         run_to_block(BLOCKS_PER_DAY * 8);
-        Credit::slash_offline_devices_credit();
+        Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
 
         run_to_block(BLOCKS_PER_DAY * 9);
-        Credit::slash_offline_devices_credit();
+        Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
     });
 }

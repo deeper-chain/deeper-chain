@@ -20,7 +20,7 @@
 
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
-use node_runtime::constants::{currency::*, time::BLOCKS_PER_ERA};
+use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeConfig,
@@ -572,7 +572,7 @@ pub fn testnet_genesis(
                             initial_credit_level: CreditLevel::One,
                             rank_in_initial_credit_level: 1u32,
                             number_of_referees: 1,
-                            expiration: BLOCKS_PER_ERA,
+                            expiration: 1, // 1 era
                         },
                     )
                 })

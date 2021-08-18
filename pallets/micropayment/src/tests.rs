@@ -61,7 +61,7 @@ fn open_channel() {
             assert_eq!(
                 dispatch_error_with_post_info.error,
                 DispatchError::Module {
-                    index: 2,
+                    index: 4,
                     error: 0,
                     message: Some("NotEnoughBalance")
                 }
@@ -149,7 +149,7 @@ fn fn_close_expired_channels() {
 }
 
 #[test]
-fn fn_add_balance() {
+fn add_balance() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
@@ -171,7 +171,7 @@ fn fn_add_balance() {
             assert_eq!(
                 dispatch_error_with_post_info.error,
                 DispatchError::Module {
-                    index: 2,
+                    index: 4,
                     error: 1,
                     message: Some("ChannelNotExist")
                 }
@@ -191,7 +191,7 @@ fn fn_add_balance() {
             assert_eq!(
                 dispatch_error_with_post_info.error,
                 DispatchError::Module {
-                    index: 2,
+                    index: 4,
                     error: 0,
                     message: Some("NotEnoughBalance")
                 }
@@ -201,7 +201,7 @@ fn fn_add_balance() {
 }
 
 #[test]
-fn fn_claim_payment() {
+fn claim_payment() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
@@ -271,60 +271,4 @@ fn test_signature() {
     println!("msg:{:?}", msg);
     let verified = sr25519_verify(&sig, &msg, &pk);
     assert_eq!(verified, true);
-}
-
-#[test]
-fn update_micropayment_information() {
-    new_test_ext().execute_with(|| {
-        let alice = alice();
-        let bob = bob();
-        let charlie = charlie();
-        Micropayment::update_micropayment_information(&bob, &alice, 5);
-        let balance = Micropayment::payment_by_server(&alice);
-        assert_eq!(balance, 5);
-        let clients = Micropayment::clients_by_server(&alice);
-        assert_eq!(clients.len(), 1);
-        assert!(clients.contains(&bob));
-
-        run_to_block(1);
-        Micropayment::update_micropayment_information(&bob, &alice, 6);
-        let balance = Micropayment::payment_by_server(&alice);
-        assert_eq!(balance, 11);
-        let clients = Micropayment::clients_by_server(&alice);
-        assert_eq!(clients.len(), 1);
-        assert!(clients.contains(&bob));
-
-        run_to_block(2);
-        Micropayment::update_micropayment_information(&charlie, &alice, 4);
-        let balance = Micropayment::payment_by_server(&alice);
-        assert_eq!(balance, 15);
-        let clients = Micropayment::clients_by_server(&alice);
-        assert_eq!(clients.len(), 2);
-        assert!(clients.contains(&bob));
-        assert!(clients.contains(&charlie));
-    });
-}
-
-#[test]
-fn micropayment_statistics() {
-    new_test_ext().execute_with(|| {
-        let alice = alice();
-        let bob = bob();
-        let charlie = charlie();
-        let dave = dave();
-        Micropayment::update_micropayment_information(&bob, &alice, 7);
-        Micropayment::update_micropayment_information(&dave, &alice, 3);
-        run_to_block(3);
-        Micropayment::update_micropayment_information(&alice, &bob, 1);
-        Micropayment::update_micropayment_information(&charlie, &alice, 8);
-        run_to_block(6);
-        Micropayment::update_micropayment_information(&charlie, &bob, 9);
-        run_to_block(9);
-        let mut stats = Micropayment::micropayment_statistics();
-        stats.sort_by(|a, b| (*a).1.cmp(&(*b).1));
-        assert_eq!(stats[0], (bob.clone(), 10, 2));
-        assert_eq!(stats[1], (alice.clone(), 18, 3));
-        stats = Micropayment::micropayment_statistics();
-        assert_eq!(stats.len(), 0); // the data should have been drained
-    });
 }

@@ -476,16 +476,15 @@ impl Convert<u128, Balance> for NumberCurrencyConverter {
 }
 
 impl pallet_staking::Config for Runtime {
+    type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditInterface = Credit;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type UnixTime = Timestamp;
     type NumberToCurrency = NumberCurrencyConverter;
-    type RewardRemainder = Treasury;
     type Event = Event;
     type Slash = Treasury; // send the slashed funds to the treasury.
-    type Reward = (); // rewards are minted from the void
     type SessionsPerEra = SessionsPerEra;
     type BondingDuration = BondingDuration;
     type SlashDeferDuration = SlashDeferDuration;
@@ -1042,6 +1041,7 @@ impl pallet_micropayment::AccountCreator<AccountId> for DefaultAccountCreator {
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
     type AccountCreator = DefaultAccountCreator;
@@ -1077,6 +1077,7 @@ parameter_types! {
 impl pallet_credit::Config for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
+    type Currency = Balances;
     type InitialCredit = InitialCredit;
     type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;

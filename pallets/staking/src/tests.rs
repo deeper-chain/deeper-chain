@@ -29,6 +29,8 @@ use pallet_balances::Error as BalancesError;
 use pallet_credit::CreditInterface;
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
+use sp_std::convert::TryFrom;
+use std::collections::HashMap;
 
 macro_rules! assert_eq_uvec {
     ( $x:expr, $y:expr $(,)? ) => {
@@ -187,13 +189,18 @@ fn change_controller_works() {
 #[test]
 fn rewards_should_work() {
     ExtBuilder::default()
-        .session_per_era(3)
+        .session_per_era(6)
+        .num_delegators(3)
         .build_and_execute(|| {
+            assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21]));
+            assert_ok!(Staking::delegate(Origin::signed(1003), vec![11, 21]));
             let init_balance_10 = Balances::total_balance(&10);
             let init_balance_11 = Balances::total_balance(&11);
             let init_balance_20 = Balances::total_balance(&20);
             let init_balance_21 = Balances::total_balance(&21);
             let init_balance_1001 = Balances::total_balance(&1001);
+            let init_balance_1002 = Balances::total_balance(&1002);
+            let init_balance_1003 = Balances::total_balance(&1003);
 
             // Set payees
             Payee::<Test>::insert(11, RewardDestination::Controller);
@@ -211,10 +218,15 @@ fn rewards_should_work() {
             assert_eq!(Balances::total_balance(&20), init_balance_20);
             assert_eq!(Balances::total_balance(&21), init_balance_21);
             assert_eq!(Balances::total_balance(&1001), init_balance_1001);
+            assert_eq!(Balances::total_balance(&1002), init_balance_1002);
+            assert_eq!(Balances::total_balance(&1003), init_balance_1003);
             assert_eq_uvec!(Session::validators(), vec![11, 21]);
 
             start_session(2);
             start_session(3);
+            start_session(4);
+            start_session(5);
+            start_session(6);
 
             assert_eq!(Staking::active_era().unwrap().index, 1);
 
@@ -228,14 +240,305 @@ fn rewards_should_work() {
                 init_balance_20 + 19999999980000000000
             );
             assert_eq!(Balances::total_balance(&21), init_balance_21);
+            // delegator not paid yet
+            assert_eq!(Balances::total_balance(&1001), init_balance_1001);
+            assert_eq!(Balances::total_balance(&1002), init_balance_1002);
+            assert_eq!(Balances::total_balance(&1003), init_balance_1003);
+            let mut remainder = TOTAL_MINING_REWARD - 39999999960000000000 - 19999999980000000000;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+            run_to_block(BLOCKS_PER_ERA + 1); // pay delegator from the second block of the second era
+            assert_eq!(
+                Balances::total_balance(&1002),
+                init_balance_1001 + 21369858941948251800
+            );
+            remainder = remainder - 21369858941948251800;
+            assert_eq!(Balances::total_balance(&1001), init_balance_1002); // 1001 is not paid yet
+            assert_eq!(Balances::total_balance(&1003), init_balance_1003); // 1003 is not paid yet
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+
+            run_to_block(BLOCKS_PER_ERA + 2);
+            // 1001 is paid
             assert_eq!(
                 Balances::total_balance(&1001),
                 init_balance_1001 + 21369858941948251800
             );
-            let remainder = TOTAL_MINING_REWARD
-                - 39999999960000000000
-                - 19999999980000000000
-                - 21369858941948251800;
+            // since 1002 is paid already, it should not pay it again
+            assert_eq!(
+                Balances::total_balance(&1002),
+                init_balance_1002 + 21369858941948251800
+            );
+            assert_eq!(Balances::total_balance(&1003), init_balance_1003); // 1003 is not paid yet
+            remainder = remainder - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+
+            run_to_block(BLOCKS_PER_ERA + 3);
+            // since 1001 is paid already, it should not pay it again
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            );
+            // since 1002 is paid already, it should not pay it again
+            assert_eq!(
+                Balances::total_balance(&1002),
+                init_balance_1002 + 21369858941948251800
+            );
+            // 1003 is paid now
+            assert_eq!(
+                Balances::total_balance(&1003),
+                init_balance_1003 + 21369858941948251800
+            );
+            remainder = remainder - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+        });
+}
+
+#[test]
+fn many_delegators_rewards_should_work() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .num_delegators(u32::try_from(BLOCKS_PER_ERA).ok().unwrap() - 1)
+        .build_and_execute(|| {
+            let mut init_balances = HashMap::<AccountId, Balance>::new();
+            for i in 1001..1001 + BLOCKS_PER_ERA - 1 {
+                assert_ok!(Staking::delegate(Origin::signed(i), vec![11, 21]));
+                init_balances.insert(i, Balances::total_balance(&i));
+            }
+            assert_eq!(Staking::delegator_count() as u64, BLOCKS_PER_ERA - 1);
+            assert_eq!(Staking::active_delegator_count() as u64, BLOCKS_PER_ERA - 1);
+            run_to_block(BLOCKS_PER_ERA); // the first block of the second era
+            for i in 1001..1001 + BLOCKS_PER_ERA - 1 {
+                // no delegators are paid yet
+                assert_eq!(Balances::total_balance(&i), *init_balances.get(&i).unwrap());
+            }
+            // since we need to pay BLOCKS_PER_ERA delegators in (BLOCKS_PER_ERA - 2) blocks
+            // 1 each block is not enough, instead we pay 2 delegators each block
+            assert_eq!(Staking::delegator_payouts_per_block(), 2);
+            assert!(!Staking::delegators_key_prefix().is_empty());
+            assert_eq!(
+                Staking::delegators_key_prefix(),
+                Staking::delegators_last_key()
+            );
+            let mut remainder = TOTAL_MINING_REWARD;
+            let mut i = 1u64;
+            while i < BLOCKS_PER_ERA / 2 {
+                run_to_block(BLOCKS_PER_ERA + i);
+                // it should pay 2 delegators each block
+                remainder = remainder - 21369858941948251800 * 2;
+                assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+                i += 1;
+            }
+            run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2);
+            remainder = remainder - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+            i = BLOCKS_PER_ERA / 2 + 1;
+            while i < BLOCKS_PER_ERA {
+                run_to_block(BLOCKS_PER_ERA + i);
+                // all the delegators are paid, so no new payment should be made
+                assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+                i += 1;
+            }
+            for i in 1002..1001 + BLOCKS_PER_ERA - 1 {
+                assert_eq!(
+                    Balances::total_balance(&1001),
+                    Balances::total_balance(&i)
+                );
+            }
+        });
+}
+
+#[test]
+fn no_rewards_if_undelegating_in_the_same_era() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .build_and_execute(|| {
+            // 1001 is the default delegator
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+            assert_ok!(Staking::undelegate(Origin::signed(1001)));
+            assert_eq!(Staking::active_delegator_count() as u64, 0);
+            assert_eq!(Staking::delegator_count() as u64, 0);
+            run_to_block(BLOCKS_PER_ERA + 1);
+            assert_eq!(
+                Staking::remainder_mining_reward().unwrap(),
+                TOTAL_MINING_REWARD
+            );
+        });
+}
+
+#[test]
+fn rewards_if_undelegating_in_next_era() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .build_and_execute(|| {
+            // 1001 is the default delegator
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+
+            run_to_block(BLOCKS_PER_ERA);
+            assert_eq!(
+                Staking::remainder_mining_reward().unwrap(),
+                TOTAL_MINING_REWARD
+            );
+
+            run_to_block(BLOCKS_PER_ERA + 1);
+            assert!(Staking::remainder_mining_reward().unwrap() < TOTAL_MINING_REWARD);
+            assert_ok!(Staking::undelegate(Origin::signed(1001)));
+            assert_eq!(Staking::active_delegator_count() as u64, 0);
+            assert_eq!(Staking::delegator_count() as u64, 0);
+        });
+}
+
+#[test]
+fn rewards_if_undelegating_in_later_era() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .build_and_execute(|| {
+            // 1001 is the default delegator
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+
+            run_to_block(BLOCKS_PER_ERA);
+            assert_eq!(
+                Staking::remainder_mining_reward().unwrap(),
+                TOTAL_MINING_REWARD
+            );
+
+            run_to_block(BLOCKS_PER_ERA + 1);
+            let remainder = Staking::remainder_mining_reward().unwrap();
+            // 1001 is paid
+            assert!(remainder < TOTAL_MINING_REWARD);
+            // 1001 is still active since it's still delegating
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+            assert_eq!(Staking::delegator_count() as u64, 1);
+
+            run_to_block(BLOCKS_PER_ERA * 2 + 1);
+            // 1001 is still active since it's still delegating
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            // but nothing is paid, since 1001 has been paid in earlier era
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+            // now 1001 undelegates
+            assert_ok!(Staking::undelegate(Origin::signed(1001)));
+            assert_eq!(Staking::active_delegator_count() as u64, 0);
+            assert_eq!(Staking::delegator_count() as u64, 0);
+        });
+}
+
+#[test]
+fn rewards_always_paid_in_next_era() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .num_delegators(2)
+        .build_and_execute(|| {
+            // 1001 is the default delegator
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+            let init_balance_1001 = Balances::total_balance(&1001);
+            let init_balance_1002 = Balances::total_balance(&1002);
+
+            run_to_block(BLOCKS_PER_ERA);
+            assert_eq!(
+                Staking::remainder_mining_reward().unwrap(),
+                TOTAL_MINING_REWARD
+            );
+
+            run_to_block(BLOCKS_PER_ERA + 1);
+            // 1001 is paid
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            );
+            let mut remainder = TOTAL_MINING_REWARD - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+
+            // 1002 becomes delegator in the new era
+            assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21]));
+            assert_eq!(Staking::active_delegator_count() as u64, 2);
+            assert_eq!(Staking::delegator_count() as u64, 2);
+
+            run_to_block(BLOCKS_PER_ERA * 2 + 2);
+            // 1001 balance is the same as the last era
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            );
+            // 1002 is paid now
+            assert_eq!(
+                Balances::total_balance(&1002),
+                init_balance_1002 + 21369858941948251800
+            );
+            remainder = remainder - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+        });
+}
+
+#[test]
+fn rewards_not_affected_by_others_undelegating() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .num_delegators(4)
+        .build_and_execute(|| {
+            // 1001 is the default delegator
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+            let init_balance_1001 = Balances::total_balance(&1001);
+            let init_balance_1002 = Balances::total_balance(&1002);
+            let init_balance_1003 = Balances::total_balance(&1003);
+            let init_balance_1004 = Balances::total_balance(&1004);
+
+            assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21]));
+            assert_ok!(Staking::delegate(Origin::signed(1003), vec![11, 21]));
+            assert_ok!(Staking::delegate(Origin::signed(1004), vec![11, 21]));
+            assert_eq!(Staking::active_delegator_count() as u64, 4);
+            assert_eq!(Staking::delegator_count() as u64, 4);
+
+            run_to_block(BLOCKS_PER_ERA);
+            assert_eq!(
+                Staking::remainder_mining_reward().unwrap(),
+                TOTAL_MINING_REWARD
+            );
+
+            run_to_block(BLOCKS_PER_ERA + 1);
+            // 1004 is paid
+            assert_eq!(
+                Balances::total_balance(&1004),
+                init_balance_1004 + 21369858941948251800
+            );
+            let mut remainder = TOTAL_MINING_REWARD - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+
+            // 1004 undelegates now
+            assert_ok!(Staking::undelegate(Origin::signed(1004)));
+            // 1004 is removed from delegators
+            assert!(!Delegators::<Test>::contains_key(&1004));
+            assert_eq!(Staking::active_delegator_count() as u64, 3);
+            assert_eq!(Staking::delegator_count() as u64, 3);
+
+            run_to_block(BLOCKS_PER_ERA + 4);
+            // 1001 is paid now
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            );
+            remainder = remainder - 21369858941948251800;
+            // 1002 is paid now
+            assert_eq!(
+                Balances::total_balance(&1002),
+                init_balance_1002 + 21369858941948251800
+            );
+            remainder = remainder - 21369858941948251800;
+            // 1003 is paid now
+            assert_eq!(
+                Balances::total_balance(&1003),
+                init_balance_1003 + 21369858941948251800
+            );
+            remainder = remainder - 21369858941948251800;
+            // 1004 balance does not increase this round as it's already paid
+            assert_eq!(
+                Balances::total_balance(&1004),
+                init_balance_1004 + 21369858941948251800
+            );
+
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
         });
 }
@@ -1215,6 +1518,7 @@ fn on_low_credit_score_removes_delegator() {
 
         credit_after_slashing = Credit::get_credit_score(&1001).unwrap_or(0);
         assert!(credit_after_slashing < 100);
+        // it's removed since there is no pending reward
         assert!(!<Delegators<Test>>::contains_key(&1001));
         assert!(!Staking::candidate_validators(&11)
             .delegators
@@ -2259,8 +2563,8 @@ fn on_initialize_weight_is_correct() {
         .has_stakers(false)
         .build_and_execute(|| {
             assert_eq!(Validators::<Test>::iter().count(), 0);
-            // When this pallet has nothing, we do 4 reads each block
-            let base_weight = <Test as frame_system::Config>::DbWeight::get().reads(4);
+            // When this pallet has nothing, we do 2 reads and 1 write
+            let base_weight = <Test as frame_system::Config>::DbWeight::get().reads_writes(2, 1);
             assert_eq!(base_weight, Staking::on_initialize(0));
         });
 }
@@ -2469,12 +2773,14 @@ fn delegate() {
             );
             // 1001 is the only delegator
             assert_eq!(Staking::delegator_count(), 1);
+            assert_eq!(Staking::active_delegator_count(), 1);
 
             // TEST1： delegate to one validator
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
             // delegator count does not change since 1001 is the existing one
             assert_eq!(Staking::delegator_count(), 1);
+            assert_eq!(Staking::active_delegator_count(), 1);
             // check delegated info
             let delegator_data = Staking::delegators(1001);
             assert_eq!(delegator_data.delegated_validators, vec![11]);
@@ -2489,6 +2795,7 @@ fn delegate() {
             ));
             // 1001 and 1002 are both delegators now
             assert_eq!(Staking::delegator_count(), 2);
+            assert_eq!(Staking::active_delegator_count(), 2);
             // check delegator data
             let delegator_data = Staking::delegators(1002);
             assert_eq!(delegator_data.delegated_validators, vec![11, 21, 31, 41]);
@@ -2521,6 +2828,7 @@ fn delegate() {
             assert_ok!(Staking::delegate(Origin::signed(1003), vec![11]));
             // 1001, 1002 and 1003 are all delegators now
             assert_eq!(Staking::delegator_count(), 3);
+            assert_eq!(Staking::active_delegator_count(), 3);
             assert_eq!(Staking::delegators(1003).delegated_validators, vec![11]);
             assert!(Staking::candidate_validators(11).delegators.contains(&1003));
             assert!(!Staking::candidate_validators(21).delegators.contains(&1003));
@@ -2538,10 +2846,14 @@ fn undelegate() {
             // TEST1： undelegate
             // delegate credit score
             assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
+            assert!(Delegators::<Test>::contains_key(&1001));
             assert_eq!(Staking::delegator_count(), 1);
+            assert_eq!(Staking::active_delegator_count(), 1);
             // undelegate after calling delegate()
             assert_ok!(Staking::undelegate(Origin::signed(1001)));
+            assert!(!Delegators::<Test>::contains_key(&1001));
             assert_eq!(Staking::delegator_count(), 0);
+            assert_eq!(Staking::active_delegator_count(), 0);
             assert_eq!(
                 Staking::candidate_validators(11).delegators.is_empty(),
                 true
@@ -2552,6 +2864,22 @@ fn undelegate() {
                 Staking::undelegate(Origin::signed(12)),
                 Error::<Test>::NotDelegator
             );
+            assert!(!Delegators::<Test>::contains_key(&12));
+
+            // TEST3: delegate in era 0 and undelegate in era 1
+            assert_ok!(Staking::delegate(Origin::signed(1001), vec![11]));
+            assert!(Delegators::<Test>::contains_key(&1001));
+            assert_eq!(Staking::delegator_count(), 1);
+            assert_eq!(Staking::active_delegator_count(), 1);
+            run_to_block(BLOCKS_PER_ERA);
+            assert_ok!(Staking::undelegate(Origin::signed(1001)));
+            // reward not paid yet, hence not deleted yet
+            assert!(Delegators::<Test>::contains_key(&1001));
+            let delegator_data = Staking::delegators(&1001);
+            assert_eq!(delegator_data.unrewarded_since.unwrap(), 0);
+            assert!(!delegator_data.delegating);
+            assert_eq!(Staking::delegator_count(), 1);
+            assert_eq!(Staking::active_delegator_count(), 0);
         });
 }
 

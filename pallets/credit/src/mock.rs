@@ -26,7 +26,6 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         Credit: pallet_credit::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
     }
@@ -77,27 +76,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
-pub struct TestAccountCreator;
-
-impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
-    fn create_account(_string: &'static str) -> u64 {
-        0
-    }
-}
-
-parameter_types! {
-    pub const SecsPerBlock: u32 = 5u32;
-    pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
-}
-impl pallet_micropayment::Config for Test {
-    type Event = Event;
-    type Currency = Balances;
-    type SecsPerBlock = SecsPerBlock;
-    type DataPerDPR = DataPerDPR;
-    type AccountCreator = TestAccountCreator;
-    type WeightInfo = ();
-}
-
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
     pub const MaxDurationDays: u8 = 7;
@@ -133,6 +111,7 @@ parameter_types! {
 
 impl pallet_credit::Config for Test {
     type Event = Event;
+    type Currency = Balances;
     type BlocksPerEra = BlocksPerEra;
     type InitialCredit = InitialCredit;
     type CreditCapTwoEras = CreditCapTwoEras;
@@ -255,7 +234,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     initial_credit_level: CreditLevel::One,
                     rank_in_initial_credit_level: 1u32,
                     number_of_referees: 1,
-                    expiration: BLOCKS_PER_ERA,
+                    expiration: 1,
                 },
             ),
             (
@@ -265,7 +244,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     initial_credit_level: CreditLevel::One,
                     rank_in_initial_credit_level: 1u32,
                     number_of_referees: 1,
-                    expiration: BLOCKS_PER_ERA,
+                    expiration: 1,
                 },
             ),
             (
@@ -275,7 +254,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     initial_credit_level: CreditLevel::One,
                     rank_in_initial_credit_level: 1u32,
                     number_of_referees: 1,
-                    expiration: BLOCKS_PER_ERA,
+                    expiration: 1,
                 },
             ),
             (
@@ -305,7 +284,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     initial_credit_level: CreditLevel::One,
                     rank_in_initial_credit_level: 1u32,
                     number_of_referees: 1,
-                    expiration: BLOCKS_PER_ERA * 270,
+                    expiration: 270,
                 },
             ),
             (
@@ -315,7 +294,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     initial_credit_level: CreditLevel::Four,
                     rank_in_initial_credit_level: 80u32,
                     number_of_referees: 7,
-                    expiration: BLOCKS_PER_ERA * 270,
+                    expiration: 270,
                 },
             ),
         ],

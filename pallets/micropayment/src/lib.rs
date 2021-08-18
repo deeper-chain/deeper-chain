@@ -21,18 +21,6 @@ use sp_std::prelude::*;
 
 pub mod weights;
 
-pub(crate) const LOG_TARGET: &'static str = "micropayment";
-// syntactic sugar for logging.
-#[macro_export]
-macro_rules! log {
-	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-		frame_support::debug::$level!(
-			target: crate::LOG_TARGET,
-			$patter $(, $values)*
-		)
-	};
-}
-
 /// This is for benchmarking
 pub trait AccountCreator<AccountId> {
     /// Get the validators from session.
@@ -49,10 +37,10 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use log::error;
     use pallet_balances::MutableCurrency;
+    use pallet_credit::CreditInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{StoredMapError, Zero};
-    use sp_std::collections::btree_set::BTreeSet;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -62,10 +50,13 @@ pub mod pallet {
         type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
         type SecsPerBlock: Get<u32>;
 
+        /// CreditInterface of credit pallet
+        type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
+
         /// data traffic to DPR ratio
         #[pallet::constant]
         type DataPerDPR: Get<u64>;
-        
+
         /// Create Account trait for benchmarking
         type AccountCreator: AccountCreator<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
@@ -126,17 +117,6 @@ pub mod pallet {
     #[pallet::getter(fn total_micropayment_chanel_balance)]
     pub(super) type TotalMicropaymentChannelBalance<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
-
-    // record payment by server
-    #[pallet::storage]
-    #[pallet::getter(fn payment_by_server)]
-    pub(super) type PaymentByServer<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn clients_by_server)]
-    pub(super) type ClientsByServer<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BTreeSet<T::AccountId>, ValueQuery>;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -389,7 +369,7 @@ pub mod pallet {
                     };
                 });
                 Self::deposit_into_account(&server, chan.balance)?;
-                Self::update_micropayment_information(&client, &server, chan.balance);
+                T::CreditInterface::update_credit((server.clone(), chan.balance));
                 // no balance in channel now, just close it
                 Self::_close_channel(&client, &server);
                 let end_block = <frame_system::Module<T>>::block_number();
@@ -413,7 +393,7 @@ pub mod pallet {
                 };
             });
             Self::deposit_into_account(&server, amount)?;
-            Self::update_micropayment_information(&client, &server, amount);
+            T::CreditInterface::update_credit((server.clone(), amount));
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
             Ok(().into())
         }
@@ -469,48 +449,6 @@ pub mod pallet {
             data.extend_from_slice(&amount.encode());
             let hash = sp_io::hashing::blake2_256(&data);
             hash
-        }
-
-        pub fn update_micropayment_information(
-            client: &T::AccountId,
-            server: &T::AccountId,
-            amount: BalanceOf<T>,
-        ) {
-            // update last block
-            let block_number = <frame_system::Module<T>>::block_number();
-            log!(
-                info,
-                "last updated block is {:?} for accounts: {:?}, {:?}",
-                block_number,
-                client,
-                server
-            );
-            let balance = Self::payment_by_server(server);
-            PaymentByServer::<T>::insert(server, balance + amount);
-            log!(info, "micro-payment info updated at block {:?} for server:{:?}, with old balance {:?}, new balance {:?}",
-                    block_number, server, balance, balance + amount);
-            ClientsByServer::<T>::mutate(server, |v| {
-                v.insert((*client).clone());
-            });
-            log!(
-                info,
-                "client:{:?} added to server:{:?} at block {:?}",
-                client,
-                server,
-                block_number
-            );
-        }
-
-        // calculate accumulated micro-payments statistics of
-        // the period since the genesis or last call of this function
-        pub fn micropayment_statistics() -> Vec<(T::AccountId, BalanceOf<T>, u32)> {
-            let mut stats: Vec<(T::AccountId, BalanceOf<T>, u32)> = Vec::new();
-            for (server, payment) in PaymentByServer::<T>::drain() {
-                let num_of_clients = ClientsByServer::<T>::take(&server).len() as u32;
-                stats.push((server, payment, num_of_clients));
-            }
-            ClientsByServer::<T>::drain(); // it should be empty already, but let's drain it for safety
-            stats
         }
 
         // TODO: take ExistentialDeposit into account

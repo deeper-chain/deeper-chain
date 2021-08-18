@@ -32,10 +32,11 @@ use sp_runtime::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 
+use frame_support::weights::Weight;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy)]
+#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy, Ord, PartialOrd)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
     Zero,
@@ -68,24 +69,31 @@ pub struct CreditSetting<Balance> {
     pub reward_per_referee: Balance,
 }
 
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct CreditData<BlockNumber> {
+pub struct CreditData {
     pub credit: u64,
     pub initial_credit_level: CreditLevel,
     pub rank_in_initial_credit_level: u32,
     pub number_of_referees: u8,
-    pub expiration: BlockNumber,
+    pub expiration: EraIndex,
 }
+
+/// Counter for the number of eras that have passed.
+pub type EraIndex = u32;
 
 pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
-    fn get_number_of_referees(account_id: &AccountId) -> Option<u8>;
-    fn pass_threshold(account_id: &AccountId, _type: u8) -> bool;
-    fn slash_credit(account_id: &AccountId);
+    fn pass_threshold(account_id: &AccountId) -> bool;
+    fn slash_credit(account_id: &AccountId) -> Weight;
     fn get_credit_level(credit_score: u64) -> CreditLevel;
-    fn get_reward(account_id: &AccountId) -> Option<(Balance, Balance)>;
-    fn get_top_referee_reward(account_id: &AccountId) -> Option<Balance>;
+    fn get_reward(
+        account_id: &AccountId,
+        from: EraIndex,
+        to: EraIndex,
+    ) -> (Option<(Balance, Balance)>, Weight);
+    fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
+    fn update_credit(micropayment: (AccountId, Balance));
 }
 
 #[frame_support::pallet]
@@ -95,6 +103,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
         pallet_prelude::*,
+        weights::Weight,
     };
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
@@ -102,17 +111,17 @@ pub mod pallet {
         traits::{Saturating, Zero},
         Perbill,
     };
-    use sp_std::{cmp, convert::TryInto};
+    use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config:
-        frame_system::Config + pallet_micropayment::Config + pallet_deeper_node::Config
-    {
+    pub trait Config: frame_system::Config + pallet_deeper_node::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        /// Number of sessions per era.
+        /// Number of blocks per era.
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
+        /// Currency
+        type Currency: Currency<Self::AccountId>;
         /// Credit init score
         type InitialCredit: Get<u64>;
         /// Credit cap per Era
@@ -129,9 +138,8 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
-    pub type BalanceOf<T> = <<T as pallet_micropayment::Config>::Currency as Currency<
-        <T as frame_system::Config>::AccountId,
-    >>::Balance;
+    pub type BalanceOf<T> =
+        <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -140,7 +148,13 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn user_credit)]
     pub type UserCredit<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, CreditData<T::BlockNumber>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, CreditData, OptionQuery>;
+
+    /// user credit history is empty until user's device gets onboard   
+    #[pallet::storage]
+    #[pallet::getter(fn user_credit_history)]
+    pub type UserCreditHistory<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, Vec<(EraIndex, CreditData)>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn credit_settings)]
@@ -153,15 +167,16 @@ pub mod pallet {
     pub type DailyPocReward<T: Config> =
         StorageMap<_, Identity, CreditLevel, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
+    /// record the latest era when user updates the credit with micro-payment    
     #[pallet::storage]
     #[pallet::getter(fn last_credit_update)]
     pub type LastCreditUpdate<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, EraIndex, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
-        pub user_credit_data: Vec<(T::AccountId, CreditData<T::BlockNumber>)>,
+        pub user_credit_data: Vec<(T::AccountId, CreditData)>,
     }
 
     #[cfg(feature = "std")]
@@ -203,27 +218,7 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(n: T::BlockNumber) {
-            // We update credit score of account per era
-            // Notice: the new_micropayment_size_in_block is block level aggregation, here we need
-            // to aggregate total payment and number of clients first before pass it into update_credit's input
-            if n % T::BlocksPerEra::get() == T::BlockNumber::default() {
-                // update credit score per era
-                let from = n.saturating_sub(T::BlocksPerEra::get());
-                let to = n.saturating_sub(T::BlockNumber::from(1u32));
-                log!(
-                    info,
-                    "micropayment_statistics block number from {:?} - to {:?}",
-                    from,
-                    to
-                );
-                let micropayment_vec = pallet_micropayment::Module::<T>::micropayment_statistics();
-                Self::update_credit(micropayment_vec);
-                Self::slash_offline_devices_credit();
-            }
-        }
-    }
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
@@ -246,11 +241,11 @@ pub mod pallet {
         pub fn update_credit_data(
             origin: OriginFor<T>,
             account_id: T::AccountId,
-            mut credit_data: CreditData<T::BlockNumber>,
+            mut credit_data: CreditData,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
-            credit_data.expiration = T::BlockNumber::default();
+            credit_data.expiration = EraIndex::default();
 
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
@@ -284,58 +279,14 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// update credit score per era using micropayment vec
-        pub fn update_credit(micropayment_vec: Vec<(T::AccountId, BalanceOf<T>, u32)>) {
-            for (server_id, balance, _num_of_clients) in micropayment_vec {
-                let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
-                let mut score_delta: u64 = balance_num
-                    .checked_div(T::MicropaymentToCreditFactor::get())
-                    .unwrap_or(0) as u64;
-                log!(
-                    info,
-                    "server_id: {:?}, balance_num: {}, score_delta:{}",
-                    server_id.clone(),
-                    balance_num,
-                    score_delta
-                );
-                if score_delta > 0 {
-                    let current_block = <frame_system::Module<T>>::block_number();
-                    let last_credit_update = Self::last_credit_update(&server_id).unwrap_or(
-                        <pallet_deeper_node::Module<T>>::onboard_time(&server_id)
-                            .unwrap_or(current_block),
-                    );
-                    let eras = TryInto::<u64>::try_into(
-                        (current_block - last_credit_update) / T::BlocksPerEra::get(),
-                    )
-                    .ok()
-                    .unwrap();
-                    let cap: u64 = T::CreditCapTwoEras::get() as u64;
-                    let total_cap = cmp::max(1, cap * eras / 2); // at least 1
-                    if score_delta > total_cap {
-                        score_delta = total_cap;
-                        log!(
-                            info,
-                            "server_id: {:?} score_delta capped at {}",
-                            server_id.clone(),
-                            total_cap
-                        );
-                    }
-
-                    let new_credit = Self::get_credit_score(&server_id)
-                        .unwrap_or(0)
-                        .saturating_add(score_delta);
-                    if Self::_update_credit(&server_id, new_credit) {
-                        LastCreditUpdate::<T>::insert(&server_id, current_block);
-                    } else {
-                        log!(
-                            error,
-                            "failed to update credit {} for server_id: {:?}",
-                            new_credit,
-                            server_id.clone()
-                        );
-                    }
-                }
+        pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            let days = T::NodeInterface::get_days_offline(&account_id);
+            if days > 0 && days % 3 == 0 {
+                // slash one credit for being offline every 3 days
+                weight = weight.saturating_add(Self::slash_credit(&account_id));
             }
+            weight
         }
 
         /// inner: update credit score
@@ -353,10 +304,98 @@ pub mod pallet {
             }
         }
 
+        fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
+            let mut user_credit_history = Self::user_credit_history(&account_id);
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            if !user_credit_history.is_empty() {
+                // update credit history only if it's not empty
+                let last_index = user_credit_history.len() - 1;
+                // user credit data cannot be none unless there is a bug
+                let user_credit_data = Self::user_credit(&account_id).unwrap();
+                if user_credit_history[last_index].0 == current_era {
+                    user_credit_history[last_index] = (current_era, user_credit_data.clone());
+                } else {
+                    user_credit_history.push((current_era, user_credit_data));
+                }
+                UserCreditHistory::<T>::insert(&account_id, user_credit_history);
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+            }
+            weight
+        }
+
+        fn init_credit_history(account_id: &T::AccountId, credit_data: CreditData) -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            match <pallet_deeper_node::Module<T>>::onboard_time(account_id) {
+                Some(block) => {
+                    let onboard_era = Self::block_to_era(block);
+                    UserCreditHistory::<T>::insert(account_id, vec![(onboard_era, credit_data)]);
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                }
+                None => (),
+            }
+            weight
+        }
+
+        /// get all the credit data passing the threshold for the eras between "from" and "to"
+        fn get_credit_map(
+            credit_history: Vec<(EraIndex, CreditData)>,
+            from: EraIndex,
+            to: EraIndex,
+        ) -> BTreeMap<CreditData, u16> {
+            let mut credit_map = BTreeMap::<CreditData, u16>::new();
+            let mut i = 0;
+            for era in from..to + 1 {
+                while i < credit_history.len() {
+                    if credit_history[i].0 < era {
+                        i += 1;
+                    } else {
+                        break;
+                    }
+                }
+                // either credit_history[i].0 >= era or i == credit_history.len()
+                if credit_history[0].0 > era {
+                    // if the first historical credit data is after the era paid for,
+                    // then the device came onboard after the era paid for.
+                    // we simply ignore the era paid for and continue to the next era
+                    continue;
+                } else {
+                    // we get the credit data at the era or the closed one before the era
+                    let credit_data = if i < credit_history.len() && credit_history[i].0 == era {
+                        credit_history[i].1.clone()
+                    } else {
+                        credit_history[i - 1].1.clone()
+                    };
+                    if Self::_pass_threshold(&credit_data) {
+                        if credit_map.contains_key(&credit_data) {
+                            credit_map.insert(
+                                credit_data.clone(),
+                                credit_map.get(&credit_data).unwrap() + 1,
+                            );
+                        } else {
+                            credit_map.insert(credit_data, 1);
+                        }
+                    }
+                }
+            }
+            credit_map
+        }
+
+        fn _pass_threshold(credit_data: &CreditData) -> bool {
+            credit_data.credit >= T::MinCreditToDelegate::get()
+        }
+
+        fn get_current_era() -> EraIndex {
+            Self::block_to_era(<frame_system::Module<T>>::block_number())
+        }
+
+        fn block_to_era(block_number: T::BlockNumber) -> EraIndex {
+            TryInto::<u32>::try_into(block_number / T::BlocksPerEra::get())
+                .ok()
+                .unwrap()
+        }
+
         /// credit data check
-        fn check_credit_data(
-            data: &CreditData<T::BlockNumber>,
-        ) -> Result<(), DispatchErrorWithPostInfo> {
+        fn check_credit_data(data: &CreditData) -> Result<(), DispatchErrorWithPostInfo> {
             ensure!(
                 Self::get_credit_level(data.credit) == data.initial_credit_level,
                 Error::<T>::InvalidCreditData
@@ -369,18 +408,6 @@ pub mod pallet {
             Ok(())
         }
 
-        pub fn slash_offline_devices_credit() {
-            for device in <pallet_deeper_node::Module<T>>::devices_onboard() {
-                let days = T::NodeInterface::get_days_offline(&device);
-                if days > 0 && days % 3 == 0 {
-                    // slash one credit for being offline every 3 days
-                    Self::slash_credit(&device);
-                }
-            }
-        }
-    }
-
-    impl<T: Config> Module<T> {
         fn _update_credit_setting(credit_setting: CreditSetting<BalanceOf<T>>) {
             let daily_referee_reward = credit_setting
                 .reward_per_referee
@@ -419,26 +446,17 @@ pub mod pallet {
             }
         }
 
-        fn get_number_of_referees(account_id: &T::AccountId) -> Option<u8> {
+        /// check if account_id's credit score is pass threshold
+        fn pass_threshold(account_id: &T::AccountId) -> bool {
             if let Some(credit_data) = Self::user_credit(account_id) {
-                Some(credit_data.number_of_referees)
-            } else {
-                None
-            }
-        }
-
-        /// check if account_id's credit score is pass threshold type
-        fn pass_threshold(account_id: &T::AccountId, _type: u8) -> bool {
-            if let Some(score) = Self::get_credit_score(account_id) {
-                if score >= T::MinCreditToDelegate::get() {
-                    return true;
-                }
+                return Self::_pass_threshold(&credit_data);
             }
             false
         }
 
-        fn slash_credit(account_id: &T::AccountId) {
-            if UserCredit::<T>::contains_key(account_id.clone()) {
+        fn slash_credit(account_id: &T::AccountId) -> Weight {
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            if UserCredit::<T>::contains_key(account_id) {
                 let penalty = T::CreditAttenuationStep::get();
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
@@ -446,7 +464,13 @@ pub mod pallet {
                     }
                     _ => (),
                 });
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                weight = weight.saturating_add(Self::update_credit_history(
+                    account_id,
+                    Self::get_current_era(),
+                ));
             }
+            weight
         }
 
         fn get_credit_level(credit_score: u64) -> CreditLevel {
@@ -464,76 +488,57 @@ pub mod pallet {
             credit_level
         }
 
-        fn get_reward(account_id: &T::AccountId) -> Option<(BalanceOf<T>, BalanceOf<T>)> {
-            // read storage
-            if Self::pass_threshold(account_id, 0) {
-                let credit_data = Self::user_credit(account_id).unwrap();
-                let current_block = <frame_system::Module<T>>::block_number();
-                let onboard_time =
-                    <pallet_deeper_node::Module<T>>::onboard_time(account_id).unwrap();
-                if current_block <= onboard_time + credit_data.expiration {
-                    // not expired
-                    let initial_credit_level = credit_data.initial_credit_level;
-                    let credit_setting = Self::credit_settings(initial_credit_level.clone());
-                    // referral reward
-                    let number_of_referees = if credit_data.number_of_referees
-                        <= credit_setting.max_referees_with_rewards
-                    {
-                        credit_data.number_of_referees
-                    } else {
-                        credit_setting.max_referees_with_rewards
-                    };
-                    let daily_referee_reward = credit_setting
-                        .reward_per_referee
-                        .saturating_mul(number_of_referees.into());
-
-                    // poc reward
-                    let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
-                    let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
-                        Self::daily_poc_reward(current_credit_level.clone());
-
-                    if current_credit_level == initial_credit_level {
-                        // level unchanged
-                        let daily_poc_reward = if credit_data.rank_in_initial_credit_level
-                            <= credit_setting.max_rank_with_bonus
-                        {
-                            daily_poc_reward_with_bonus
-                        } else {
-                            base_daily_poc_reward
-                        };
-                        Some((daily_referee_reward, daily_poc_reward))
-                    } else {
-                        // level changed
-                        let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
-                            Self::daily_poc_reward(initial_credit_level);
-
-                        let daily_poc_reward = if credit_data.rank_in_initial_credit_level
-                            <= credit_setting.max_rank_with_bonus
-                        {
-                            base_daily_poc_reward
-                                + (initial_daily_poc_reward_with_bonus
-                                    - initial_base_daily_poc_reward)
-                        } else {
-                            base_daily_poc_reward
-                        };
-                        Some((daily_referee_reward, daily_poc_reward))
-                    }
-                } else {
-                    // expired
-                    // only daily_base_poc_reward
-                    let credit_level = Self::get_credit_level(credit_data.credit);
-                    let (base_daily_poc_reward, _) = Self::daily_poc_reward(credit_level);
-                    Some((BalanceOf::<T>::zero(), base_daily_poc_reward))
-                }
-            } else {
-                None
+        fn get_reward(
+            account_id: &T::AccountId,
+            from: EraIndex,
+            to: EraIndex,
+        ) -> (Option<(BalanceOf<T>, BalanceOf<T>)>, Weight) {
+            // silently ignore invalid inputs
+            if from > to || to >= Self::get_current_era() {
+                return (None, Weight::zero());
             }
-        }
 
-        fn get_top_referee_reward(account_id: &T::AccountId) -> Option<BalanceOf<T>> {
-            if Self::pass_threshold(account_id, 0) {
-                let credit_data = Self::user_credit(account_id).unwrap();
-                let credit_setting = Self::credit_settings(credit_data.initial_credit_level);
+            let optional_credit_data = Self::user_credit(account_id); // 1 db read
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            if optional_credit_data.is_none() {
+                return (None, weight);
+            }
+
+            let credit_data = optional_credit_data.unwrap();
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+            if Self::user_credit_history(account_id).is_empty() {
+                weight = weight
+                    .saturating_add(Self::init_credit_history(account_id, credit_data.clone()));
+            }
+            weight = weight.saturating_add(Self::slash_offline_device_credit(account_id));
+            let credit_history = Self::user_credit_history(account_id);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+            if credit_history.is_empty() {
+                return (None, weight);
+            }
+
+            let onboard_era = credit_history[0].0;
+            let expiry_era = if credit_data.expiration > 0 {
+                onboard_era + credit_data.expiration - 1
+            } else {
+                EraIndex::MAX // 0 means "never" expire
+            };
+            if from > expiry_era {
+                return (None, weight);
+            }
+
+            let credit_map = Self::get_credit_map(credit_history, from, cmp::min(to, expiry_era));
+            if credit_map.is_empty() {
+                return (None, weight);
+            }
+
+            let mut referee_reward = BalanceOf::<T>::zero();
+            let mut poc_reward = BalanceOf::<T>::zero();
+            for (credit_data, num_of_eras) in credit_map {
+                let initial_credit_level = credit_data.initial_credit_level;
+                let credit_setting = Self::credit_settings(initial_credit_level.clone());
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+                // referral reward
                 let number_of_referees =
                     if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
                         credit_data.number_of_referees
@@ -543,10 +548,118 @@ pub mod pallet {
                 let daily_referee_reward = credit_setting
                     .reward_per_referee
                     .saturating_mul(number_of_referees.into());
-                let top_referee_reward = daily_referee_reward.saturating_mul((270u32).into());
-                return Some(top_referee_reward);
+
+                // poc reward
+                let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
+                let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
+                    Self::daily_poc_reward(current_credit_level.clone());
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
+                let daily_poc_reward = if current_credit_level == initial_credit_level {
+                    // level unchanged
+                    if credit_data.rank_in_initial_credit_level
+                        <= credit_setting.max_rank_with_bonus
+                    {
+                        daily_poc_reward_with_bonus
+                    } else {
+                        base_daily_poc_reward
+                    }
+                } else {
+                    // level changed
+                    let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
+                        Self::daily_poc_reward(initial_credit_level);
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+                    if credit_data.rank_in_initial_credit_level
+                        <= credit_setting.max_rank_with_bonus
+                    {
+                        base_daily_poc_reward
+                            + (initial_daily_poc_reward_with_bonus - initial_base_daily_poc_reward)
+                    } else {
+                        base_daily_poc_reward
+                    }
+                };
+                referee_reward = referee_reward
+                    .saturating_add(daily_referee_reward.saturating_mul(num_of_eras.into()));
+                poc_reward =
+                    poc_reward.saturating_add(daily_poc_reward.saturating_mul(num_of_eras.into()));
             }
-            None
+            (Some((referee_reward, poc_reward)), weight)
+        }
+
+        fn get_top_referee_reward(account_id: &T::AccountId) -> (BalanceOf<T>, Weight) {
+            let mut weight = T::DbWeight::get().reads_writes(1, 0); // 1 db read for pass_threshold
+            if !Self::pass_threshold(account_id) {
+                // if not passing threshold
+                return (BalanceOf::<T>::zero(), weight);
+            }
+            let credit_data = Self::user_credit(account_id).unwrap(); // 1 db read
+            let credit_setting = Self::credit_settings(credit_data.initial_credit_level); // 1 db read
+            let number_of_referees =
+                if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
+                    credit_data.number_of_referees
+                } else {
+                    credit_setting.max_referees_with_rewards
+                };
+            let daily_referee_reward = credit_setting
+                .reward_per_referee
+                .saturating_mul(number_of_referees.into());
+            let top_referee_reward =
+                daily_referee_reward.saturating_mul(credit_data.expiration.into());
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+            (top_referee_reward, weight)
+        }
+
+        /// update credit score based on micropayment tuple
+        fn update_credit(micropayment: (T::AccountId, BalanceOf<T>)) {
+            let (server_id, balance) = micropayment;
+            let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
+            let mut score_delta: u64 = balance_num
+                .checked_div(T::MicropaymentToCreditFactor::get())
+                .unwrap_or(0) as u64;
+            log!(
+                info,
+                "server_id: {:?}, balance_num: {}, score_delta:{}",
+                server_id.clone(),
+                balance_num,
+                score_delta
+            );
+            if score_delta > 0 {
+                let current_era = Self::get_current_era();
+                let last_credit_update_era = Self::last_credit_update(&server_id).unwrap_or(0);
+                let mut eras = (current_era - last_credit_update_era) as u64;
+                if eras < 2 && Self::last_credit_update(&server_id).is_none() {
+                    // first update within 2 eras, we boost it to 2 eras so that credit can be updated
+                    eras = 2;
+                }
+                if eras >= 2 {
+                    let cap: u64 = T::CreditCapTwoEras::get() as u64;
+                    let total_cap = cap * (eras / 2);
+                    if score_delta > total_cap {
+                        score_delta = total_cap;
+                        log!(
+                            info,
+                            "server_id: {:?} score_delta capped at {}",
+                            server_id.clone(),
+                            total_cap
+                        );
+                    }
+
+                    let new_credit = Self::get_credit_score(&server_id)
+                        .unwrap_or(0)
+                        .saturating_add(score_delta);
+                    if Self::_update_credit(&server_id, new_credit) {
+                        LastCreditUpdate::<T>::insert(&server_id, current_era);
+                        Self::update_credit_history(&server_id, current_era);
+                    } else {
+                        log!(
+                            error,
+                            "failed to update credit {} for server_id: {:?}",
+                            new_credit,
+                            server_id.clone()
+                        );
+                    }
+                }
+            }
         }
     }
 }
