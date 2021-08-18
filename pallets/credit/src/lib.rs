@@ -594,6 +594,7 @@ pub mod pallet {
             }
             let credit_data = Self::user_credit(account_id).unwrap(); // 1 db read
             let credit_setting = Self::credit_settings(credit_data.initial_credit_level); // 1 db read
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
             let number_of_referees =
                 if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
                     credit_data.number_of_referees
@@ -604,8 +605,7 @@ pub mod pallet {
                 .reward_per_referee
                 .saturating_mul(number_of_referees.into());
             let top_referee_reward =
-                daily_referee_reward.saturating_mul(credit_data.expiration.into());
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+                daily_referee_reward.saturating_mul(credit_data.expiration.into());            
             (top_referee_reward, weight)
         }
 
