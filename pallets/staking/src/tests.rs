@@ -296,17 +296,17 @@ fn rewards_should_work() {
 fn many_delegators_rewards_should_work() {
     ExtBuilder::default()
         .session_per_era(6)
-        .num_delegators(u32::try_from(BLOCKS_PER_ERA).ok().unwrap())
+        .num_delegators(u32::try_from(BLOCKS_PER_ERA).ok().unwrap() - 1)
         .build_and_execute(|| {
             let mut init_balances = HashMap::<AccountId, Balance>::new();
-            for i in 1001..1001 + BLOCKS_PER_ERA {
+            for i in 1001..1001 + BLOCKS_PER_ERA - 1 {
                 assert_ok!(Staking::delegate(Origin::signed(i), vec![11, 21]));
                 init_balances.insert(i, Balances::total_balance(&i));
             }
-            assert_eq!(Staking::delegator_count() as u64, BLOCKS_PER_ERA);
-            assert_eq!(Staking::active_delegator_count() as u64, BLOCKS_PER_ERA);
+            assert_eq!(Staking::delegator_count() as u64, BLOCKS_PER_ERA - 1);
+            assert_eq!(Staking::active_delegator_count() as u64, BLOCKS_PER_ERA - 1);
             run_to_block(BLOCKS_PER_ERA); // the first block of the second era
-            for i in 1001..1001 + BLOCKS_PER_ERA {
+            for i in 1001..1001 + BLOCKS_PER_ERA - 1 {
                 // no delegators are paid yet
                 assert_eq!(Balances::total_balance(&i), *init_balances.get(&i).unwrap());
             }
@@ -320,18 +320,28 @@ fn many_delegators_rewards_should_work() {
             );
             let mut remainder = TOTAL_MINING_REWARD;
             let mut i = 1u64;
-            while i <= BLOCKS_PER_ERA / 2 {
+            while i < BLOCKS_PER_ERA / 2 {
                 run_to_block(BLOCKS_PER_ERA + i);
                 // it should pay 2 delegators each block
                 remainder = remainder - 21369858941948251800 * 2;
                 assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
                 i += 1;
             }
+            run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2);
+            remainder = remainder - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+            i = BLOCKS_PER_ERA / 2 + 1;
             while i < BLOCKS_PER_ERA {
                 run_to_block(BLOCKS_PER_ERA + i);
                 // all the delegators are paid, so no new payment should be made
                 assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
                 i += 1;
+            }
+            for i in 1002..1001 + BLOCKS_PER_ERA - 1 {
+                assert_eq!(
+                    Balances::total_balance(&1001),
+                    Balances::total_balance(&i)
+                );
             }
         });
 }
