@@ -338,6 +338,13 @@ pub mod pallet {
             weight
         }
 
+        fn get_onboard_era(account_id: &T::AccountId) -> Option<EraIndex> {
+            match <pallet_deeper_node::Module<T>>::onboard_time(account_id) {
+                Some(block) => Some(Self::block_to_era(block)),
+                None => None,
+            }
+        }
+
         /// get all the credit data passing the threshold for the eras between "from" and "to"
         fn get_credit_map(
             credit_history: Vec<(EraIndex, CreditData)>,
@@ -635,8 +642,15 @@ pub mod pallet {
                 score_delta
             );
             if score_delta > 0 {
+                let onboard_era = Self::get_onboard_era(&server_id);
+                if onboard_era.is_none() {
+                    // credit is not updated if the device is never online
+                    return;
+                }
                 let current_era = Self::get_current_era();
-                let last_credit_update_era = Self::last_credit_update(&server_id).unwrap_or(0);
+                // if this is the first update, we use onboard era as the last update era
+                let last_credit_update_era =
+                    Self::last_credit_update(&server_id).unwrap_or(onboard_era.unwrap());
                 let mut eras = (current_era - last_credit_update_era) as u64;
                 if eras < 2 && Self::last_credit_update(&server_id).is_none() {
                     // first update within 2 eras, we boost it to 2 eras so that credit can be updated

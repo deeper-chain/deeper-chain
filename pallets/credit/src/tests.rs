@@ -191,6 +191,13 @@ fn slash_credit() {
 fn update_credit() {
     new_test_ext().execute_with(|| {
         Credit::update_credit((1, 1_000 * 1_000_000_000_000_000));
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
+        
+        for i in 1..5 {
+            assert_ok!(DeeperNode::im_online(Origin::signed(i)));
+        }
+
+        Credit::update_credit((1, 1_000 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 1);
 
         Credit::update_credit((2, 1 * 1_000_000_000_000_000));
