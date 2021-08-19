@@ -280,9 +280,9 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            let days = T::NodeInterface::get_days_offline(&account_id);
-            if days > 0 && days % 3 == 0 {
-                // slash one credit for being offline every 3 days
+            let eras = T::NodeInterface::get_eras_offline(&account_id);
+            if eras > 0 && eras % 3 == 0 {
+                // slash one credit for being offline every 3 eras
                 weight = weight.saturating_add(Self::slash_credit(&account_id));
             }
             weight

@@ -10,7 +10,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use node_primitives::Balance;
+use node_primitives::{Balance, BlockNumber, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -73,18 +73,23 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+pub const MILLISECS_PER_BLOCK: Moment = 5000;
+pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+pub const BLOCKS_PER_ERA: u64 = (6 * EPOCH_DURATION_IN_BLOCKS) as u64;
+
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
-    pub const MaxDurationDays: u8 = 7;
-    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+    pub const MaxDurationEras: u8 = 7;
+    pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
     pub const MaxIpLength: usize = 256;
 }
 impl pallet_deeper_node::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
-    type MaxDurationDays = MaxDurationDays;
-    type DayToBlocknum = DayToBlocknum;
+    type MaxDurationEras = MaxDurationEras;
+    type BlocksPerEra = BlocksPerEra;
     type MaxIpLength = MaxIpLength;
     type WeightInfo = ();
 }

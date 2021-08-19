@@ -249,6 +249,8 @@ fn get_reward_with_update_credit_no_bonus() {
             // run 19 times
             run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
             Credit::update_credit((6, 5 * 1_000_000_000_000_000));
+            // to avoid slashing for being offline for 3 eras
+            assert_ok!(DeeperNode::im_online(Origin::signed(6))); 
             assert_eq!(
                 Credit::user_credit(&6).unwrap().credit,
                 100 + (i as u64 + 1) / 2
@@ -287,6 +289,8 @@ fn get_reward_with_update_credit_with_bonus() {
             // run 19 times
             run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
             Credit::update_credit((7, 5 * 1_000_000_000_000_000));
+            // to avoid slashing for being offline for 3 eras
+            assert_ok!(DeeperNode::im_online(Origin::signed(7)));
             assert_eq!(
                 Credit::user_credit(&7).unwrap().credit,
                 400 + (i as u64 + 1) / 2
@@ -348,27 +352,27 @@ fn slash_offline_devices_credit() {
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
         assert_ok!(DeeperNode::im_online(Origin::signed(3)));
 
-        run_to_block(BLOCKS_PER_DAY);
+        run_to_block(BLOCKS_PER_ERA);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
 
-        run_to_block(BLOCKS_PER_DAY * 3);
+        run_to_block(BLOCKS_PER_ERA * 3);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
 
-        run_to_block(BLOCKS_PER_DAY * 5);
+        run_to_block(BLOCKS_PER_ERA * 5);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
 
-        run_to_block(BLOCKS_PER_DAY * 6);
+        run_to_block(BLOCKS_PER_ERA * 6);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
 
-        run_to_block(BLOCKS_PER_DAY * 8);
+        run_to_block(BLOCKS_PER_ERA * 8);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
 
-        run_to_block(BLOCKS_PER_DAY * 9);
+        run_to_block(BLOCKS_PER_ERA * 9);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
     });

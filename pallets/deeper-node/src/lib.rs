@@ -21,7 +21,7 @@ pub use weights::WeightInfo;
 
 pub type IpV4 = Vec<u8>;
 pub type CountryRegion = Vec<u8>;
-pub type Duration = u8;
+pub type DurationEras = u8;
 
 // struct to store the registered Device Information
 #[derive(Decode, Encode, Default)]
@@ -39,8 +39,8 @@ pub trait NodeInterface<AccountId, BlockNumber> {
     /// This function tells if the device has ever been online
     fn im_ever_online(account_id: &AccountId) -> bool;
 
-    /// This function returns how many days the device has been offline
-    fn get_days_offline(account_id: &AccountId) -> u32;
+    /// This function returns how many eras the device has been offline
+    fn get_eras_offline(account_id: &AccountId) -> u32;
 }
 
 #[frame_support::pallet]
@@ -60,8 +60,9 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type MinLockAmt: Get<u32>;
-        type MaxDurationDays: Get<u8>;
-        type DayToBlocknum: Get<u32>;
+        type MaxDurationEras: Get<u8>;
+        /// Number of blocks per era.
+        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         type MaxIpLength: Get<usize>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -245,7 +246,7 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::unregister_device())]
         pub fn register_server(
             origin: OriginFor<T>,
-            duration: Duration,
+            duration_eras: DurationEras,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
@@ -253,18 +254,18 @@ pub mod pallet {
                 Error::<T>::DeviceNotRegister
             );
             ensure!(
-                duration <= T::MaxDurationDays::get(),
+                duration_eras <= T::MaxDurationEras::get(),
                 Error::<T>::DurationOverflow
             );
-            let block_num = (duration as u32) * T::DayToBlocknum::get();
-            let _ = Self::try_add_server(&sender, T::BlockNumber::from(block_num));
+            let blocks = T::BlockNumber::from(duration_eras) * T::BlocksPerEra::get();
+            let _ = Self::try_add_server(&sender, blocks);
             Ok(().into())
         }
 
         #[pallet::weight(T::WeightInfo::update_server())]
         pub fn update_server(
             origin: OriginFor<T>,
-            duration: Duration,
+            duration_eras: DurationEras,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             ensure!(
@@ -272,13 +273,13 @@ pub mod pallet {
                 Error::<T>::DeviceNotRegister
             );
             ensure!(
-                duration <= T::MaxDurationDays::get(),
+                duration_eras <= T::MaxDurationEras::get(),
                 Error::<T>::DurationOverflow
             );
-            let block_num = (duration as u32) * T::DayToBlocknum::get();
+            let blocks = T::BlockNumber::from(duration_eras) * T::BlocksPerEra::get();
             <DeviceInfo<T>>::mutate(&sender, |node| {
                 node.expire =
-                    <frame_system::Module<T>>::block_number() + T::BlockNumber::from(block_num);
+                    <frame_system::Module<T>>::block_number() + blocks;
             });
             Ok(().into())
         }
@@ -779,11 +780,11 @@ pub mod pallet {
             Self::get_im_online(account_id) != None
         }
 
-        fn get_days_offline(account_id: &T::AccountId) -> u32 {
+        fn get_eras_offline(account_id: &T::AccountId) -> u32 {
             let block = Self::get_im_online(account_id).unwrap_or(T::BlockNumber::default());
             let current_block = <frame_system::Module<T>>::block_number();
-            let days = (current_block - block) / T::DayToBlocknum::get().into();
-            TryInto::<u32>::try_into(days).ok().unwrap()
+            let eras = (current_block - block) / T::BlocksPerEra::get();
+            TryInto::<u32>::try_into(eras).ok().unwrap()
         }
     }
 }

@@ -207,15 +207,15 @@ fn im_ever_online() {
 }
 
 #[test]
-fn get_days_offline() {
+fn get_eras_offline() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
-        run_to_block(24 * 3600 * 1000 / 5000 - 1);
-        assert_eq!(DeeperNode::get_days_offline(&1), 0);
-        run_to_block(24 * 3600 * 1000 / 5000);
-        assert_eq!(DeeperNode::get_days_offline(&1), 1);
-        run_to_block(3 * 24 * 3600 * 1000 / 5000);
-        assert_eq!(DeeperNode::get_days_offline(&1), 3);
-        assert_eq!(DeeperNode::get_days_offline(&2), 3);
+        run_to_block(BLOCKS_PER_ERA - 1);
+        assert_eq!(DeeperNode::get_eras_offline(&1), 0);
+        run_to_block(BLOCKS_PER_ERA);
+        assert_eq!(DeeperNode::get_eras_offline(&1), 1);
+        run_to_block(3 * BLOCKS_PER_ERA);
+        assert_eq!(DeeperNode::get_eras_offline(&1), 3);
+        assert_eq!(DeeperNode::get_eras_offline(&2), 3);
     });
 }
