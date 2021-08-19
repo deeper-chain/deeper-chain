@@ -22,7 +22,7 @@ use crate::*;
 use crate::{Config as StakingConfig, Module as Staking};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
-use pallet_credit::{Config as CreditConfig, Module as Credit};
+use pallet_credit::{Config as CreditConfig, CreditData, CreditLevel, Module as Credit};
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaChaRng,
@@ -80,7 +80,20 @@ pub fn create_delegator<T: StakingConfig + CreditConfig>(
     balance_factor: u32,
 ) -> Result<T::AccountId, &'static str> {
     let delegator = create_funded_user::<T>("delegator", n, balance_factor);
-    let _ = Credit::<T>::initialize_credit(RawOrigin::Root.into(), delegator.clone());
+    let credit_data = CreditData {
+        campaign_id: 0,
+        credit: 100,
+        initial_credit_level: CreditLevel::Zero,
+        rank_in_initial_credit_level: 0u32,
+        number_of_referees: 0,
+        reward_eras: 100,
+        current_credit_level: CreditLevel::One,
+    };
+    let _ = Credit::<T>::add_or_update_credit_data(
+        RawOrigin::Root.into(),
+        delegator.clone(),
+        credit_data,
+    );
     return Ok(delegator);
 }
 

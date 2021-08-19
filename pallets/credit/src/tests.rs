@@ -42,8 +42,9 @@ fn get_credit_level() {
 fn update_credit_setting() {
     new_test_ext().execute_with(|| {
         let credit_setting = CreditSetting {
+            campaign_id: 0,
             credit_level: CreditLevel::One,
-            balance: 20_000,
+            staking_balance: 20_000,
             base_apy: Percent::from_percent(39),
             bonus_apy: Percent::from_percent(0),
             max_rank_with_bonus: 1u32,
@@ -59,11 +60,12 @@ fn update_credit_setting() {
             RawOrigin::Root.into(),
             credit_setting.clone()
         ));
-        assert_eq!(Credit::credit_settings(CreditLevel::One), credit_setting);
+        assert_eq!(Credit::credit_settings(0, CreditLevel::One), credit_setting);
 
         let credit_setting_updated = CreditSetting {
+            campaign_id: 0,
             credit_level: CreditLevel::One,
-            balance: 40_000,
+            staking_balance: 40_000,
             base_apy: Percent::from_percent(45),
             bonus_apy: Percent::from_percent(3),
             max_rank_with_bonus: 2u32,
@@ -76,30 +78,32 @@ fn update_credit_setting() {
             credit_setting_updated.clone()
         ));
         assert_eq!(
-            Credit::credit_settings(CreditLevel::One),
+            Credit::credit_settings(0, CreditLevel::One),
             credit_setting_updated
         );
     });
 }
 
 #[test]
-fn update_credit_data() {
+fn add_or_update_credit_data() {
     new_test_ext().execute_with(|| {
         let credit_data = CreditData {
+            campaign_id: 0,
             credit: 100,
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            expiration: 0,
+            reward_eras: 0,
+            current_credit_level: CreditLevel::One,
         };
         // Only sudo can call update_credit_data
         assert_noop!(
-            Credit::update_credit_data(Origin::signed(1), 2, credit_data.clone()),
+            Credit::add_or_update_credit_data(Origin::signed(1), 2, credit_data.clone()),
             BadOrigin
         );
 
         // update_credit_data works
-        assert_ok!(Credit::update_credit_data(
+        assert_ok!(Credit::add_or_update_credit_data(
             RawOrigin::Root.into(),
             1,
             credit_data.clone()
@@ -108,57 +112,35 @@ fn update_credit_data() {
 
         // credit_data invalid
         let credit_data = CreditData {
+            campaign_id: 0,
             credit: 100,
             initial_credit_level: CreditLevel::Two,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            expiration: 0,
+            reward_eras: 0,
+            current_credit_level: CreditLevel::Two,
         };
         assert_eq!(
-            Credit::update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
+            Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::InvalidCreditData
             ))
         );
 
         let credit_data = CreditData {
+            campaign_id: 0,
             credit: 100,
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 10,
-            expiration: 100,
+            reward_eras: 100,
+            current_credit_level: CreditLevel::One,
         };
         assert_eq!(
-            Credit::update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
+            Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::InvalidCreditData
             ))
-        );
-    });
-}
-
-#[test]
-fn initialize_credit() {
-    new_test_ext().execute_with(|| {
-        // Only sudo can call initialize_credit
-        assert_noop!(Credit::initialize_credit(Origin::signed(1), 2), BadOrigin);
-
-        //initialize_credit failed
-        assert_eq!(
-            Credit::initialize_credit(RawOrigin::Root.into(), 1),
-            Err(DispatchErrorWithPostInfo::from(
-                Error::<Test>::CreditDataInitialized
-            ))
-        );
-
-        // initialize_credit works
-        assert_ok!(Credit::initialize_credit(RawOrigin::Root.into(), 33));
-        assert_eq!(
-            Credit::user_credit(33),
-            Some(CreditData {
-                credit: 100,
-                ..Default::default()
-            })
         );
     });
 }
@@ -169,11 +151,13 @@ fn get_credit_score() {
         UserCredit::<Test>::insert(
             1,
             CreditData {
+                campaign_id: 0,
                 credit: 100,
                 initial_credit_level: CreditLevel::One,
                 rank_in_initial_credit_level: 1u32,
                 number_of_referees: 1,
-                expiration: 1,
+                reward_eras: 1,
+                current_credit_level: CreditLevel::One,
             },
         );
         assert_eq!(Credit::get_credit_score(&1).unwrap(), 100);
@@ -186,11 +170,13 @@ fn slash_credit() {
         UserCredit::<Test>::insert(
             1,
             CreditData {
+                campaign_id: 0,
                 credit: 100,
                 initial_credit_level: CreditLevel::One,
                 rank_in_initial_credit_level: 1u32,
                 number_of_referees: 1,
-                expiration: 1,
+                reward_eras: 1,
+                current_credit_level: CreditLevel::One,
             },
         );
         Credit::slash_credit(&1);

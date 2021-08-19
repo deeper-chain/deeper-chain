@@ -338,10 +338,7 @@ fn many_delegators_rewards_should_work() {
                 i += 1;
             }
             for i in 1002..1001 + BLOCKS_PER_ERA - 1 {
-                assert_eq!(
-                    Balances::total_balance(&1001),
-                    Balances::total_balance(&i)
-                );
+                assert_eq!(Balances::total_balance(&1001), Balances::total_balance(&i));
             }
         });
 }
@@ -389,13 +386,14 @@ fn rewards_if_undelegating_in_next_era() {
 }
 
 #[test]
-fn rewards_if_undelegating_in_later_era() {
+fn rewards_continue_each_era() {
     ExtBuilder::default()
         .session_per_era(6)
         .build_and_execute(|| {
             // 1001 is the default delegator
             assert_eq!(Staking::delegator_count() as u64, 1);
             assert_eq!(Staking::active_delegator_count() as u64, 1);
+            let init_balance_1001 = Balances::total_balance(&1001);
 
             run_to_block(BLOCKS_PER_ERA);
             assert_eq!(
@@ -404,23 +402,22 @@ fn rewards_if_undelegating_in_later_era() {
             );
 
             run_to_block(BLOCKS_PER_ERA + 1);
-            let remainder = Staking::remainder_mining_reward().unwrap();
             // 1001 is paid
-            assert!(remainder < TOTAL_MINING_REWARD);
-            // 1001 is still active since it's still delegating
-            assert_eq!(Staking::active_delegator_count() as u64, 1);
-            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            );
+            let mut remainder = TOTAL_MINING_REWARD - 21369858941948251800;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
 
             run_to_block(BLOCKS_PER_ERA * 2 + 1);
-            // 1001 is still active since it's still delegating
-            assert_eq!(Staking::active_delegator_count() as u64, 1);
-            assert_eq!(Staking::delegator_count() as u64, 1);
-            // but nothing is paid, since 1001 has been paid in earlier era
+            // 1001 is paid
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800 * 2
+            );
+            remainder = TOTAL_MINING_REWARD - 21369858941948251800 * 2;
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
-            // now 1001 undelegates
-            assert_ok!(Staking::undelegate(Origin::signed(1001)));
-            assert_eq!(Staking::active_delegator_count() as u64, 0);
-            assert_eq!(Staking::delegator_count() as u64, 0);
         });
 }
 
@@ -451,10 +448,13 @@ fn rewards_always_paid_in_next_era() {
             let mut remainder = TOTAL_MINING_REWARD - 21369858941948251800;
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
 
+            // 1001 undelegates so that it won't be paid next era
+            assert_ok!(Staking::undelegate(Origin::signed(1001)));
+
             // 1002 becomes delegator in the new era
             assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21]));
-            assert_eq!(Staking::active_delegator_count() as u64, 2);
-            assert_eq!(Staking::delegator_count() as u64, 2);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+            assert_eq!(Staking::delegator_count() as u64, 1);
 
             run_to_block(BLOCKS_PER_ERA * 2 + 2);
             // 1001 balance is the same as the last era
