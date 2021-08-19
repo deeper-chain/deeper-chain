@@ -189,13 +189,11 @@ fn im_online() {
 }
 
 #[test]
-fn im_offline() {
+fn get_onboard_time() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         run_to_block(1);
-        assert_eq!(DeeperNode::im_offline(&1), false);
-        run_to_block(24 * 3600 * 1000 / 5000);
-        assert_eq!(DeeperNode::im_offline(&1), true);
+        assert_eq!(DeeperNode::get_onboard_time(&1), Some(0));
     });
 }
 

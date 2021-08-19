@@ -32,9 +32,9 @@ pub struct Node<AccountId, BlockNumber> {
     expire: BlockNumber,
 }
 
-pub trait NodeInterface<AccountId> {
+pub trait NodeInterface<AccountId, BlockNumber> {
     /// This function tells if the device has been offline for a day
-    fn im_offline(account_id: &AccountId) -> bool;
+    fn get_onboard_time(account_id: &AccountId) -> Option<BlockNumber>;
 
     /// This function tells if the device has ever been online
     fn im_ever_online(account_id: &AccountId) -> bool;
@@ -770,11 +770,9 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> NodeInterface<T::AccountId> for Module<T> {
-        fn im_offline(account_id: &T::AccountId) -> bool {
-            let block = Self::get_im_online(account_id).unwrap_or(T::BlockNumber::default());
-            let current_block = <frame_system::Module<T>>::block_number();
-            current_block - block >= T::DayToBlocknum::get().into()
+    impl<T: Config> NodeInterface<T::AccountId, T::BlockNumber> for Module<T> {
+        fn get_onboard_time(account_id: &T::AccountId) -> Option<T::BlockNumber> {
+            Self::onboard_time(account_id)
         }
 
         fn im_ever_online(account_id: &T::AccountId) -> bool {

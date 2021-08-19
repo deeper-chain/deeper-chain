@@ -465,7 +465,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
 
     /// NodeInterface of deeper-node pallet
-    type NodeInterface: NodeInterface<Self::AccountId>;
+    type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
 
     /// max delegates can be selected by one delegator
     type MaxDelegates: Get<usize>;

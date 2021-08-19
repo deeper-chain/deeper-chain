@@ -122,7 +122,7 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_deeper_node::Config {
+    pub trait Config: frame_system::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Number of blocks per era.
@@ -138,7 +138,7 @@ pub mod pallet {
         /// mircropayment to credit factor:
         type MicropaymentToCreditFactor: Get<u128>;
         /// NodeInterface of deeper-node pallet
-        type NodeInterface: NodeInterface<Self::AccountId>;
+        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
@@ -327,7 +327,7 @@ pub mod pallet {
 
         fn init_credit_history(account_id: &T::AccountId, credit_data: CreditData) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            match <pallet_deeper_node::Module<T>>::onboard_time(account_id) {
+            match T::NodeInterface::get_onboard_time(account_id) {
                 Some(block) => {
                     let onboard_era = Self::block_to_era(block);
                     UserCreditHistory::<T>::insert(account_id, vec![(onboard_era, credit_data)]);
@@ -339,7 +339,7 @@ pub mod pallet {
         }
 
         fn get_onboard_era(account_id: &T::AccountId) -> Option<EraIndex> {
-            match <pallet_deeper_node::Module<T>>::onboard_time(account_id) {
+            match T::NodeInterface::get_onboard_time(account_id) {
                 Some(block) => Some(Self::block_to_era(block)),
                 None => None,
             }
