@@ -53,7 +53,7 @@ fn add_slashing_spans<T: Config>(who: &T::AccountId, spans: u32) {
 const USER_SEED: u32 = 999666;
 
 benchmarks! {
-    where_clause {  where T: Config, T: pallet_credit::Config}
+    where_clause { where T: Config, T: pallet_credit::Config }
     bond {
         let stash = create_funded_user::<T>("stash", USER_SEED, 100);
         let controller = create_funded_user::<T>("controller", USER_SEED, 100);
@@ -366,7 +366,7 @@ benchmarks! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mock::{Balances, Credit, ExtBuilder, Origin, Staking, Test};
+    use crate::mock::{ExtBuilder, Staking, Test};
     use frame_support::assert_ok;
 
     #[test]

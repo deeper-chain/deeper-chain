@@ -1994,7 +1994,7 @@ impl<T: Config> Module<T> {
             }
             if delegator_data.delegating {
                 Delegators::<T>::mutate(delegator, |data| {
-                    data.unrewarded_since = None;
+                    data.unrewarded_since = Some(current_era);
                 });
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             } else {

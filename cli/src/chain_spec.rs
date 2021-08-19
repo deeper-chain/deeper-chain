@@ -471,8 +471,9 @@ pub fn testnet_genesis(
         pallet_credit: Some(CreditConfig {
             credit_settings: vec![
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Zero,
-                    balance: 0,
+                    staking_balance: 0,
                     base_apy: Percent::from_percent(0),
                     bonus_apy: Percent::from_percent(0),
                     max_rank_with_bonus: 0u32,
@@ -481,8 +482,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 0,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::One,
-                    balance: 20_000 * DPR,
+                    staking_balance: 20_000 * DPR,
                     base_apy: Percent::from_percent(39),
                     bonus_apy: Percent::from_percent(0),
                     max_rank_with_bonus: 0u32,
@@ -491,8 +493,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Two,
-                    balance: 46_800 * DPR,
+                    staking_balance: 46_800 * DPR,
                     base_apy: Percent::from_percent(40),
                     bonus_apy: Percent::from_percent(7),
                     max_rank_with_bonus: 1200u32,
@@ -501,8 +504,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Three,
-                    balance: 76_800 * DPR,
+                    staking_balance: 76_800 * DPR,
                     base_apy: Percent::from_percent(42),
                     bonus_apy: Percent::from_percent(11),
                     max_rank_with_bonus: 1000u32,
@@ -511,8 +515,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Four,
-                    balance: 138_000 * DPR,
+                    staking_balance: 138_000 * DPR,
                     base_apy: Percent::from_percent(46),
                     bonus_apy: Percent::from_percent(13),
                     max_rank_with_bonus: 800u32,
@@ -521,8 +526,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Five,
-                    balance: 218_000 * DPR,
+                    staking_balance: 218_000 * DPR,
                     base_apy: Percent::from_percent(50),
                     bonus_apy: Percent::from_percent(16),
                     max_rank_with_bonus: 600u32,
@@ -531,8 +537,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Six,
-                    balance: 288_000 * DPR,
+                    staking_balance: 288_000 * DPR,
                     base_apy: Percent::from_percent(54),
                     bonus_apy: Percent::from_percent(20),
                     max_rank_with_bonus: 400u32,
@@ -541,8 +548,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Seven,
-                    balance: 368_000 * DPR,
+                    staking_balance: 368_000 * DPR,
                     base_apy: Percent::from_percent(57),
                     bonus_apy: Percent::from_percent(25),
                     max_rank_with_bonus: 200u32,
@@ -551,8 +559,9 @@ pub fn testnet_genesis(
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Eight,
-                    balance: 468_000 * DPR,
+                    staking_balance: 468_000 * DPR,
                     base_apy: Percent::from_percent(60),
                     bonus_apy: Percent::from_percent(30),
                     max_rank_with_bonus: 100u32,
@@ -568,11 +577,13 @@ pub fn testnet_genesis(
                     (
                         x,
                         CreditData {
+                            campaign_id: 0,
                             credit: 100,
                             initial_credit_level: CreditLevel::One,
                             rank_in_initial_credit_level: 1u32,
                             number_of_referees: 1,
-                            expiration: 1, // 1 era
+                            reward_eras: 1,
+                            current_credit_level: CreditLevel::One,
                         },
                     )
                 })

@@ -104,9 +104,11 @@
       "Eight"
     ]
   },
+  "CampaignId": "u16",
   "CreditSetting": {
+    "campaign_id": "CampaignId",
     "credit_level": "CreditLevel",
-    "balance": "Balance",
+    "staking_balance": "Balance",
     "base_apy": "Percent",
     "bonus_apy": "Percent",
     "max_rank_with_bonus": "u32",
@@ -115,11 +117,13 @@
     "reward_per_referee": "Balance"
   },
   "CreditData": {
+    "campaign_id": "CampaignId",
     "credit": "u64",
     "initial_credit_level": "CreditLevel",
     "rank_in_initial_credit_level": "u32",
     "number_of_referees": "u8",
-    "expiration": "EraIndex"
+    "reward_eras": "EraIndex",
+    "current_credit_level": "CreditLevel"
   },
   "DelegatorData": {
     "delegated_validators": "Vec<AccountId>"

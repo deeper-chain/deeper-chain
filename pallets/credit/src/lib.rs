@@ -56,11 +56,19 @@ impl Default for CreditLevel {
     }
 }
 
+/// Each campaign_id represents a DPR Proof-of-Credit promotion campaign.
+pub type CampaignId = u16;
+
+/// Counter for the number of eras that have passed.
+pub type EraIndex = u32;
+
+/// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditSetting<Balance> {
+    pub campaign_id: CampaignId,
     pub credit_level: CreditLevel,
-    pub balance: Balance,
+    pub staking_balance: Balance,
     pub base_apy: Percent,
     pub bonus_apy: Percent,
     pub max_rank_with_bonus: u32, // max rank which can get bonus in the credit_level
@@ -72,15 +80,14 @@ pub struct CreditSetting<Balance> {
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditData {
+    pub campaign_id: CampaignId,
     pub credit: u64,
     pub initial_credit_level: CreditLevel,
     pub rank_in_initial_credit_level: u32,
     pub number_of_referees: u8,
-    pub expiration: EraIndex,
+    pub current_credit_level: CreditLevel,
+    pub reward_eras: EraIndex, // reward eras since device gets online
 }
-
-/// Counter for the number of eras that have passed.
-pub type EraIndex = u32;
 
 pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
@@ -122,9 +129,7 @@ pub mod pallet {
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
-        /// Credit init score
-        type InitialCredit: Get<u64>;
-        /// Credit cap per Era
+        /// Credit cap every two eras
         type CreditCapTwoEras: Get<u8>;
         /// credit attenuation step
         type CreditAttenuationStep: Get<u64>;
@@ -158,14 +163,28 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn credit_settings)]
-    pub type CreditSettings<T: Config> =
-        StorageMap<_, Identity, CreditLevel, CreditSetting<BalanceOf<T>>, ValueQuery>;
+    pub type CreditSettings<T: Config> = StorageDoubleMap<
+        _,
+        Identity,
+        CampaignId,
+        Identity,
+        CreditLevel,
+        CreditSetting<BalanceOf<T>>,
+        ValueQuery,
+    >;
 
     /// (daily_base_poc_reward, daily_poc_reward_with_bonus)
     #[pallet::storage]
     #[pallet::getter(fn daily_poc_reward)]
-    pub type DailyPocReward<T: Config> =
-        StorageMap<_, Identity, CreditLevel, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+    pub type DailyPocReward<T: Config> = StorageDoubleMap<
+        _,
+        Identity,
+        CampaignId,
+        Identity,
+        CreditLevel,
+        (BalanceOf<T>, BalanceOf<T>),
+        ValueQuery,
+    >;
 
     /// record the latest era when user updates the credit with micro-payment    
     #[pallet::storage]
@@ -236,16 +255,15 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// update creditdata
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_credit_data())]
-        pub fn update_credit_data(
+        /// update credit data
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::add_or_update_credit_data())]
+        pub fn add_or_update_credit_data(
             origin: OriginFor<T>,
             account_id: T::AccountId,
-            mut credit_data: CreditData,
+            credit_data: CreditData,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
-            credit_data.expiration = EraIndex::default();
 
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
@@ -255,25 +273,6 @@ pub mod pallet {
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data);
             }
-            Ok(().into())
-        }
-
-        /// initialize credit score
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::initialize_credit())]
-        pub fn initialize_credit(
-            origin: OriginFor<T>,
-            account_id: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            ensure!(
-                !UserCredit::<T>::contains_key(&account_id),
-                Error::<T>::CreditDataInitialized
-            );
-            let credit_data = CreditData {
-                credit: T::InitialCredit::get(),
-                ..Default::default()
-            };
-            UserCredit::<T>::insert(&account_id, credit_data);
             Ok(().into())
         }
     }
@@ -293,7 +292,10 @@ pub mod pallet {
         fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
             if UserCredit::<T>::contains_key(account_id) {
                 UserCredit::<T>::mutate(account_id, |v| match v {
-                    Some(credit_data) => credit_data.credit = score,
+                    Some(credit_data) => {
+                        credit_data.credit = score;
+                        credit_data.current_credit_level = Self::get_credit_level(score);
+                    }
                     _ => (),
                 });
                 Self::deposit_event(Event::CreditUpdateSuccess((*account_id).clone(), score));
@@ -397,10 +399,10 @@ pub mod pallet {
         /// credit data check
         fn check_credit_data(data: &CreditData) -> Result<(), DispatchErrorWithPostInfo> {
             ensure!(
-                Self::get_credit_level(data.credit) == data.initial_credit_level,
+                Self::get_credit_level(data.credit) == data.current_credit_level,
                 Error::<T>::InvalidCreditData
             );
-            let credit_setting = Self::credit_settings(data.initial_credit_level);
+            let credit_setting = Self::credit_settings(data.campaign_id, data.initial_credit_level);
             ensure!(
                 data.number_of_referees <= credit_setting.max_referees_with_rewards,
                 Error::<T>::InvalidCreditData
@@ -415,7 +417,7 @@ pub mod pallet {
 
             // poc reward
             let base_total_reward = Perbill::from_rational_approximation(270u32, 365u32)
-                * (credit_setting.base_apy * credit_setting.balance);
+                * (credit_setting.base_apy * credit_setting.staking_balance);
             let base_daily_poc_reward = (Perbill::from_rational_approximation(1u32, 270u32)
                 * base_total_reward)
                 .saturating_sub(daily_referee_reward);
@@ -424,16 +426,21 @@ pub mod pallet {
                 * (credit_setting
                     .base_apy
                     .saturating_add(credit_setting.bonus_apy)
-                    * credit_setting.balance);
+                    * credit_setting.staking_balance);
             let base_daily_poc_reward_with_bonus =
                 (Perbill::from_rational_approximation(1u32, 270u32) * base_total_reward_with_bonus)
                     .saturating_sub(daily_referee_reward);
 
             DailyPocReward::<T>::insert(
+                credit_setting.campaign_id,
                 credit_setting.credit_level.clone(),
                 (base_daily_poc_reward, base_daily_poc_reward_with_bonus),
             );
-            CreditSettings::<T>::insert(credit_setting.credit_level.clone(), credit_setting);
+            CreditSettings::<T>::insert(
+                credit_setting.campaign_id,
+                credit_setting.credit_level.clone(),
+                credit_setting,
+            );
         }
     }
 
@@ -460,7 +467,9 @@ pub mod pallet {
                 let penalty = T::CreditAttenuationStep::get();
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
-                        credit_data.credit = credit_data.credit.saturating_sub(penalty)
+                        credit_data.credit = credit_data.credit.saturating_sub(penalty);
+                        credit_data.current_credit_level =
+                            Self::get_credit_level(credit_data.credit);
                     }
                     _ => (),
                 });
@@ -505,6 +514,10 @@ pub mod pallet {
             }
 
             let credit_data = optional_credit_data.unwrap();
+            if credit_data.reward_eras == 0 {
+                return (None, weight);
+            }
+
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
             if Self::user_credit_history(account_id).is_empty() {
                 weight = weight
@@ -518,11 +531,7 @@ pub mod pallet {
             }
 
             let onboard_era = credit_history[0].0;
-            let expiry_era = if credit_data.expiration > 0 {
-                onboard_era + credit_data.expiration - 1
-            } else {
-                EraIndex::MAX // 0 means "never" expire
-            };
+            let expiry_era = onboard_era + credit_data.reward_eras - 1;
             if from > expiry_era {
                 return (None, weight);
             }
@@ -536,7 +545,8 @@ pub mod pallet {
             let mut poc_reward = BalanceOf::<T>::zero();
             for (credit_data, num_of_eras) in credit_map {
                 let initial_credit_level = credit_data.initial_credit_level;
-                let credit_setting = Self::credit_settings(initial_credit_level.clone());
+                let credit_setting =
+                    Self::credit_settings(credit_data.campaign_id, initial_credit_level.clone());
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
                 // referral reward
                 let number_of_referees =
@@ -550,9 +560,9 @@ pub mod pallet {
                     .saturating_mul(number_of_referees.into());
 
                 // poc reward
-                let current_credit_level = Self::get_credit_level(credit_data.credit); // get current credit_level
+                let current_credit_level = credit_data.current_credit_level;
                 let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
-                    Self::daily_poc_reward(current_credit_level.clone());
+                    Self::daily_poc_reward(credit_data.campaign_id, current_credit_level.clone());
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
 
                 let daily_poc_reward = if current_credit_level == initial_credit_level {
@@ -567,7 +577,7 @@ pub mod pallet {
                 } else {
                     // level changed
                     let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
-                        Self::daily_poc_reward(initial_credit_level);
+                        Self::daily_poc_reward(credit_data.campaign_id, initial_credit_level);
                     weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
                     if credit_data.rank_in_initial_credit_level
                         <= credit_setting.max_rank_with_bonus
@@ -593,7 +603,9 @@ pub mod pallet {
                 return (BalanceOf::<T>::zero(), weight);
             }
             let credit_data = Self::user_credit(account_id).unwrap(); // 1 db read
-            let credit_setting = Self::credit_settings(credit_data.initial_credit_level); // 1 db read
+            let credit_setting =
+                Self::credit_settings(credit_data.campaign_id, credit_data.initial_credit_level); // 1 db read
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
             let number_of_referees =
                 if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
                     credit_data.number_of_referees
@@ -604,8 +616,7 @@ pub mod pallet {
                 .reward_per_referee
                 .saturating_mul(number_of_referees.into());
             let top_referee_reward =
-                daily_referee_reward.saturating_mul(credit_data.expiration.into());
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
+                daily_referee_reward.saturating_mul(credit_data.reward_eras.into());
             (top_referee_reward, weight)
         }
 

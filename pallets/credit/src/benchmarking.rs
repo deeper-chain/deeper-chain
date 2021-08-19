@@ -28,8 +28,9 @@ const USER_SEED: u32 = 999666;
 benchmarks! {
     update_credit_setting {
         let credit_setting = CreditSetting::<BalanceOf<T>> {
+            campaign_id: 0,
             credit_level: CreditLevel::One,
-            balance: 20_000u32.into(),
+            staking_balance: 20_000u32.into(),
             base_apy: Percent::from_percent(39),
             bonus_apy: Percent::from_percent(0),
             max_rank_with_bonus: 1u32,
@@ -39,26 +40,21 @@ benchmarks! {
         };
     }: _(RawOrigin::Root, credit_setting)
     verify {
-        assert!(CreditSettings::<T>::contains_key(CreditLevel::One));
+        assert!(CreditSettings::<T>::contains_key(0, CreditLevel::One));
     }
 
-    update_credit_data {
+    add_or_update_credit_data {
         let credit_data = CreditData {
+            campaign_id: 0,
             credit: 100,
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            expiration: 0,
+            reward_eras: 0,
+            current_credit_level: CreditLevel::One,
         };
         let user: T::AccountId = account("user", USER_SEED, SEED);
     }: _(RawOrigin::Root, user.clone(), credit_data)
-    verify {
-        assert!(UserCredit::<T>::contains_key(user));
-    }
-
-    initialize_credit {
-        let user: T::AccountId = account("user", USER_SEED, SEED);
-    }: _(RawOrigin::Root, user.clone())
     verify {
         assert!(UserCredit::<T>::contains_key(user));
     }
@@ -74,8 +70,7 @@ mod tests {
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
             assert_ok!(test_benchmark_update_credit_setting::<Test>());
-            assert_ok!(test_benchmark_update_credit_data::<Test>());
-            assert_ok!(test_benchmark_initialize_credit::<Test>());
+            assert_ok!(test_benchmark_add_or_update_credit_data::<Test>());
         });
     }
 }

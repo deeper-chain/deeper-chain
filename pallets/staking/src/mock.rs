@@ -214,7 +214,6 @@ pub const CREDIT_ATTENUATION_STEP: u64 = 1;
 pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 
 parameter_types! {
-    pub const InitialCredit: u64 = INITIAL_CREDIT;
     pub const CreditCapTwoEras: u8 = 5;
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
@@ -226,7 +225,6 @@ impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
-    type InitialCredit = InitialCredit;
     type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
@@ -443,12 +441,14 @@ impl ExtBuilder {
                 (
                     (1001 + x) as AccountId,
                     CreditData {
+                        campaign_id: 0,
                         // some tests require delegators to survive one slash
                         credit: INITIAL_CREDIT + CREDIT_ATTENUATION_STEP,
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
-                        expiration: 1 + x,
+                        reward_eras: 100,
+                        current_credit_level: CreditLevel::One,
                     },
                 )
             })
@@ -456,11 +456,13 @@ impl ExtBuilder {
         user_credit_data.push((
             1000,
             CreditData {
+                campaign_id: 0,
                 credit: 99,
                 initial_credit_level: CreditLevel::Zero,
                 rank_in_initial_credit_level: 0u32,
                 number_of_referees: 0,
-                expiration: 1,
+                reward_eras: 1,
+                current_credit_level: CreditLevel::Zero,
             },
         ));
         const MILLICENTS: Balance = 10_000_000_000_000;
@@ -470,8 +472,9 @@ impl ExtBuilder {
         pallet_credit::GenesisConfig::<Test> {
             credit_settings: vec![
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Zero,
-                    balance: 0,
+                    staking_balance: 0,
                     base_apy: Percent::from_percent(0),
                     bonus_apy: Percent::from_percent(0),
                     max_rank_with_bonus: 0u32,
@@ -480,8 +483,9 @@ impl ExtBuilder {
                     reward_per_referee: 0,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::One,
-                    balance: 20_000 * DPR,
+                    staking_balance: 20_000 * DPR,
                     base_apy: Percent::from_percent(39),
                     bonus_apy: Percent::from_percent(0),
                     max_rank_with_bonus: 0u32,
@@ -490,8 +494,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Two,
-                    balance: 46_800 * DPR,
+                    staking_balance: 46_800 * DPR,
                     base_apy: Percent::from_percent(40),
                     bonus_apy: Percent::from_percent(7),
                     max_rank_with_bonus: 1200u32,
@@ -500,8 +505,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Three,
-                    balance: 76_800 * DPR,
+                    staking_balance: 76_800 * DPR,
                     base_apy: Percent::from_percent(42),
                     bonus_apy: Percent::from_percent(11),
                     max_rank_with_bonus: 1000u32,
@@ -510,8 +516,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Four,
-                    balance: 138_000 * DPR,
+                    staking_balance: 138_000 * DPR,
                     base_apy: Percent::from_percent(46),
                     bonus_apy: Percent::from_percent(13),
                     max_rank_with_bonus: 800u32,
@@ -520,8 +527,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Five,
-                    balance: 218_000 * DPR,
+                    staking_balance: 218_000 * DPR,
                     base_apy: Percent::from_percent(50),
                     bonus_apy: Percent::from_percent(16),
                     max_rank_with_bonus: 600u32,
@@ -530,8 +538,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Six,
-                    balance: 288_000 * DPR,
+                    staking_balance: 288_000 * DPR,
                     base_apy: Percent::from_percent(54),
                     bonus_apy: Percent::from_percent(20),
                     max_rank_with_bonus: 400u32,
@@ -540,8 +549,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Seven,
-                    balance: 368_000 * DPR,
+                    staking_balance: 368_000 * DPR,
                     base_apy: Percent::from_percent(57),
                     bonus_apy: Percent::from_percent(25),
                     max_rank_with_bonus: 200u32,
@@ -550,8 +560,9 @@ impl ExtBuilder {
                     reward_per_referee: 18 * DPR,
                 },
                 CreditSetting {
+                    campaign_id: 0,
                     credit_level: CreditLevel::Eight,
-                    balance: 468_000 * DPR,
+                    staking_balance: 468_000 * DPR,
                     base_apy: Percent::from_percent(60),
                     bonus_apy: Percent::from_percent(30),
                     max_rank_with_bonus: 100u32,
