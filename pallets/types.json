@@ -7,7 +7,7 @@
     "BlockNumber": "u32",
     "IpV4": "Vec<u8>",
     "CountryRegion": "Vec<u8>",
-    "Duration": "u8",
+    "DurationEras": "u8",
     "Node": {
         "account_id": "AccountId",
         "ipv4": "IpV4",
@@ -126,7 +126,10 @@
     "current_credit_level": "CreditLevel"
   },
   "DelegatorData": {
-    "delegated_validators": "Vec<AccountId>"
+    "delegator": "AccountId",
+    "delegated_validators": "Vec<AccountId>",
+    "unrewarded_since": "Option<EraIndex>",
+    "delegating": "bool"
   },
   "EraIndex": "u32",
   "ValidatorData": {

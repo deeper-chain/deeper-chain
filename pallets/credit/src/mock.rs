@@ -78,16 +78,15 @@ impl pallet_balances::Config for Test {
 
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
-    pub const MaxDurationDays: u8 = 7;
+    pub const MaxDurationEras: u8 = 7;
     pub const MaxIpLength: usize = 256;
-    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
 }
 impl pallet_deeper_node::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
-    type MaxDurationDays = MaxDurationDays;
-    type DayToBlocknum = DayToBlocknum;
+    type MaxDurationEras = MaxDurationEras;
+    type BlocksPerEra = BlocksPerEra;
     type MaxIpLength = MaxIpLength;
     type WeightInfo = ();
 }
@@ -97,7 +96,6 @@ pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 pub const BLOCKS_PER_ERA: u64 = (6 * EPOCH_DURATION_IN_BLOCKS) as u64;
 pub const CREDIT_ATTENUATION_STEP: u64 = 1;
-pub const BLOCKS_PER_DAY: u64 = 24 * 60 * 60 / SECS_PER_BLOCK;
 pub const CREDIT_CAP_TWO_ERAS: u8 = 1;
 
 parameter_types! {

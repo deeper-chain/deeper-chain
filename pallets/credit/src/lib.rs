@@ -122,7 +122,7 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_deeper_node::Config {
+    pub trait Config: frame_system::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Number of blocks per era.
@@ -138,7 +138,7 @@ pub mod pallet {
         /// mircropayment to credit factor:
         type MicropaymentToCreditFactor: Get<u128>;
         /// NodeInterface of deeper-node pallet
-        type NodeInterface: NodeInterface<Self::AccountId>;
+        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
@@ -280,9 +280,9 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            let days = T::NodeInterface::get_days_offline(&account_id);
-            if days > 0 && days % 3 == 0 {
-                // slash one credit for being offline every 3 days
+            let eras = T::NodeInterface::get_eras_offline(&account_id);
+            if eras > 0 && eras % 3 == 0 {
+                // slash one credit for being offline every 3 eras
                 weight = weight.saturating_add(Self::slash_credit(&account_id));
             }
             weight
@@ -327,7 +327,7 @@ pub mod pallet {
 
         fn init_credit_history(account_id: &T::AccountId, credit_data: CreditData) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            match <pallet_deeper_node::Module<T>>::onboard_time(account_id) {
+            match T::NodeInterface::get_onboard_time(account_id) {
                 Some(block) => {
                     let onboard_era = Self::block_to_era(block);
                     UserCreditHistory::<T>::insert(account_id, vec![(onboard_era, credit_data)]);
@@ -336,6 +336,13 @@ pub mod pallet {
                 None => (),
             }
             weight
+        }
+
+        fn get_onboard_era(account_id: &T::AccountId) -> Option<EraIndex> {
+            match T::NodeInterface::get_onboard_time(account_id) {
+                Some(block) => Some(Self::block_to_era(block)),
+                None => None,
+            }
         }
 
         /// get all the credit data passing the threshold for the eras between "from" and "to"
@@ -635,8 +642,15 @@ pub mod pallet {
                 score_delta
             );
             if score_delta > 0 {
+                let onboard_era = Self::get_onboard_era(&server_id);
+                if onboard_era.is_none() {
+                    // credit is not updated if the device is never online
+                    return;
+                }
                 let current_era = Self::get_current_era();
-                let last_credit_update_era = Self::last_credit_update(&server_id).unwrap_or(0);
+                // if this is the first update, we use onboard era as the last update era
+                let last_credit_update_era =
+                    Self::last_credit_update(&server_id).unwrap_or(onboard_era.unwrap());
                 let mut eras = (current_era - last_credit_update_era) as u64;
                 if eras < 2 && Self::last_credit_update(&server_id).is_none() {
                     // first update within 2 eras, we boost it to 2 eras so that credit can be updated

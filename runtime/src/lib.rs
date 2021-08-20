@@ -1050,8 +1050,7 @@ impl pallet_micropayment::Config for Runtime {
 
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
-    pub const MaxDurationDays: u8 = 7;
-    pub const DayToBlocknum: u32 = (24 * 3600 * 1000 / 5000) as u32;
+    pub const MaxDurationEras: u8 = 7;
     pub const MaxIpLength: usize = 256;
 }
 
@@ -1059,8 +1058,8 @@ impl pallet_deeper_node::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
-    type MaxDurationDays = MaxDurationDays;
-    type DayToBlocknum = DayToBlocknum;
+    type MaxDurationEras = MaxDurationEras;
+    type BlocksPerEra = BlocksPerEra;
     type MaxIpLength = MaxIpLength;
     type WeightInfo = pallet_deeper_node::weights::SubstrateWeight<Runtime>;
 }
