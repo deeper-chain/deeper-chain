@@ -69,6 +69,42 @@ fn eth2sub_mint_works() {
 }
 
 #[test]
+fn eth2sub_mint_should_fail() {
+    new_test_ext().execute_with(|| {
+        let message_id = H256::from(ETH_MESSAGE_ID);
+        let eth_address = H160::from(ETH_ADDRESS);
+        let amount1 = 9;
+        let amount2 = 101;
+
+        assert_eq!(
+            Bridge::multi_signed_mint(
+                Origin::signed(V2),
+                message_id,
+                eth_address,
+                USER2,
+                amount1
+            ),
+            Err(DispatchErrorWithPostInfo::from(
+                "Invalid amount for transaction. Reached minimum limit."
+            ))
+        );
+
+        assert_eq!(
+            Bridge::multi_signed_mint(
+                Origin::signed(V1),
+                message_id,
+                eth_address,
+                USER2,
+                amount2
+            ),
+            Err(DispatchErrorWithPostInfo::from(
+                "Invalid amount for transaction. Reached maximum limit."
+            ))
+        );
+    });
+}
+
+#[test]
 fn sub2eth_burn_works() {
     new_test_ext().execute_with(|| {
         let eth_address = H160::from(ETH_ADDRESS);
@@ -620,7 +656,24 @@ fn pending_mint_limit_should_work() {
 fn blocking_account_by_volume_should_work() {
     new_test_ext().execute_with(|| {
         let eth_address = H160::from(ETH_ADDRESS);
+        let amount1 = 9;
         let amount2 = 49;
+        let amount3 = 101;
+
+        assert_eq!(
+            Bridge::set_transfer(Origin::signed(USER2), eth_address, amount1),
+            Err(DispatchErrorWithPostInfo::from(
+                "Invalid amount for transaction. Reached minimum limit."
+            ))
+        );
+
+        assert_eq!(
+            Bridge::set_transfer(Origin::signed(USER2), eth_address, amount3),
+            Err(DispatchErrorWithPostInfo::from(
+                "Invalid amount for transaction. Reached maximum limit."
+            ))
+        );
+
         assert_ok!(Bridge::set_transfer(
             Origin::signed(USER2),
             eth_address,
@@ -638,6 +691,7 @@ fn blocking_account_by_volume_should_work() {
         );
     })
 }
+
 #[test]
 fn blocked_account_unblocked_next_day_should_work() {
     new_test_ext().execute_with(|| {

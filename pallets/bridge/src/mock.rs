@@ -117,7 +117,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let _ = pallet_eth_sub_bridge::GenesisConfig::<Test> {
         validators_count: 3u32,
         validator_accounts: vec![V1, V2, V3],
-        current_limits: vec![100, 200, 50, 400, 1],
+        current_limits: vec![100, 200, 50, 400, 10],
     }
     .assimilate_storage(&mut storage);
 
