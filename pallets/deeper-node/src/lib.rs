@@ -278,8 +278,7 @@ pub mod pallet {
             );
             let blocks = T::BlockNumber::from(duration_eras) * T::BlocksPerEra::get();
             <DeviceInfo<T>>::mutate(&sender, |node| {
-                node.expire =
-                    <frame_system::Module<T>>::block_number() + blocks;
+                node.expire = <frame_system::Module<T>>::block_number() + blocks;
             });
             Ok(().into())
         }
