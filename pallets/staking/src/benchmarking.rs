@@ -29,7 +29,7 @@ const SEED: u32 = 0;
 const MAX_SPANS: u32 = 100;
 const MAX_SLASHES: u32 = 1000;
 const MAX_DELEGATORS: u32 = 1_000_000;
-const MAX_DELEGATES: u32 = 10;
+const MAX_DELEGATES: u32 = 1;
 const MAX_VALIDATORS: u32 = 1000;
 
 // Add slashing spans to a user account. Not relevant for actual use, only to benchmark
@@ -141,10 +141,8 @@ benchmarks! {
     // Worst case scenario, MAX_DELEGATORS
     delegate {
         let n in 1 .. MAX_DELEGATORS;
-        let v in 1 .. MAX_DELEGATES;
         let delegator = create_delegator::<T>(n + 1, 100)?;
-        let mut validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
-        validators.truncate(v as usize);
+        let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
         whitelist_account!(delegator);
     }: _(RawOrigin::Signed(delegator.clone()), validators)
     verify {
@@ -152,10 +150,8 @@ benchmarks! {
     }
 
     undelegate {
-        let v in 1 .. MAX_DELEGATES;
         let delegator = create_delegator::<T>(1, 100)?;
-        let mut validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
-        validators.truncate(v as usize);
+        let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
         Staking::<T>::delegate(RawOrigin::Signed(delegator.clone()).into(), validators)?;
         whitelist_account!(delegator);
     }: _(RawOrigin::Signed(delegator.clone()))
@@ -185,6 +181,13 @@ benchmarks! {
     }: _(RawOrigin::Signed(stash), new_controller_lookup)
     verify {
         assert!(Ledger::<T>::contains_key(&new_controller));
+    }
+
+    set_era_validator_reward {
+        let amount = <T as Config>::Currency::minimum_balance() * 100000u32.into();
+    }: _(RawOrigin::Root, amount)
+    verify {
+        assert_eq!(EraValidatorReward::<T>::get(), amount);
     }
 
     set_validator_count {

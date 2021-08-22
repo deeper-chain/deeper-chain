@@ -1591,7 +1591,7 @@ decl_module! {
         }
 
         /// delegate credit to a set of validators
-        #[weight = T::WeightInfo::delegate(1, validators.len() as u32)]
+        #[weight = T::WeightInfo::delegate(1)]
         pub fn delegate(origin, validators: Vec<T::AccountId>) -> DispatchResult {
             ensure!(Self::era_election_status().is_closed(), Error::<T>::CallNotAllowed);
             let delegator = ensure_signed(origin)?;
@@ -1663,7 +1663,7 @@ decl_module! {
         }
 
         /// undelegate credit from the validators
-        #[weight = T::WeightInfo::undelegate(T::MaxDelegates::get() as u32)]
+        #[weight = T::WeightInfo::undelegate()]
         pub fn undelegate(origin) -> DispatchResult {
             let delegator = ensure_signed(origin)?;
             ensure!(<Delegators<T>>::contains_key(&delegator), Error::<T>::NotDelegator);
