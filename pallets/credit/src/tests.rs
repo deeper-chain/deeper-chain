@@ -192,7 +192,7 @@ fn update_credit() {
     new_test_ext().execute_with(|| {
         Credit::update_credit((1, 1_000 * 1_000_000_000_000_000));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
-        
+
         for i in 1..5 {
             assert_ok!(DeeperNode::im_online(Origin::signed(i)));
         }
@@ -250,7 +250,7 @@ fn get_reward_with_update_credit_no_bonus() {
             run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
             Credit::update_credit((6, 5 * 1_000_000_000_000_000));
             // to avoid slashing for being offline for 3 eras
-            assert_ok!(DeeperNode::im_online(Origin::signed(6))); 
+            assert_ok!(DeeperNode::im_online(Origin::signed(6)));
             assert_eq!(
                 Credit::user_credit(&6).unwrap().credit,
                 100 + (i as u64 + 1) / 2

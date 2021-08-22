@@ -81,10 +81,6 @@ benchmarks! {
         let amount = T::Currency::minimum_balance() * 99u32.into();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
         let validator1 = create_funded_user::<T>("user",USER_SEED, 100);
-        // TODO Create Account by using private of validator in bridge
-        let signer = create_sr25519_pubkey(hex!("73e79288db1c1b7d0ed3cb38d149f1de6c0a771406a3fee330c38b4e37643a9a").to_vec());
-        let account_id: AccountId = AccountPublic::from(signer).into_account();
-        // assert_eq!(account_id, validator1);
     }:  _(RawOrigin::Signed(validator1), message_id, eth_address, user,amount)
     verify {
         let message = Bridge::<T>::messages(message_id);

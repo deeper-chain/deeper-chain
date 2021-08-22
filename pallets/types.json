@@ -22,10 +22,6 @@
         "opened": "BlockNumber",
         "expiration": "BlockNumber"
     },
-    "CreditDelegateInfo": {
-        "score": "u64",
-        "validators": "Vec<AccountId>"
-    },
     "MemberId": "u64",
   "ProposalId": "u64",
   "Limits": {
@@ -135,5 +131,12 @@
   "ValidatorData": {
     "delegators": "Vec<AccountId>",
     "elected_era": "EraIndex"
+  },
+  "RewardData": {
+    "total_referee_reward": "Balance",
+    "received_referee_reward": "Balance",
+    "referee_reward": "Balance",
+    "received_pocr_reward": "Balance",
+    "poc_reward": "Balance"
   }
 }

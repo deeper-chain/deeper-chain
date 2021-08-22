@@ -47,10 +47,6 @@ async function get_api(url_string) {
                 opened: 'BlockNumber',
                 expiration: 'BlockNumber',
             },
-            CreditDelegateInfo: {
-                score: 'u64',
-                validators: 'Vec<AccountId>',
-            },
         },
     });
 
