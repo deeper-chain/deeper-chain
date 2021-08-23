@@ -226,6 +226,7 @@ fn get_reward_work() {
         assert_ok!(DeeperNode::im_online(Origin::signed(8)));
         assert_ok!(DeeperNode::im_online(Origin::signed(9)));
         assert_ok!(DeeperNode::im_online(Origin::signed(10)));
+        assert_ok!(DeeperNode::im_online(Origin::signed(11)));
         assert_eq!(Credit::get_reward(&3, 0, 0).0, None);
         run_to_block(BLOCKS_PER_ERA); // era 1
         assert_eq!(
@@ -248,8 +249,32 @@ fn get_reward_work() {
             Credit::get_reward(&10, 0, 0).0,
             Some((18000000000000000000, 47917775081394233880))
         );
+        assert_eq!(
+            Credit::get_reward(&11, 0, 0).0,
+            Some((0, 56416427606743384752))
+        );
         run_to_block(BLOCKS_PER_ERA * 2); // era 2, credit expires at era 1
         assert_eq!(Credit::get_reward(&3, 1, 1).0, None);
+        assert_eq!(
+            Credit::get_reward(&7, 1, 1).0,
+            Some((126000000000000000000, 97068450647875213020))
+        );
+        assert_eq!(
+            Credit::get_reward(&8, 1, 1).0,
+            Some((126000000000000000000, 47917775081394233880))
+        );
+        assert_eq!(
+            Credit::get_reward(&9, 1, 1).0,
+            Some((18000000000000000000, 97068450647875213020))
+        );
+        assert_eq!(
+            Credit::get_reward(&10, 1, 1).0,
+            Some((18000000000000000000, 47917775081394233880))
+        );
+        assert_eq!(
+            Credit::get_reward(&11, 1, 1).0,
+            Some((0, 56416427606743384752))
+        );
     });
 }
 
