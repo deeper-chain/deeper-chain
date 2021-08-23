@@ -77,26 +77,14 @@ fn eth2sub_mint_should_fail() {
         let amount2 = 101;
 
         assert_eq!(
-            Bridge::multi_signed_mint(
-                Origin::signed(V2),
-                message_id,
-                eth_address,
-                USER2,
-                amount1
-            ),
+            Bridge::multi_signed_mint(Origin::signed(V2), message_id, eth_address, USER2, amount1),
             Err(DispatchErrorWithPostInfo::from(
                 "Invalid amount for transaction. Reached minimum limit."
             ))
         );
 
         assert_eq!(
-            Bridge::multi_signed_mint(
-                Origin::signed(V1),
-                message_id,
-                eth_address,
-                USER2,
-                amount2
-            ),
+            Bridge::multi_signed_mint(Origin::signed(V1), message_id, eth_address, USER2, amount2),
             Err(DispatchErrorWithPostInfo::from(
                 "Invalid amount for transaction. Reached maximum limit."
             ))
