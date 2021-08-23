@@ -316,6 +316,42 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     current_credit_level: CreditLevel::Four,
                 },
             ),
+            (
+                8,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 801u32,
+                    number_of_referees: 7,
+                    reward_eras: 270,
+                    current_credit_level: CreditLevel::Four,
+                },
+            ),
+            (
+                9,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 800u32,
+                    number_of_referees: 1,
+                    reward_eras: 270,
+                    current_credit_level: CreditLevel::Four,
+                },
+            ),
+            (
+                10,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 801u32,
+                    number_of_referees: 1,
+                    reward_eras: 270,
+                    current_credit_level: CreditLevel::Four,
+                },
+            ),
         ],
     };
     GenesisBuild::<Test>::assimilate_storage(&genesis_config, &mut storage).unwrap();
