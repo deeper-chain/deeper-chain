@@ -461,11 +461,11 @@ pub fn testnet_genesis(
             validator_accounts: bridge_validators,
             validators_count: 3u32,
             current_limits: vec![
-                100 * 10u128.pow(18),
-                200 * 10u128.pow(18),
-                50 * 10u128.pow(18),
-                400 * 10u128.pow(18),
-                10 * 10u128.pow(18),
+                20000 * DPR, // max single tx limit
+                200000000 * DPR, // max daily tx limit
+                60000 * DPR, // max daily tx per address limit
+                400000000 * DPR, // max pending tx limit
+                100 * DPR, // min tx limit
             ],
         }),
         pallet_credit: Some(CreditConfig {
