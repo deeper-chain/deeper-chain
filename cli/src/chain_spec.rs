@@ -569,7 +569,6 @@ pub fn testnet_genesis(
                     max_referees_with_rewards: 34,
                     reward_per_referee: 18 * DPR,
                 },
-
                 CreditSetting {
                     campaign_id: 1,
                     credit_level: CreditLevel::Zero,
