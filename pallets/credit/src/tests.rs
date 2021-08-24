@@ -93,8 +93,8 @@ fn add_or_update_credit_data() {
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            reward_eras: 0,
             current_credit_level: CreditLevel::One,
+            reward_eras: 0,
         };
         // Only sudo can call update_credit_data
         assert_noop!(
@@ -117,8 +117,8 @@ fn add_or_update_credit_data() {
             initial_credit_level: CreditLevel::Two,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            reward_eras: 0,
             current_credit_level: CreditLevel::Two,
+            reward_eras: 0,
         };
         assert_eq!(
             Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
@@ -133,8 +133,8 @@ fn add_or_update_credit_data() {
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 10,
-            reward_eras: 100,
             current_credit_level: CreditLevel::One,
+            reward_eras: 100,
         };
         assert_eq!(
             Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
@@ -156,8 +156,8 @@ fn get_credit_score() {
                 initial_credit_level: CreditLevel::One,
                 rank_in_initial_credit_level: 1u32,
                 number_of_referees: 1,
-                reward_eras: 1,
                 current_credit_level: CreditLevel::One,
+                reward_eras: 1,
             },
         );
         assert_eq!(Credit::get_credit_score(&1).unwrap(), 100);
@@ -231,23 +231,23 @@ fn get_reward_work() {
         run_to_block(BLOCKS_PER_ERA); // era 1
         assert_eq!(
             Credit::get_reward(&3, 0, 0).0,
-            Some((18000000000000000000, 3369858941948251800))
+            Some((0, 21369858941948251800))
         );
         assert_eq!(
             Credit::get_reward(&7, 0, 0).0,
-            Some((126000000000000000000, 97068450647875213020))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&8, 0, 0).0,
-            Some((126000000000000000000, 47917775081394233880))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&9, 0, 0).0,
-            Some((18000000000000000000, 97068450647875213020))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&10, 0, 0).0,
-            Some((18000000000000000000, 47917775081394233880))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&11, 0, 0).0,
@@ -257,19 +257,19 @@ fn get_reward_work() {
         assert_eq!(Credit::get_reward(&3, 1, 1).0, None);
         assert_eq!(
             Credit::get_reward(&7, 1, 1).0,
-            Some((126000000000000000000, 97068450647875213020))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&8, 1, 1).0,
-            Some((126000000000000000000, 47917775081394233880))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&9, 1, 1).0,
-            Some((18000000000000000000, 97068450647875213020))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&10, 1, 1).0,
-            Some((18000000000000000000, 47917775081394233880))
+            Some((0, 223068450647875213020))
         );
         assert_eq!(
             Credit::get_reward(&11, 1, 1).0,
@@ -286,7 +286,7 @@ fn get_reward_with_update_credit_no_bonus() {
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
             Credit::get_reward(&6, 0, 0).0,
-            Some((18000000000000000000, 3369858941948251800))
+            Some((0, 21369858941948251800))
         );
 
         let mut i: u32 = 1;
@@ -302,7 +302,7 @@ fn get_reward_with_update_credit_no_bonus() {
             );
             assert_eq!(
                 Credit::get_reward(&6, i - 1, i - 1).0,
-                Some((18000000000000000000, 3369858941948251800))
+                Some((0, 21369858941948251800))
             );
             i += 1;
         }
@@ -313,7 +313,7 @@ fn get_reward_with_update_credit_no_bonus() {
         run_to_block(BLOCKS_PER_ERA * 201);
         assert_eq!(
             Credit::get_reward(&6, 200, 200).0,
-            Some((18000000000000000000, 15287661460675804320))
+            Some((0, 60263002216294070076))
         );
     });
 }
@@ -326,7 +326,7 @@ fn get_reward_with_update_credit_with_bonus() {
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
             Credit::get_reward(&7, 0, 0).0,
-            Some((18000000000000000000 * 7, 97068450647875213020))
+            Some((0, 223068450647875213020))
         );
 
         let mut i: u32 = 1;
@@ -342,7 +342,7 @@ fn get_reward_with_update_credit_with_bonus() {
             );
             assert_eq!(
                 Credit::get_reward(&7, i - 1, i - 1).0,
-                Some((18000000000000000000 * 7, 97068450647875213020))
+                Some((0, 223068450647875213020))
             );
             i += 1;
         }
@@ -353,7 +353,7 @@ fn get_reward_with_update_credit_with_bonus() {
         run_to_block(BLOCKS_PER_ERA * 201);
         assert_eq!(
             Credit::get_reward(&7, 200, 200).0,
-            Some((18000000000000000000 * 7, 131780755652680908140))
+            Some((0, 394191705713783906280))
         );
     });
 }
@@ -366,7 +366,7 @@ fn get_reward_with_slash_credit_with_bonus() {
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
             Credit::get_reward(&7, 0, 0).0,
-            Some((18000000000000000000 * 7, 97068450647875213020))
+            Some((0, 223068450647875213020))
         );
 
         Credit::slash_credit(&7);
@@ -377,7 +377,7 @@ fn get_reward_with_slash_credit_with_bonus() {
         run_to_block(BLOCKS_PER_ERA * 2);
         assert_eq!(
             Credit::get_reward(&7, 1, 1).0,
-            Some((18000000000000000000 * 7, 83523261467953134276))
+            Some((0, 111517786970905338624))
         );
     });
 }
