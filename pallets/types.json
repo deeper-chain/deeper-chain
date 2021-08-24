@@ -118,8 +118,8 @@
     "initial_credit_level": "CreditLevel",
     "rank_in_initial_credit_level": "u32",
     "number_of_referees": "u8",
-    "reward_eras": "EraIndex",
-    "current_credit_level": "CreditLevel"
+    "current_credit_level": "CreditLevel",
+    "reward_eras": "EraIndex"
   },
   "DelegatorData": {
     "delegator": "AccountId",

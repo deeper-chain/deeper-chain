@@ -25,7 +25,8 @@ pub mod currency {
     pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
     pub const DOLLARS: Balance = 100 * CENTS;
     pub const DPR: Balance = DOLLARS;
-    pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000 * DPR; // 6 billion DPR
+    // TODO: need to be finalized before mainnet launch
+    pub const TOTAL_MINING_REWARD: u128 = 100_000_000 * DPR; // 100 million DPR initially
     pub const MICROPAYMENT_TO_CREDIT_FACTOR: u128 = DPR * 10 / 1024 / 1024; // 1 credit per 10 MB
 
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
