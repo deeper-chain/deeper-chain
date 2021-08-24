@@ -93,8 +93,8 @@ fn add_or_update_credit_data() {
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            reward_eras: 0,
             current_credit_level: CreditLevel::One,
+            reward_eras: 0,
         };
         // Only sudo can call update_credit_data
         assert_noop!(
@@ -117,8 +117,8 @@ fn add_or_update_credit_data() {
             initial_credit_level: CreditLevel::Two,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            reward_eras: 0,
             current_credit_level: CreditLevel::Two,
+            reward_eras: 0,
         };
         assert_eq!(
             Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
@@ -133,8 +133,8 @@ fn add_or_update_credit_data() {
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 10,
-            reward_eras: 100,
             current_credit_level: CreditLevel::One,
+            reward_eras: 100,
         };
         assert_eq!(
             Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
@@ -156,8 +156,8 @@ fn get_credit_score() {
                 initial_credit_level: CreditLevel::One,
                 rank_in_initial_credit_level: 1u32,
                 number_of_referees: 1,
-                reward_eras: 1,
                 current_credit_level: CreditLevel::One,
+                reward_eras: 1,
             },
         );
         assert_eq!(Credit::get_credit_score(&1).unwrap(), 100);

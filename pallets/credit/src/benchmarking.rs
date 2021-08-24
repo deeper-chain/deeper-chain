@@ -50,8 +50,8 @@ benchmarks! {
             initial_credit_level: CreditLevel::One,
             rank_in_initial_credit_level: 0,
             number_of_referees: 1,
-            reward_eras: 0,
             current_credit_level: CreditLevel::One,
+            reward_eras: 0,
         };
         let user: T::AccountId = account("user", USER_SEED, SEED);
     }: _(RawOrigin::Root, user.clone(), credit_data)

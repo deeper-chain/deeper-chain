@@ -86,8 +86,8 @@ pub fn create_delegator<T: StakingConfig + CreditConfig>(
         initial_credit_level: CreditLevel::Zero,
         rank_in_initial_credit_level: 0u32,
         number_of_referees: 0,
-        reward_eras: 100,
         current_credit_level: CreditLevel::One,
+        reward_eras: 100,
     };
     let _ = Credit::<T>::add_or_update_credit_data(
         RawOrigin::Root.into(),

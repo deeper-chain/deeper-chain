@@ -446,8 +446,8 @@ impl ExtBuilder {
                         initial_credit_level: CreditLevel::One,
                         rank_in_initial_credit_level: 1u32,
                         number_of_referees: 1,
-                        reward_eras: 100,
                         current_credit_level: CreditLevel::One,
+                        reward_eras: 100,
                     },
                 )
             })
@@ -460,8 +460,8 @@ impl ExtBuilder {
                 initial_credit_level: CreditLevel::Zero,
                 rank_in_initial_credit_level: 0u32,
                 number_of_referees: 0,
-                reward_eras: 1,
                 current_credit_level: CreditLevel::Zero,
+                reward_eras: 1,
             },
         ));
         const MILLICENTS: Balance = 10_000_000_000_000;

@@ -681,8 +681,8 @@ pub fn testnet_genesis(
                             initial_credit_level: CreditLevel::One,
                             rank_in_initial_credit_level: 1u32,
                             number_of_referees: 1,
-                            reward_eras: 1,
                             current_credit_level: CreditLevel::One,
+                            reward_eras: 270,
                         },
                     )
                 })
