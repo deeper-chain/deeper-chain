@@ -13686,7 +13686,8 @@ fn development_config_genesis() -> GenesisConfig {
     ];
     let credit_settings = campaign_0_credit_settings();
     let user_credit_data = endowed_accounts
-        .iter().cloned()
+        .iter()
+        .cloned()
         .map(|x| {
             (
                 x,
@@ -13800,7 +13801,8 @@ fn local_testnet_genesis() -> GenesisConfig {
     ];
 
     // 5CHu6tEdZWEnGHa928e9CfsXnL5otzRg4xGwqCscXDrcH38t
-    let root_key: AccountId = hex!["0a100b6bf4e332cac53b98af0003bbbf6984d2171bbe30a05a97bb28f5212119"].into();
+    let root_key: AccountId =
+        hex!["0a100b6bf4e332cac53b98af0003bbbf6984d2171bbe30a05a97bb28f5212119"].into();
 
     let bridge_validators: Vec<AccountId> = vec![
         // 5DDCabfWypaJwMdXeKCxHmBtxWwob3RSYZeP9pMZa6V3bKEL
@@ -13828,7 +13830,8 @@ fn local_testnet_genesis() -> GenesisConfig {
     ];
     let credit_settings = campaign_0_credit_settings();
     let user_credit_data = endowed_accounts
-        .iter().cloned()
+        .iter()
+        .cloned()
         .map(|x| {
             (
                 x,
@@ -13902,10 +13905,24 @@ pub(crate) mod tests {
     use sp_runtime::BuildStorage;
 
     fn local_testnet_genesis_instant_single() -> GenesisConfig {
+        let bridge_validators: Vec<AccountId> = vec![];
+        let bridge_limits: Vec<Balance> = vec![];
+        let endowed_accounts: Vec<AccountId> = vec![];
+        let credit_settings: Vec<CreditSetting<Balance>> = vec![];
+        let user_credit_data: Vec<(AccountId, CreditData)> = vec![];
         testnet_genesis(
             vec![authority_keys_from_seed("Alice")],
+            10_000_000 * DPR, // authority endowment
+            10_000 * DPR,     // authority stash
             get_account_id_from_seed::<sr25519::Public>("Alice"),
-            None,
+            10_000_000 * DPR, // root endowment
+            bridge_validators,
+            10_000_000 * DPR, // bridge validator endowment
+            bridge_limits,
+            endowed_accounts,
+            10_000_000 * DPR, // endowed accounts endowment
+            credit_settings,
+            user_credit_data,
             false,
         )
     }
