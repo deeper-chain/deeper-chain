@@ -232,7 +232,7 @@ pub fn staging_testnet_config() -> ChainSpec {
                 .expect("Staging telemetry url is valid; qed"),
         ),
         None,
-        None,
+        Some(chain_spec_properties()),
         Default::default(),
     )
 }
