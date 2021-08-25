@@ -10,7 +10,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
 };
 
-use node_primitives::{Balance, Moment};
+use node_primitives::{Balance, BlockNumber, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -74,8 +74,12 @@ impl pallet_balances::Config for Test {
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+pub const MILLISECS_PER_BLOCK: Moment = 5000;
+pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 parameter_types! {
     pub const MinimumPeriod: Moment = 2500u64;
+    pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -88,6 +92,7 @@ impl pallet_timestamp::Config for Test {
 impl pallet_eth_sub_bridge::Config for Test {
     type Event = Event;
     type Currency = Balances;
+    type BlocksPerEra = BlocksPerEra;
     type WeightInfo = ();
 }
 
