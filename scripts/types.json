@@ -138,5 +138,9 @@
     "referee_reward": "Balance",
     "received_pocr_reward": "Balance",
     "poc_reward": "Balance"
+  },
+  "ValidatorPrefs": {
+    "commission": "Perbill",
+    "blocked": "bool"
   }
 }
