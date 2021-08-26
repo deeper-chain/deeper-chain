@@ -226,6 +226,9 @@ pub mod pallet {
     pub enum Event<T: Config> {
         CreditUpdateSuccess(T::AccountId, u64),
         CreditUpdateFailed(T::AccountId, u64),
+        CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
+        CreditDataAdded(T::AccountId, CreditData),
+        CreditDataUpdated(T::AccountId, CreditData),
     }
 
     #[pallet::error]
@@ -251,7 +254,8 @@ pub mod pallet {
             credit_setting: CreditSetting<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
-            Self::_update_credit_setting(credit_setting);
+            Self::_update_credit_setting(credit_setting.clone());
+            Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
             Ok(().into())
         }
 
@@ -267,11 +271,13 @@ pub mod pallet {
 
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
-                    Some(data) => *data = credit_data,
+                    Some(data) => *data = credit_data.clone(),
                     _ => (),
                 });
+                Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data));
             } else {
-                UserCredit::<T>::insert(&account_id, credit_data);
+                UserCredit::<T>::insert(&account_id, credit_data.clone());
+                Self::deposit_event(Event::CreditDataAdded(account_id, credit_data));
             }
             Ok(().into())
         }
