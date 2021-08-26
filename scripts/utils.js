@@ -2,6 +2,7 @@
 const { ApiPromise, WsProvider } = require('@polkadot/api');
 const { Keyring } = require('@polkadot/keyring');
 const to = require("await-to-js").default;
+const types = require("./types.json");
 
 const delay_promise = function (ms) {
     return new Promise(function (resolve, reject) {
@@ -23,31 +24,7 @@ async function get_api(url_string) {
 
     let promiseA = ApiPromise.create({
         provider: wsProvider,
-        types: {
-            Address: "MultiAddress",
-            LookupSource: "MultiAddress",
-            AccountInfo: 'AccountInfoWithDualRefCount',
-            Balance: 'u128',
-            Timestamp: 'Moment',
-            BlockNumber: 'u32',
-            IpV4: 'Vec<u8>',
-            CountryRegion: 'Vec<u8>',
-            Duration: 'u8',
-            Node: {
-                account_id: 'AccountId',
-                ipv4: 'IpV4',
-                country: 'CountryRegion',
-                expire: 'BlockNumber',
-            },
-            ChannelOf: {
-                sender: 'AccountId',
-                receiver: 'AccountId',
-                balance: 'Balance',
-                nonce: 'u64',
-                opened: 'BlockNumber',
-                expiration: 'BlockNumber',
-            },
-        },
+        types,
     });
 
     let promiseB = delay_promise(30000);
