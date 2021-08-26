@@ -12,22 +12,24 @@ const DPR = new BN("1000000000000000", 10); // base = 1e15 according to frontend
 
 
 // pallet credit test
-async function initializeCreditScore(api, signer, score, test, expect) {
-    const unsub = await api.tx.credit
-        .initializeCredit(score)
-        .signAndSend(signer, ({ events = [], status }) => {
+async function initCredit(api, signer, address, creditData, test, expect) {
+
+    const unsub = await api.tx.sudo.sudo(
+        api.tx.credit.addOrUpdateCreditData(address, creditData)
+      )
+      .signAndSend(signer, ({ events = [], status }) => {
             if (status.isFinalized) {
                 events.forEach(({ phase, event: { data, method, section } }) => {
                     if (method == "ExtrinsicFailed") {
                         if (test == 0)
                             console.log("Init success!");
                         else
-                            console.log("Test #" + test + ": initializeCreditExtrinsic Failed, " + "expect " + expect);
+                            console.log("Test #" + test + ": initCredit Failed, " + "expect " + expect);
                     } else if (method == "ExtrinsicSuccess") {
                         if (test == 0)
                             console.log("Init success!");
                         else
-                            console.log("Test #" + test + ": initializeCreditExtrinsic Success, " + "expect " + expect);
+                            console.log("Test #" + test + ": initCredit Success, " + "expect " + expect);
                     }
                 });
 
@@ -35,29 +37,6 @@ async function initializeCreditScore(api, signer, score, test, expect) {
             }
         });
 }
-
-async function killCreditScore(api, signer, test, expect) {
-    const unsub = await api.tx.credit
-        .killCredit()
-        .signAndSend(signer, ({ events = [], status }) => {
-            if (status.isFinalized) {
-                events.forEach(({ phase, event: { data, method, section } }) => {
-                    if (method == "ExtrinsicFailed") {
-                        if (test == 0)
-                            console.log("Init success!");
-                        else
-                            console.log("Test #" + test + ": killCreditExtrinsic Failed, " + "expect " + expect);
-                    } else if (method == "ExtrinsicSuccess") {
-                        if (test == 0)
-                            console.log("Init success!");
-                        else
-                            console.log("Test #" + test + ": killCreditExtrinsic Success, " + "expect " + expect);
-                    }
-                });
-            }
-        });
-}
-
 
 function toHexString(byteArray) {
     return Array.from(byteArray, function (byte) {
@@ -78,10 +57,10 @@ function construct_byte_array(addr, nonce, session_id, amount) {
 // pallet delegating test
 async function claimPayment(api, sender, receiver) {
     // open channel (sender -> receiver)
-    await api.tx.micropayment.openChannel(receiver.address, new BN("1000000000000000000", 10),3600).signAndSend(sender, { nonce: -1 });
+    await api.tx.micropayment.openChannel(receiver.address, new BN("1000000000000000000000", 10),3600).signAndSend(sender, { nonce: -1 });
     var nonceNum = await api.query.micropayment.nonce([sender.address, receiver.address]);
     // claim payment 
-    let base = new BN("1000000000000000", 10); // base = 1e15
+    let base = new BN("1000000000000000000", 10); // base = 1e18
     let sessionId = new BN((0).toString(), 10);
     let nonce_micropayment = new BN((nonceNum).toString(), 10);
     let amtNum = 50;
@@ -96,7 +75,7 @@ async function claimPayment(api, sender, receiver) {
 
 async function delegate_failed(api, signer, validators, test, expect) {
     //delegate to validators
-    const unsub = await api.tx.delegating
+    const unsub = await api.tx.staking
         .delegate(validators)
         .signAndSend(signer, ({ events = [], status }) => {
             if (status.isFinalized) {
@@ -111,6 +90,32 @@ async function delegate_failed(api, signer, validators, test, expect) {
                             console.log("Init success!");
                         else
                             console.log("Test #" + test + ": delegating Success, " + "expect " + expect);
+                    }
+                });
+
+                unsub();
+            }
+        });
+}
+
+async function validate(api, signer, test, expect) {
+    const unsub = await api.tx.staking
+        .validate({ commission: 10, blocked: false })
+        .signAndSend(signer, ({ events = [], status }) => {
+            if (status.isFinalized) {
+                events.forEach(({ phase, event: { data, method, section } }) => {
+                    if (method == "ExtrinsicFailed") {
+                        if (test == 0)
+                            console.log("Init success!");
+                        else {
+                            console.log("Test #" + test + ": validating Failed, " + "expect " + expect);
+                            console.log('data = ', data, 'section = ', section);
+                        }
+                    } else if (method == "ExtrinsicSuccess") {
+                        if (test == 0)
+                            console.log("Init success!");
+                        else
+                            console.log("Test #" + test + ": validating Success, " + "expect " + expect);
                     }
                 });
 
@@ -128,15 +133,10 @@ async function delegate(api, signer, validators, test, expect) {
     await claimPayment(api, dave, signer);
     await claimPayment(api, eve, signer);
 
-    //wait for credit update
-    console.log("wait 6m (An era)for credit score update...");
-    await Utils.sleep(1000 * 360);
-
-    let score = await api.query.credit.userCredit(signer.address);
-    console.log(`score of account ${signer.address} is ${score.unwrapOr(0)}`);
+    await Utils.sleep(30 * 1000);
 
     //delegate to validators
-    const unsub = await api.tx.delegating
+    const unsub = await api.tx.staking
         .delegate(validators)
         .signAndSend(signer, ({ events = [], status }) => {
             if (status.isFinalized) {
@@ -144,7 +144,7 @@ async function delegate(api, signer, validators, test, expect) {
                     if (method == "ExtrinsicFailed") {
                         if (test == 0)
                             console.log("Init success!");
-                        else
+                        else 
                             console.log("Test #" + test + ": delegating Failed, " + "expect " + expect);
                     } else if (method == "ExtrinsicSuccess") {
                         if (test == 0)
@@ -161,7 +161,7 @@ async function delegate(api, signer, validators, test, expect) {
 
 async function undelegate(api, signer, test, expect) {
     //delegate to validators
-    const unsub = await api.tx.delegating
+    const unsub = await api.tx.staking
         .undelegate()
         .signAndSend(signer, ({ events = [], status }) => {
             if (status.isFinalized) {
@@ -195,60 +195,65 @@ async function poc_test() {
     const bob = keyring.addFromUri("//Bob");
     const bob_stash = keyring.addFromUri("//Bob//stash");
 
-    const charlie = keyring.addFromUri("//Charlie");
-    const dave = keyring.addFromUri("//Dave");
-    const eve = keyring.addFromUri("//Eve");
     const ferdie = keyring.addFromUri("//Ferdie");
 
     
-    // Failed: #1, pallet credit: initializeCreditExtrinsic() [30~ ] Failed
+    // Failed: #1, pallet credit: initCredit() [30~ ] Failed
     console.log("Running test #1");
-    await initializeCreditScore(api, alice, 30, 1, "Failed");
+    let creditData = {
+        campaign_id: 0,
+        credit: 100,
+        initialCreditLevel: 'One',
+        rankInInitialCredit_level: 0,
+        numberOfReferees: 0,
+        rewardEras: 270, // rewarded for how many days 
+        currentCreditLevel: 'One'
+    }
+    await initCredit(api, alice, bob.address, creditData, 1, "Success");
     await Utils.sleep(30 * 1000);
+    creditData = await api.query.credit.userCredit(alice.address);
+    console.log(`credit of alice account ${alice.address} is ${creditData.unwrapOr(0)}`);
 
-    // Success: #2, pallet credit: initializeCreditExtrinsic() [0~29] Success
-    console.log("Running test #2");
-    await initializeCreditScore(api, alice, 29, 2, "Success");
-    await Utils.sleep(30 * 1000);
-
-    // Failed: #3, pallet credit: recall initializeCreditExtrinsic() [0~29] Failed
-    console.log("Running test #3");
-    await initializeCreditScore(api, alice, 20, 3, "Failed");
-    await Utils.sleep(30 * 1000);
-
-    // Success: #4, pallet credit: killCreditExtrinsic() Success
-    console.log("Running test #4");
-    await killCreditScore(api, alice, 4, "Success");
-    await Utils.sleep(30 * 1000);
-
-    // Failed: #5, pallet credit: killCreditExtrinsic() Failed
-    console.log("Running test #5");
-    await killCreditScore(api, alice, 5, "Failed");
-    await Utils.sleep(30 * 1000);
-    
     // Failed: #6, pallet delegating: delegate() Failed
     // charlie score is too low
-    console.log("Running test #6");
-    await initializeCreditScore(api, charlie, 0, 6, "Success");
+    console.log("Running test #2");
+    creditData = {
+        campaign_id: 0,
+        credit: 100,
+        initialCreditLevel: 'One',
+        rankInInitialCredit_level: 0,
+        numberOfReferees: 0,
+        rewardEras: 270, // rewarded for how many days 
+        currentCreditLevel: 'One'
+    }
+    await initCredit(api, alice, bob.address, creditData, 2, "Success");
     await Utils.sleep(30 * 1000);
-    await delegate_failed(api, charlie, [alice_stash.address, bob_stash.address], 6, "Failed");
+    creditData = await api.query.credit.userCredit(bob.address);
+    console.log(`credit of bob account ${bob.address} is ${creditData.unwrapOr(0)}`);
+    // cannot delegate to more than 1 validators
+    await delegate_failed(api, bob, [alice_stash.address, bob_stash.address], 2, "Failed");
     await Utils.sleep(30 * 1000);
 
-    // Success: #7, pallet delegating: delegate() Success
-    console.log("Running test #7");
-    await delegate(api, charlie, [alice_stash.address, bob_stash.address], 7, "Success");
+    // Success: #3, pallet delegating: delegate() Success
+    console.log("Running test #3");
+    await validate(api, alice, 3, "Success");
     await Utils.sleep(30 * 1000);
 
-    // Success: #8, pallet delegating: undelegate() Success
-    console.log("Running test #8");
-    await undelegate(api, charlie, 8, "Success");
+    // Success: #4, pallet delegating: delegate() Success
+    console.log("Running test #4");
+    await delegate(api, bob, [alice_stash.address], 4, "Success");
+    await Utils.sleep(30 * 1000);
+
+    // Success: #5, pallet delegating: undelegate() Success
+    console.log("Running test #5");
+    await undelegate(api, bob, 5, "Success");
     await Utils.sleep(30 * 1000);
 
 
-    // Failed: #9, pallet delegating: delegate() Failed
+    // Failed: #6, pallet delegating: delegate() Failed
     // ferdie is not candidate validator
-    console.log("Running test #9");
-    await delegate_failed(api, charlie, [alice_stash.address, ferdie.address], 9, "Failed");
+    console.log("Running test #6");
+    await delegate_failed(api, bob, [ferdie.address], 6, "Failed");
     await Utils.sleep(30 * 1000);
 }
 
