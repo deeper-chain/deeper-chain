@@ -37,7 +37,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     const MAX_VALIDATORS: u32 = 100_000;
-    const DAY_IN_BLOCKS: u32 = 14_400;
     const DAY: u32 = 86_400;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
@@ -46,6 +45,7 @@ pub mod pallet {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
@@ -934,7 +934,7 @@ pub mod pallet {
         ) -> Result<(), &'static str> {
             let from = message.substrate_address;
             let first_tx = <DailyHolds<T>>::get(from.clone());
-            let daily_hold = T::BlockNumber::from(DAY_IN_BLOCKS);
+            let daily_hold = T::BlocksPerEra::get();
             let day_passed = first_tx.0 + daily_hold < T::BlockNumber::from(0u32);
 
             if !day_passed {

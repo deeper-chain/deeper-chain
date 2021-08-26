@@ -1015,6 +1015,7 @@ impl pallet_assets::Config for Runtime {
 impl pallet_eth_sub_bridge::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
+    type BlocksPerEra = BlocksPerEra;
     type WeightInfo = pallet_eth_sub_bridge::weights::SubstrateWeight<Runtime>;
 }
 
