@@ -25,8 +25,20 @@ pub mod currency {
     pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
     pub const DOLLARS: Balance = 100 * CENTS;
     pub const DPR: Balance = DOLLARS;
-    // TODO: need to be finalized before mainnet launch
-    pub const TOTAL_MINING_REWARD: u128 = 100_000_000 * DPR; // 100 million DPR initially
+
+    // 2 DPR per account for 2158 accounts
+    const GENESIS_ACCOUNTS_INITIAL_BALANCE: u128 = 2158 * 2 * DPR;
+    // 100 DPR per chain validator for 7 validators
+    const GENESIS_CHAIN_VALIDATORS_BALANCE: u128 = 7 * 100 * DPR;
+    // 100 DPR per bridge validator for 3 validators
+    const GENESIS_BRIDGE_VALIDATORS_BALANCE: u128 = 3 * 100 * DPR;
+    // Deeper Network will transfer 250_000_000 DPR from Ethereum to the bridge on genesis
+    // and will transfer more and increase remainder_mining_reward in staking pallet when needed
+    pub const TOTAL_MINING_REWARD: u128 = 250_000_000 * DPR
+        - GENESIS_ACCOUNTS_INITIAL_BALANCE
+        - GENESIS_CHAIN_VALIDATORS_BALANCE
+        - GENESIS_BRIDGE_VALIDATORS_BALANCE;
+
     pub const MICROPAYMENT_TO_CREDIT_FACTOR: u128 = DPR * 10 / 1024 / 1024; // 1 credit per 10 MB
 
     pub const fn deposit(items: u32, bytes: u32) -> Balance {
