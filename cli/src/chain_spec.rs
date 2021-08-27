@@ -174,7 +174,7 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
         200000000 * DPR, // max daily tx limit
         60000 * DPR,     // max daily tx per address limit
         400000000 * DPR, // max pending tx limit
-        100 * DPR,       // min tx limit
+        1000 * DPR,       // min tx limit
     ];
 
     let endowed_accounts: Vec<AccountId> = genesis_user_accounts();
@@ -13664,7 +13664,7 @@ fn development_config_genesis() -> GenesisConfig {
         200000000 * DPR, // max daily tx limit
         60000 * DPR,     // max daily tx per address limit
         400000000 * DPR, // max pending tx limit
-        100 * DPR,       // min tx limit
+        1000 * DPR,      // min tx limit
     ];
     let credit_settings = campaign_0_credit_settings();
     let user_credit_data = endowed_accounts
@@ -13799,7 +13799,7 @@ fn local_testnet_genesis() -> GenesisConfig {
         200000000 * DPR, // max daily tx limit
         60000 * DPR,     // max daily tx per address limit
         400000000 * DPR, // max pending tx limit
-        100 * DPR,       // min tx limit
+        1000 * DPR,       // min tx limit
     ];
     let endowed_accounts = vec![
         root_key.clone(),
