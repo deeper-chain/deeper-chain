@@ -74,8 +74,6 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
-pub use pallet_eth_sub_bridge as bridge;
-pub use pallet_eth_sub_bridge::Call as BridgeCall;
 pub use pallet_micropayment;
 
 #[cfg(any(feature = "std", test))]
@@ -1012,13 +1010,6 @@ impl pallet_assets::Config for Runtime {
     type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_eth_sub_bridge::Config for Runtime {
-    type Event = Event;
-    type Currency = Balances;
-    type BlocksPerEra = BlocksPerEra;
-    type WeightInfo = pallet_eth_sub_bridge::weights::SubstrateWeight<Runtime>;
-}
-
 parameter_types! {
     pub const SecsPerBlock: u32 = MILLISECS_PER_BLOCK as u32 / 1000;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
@@ -1130,7 +1121,6 @@ construct_runtime!(
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
-        Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>}
     }
 );
 
@@ -1467,7 +1457,6 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_utility, Utility);
             add_benchmark!(params, batches, pallet_vesting, Vesting);
             add_benchmark!(params, batches, pallet_credit, Credit);
-            add_benchmark!(params, batches, pallet_eth_sub_bridge, Bridge);
             add_benchmark!(params, batches, pallet_deeper_node, DeeperNode);
             add_benchmark!(params, batches, pallet_micropayment, Micropayment);
 
