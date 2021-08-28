@@ -1,0 +1,16 @@
+on: push
+name: Slack Notification
+jobs:
+  slackNotification:
+    name: Slack Notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: blockchain-git
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_ICON: https://github.com/deeper-chain.png?size=48
+          SLACK_USERNAME: ${{ github.event.repository.name }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
