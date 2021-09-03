@@ -40,7 +40,7 @@ pub mod pallet {
     use pallet_credit::CreditInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::traits::{StoredMapError, Zero, Hash};
+    use sp_runtime::traits::{Hash, StoredMapError, Zero};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -117,10 +117,10 @@ pub mod pallet {
     #[pallet::getter(fn total_micropayment_chanel_balance)]
     pub(super) type TotalMicropaymentChannelBalance<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
-        
-	#[pallet::storage]
-	#[pallet::getter(fn flag_hash)]
-	pub(super) type FlagHash<T: Config> = StorageValue<_, T::Hash>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn flag_hash)]
+    pub(super) type FlagHash<T: Config> = StorageValue<_, T::Hash>;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -342,7 +342,7 @@ pub mod pallet {
             if flag_hash == Self::flag_hash().unwrap_or_default() {
                 is_atmos_flag = true;
             }
-            
+
             // close channel if it expires
             let mut chan = Channel::<T>::get(&client, &server);
             let current_block = <frame_system::Module<T>>::block_number();
@@ -361,7 +361,7 @@ pub mod pallet {
                 Self::deposit_event(Event::ChannelClosed(client, server, end_block));
                 if is_atmos_flag {
                     return Ok(Pays::No.into());
-                }else{
+                } else {
                     return Ok(().into());
                 }
             }
@@ -412,13 +412,16 @@ pub mod pallet {
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
             if is_atmos_flag {
                 return Ok(Pays::No.into());
-            }else{
+            } else {
                 return Ok(().into());
             }
         }
 
         #[pallet::weight(10000)]
-        pub fn set_flag_hash(origin: OriginFor<T>, atmos_flag: Vec<u8>) -> DispatchResultWithPostInfo {
+        pub fn set_flag_hash(
+            origin: OriginFor<T>,
+            atmos_flag: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             let flag_hash = (atmos_flag).using_encoded(<T as frame_system::Config>::Hashing::hash);
             <FlagHash<T>>::put(flag_hash);
