@@ -234,6 +234,30 @@ fn update_credit() {
 }
 
 #[test]
+fn update_credit_by_traffic() {
+    new_test_ext().execute_with(|| {
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
+
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
+
+        run_to_block(BLOCKS_PER_ERA * 2);
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1); // 0 + 1
+
+        run_to_block(BLOCKS_PER_ERA * 3);
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1); // 1 + 0
+
+        run_to_block(BLOCKS_PER_ERA * 4);
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
+    });
+}
+
+#[test]
 fn get_reward_work() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(3)));

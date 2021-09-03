@@ -16,9 +16,12 @@
 use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{
-    assert_ok,
+    assert_noop, assert_ok,
+    codec::Encode,
     dispatch::{DispatchError, DispatchErrorWithPostInfo},
+    error::BadOrigin,
 };
+use frame_system::RawOrigin;
 use hex_literal::hex;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
@@ -239,7 +242,50 @@ fn claim_payment() {
 }
 
 #[test]
-fn blake2_hash() {
+fn add_credit_by_traffic() {
+    new_test_ext().execute_with(|| {
+        // OK
+        assert_ok!(Micropayment::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob(),
+        ));
+
+        let nonce: u64 = 0;
+
+        let mut data = Vec::new();
+        data.extend_from_slice(&bob().encode());
+        data.extend_from_slice(&nonce.to_be_bytes());
+        data.extend_from_slice(&alice().encode());
+        let _msg = sp_io::hashing::blake2_256(&data);
+
+        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+        assert_ok!(Micropayment::add_credit_by_traffic(
+            Origin::signed(alice()),
+            nonce, signature.into()
+        ));
+
+    });
+}
+
+#[test]
+fn set_atmos_pubkey() {
+    new_test_ext().execute_with(|| {
+        // OK
+        assert_ok!(Micropayment::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob(),
+        ));
+
+        // BadOrigin
+        assert_noop!(
+            Micropayment::set_atmos_pubkey(Origin::signed(alice()), bob(),),
+            BadOrigin
+        );
+    });
+}
+
+#[test]
+fn test_blake2_hash() {
     let bob: [u8; 32] = [
         142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37, 252, 82, 135, 97, 54, 147,
         201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,

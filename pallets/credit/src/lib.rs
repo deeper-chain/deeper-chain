@@ -116,6 +116,7 @@ pub trait CreditInterface<AccountId, Balance> {
     ) -> (Option<(Balance, Balance)>, Weight);
     fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
     fn update_credit(micropayment: (AccountId, Balance));
+    fn update_credit_by_traffic(server: AccountId);
 }
 
 #[frame_support::pallet]
@@ -704,6 +705,37 @@ pub mod pallet {
                             server_id.clone()
                         );
                     }
+                }
+            }
+        }
+
+        /// update credit score by traffic
+        fn update_credit_by_traffic(server_id: T::AccountId) {
+            let onboard_era = Self::get_onboard_era(&server_id);
+            if onboard_era.is_none() {
+                // credit is not updated if the device is never online
+                return;
+            }
+            let current_era = Self::get_current_era();
+            // if this is the first update, we use onboard era as the last update era
+            let last_credit_update_era =
+                Self::last_credit_update(&server_id).unwrap_or(onboard_era.unwrap());
+            let eras = (current_era - last_credit_update_era) as u64;
+            if eras >= 2 {
+                let cap: u64 = T::CreditCapTwoEras::get() as u64;
+                let new_credit = Self::get_credit_score(&server_id)
+                    .unwrap_or(0)
+                    .saturating_add(cap);
+                if Self::_update_credit(&server_id, new_credit) {
+                    LastCreditUpdate::<T>::insert(&server_id, current_era);
+                    Self::update_credit_history(&server_id, current_era);
+                } else {
+                    log!(
+                        error,
+                        "failed to update credit {} for server_id: {:?}",
+                        new_credit,
+                        server_id.clone()
+                    );
                 }
             }
         }

@@ -134,6 +134,16 @@ pub mod pallet {
     pub(super) type TotalMicropaymentChannelBalance<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
 
+    // atmos_nonce indicates the next available value;
+    #[pallet::storage]
+    #[pallet::getter(fn atmos_nonce)]
+    pub(super) type AtmosNonce<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn atmos_accountid)]
+    pub(super) type AtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
+
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
@@ -169,6 +179,8 @@ pub mod pallet {
         SessionError,
         // Invalid signature
         InvalidSignature,
+        /// Invalid atomos nonce
+        InvalidAtomosNonce,
     }
 
     #[pallet::hooks]
@@ -426,6 +438,36 @@ pub mod pallet {
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
             Ok(().into())
         }
+
+        #[pallet::weight(10000)]
+        pub fn add_credit_by_traffic(
+            origin: OriginFor<T>,
+            nonce: u64,
+            signature: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let server = ensure_signed(origin)?;
+
+            let atmos_nonce_of_server = Self::atmos_nonce(&server).unwrap_or_default();
+            ensure!(
+                nonce == atmos_nonce_of_server,
+                Error::<T>::InvalidAtomosNonce
+            );
+
+            Self::verify_atomos_signature(nonce, &signature, server.clone())?;
+            AtmosNonce::<T>::insert(&server, atmos_nonce_of_server + 1u64);
+            T::CreditInterface::update_credit_by_traffic(server.clone());
+            Ok(().into())
+        }
+
+        #[pallet::weight(10000)]
+        pub fn set_atmos_pubkey(
+            origin: OriginFor<T>,
+            pubkey: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <AtmosAccountid<T>>::put(pubkey);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -468,7 +510,33 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// construct data from |server_addr|session_id|amount| and hash it
+        pub fn verify_atomos_signature(
+            nonce: u64,
+            signature: &Vec<u8>,
+            sender: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let mut pk = [0u8; 32];
+            let atomos_accountid = Self::atmos_accountid().unwrap_or_default();
+            pk.copy_from_slice(&atomos_accountid.encode());
+            let pub_key = sr25519::Public::from_raw(pk);
+
+            let mut sig = [0u8; 64];
+            sig.copy_from_slice(&signature);
+            let sig = sr25519::Signature::from_slice(&sig);
+
+            let mut data = Vec::new();
+            data.extend_from_slice(&atomos_accountid.encode());
+            data.extend_from_slice(&nonce.to_be_bytes());
+            data.extend_from_slice(&sender.encode());
+            let msg = sp_io::hashing::blake2_256(&data);
+
+            let verified = sr25519_verify(&sig, &msg, &pub_key);
+            ensure!(verified, Error::<T>::InvalidSignature);
+
+            Ok(().into())
+        }
+
+        // construct data from |server_addr|session_id|amount| and hash it
         pub fn construct_byte_array_and_hash(
             address: &T::AccountId,
             nonce: u64,
