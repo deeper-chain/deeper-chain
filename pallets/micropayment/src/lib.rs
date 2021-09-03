@@ -339,8 +339,10 @@ pub mod pallet {
 
             let flag_hash = (atmos_flag).using_encoded(<T as frame_system::Config>::Hashing::hash);
             let mut is_atmos_flag = false;
-            if flag_hash == Self::flag_hash().unwrap_or_default() {
-                is_atmos_flag = true;
+            if let Some(fh) = Self::flag_hash() {
+                if fh == flag_hash {
+                    is_atmos_flag = true;
+                }
             }
 
             // close channel if it expires
