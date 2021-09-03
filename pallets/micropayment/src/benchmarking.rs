@@ -165,7 +165,9 @@ benchmarks! {
         let pub_key = sr25519::Public::from_raw(pk);
 
         let signature: [u8; 64] = sr25519_sign(0.into(), &pub_key, &msg).unwrap().into();
-    }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, claim_amount, signature.into())
+        let flag = "dc".as_bytes().to_vec();
+        Micropayment::<T>::set_flag_hash(RawOrigin::Root.into(), flag.clone())?;
+    }: _(RawOrigin::Signed(server.clone()), client.clone(), session_id, claim_amount, signature.into(), flag)
     verify {
         let balance_of_chain = T::Currency::minimum_balance() * 20u32.into();
         assert_eq!(

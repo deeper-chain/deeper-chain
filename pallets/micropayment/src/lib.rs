@@ -40,7 +40,7 @@ pub mod pallet {
     use pallet_credit::CreditInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::traits::{StoredMapError, Zero};
+    use sp_runtime::traits::{StoredMapError, Zero, Hash};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -117,6 +117,10 @@ pub mod pallet {
     #[pallet::getter(fn total_micropayment_chanel_balance)]
     pub(super) type TotalMicropaymentChannelBalance<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, OptionQuery>;
+        
+	#[pallet::storage]
+	#[pallet::getter(fn flag_hash)]
+	pub(super) type FlagHash<T: Config> = StorageValue<_, T::Hash>;
 
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -325,6 +329,7 @@ pub mod pallet {
             session_id: u32,
             amount: BalanceOf<T>,
             signature: Vec<u8>,
+            atmos_flag: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             let server = ensure_signed(origin)?;
             ensure!(
@@ -332,6 +337,12 @@ pub mod pallet {
                 Error::<T>::ChannelNotExist
             );
 
+            let flag_hash = (atmos_flag).using_encoded(<T as frame_system::Config>::Hashing::hash);
+            let mut is_atmos_flag = false;
+            if flag_hash == Self::flag_hash().unwrap_or_default() {
+                is_atmos_flag = true;
+            }
+            
             // close channel if it expires
             let mut chan = Channel::<T>::get(&client, &server);
             let current_block = <frame_system::Module<T>>::block_number();
@@ -348,7 +359,11 @@ pub mod pallet {
                 Self::_close_channel(&client, &server);
                 let end_block = current_block;
                 Self::deposit_event(Event::ChannelClosed(client, server, end_block));
-                return Ok(().into());
+                if is_atmos_flag {
+                    return Ok(Pays::No.into());
+                }else{
+                    return Ok(().into());
+                }
             }
 
             if SessionId::<T>::contains_key((&client, &server))
@@ -395,6 +410,18 @@ pub mod pallet {
             Self::deposit_into_account(&server, amount)?;
             T::CreditInterface::update_credit((server.clone(), amount));
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
+            if is_atmos_flag {
+                return Ok(Pays::No.into());
+            }else{
+                return Ok(().into());
+            }
+        }
+
+        #[pallet::weight(10000)]
+        pub fn set_flag_hash(origin: OriginFor<T>, atmos_flag: Vec<u8>) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            let flag_hash = (atmos_flag).using_encoded(<T as frame_system::Config>::Hashing::hash);
+            <FlagHash<T>>::put(flag_hash);
             Ok(().into())
         }
     }
