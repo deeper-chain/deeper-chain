@@ -157,6 +157,8 @@ pub mod pallet {
         SessionError,
         /// Invalid signature, cannot be verified
         InvalidSignature,
+        /// Invalid flag
+        InvalidFlag,
     }
 
     #[pallet::hooks]
@@ -417,6 +419,26 @@ pub mod pallet {
             } else {
                 return Ok(().into());
             }
+        }
+
+        #[pallet::weight(10000)]
+        pub fn add_credit_by_traffic(
+            origin: OriginFor<T>,
+            atmos_flag: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+            let server = ensure_signed(origin)?;
+
+            let flag_hash = (atmos_flag).using_encoded(<T as frame_system::Config>::Hashing::hash);
+            let mut is_atmos_flag = false;
+            if let Some(fh) = Self::flag_hash() {
+                if fh == flag_hash {
+                    is_atmos_flag = true;
+                }
+            }
+            ensure!(is_atmos_flag, Error::<T>::InvalidFlag);
+            //update credit
+            T::CreditInterface::update_credit_by_traffic(server);
+            Ok(Pays::No.into())
         }
 
         #[pallet::weight(10000)]
