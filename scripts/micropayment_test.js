@@ -8,7 +8,7 @@ const Utils = require("./utils.js");
 //const serverHost = "wss://138.68.229.14:443";
 //const serverHost = "wss://10.168.98.1:443";
 const serverHost = "ws://127.0.0.1:9944";
-const DPR = new BN("1000000000000000", 10); // base = 1e15 according to frontend apps, in code it's 1e14, fix it later;
+const DPR = new BN("1000000000000000000", 10); // base = 1e18 
 const ONE_MILLION = 1000000;
 // convert number in "atom" unit to DPR unit
 // return float
@@ -82,7 +82,7 @@ function claimPayment(api, sender, receiver, nonceNum, sessionIdNum, amtNum) {
         let signature = sender.sign(msg);
         let hexsig = toHexString(signature);
         console.log(`nonce: ${nonce}, session_id: ${sessionId}, amt: ${amount}, signature: ${hexsig}`);
-        api.tx.micropayment.claimPayment(sender.address, sessionId, amt, "0x" + hexsig).signAndSend(receiver, {nonce: -1}, ({ events = [], status }) => {
+        api.tx.micropayment.claimPayment(sender.address, sessionId, amt, "0x" + hexsig, "dc").signAndSend(receiver, {nonce: -1}, ({ events = [], status }) => {
             //console.log("Transaction status:", status.type);
             if (status.isInBlock) {
                 //console.log("Included at block hash", status.asInBlock.toHex());
@@ -117,7 +117,7 @@ async function micropayment_test() {
     
     // open channel Alice -> Bob
     console.log("OpenChannel [Alice -> Bob]");
-    await openChannel(api, alice, bob, DPRToAtom(100), 1);
+    await openChannel(api, alice, bob, DPRToAtom(100), 24*3600);
     await Utils.sleep(30 * 1000);
     let totalMicropaymentChannelBalanceOption = await api.query.micropayment.totalMicropaymentChannelBalance(alice.address);
     let totalMicropaymentChannelBalance = atomToDPR(totalMicropaymentChannelBalanceOption.unwrapOr(0));
@@ -126,7 +126,7 @@ async function micropayment_test() {
     
     // open channel Alice->Charlie
     console.log("OpenChannel [Alice -> Charlie]");
-    await openChannel(api, alice, charlie, DPRToAtom(100), 1);
+    await openChannel(api, alice, charlie, DPRToAtom(100), 24*3600);
     await Utils.sleep(30 * 1000);
     totalMicropaymentChannelBalanceOption = await api.query.micropayment.totalMicropaymentChannelBalance(alice.address);
     totalMicropaymentChannelBalance = atomToDPR(totalMicropaymentChannelBalanceOption.unwrapOr(0));
@@ -135,7 +135,7 @@ async function micropayment_test() {
 
     // open channel Alice -> Dave
     console.log("OpenChannel [Alice -> Dave]");
-    await openChannel(api, alice, dave, DPRToAtom(100), 1);
+    await openChannel(api, alice, dave, DPRToAtom(100), 24*3600);
     await Utils.sleep(30 * 1000);
     totalMicropaymentChannelBalanceOption = await api.query.micropayment.totalMicropaymentChannelBalance(alice.address);
     totalMicropaymentChannelBalance = atomToDPR(totalMicropaymentChannelBalanceOption.unwrapOr(0));
