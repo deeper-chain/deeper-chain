@@ -13,6 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Micropayment pallet for deeper chain
+//!
+//! This pallet provides functions for Deeper Connect devices to get rewarded
+//! for sharing bandwidth. The rewards include payment in DPR tokens and
+//! credit accumulation.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -33,9 +39,9 @@ use sp_std::prelude::*;
 
 pub mod weights;
 
-/// This is for benchmarking
+/// This is for benchmarking and testing.
+/// Benchmarking requires AccountId32, while testing requires u64 as AccountId.
 pub trait AccountCreator<AccountId> {
-    /// Get the validators from session.
     fn create_account(string: &'static str) -> AccountId;
 }
 
@@ -57,21 +63,18 @@ pub mod pallet {
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Because this pallet emits events, it depends on the runtime's definition of an event.
+        // Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
         type SecsPerBlock: Get<u32>;
-
-        /// CreditInterface of credit pallet
+        // CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
-
-        /// data traffic to DPR ratio
+        // data traffic to DPR ratio
         #[pallet::constant]
         type DataPerDPR: Get<u64>;
-
-        /// Create Account trait for benchmarking
+        // Create Account trait for benchmarking
         type AccountCreator: AccountCreator<Self::AccountId>;
-        /// Weight information for extrinsics in this pallet.
+        // Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }
 
@@ -112,7 +115,8 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    // nonce indicates the next available value; increase by one whenever open a new channel for an account pair
+    // nonce indicates the next available value;
+    // increase by one whenever open a new channel for an account pair
     #[pallet::storage]
     #[pallet::getter(fn nonce)]
     pub(super) type Nonce<T: Config> =
@@ -124,7 +128,7 @@ pub mod pallet {
     pub(super) type SessionId<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::AccountId, T::AccountId), u32, OptionQuery>;
 
-    // record total micro-payment channel balance of accountId
+    // record total micropayment channel balance of accountId
     #[pallet::storage]
     #[pallet::getter(fn total_micropayment_chanel_balance)]
     pub(super) type TotalMicropaymentChannelBalance<T: Config> =
@@ -151,19 +155,19 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Not enough balance
+        // Not enough balance
         NotEnoughBalance,
-        /// micro-payment channel not exist
+        // micropayment channel not exist
         ChannelNotExist,
-        /// channel has been opened
+        // channel has already been opened
         ChannelAlreadyOpened,
-        /// client can only close expired channel
+        // client can only close expired channel
         UnexpiredChannelCannotBeClosedBySender,
-        /// Sender and server are the same
+        // Client and server are the same
         SameChannelEnds,
-        /// Session has already been consumed
+        // Session has already been consumed
         SessionError,
-        /// Invalid signature, cannot be verified
+        // Invalid signature
         InvalidSignature,
     }
 
@@ -176,12 +180,14 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::open_channel())]
-        // duration is in units of second
+
+        /// Client opens a channel to the server by locking DPR tokens inside the channel.
+        /// The channel is live for a time span specified in seconds.
         pub fn open_channel(
             origin: OriginFor<T>,
             server: T::AccountId,
             lock_amount: BalanceOf<T>,
-            duration: u32,
+            duration: u32, // duration is in units of seconds
         ) -> DispatchResultWithPostInfo {
             let client = ensure_signed(origin)?;
             ensure!(
@@ -225,7 +231,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // make sure claim your payment before close the channel
+        /// Close the channel and settle the payment
         #[pallet::weight(T::WeightInfo::close_channel())]
         pub fn close_channel(
             origin: OriginFor<T>,
@@ -246,6 +252,7 @@ pub mod pallet {
                         None
                     };
                 });
+                // return the remaining balance in the channel to the client
                 Self::deposit_into_account(&account_id, chan.balance)?;
                 Self::_close_channel(&account_id, &signer);
                 let end_block = <frame_system::Module<T>>::block_number();
@@ -264,6 +271,7 @@ pub mod pallet {
                             None
                         };
                     });
+                    // return the remaining balance in the channel to the client
                     Self::deposit_into_account(&signer, chan.balance)?;
                     Self::_close_channel(&signer, &account_id);
                     let end_block = current_block;
@@ -277,10 +285,10 @@ pub mod pallet {
             }
         }
 
-        // client close all expired channels on chain
+        /// client close all expired channels.
+        /// client can only close expired channel.
         #[pallet::weight(T::WeightInfo::close_expired_channels())]
         pub fn close_expired_channels(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            // client can only close expired channel.
             let client = ensure_signed(origin)?;
             for (server, chan) in Channel::<T>::iter_prefix(&client) {
                 let current_block = <frame_system::Module<T>>::block_number();
@@ -293,6 +301,7 @@ pub mod pallet {
                             None
                         };
                     });
+                    // return the remaining balance in the channel to the client
                     Self::deposit_into_account(&client, chan.balance)?;
                     Self::_close_channel(&client, &server);
                     let end_block = current_block;
@@ -302,6 +311,8 @@ pub mod pallet {
             Ok(().into())
         }
 
+
+        /// Client adds more DPR tokens to the existing channel
         #[pallet::weight(T::WeightInfo::add_balance())]
         pub fn add_balance(
             origin: OriginFor<T>,
@@ -329,8 +340,8 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Server claims payment from the channel
         #[pallet::weight(T::WeightInfo::claim_payment())]
-        // TODO: instead of transfer from client, transfer from client's reserved token
         pub fn claim_payment(
             origin: OriginFor<T>,
             client: T::AccountId,
@@ -356,6 +367,7 @@ pub mod pallet {
                         None
                     };
                 });
+                // return the remaining balance in the channel to the client
                 Self::deposit_into_account(&client, chan.balance)?;
                 Self::_close_channel(&client, &server);
                 let end_block = current_block;
@@ -371,6 +383,7 @@ pub mod pallet {
             Self::verify_signature(&client, &server, chan.nonce, session_id, amount, &signature)?;
             SessionId::<T>::insert((&client, &server), session_id); // mark session_id as used
 
+            // if there is not enough balance in the channel
             if chan.balance < amount {
                 TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
                     let total_balance = b.take().unwrap_or_default();
@@ -380,7 +393,9 @@ pub mod pallet {
                         None
                     };
                 });
+                // deposit all the balance in the channel to the server's account
                 Self::deposit_into_account(&server, chan.balance)?;
+                // update server's credit
                 T::CreditInterface::update_credit((server.clone(), chan.balance));
                 // no balance in channel now, just close it
                 Self::_close_channel(&client, &server);
@@ -404,7 +419,9 @@ pub mod pallet {
                     None
                 };
             });
+            // deposit the claimed amount to the server's account
             Self::deposit_into_account(&server, amount)?;
+            // update server's credit
             T::CreditInterface::update_credit((server.clone(), amount));
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
             Ok(().into())
@@ -412,17 +429,21 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+
+        /// Close the channel between the client and server
         fn _close_channel(client: &T::AccountId, server: &T::AccountId) {
             // remove all the session_ids of given channel
             SessionId::<T>::remove((client, server));
+            // remove the channel
             Channel::<T>::remove(client, server);
+            // increment the nonce
             Nonce::<T>::mutate((client, server), |v| *v += 1);
         }
 
-        // verify signature, signature is on hash of |server_addr|nonce|session_id|amount|
-        // during one session_id, a client can send multiple accumulated
-        // micro-payments with the same session_id; the server can only claim one payment of the same
-        // session_id, i.e. the latest accumulated micro-payment.
+        /// verify signature, signature is on hash of |server_addr|nonce|session_id|amount|
+        /// during one session_id, a client can send multiple accumulated
+        /// micropayments with the same session_id; the server can only claim one payment
+        /// of the same session_id, i.e. the latest accumulated micropayment.
         pub fn verify_signature(
             client: &T::AccountId,
             server: &T::AccountId,
@@ -447,7 +468,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // construct data from |server_addr|session_id|amount| and hash it
+        /// construct data from |server_addr|session_id|amount| and hash it
         pub fn construct_byte_array_and_hash(
             address: &T::AccountId,
             nonce: u64,
@@ -463,7 +484,7 @@ pub mod pallet {
             hash
         }
 
-        // TODO: take ExistentialDeposit into account
+        /// Deduct the amount from the account free balance
         fn take_from_account(account: &T::AccountId, amount: BalanceOf<T>) -> bool {
             let result = T::Currency::mutate_account_balance(account, |balance| {
                 if amount > balance.free {
@@ -479,6 +500,7 @@ pub mod pallet {
             }
         }
 
+        /// Deposit the amount to the account free balance
         fn deposit_into_account(
             account: &T::AccountId,
             amount: BalanceOf<T>,
