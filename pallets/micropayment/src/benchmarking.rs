@@ -1,5 +1,3 @@
-// This file is part of Substrate.
-
 // Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -15,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Staking pallet benchmarking.
+//! Micropayment pallet benchmarking.
 
 use super::*;
 use crate::pallet::ChannelOf;

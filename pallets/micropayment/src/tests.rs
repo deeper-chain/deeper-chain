@@ -1,3 +1,18 @@
+// Copyright (C) 2021 Deeper Network Inc.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{
@@ -71,7 +86,7 @@ fn open_channel() {
 }
 
 #[test]
-fn fn_close_channel() {
+fn close_channel() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
@@ -119,7 +134,7 @@ fn fn_close_channel() {
 }
 
 #[test]
-fn fn_close_expired_channels() {
+fn close_expired_channels() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
@@ -224,7 +239,7 @@ fn claim_payment() {
 }
 
 #[test]
-fn test_blake2_hash() {
+fn blake2_hash() {
     let bob: [u8; 32] = [
         142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37, 252, 82, 135, 97, 54, 147,
         201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,
@@ -246,7 +261,7 @@ fn test_blake2_hash() {
 }
 
 #[test]
-fn test_signature() {
+fn signature() {
     let sig: [u8; 64] = [
         68, 47, 70, 69, 17, 14, 9, 253, 233, 25, 253, 31, 54, 87, 196, 88, 192, 81, 241, 235, 51,
         175, 232, 189, 181, 176, 89, 123, 223, 237, 162, 39, 79, 234, 237, 116, 157, 88, 19, 64,
@@ -266,9 +281,6 @@ fn test_signature() {
 
     let pk = Public::from_raw(pk);
     let sig = Signature::from_slice(&sig);
-    println!("pk:{:?}", pk);
-    println!("sig:{:?}", sig);
-    println!("msg:{:?}", msg);
     let verified = sr25519_verify(&sig, &msg, &pk);
-    assert_eq!(verified, true);
+    assert!(verified);
 }
