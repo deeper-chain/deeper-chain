@@ -1,7 +1,7 @@
 {
   "name": "Deeper Chain integration tests",
   "version": "0.0.1",
-  "description": "Fei Weekly Staking Rewards Dripper",
+  "description": "Deeper Chain integration tests written in Javascript",
   "scripts": {
     "test": "node *test.js"
   },
