@@ -406,8 +406,8 @@ pub mod pallet {
                 });
                 // deposit all the balance in the channel to the server's account
                 Self::deposit_into_account(&server, chan.balance)?;
-                // update server's credit
-                T::CreditInterface::update_credit((server.clone(), chan.balance));
+                // update server's credit TODO: reuse in future
+                //T::CreditInterface::update_credit((server.clone(), chan.balance));
                 // no balance in channel now, just close it
                 Self::_close_channel(&client, &server);
                 let end_block = <frame_system::Module<T>>::block_number();
@@ -432,8 +432,8 @@ pub mod pallet {
             });
             // deposit the claimed amount to the server's account
             Self::deposit_into_account(&server, amount)?;
-            // update server's credit
-            T::CreditInterface::update_credit((server.clone(), amount));
+            // update server's credit TODO: reuse in future
+            //T::CreditInterface::update_credit((server.clone(), amount));
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
             Ok(().into())
         }
