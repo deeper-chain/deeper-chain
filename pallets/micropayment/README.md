@@ -16,6 +16,8 @@ For server
 - Close a micropayment channel
 - Claim payment from the micropayment channel
 
+### Position in the Deeper Chain
+![Overview](../../deeper-chain.svg "Overview")
 ### Terminology
 
 - **Client:** A client is a Deeper Connect device that requests data proxy service from another Deeper Connect device. Any Deeper Connect device can be a client.
@@ -41,6 +43,9 @@ For server
 ## Usage
 
 This pallet only provides dispatchable functions to end users.
+
+Run `cargo build` in terminal to build this pallet.
+Run `cargo test` in terminal to run the unit tests. 
 
 ## Genesis config
 
