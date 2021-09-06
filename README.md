@@ -1,6 +1,6 @@
 # deeper chain node
 
-deeper chain node is built on top of Substrate v2.0.0 full node
+deeper chain node is built on top of Substrate v3.0.0 full node
 
 ## Local Development
 
