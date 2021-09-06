@@ -54,6 +54,7 @@ function openChannel(api, sender, receiver, amt, duration) {
         });
     });
 }
+
 function closeChannel(api, sender, receiver) {
     return new Promise(function (resolve, reject) {
         api.tx.micropayment.closeChannel(sender.address).signAndSend(receiver, {nonce: -1}, ({ events = [], status }) => {
@@ -71,6 +72,7 @@ function closeChannel(api, sender, receiver) {
         });
     });
 }
+
 function claimPayment(api, sender, receiver, nonceNum, sessionIdNum, amtNum) {
     return new Promise(function (resolve, reject) {
         let nonce = new BN(nonceNum.toString(), 10);
