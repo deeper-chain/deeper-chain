@@ -249,13 +249,35 @@ fn add_credit_by_traffic() {
             bob(),
         ));
 
+        // InvalidAtomosNonce
         let nonce: u64 = 1;
         let signature: [u8; 64] = hex!("2623f985877cc214821b3c01e364ae14a88a2042222a4bcf7580b48e407c2764c8527be4157c4953378a43f2f7da896d7c0cd268e69f70e601b44db020a05889");
         assert_eq!(Micropayment::add_credit_by_traffic(Origin::signed(alice()), nonce, signature.into()),
         Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidAtomosNonce)));
 
+        // OK
         let nonce: u64 = 0;
         let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+        assert_ok!(Micropayment::add_credit_by_traffic(
+            Origin::signed(alice()),
+            nonce, signature.into()
+        ));
+
+        // InvalidAtomosNonce
+        let nonce: u64 = 0;
+        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+        assert_eq!(Micropayment::add_credit_by_traffic(Origin::signed(alice()), nonce, signature.into()),
+        Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidAtomosNonce)));
+
+        // InvalidSignature
+        let nonce: u64 = 0;
+        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+        assert_eq!(Micropayment::add_credit_by_traffic(Origin::signed(bob()), nonce, signature.into()),
+        Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidSignature)));
+
+        // OK
+        let nonce: u64 = 1;
+        let signature: [u8; 64] = hex!("2623f985877cc214821b3c01e364ae14a88a2042222a4bcf7580b48e407c2764c8527be4157c4953378a43f2f7da896d7c0cd268e69f70e601b44db020a05889");
         assert_ok!(Micropayment::add_credit_by_traffic(
             Origin::signed(alice()),
             nonce, signature.into()
