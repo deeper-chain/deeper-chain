@@ -1076,6 +1076,14 @@ impl pallet_credit::Config for Runtime {
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_credit_accumulation::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type CreditInterface = Credit;
+    type AccountCreator = DefaultAccountCreator;
+    type WeightInfo = pallet_credit_accumulation::weights::SubstrateWeight<Runtime>;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1121,6 +1129,7 @@ construct_runtime!(
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
+        CreditAccumulation: pallet_credit_accumulation::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -1459,6 +1468,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_credit, Credit);
             add_benchmark!(params, batches, pallet_deeper_node, DeeperNode);
             add_benchmark!(params, batches, pallet_micropayment, Micropayment);
+            add_benchmark!(params, batches, pallet_credit_accumulation, CreditAccumulation);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

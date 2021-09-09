@@ -40,7 +40,7 @@ async function addCreditByTrafficTest() {
     atomsKeypair = bob;
     //set atomos pubkey
     await api.tx.sudo.sudo(
-      api.tx.micropayment.setAtmosPubkey(atomsKeypair.address)
+      api.tx.creditAccumulation.setAtmosPubkey(atomsKeypair.address)
     ).signAndSend(root, { nonce: -1 });
 
     //set Alice creditData
@@ -62,7 +62,7 @@ async function addCreditByTrafficTest() {
     //await Utils.sleep(1000* 60 * 19);
     
     // alice send message and signature which is signed by atomsKeypair
-    let alice_nonce_option = await api.query.micropayment.atmosNonce(alice.address); 
+    let alice_nonce_option = await api.query.creditAccumulation.atmosNonce(alice.address); 
     let alice_nonce = alice_nonce_option.unwrapOr(0);
 
     let res = construct_byte_array(atomsKeypair.publicKey, alice_nonce, alice.publicKey);
@@ -70,7 +70,7 @@ async function addCreditByTrafficTest() {
     let signature = atomsKeypair.sign(msg);
     let hexsig = "0x" + toHexString(signature);
     console.log(`nonce: ${alice_nonce}, signature: ${hexsig}`);
-    await api.tx.micropayment.addCreditByTraffic(alice_nonce, hexsig)
+    await api.tx.creditAccumulation.addCreditByTraffic(alice_nonce, hexsig)
         .signAndSend(alice, { nonce: -1 });
     
     await Utils.sleep(1000* 60 * 3);
