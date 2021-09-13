@@ -26,7 +26,7 @@ use sp_blockchain::{well_known_cache_keys::Id as CacheKeyId, HeaderBackend, Prov
 use sp_consensus::{
 	BlockCheckParams, BlockImport, BlockImportParams, Error as ConsensusError, ImportResult,
 };
-use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
+pub use sp_runtime::traits::{Block as BlockT, Header as HeaderT};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;

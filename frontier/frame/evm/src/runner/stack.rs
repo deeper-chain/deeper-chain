@@ -28,7 +28,6 @@ use evm::{ExitError, ExitReason, Transfer};
 use fp_evm::{CallInfo, CreateInfo, ExecutionInfo, Log, Vicinity};
 use frame_support::{
 	ensure,
-	storage::{StorageDoubleMap, StorageMap},
 	traits::{Currency, ExistenceRequirement, Get},
 };
 use sha3::{Digest, Keccak256};
@@ -400,11 +399,11 @@ impl<'vicinity, 'config, T: Config> BackendT for SubstrateStackState<'vicinity, 
 	}
 
 	fn code(&self, address: H160) -> Vec<u8> {
-		AccountCodes::get(&address)
+		<AccountCodes<T>>::get(&address)
 	}
 
 	fn storage(&self, address: H160, index: H256) -> H256 {
-		AccountStorages::get(address, index)
+		<AccountStorages<T>>::get(address, index)
 	}
 
 	fn original_storage(&self, _address: H160, _index: H256) -> Option<H256> {
@@ -460,7 +459,7 @@ impl<'vicinity, 'config, T: Config> StackStateT<'config>
 				address,
 				index,
 			);
-			AccountStorages::remove(address, index);
+			<AccountStorages<T>>::remove(address, index);
 		} else {
 			log::debug!(
 				target: "evm",
@@ -469,12 +468,12 @@ impl<'vicinity, 'config, T: Config> StackStateT<'config>
 				index,
 				value,
 			);
-			AccountStorages::insert(address, index, value);
+			<AccountStorages<T>>::insert(address, index, value);
 		}
 	}
 
 	fn reset_storage(&mut self, address: H160) {
-		AccountStorages::remove_prefix(address);
+		<AccountStorages<T>>::remove_prefix(address);
 	}
 
 	fn log(&mut self, address: H160, topics: Vec<H256>, data: Vec<u8>) {

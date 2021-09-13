@@ -27,7 +27,7 @@ use node_runtime::{
     ContractsConfig, CouncilConfig, CreditConfig, DeeperNodeConfig, DemocracyConfig,
     ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
     SocietyConfig, StakerStatus, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
-    EVMConfig,
+    EVMConfig, EthereumConfig, 
 };
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -38,10 +38,12 @@ use serde::{Deserialize, Serialize};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{H160, U256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     Perbill, Percent,
 };
+use std::{collections::BTreeMap, str::FromStr};
 
 pub use node_primitives::{AccountId, Balance, BlockNumber, Signature};
 pub use node_runtime::GenesisConfig;
@@ -590,7 +592,7 @@ pub fn testnet_genesis(
                 })
                 .collect(),
         }),
-        pallet_evm: EVMConfig {
+        pallet_evm: Some(EVMConfig {
             accounts: {
                 let mut map = BTreeMap::new();
                 map.insert(
@@ -623,9 +625,9 @@ pub fn testnet_genesis(
                 );
                 map
             },
-        },
-        pallet_ethereum: EthereumConfig {},
-        pallet_dynamic_fee: Default::default(),
+        }),
+        pallet_ethereum: Some(EthereumConfig {}),
+        pallet_dynamic_fee: Some(Default::default()),
     }
 }
 

@@ -89,12 +89,12 @@ pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../p
 pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 
 # frontier frame dependencies
-pallet-evm = { version = "5.0.0", default-features = false, path = "../frontier/pallets/evm"}
-pallet-evm-precompile-simple = { default-features = false, path = "../frontier/pallets/evm/precompile/simple" }
-pallet-evm-precompile-sha3fips = { default-features = false, path = "../frontier/pallets/evm/precompile/sha3fips" }
-pallet-evm-precompile-modexp = { default-features = false, path = "../frontier/pallets/evm/precompile/modexp" }
-pallet-ethereum = { version = "3.0.0", default-features = false, path = "../frontier/pallets/ethereum"}
-pallet-dynamic-fee = { version = "3.0.0", default-features = false, path = "../frontier/pallets/dynamic-fee"}
+pallet-evm = { version = "5.0.0", default-features = false, path = "../frontier/frame/evm"}
+pallet-evm-precompile-simple = { default-features = false, path = "../frontier/frame/evm/precompile/simple" }
+pallet-evm-precompile-sha3fips = { default-features = false, path = "../frontier/frame/evm/precompile/sha3fips" }
+pallet-evm-precompile-modexp = { default-features = false, path = "../frontier/frame/evm/precompile/modexp" }
+pallet-ethereum = { version = "3.0.0", default-features = false, path = "../frontier/frame/ethereum"}
+pallet-dynamic-fee = { version = "3.0.0", default-features = false, path = "../frontier/frame/dynamic-fee"}
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}

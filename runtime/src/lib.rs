@@ -28,13 +28,13 @@ use frame_support::{
     construct_runtime, debug, parameter_types,
     traits::{
         Currency, Imbalance, KeyOwnerProofSystem, LockIdentifier, OnUnbalanced, Randomness,
-        U128CurrencyToVote,
+        U128CurrencyToVote, FindAuthor,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         DispatchClass, IdentityFee, Weight,
     },
-    RuntimeDebug,
+    RuntimeDebug, ConsensusEngineId,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
@@ -55,7 +55,9 @@ use sp_core::{
     crypto::KeyTypeId,
     u32_trait::{_1, _2, _3, _4, _5},
     OpaqueMetadata,
+    H160, H256, U256,
 };
+use sp_core::crypto::Public;
 use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::traits::{
     self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys,
@@ -68,7 +70,7 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber,
     ModuleId, Perbill, Percent, Permill, Perquintill,
 };
-use sp_std::prelude::*;
+use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -89,6 +91,7 @@ pub use sp_runtime::BuildStorage;
 
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::{Account as EVMAccount, EnsureAddressTruncated, HashedAddressMapping, Runner};
+use fp_rpc::TransactionStatus;
 
 type AccountPublic = <Signature as Verify>::Signer;
 use sp_io::crypto::sr25519_generate;
@@ -1087,48 +1090,62 @@ impl pallet_credit::Config for Runtime {
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
 }
 
+pub struct FindAuthorTruncated<F>(PhantomData<F>);
+impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
+    fn find_author<'a, I>(digests: I) -> Option<H160>
+    where
+        I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
+    {
+        if let Some(author_index) = F::find_author(digests) {
+            let authority_id = Babe::authorities()[author_index as usize].0.clone();
+            return Some(H160::from_slice(&authority_id.to_raw_vec()[4..24]));
+        }
+        None
+    }
+}
+
 parameter_types! {
-	pub const ChainId: u64 = 42;
-	pub BlockGasLimit: U256 = U256::from(u32::max_value());
+    pub const ChainId: u64 = 42;
+    pub BlockGasLimit: U256 = U256::from(u32::max_value());
 }
 
 impl pallet_evm::Config for Runtime {
-	type FeeCalculator = pallet_dynamic_fee::Module<Self>;
-	type GasWeightMapping = ();
-	type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
-	type CallOrigin = EnsureAddressTruncated;
-	type WithdrawOrigin = EnsureAddressTruncated;
-	type AddressMapping = HashedAddressMapping<BlakeTwo256>;
-	type Currency = Balances;
-	type Event = Event;
-	type Runner = pallet_evm::runner::stack::Runner<Self>;
-	type Precompiles = (
-		pallet_evm_precompile_simple::ECRecover,
-		pallet_evm_precompile_simple::Sha256,
-		pallet_evm_precompile_simple::Ripemd160,
-		pallet_evm_precompile_simple::Identity,
-		pallet_evm_precompile_modexp::Modexp,
-		pallet_evm_precompile_simple::ECRecoverPublicKey,
-		pallet_evm_precompile_sha3fips::Sha3FIPS256,
-		pallet_evm_precompile_sha3fips::Sha3FIPS512,
-	);
-	type ChainId = ChainId;
-	type BlockGasLimit = BlockGasLimit;
-	type OnChargeTransaction = ();
-	type FindAuthor = FindAuthorTruncated<Aura>;
+    type FeeCalculator = pallet_dynamic_fee::Module<Self>;
+    type GasWeightMapping = ();
+    type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
+    type CallOrigin = EnsureAddressTruncated;
+    type WithdrawOrigin = EnsureAddressTruncated;
+    type AddressMapping = HashedAddressMapping<BlakeTwo256>;
+    type Currency = Balances;
+    type Event = Event;
+    type Runner = pallet_evm::runner::stack::Runner<Self>;
+    type Precompiles = (
+        pallet_evm_precompile_simple::ECRecover,
+        pallet_evm_precompile_simple::Sha256,
+        pallet_evm_precompile_simple::Ripemd160,
+        pallet_evm_precompile_simple::Identity,
+        pallet_evm_precompile_modexp::Modexp,
+        pallet_evm_precompile_simple::ECRecoverPublicKey,
+        pallet_evm_precompile_sha3fips::Sha3FIPS256,
+        pallet_evm_precompile_sha3fips::Sha3FIPS512,
+    );
+    type ChainId = ChainId;
+    type BlockGasLimit = BlockGasLimit;
+    type OnChargeTransaction = ();
+    type FindAuthor = FindAuthorTruncated<Babe>;
 }
 
 impl pallet_ethereum::Config for Runtime {
-	type Event = Event;
-	type StateRoot = pallet_ethereum::IntermediateStateRoot;
+    type Event = Event;
+    type StateRoot = pallet_ethereum::IntermediateStateRoot;
 }
 
 frame_support::parameter_types! {
-	pub BoundDivision: U256 = U256::from(1024);
+    pub BoundDivision: U256 = U256::from(1024);
 }
 
 impl pallet_dynamic_fee::Config for Runtime {
-	type MinGasPriceBoundDivisor = BoundDivision;
+    type MinGasPriceBoundDivisor = BoundDivision;
 }
 
 construct_runtime!(
@@ -1177,9 +1194,9 @@ construct_runtime!(
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
         Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>, Config<T>},
-        Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, ValidateUnsigned},
-        EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>},
-        DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent},
+        Ethereum: pallet_ethereum::{Module, Call, Storage, Event, Config, ValidateUnsigned},
+        EVM: pallet_evm::{Module, Config, Call, Storage, Event<T>},
+        DynamicFee: pallet_dynamic_fee::{Module, Call, Storage, Config, Inherent},
     }
 );
 

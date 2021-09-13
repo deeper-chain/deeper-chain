@@ -69,7 +69,7 @@ where
 
 	let has_api = client
 		.runtime_api()
-		.has_api::<dyn EthereumRuntimeRPCApi<Block>>(&id)
+		.has_api::<dyn EthereumRuntimeRPCApi<Block, Error = ()>>(&id)
 		.map_err(|e| format!("{:?}", e))?;
 
 	if has_api {

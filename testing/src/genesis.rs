@@ -148,5 +148,8 @@ pub fn config_endowed(
             ],
         }),
         pallet_credit: Some(Default::default()),
+        pallet_evm: Some(Default::default()),
+        pallet_ethereum: Some(Default::default()),
+        pallet_dynamic_fee: Some(Default::default()),
     }
 }

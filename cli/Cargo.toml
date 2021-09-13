@@ -108,9 +108,9 @@ pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
 
 # frontier frame dependencies
-pallet-evm = { version = "5.0.0", default-features = false, path = "../frontier/pallets/evm"}
-pallet-ethereum = { version = "3.0.0", default-features = false, path = "../frontier/pallets/ethereum"}
-pallet-dynamic-fee = { version = "3.0.0", default-features = false, path = "../frontier/pallets/dynamic-fee"}
+pallet-evm = { version = "5.0.0", default-features = false, path = "../frontier/frame/evm"}
+pallet-ethereum = { version = "3.0.0", default-features = false, path = "../frontier/frame/ethereum"}
+pallet-dynamic-fee = { version = "3.0.0", default-features = false, path = "../frontier/frame/dynamic-fee"}
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }

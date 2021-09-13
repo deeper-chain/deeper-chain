@@ -10,7 +10,7 @@ members = [
 	"rpc-client",
 	"runtime",
 	"testing",
-	"frontier/pallets/*",
+	"frontier/frame/*",
 	"frontier/primitives/*",
 	"frontier/client/*",
 ]
