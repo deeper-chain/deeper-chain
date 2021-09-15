@@ -279,6 +279,9 @@ pub mod pallet {
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
         CreditDataAdded(T::AccountId, CreditData),
         CreditDataUpdated(T::AccountId, CreditData),
+        CampaignDataSetted(CampaignId, CampaignData<BalanceOf<T>>),
+        CampaignRestartSuccess(CampaignId, CampaignData<BalanceOf<T>>),
+        CampaignStopSuccess(CampaignId, CampaignData<BalanceOf<T>>),
     }
 
     #[pallet::error]
@@ -287,6 +290,14 @@ pub mod pallet {
         InvalidCreditData,
         /// credit data has been initialized
         CreditDataInitialized,
+        /// campaign data error
+        CampaignDataError,
+        /// campaign is stop
+        CampaignStatusStoped,
+        /// campaign is started
+        CampaignStatusStarted,
+        /// ivalid campaign id
+        InvalidCampaignId,
     }
 
     #[pallet::hooks]
@@ -338,9 +349,18 @@ pub mod pallet {
             mut campaign_data: CampaignData<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
+            for (_, score, credit_level) in campaign_data.stake_list.clone() {
+                ensure!(
+                    credit_level == Self::get_credit_level(score),
+                    Error::<T>::CampaignDataError
+                );
+            }
             campaign_data.stake_list.sort_by(|a, b| a.0.cmp(&b.0));
-            CampaignDatas::<T>::insert(campaign_data.campaign_id, campaign_data);
-            // Event
+            CampaignDatas::<T>::insert(campaign_data.campaign_id, campaign_data.clone());
+            Self::deposit_event(Event::CampaignDataSetted(
+                campaign_data.campaign_id,
+                campaign_data,
+            ));
             Ok(().into())
         }
 
@@ -350,17 +370,21 @@ pub mod pallet {
             campaign_id: CampaignId,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
-            if CampaignDatas::<T>::contains_key(campaign_id) {
-                CampaignDatas::<T>::mutate(campaign_id, |d| match d {
-                    Some(campaign_data) => {
-                        if campaign_data.campaign_status == CampaignStatus::Stop {
-                            campaign_data.campaign_status = CampaignStatus::Start
-                        }
-                    }
-                    _ => (),
-                });
-            }
-            // Event
+            ensure!(
+                CampaignDatas::<T>::contains_key(campaign_id),
+                Error::<T>::InvalidCampaignId
+            );
+            let mut campaign_data = Self::campaign_datas(campaign_id).unwrap();
+            ensure!(
+                campaign_data.campaign_status == CampaignStatus::Stop,
+                Error::<T>::CampaignStatusStarted
+            );
+            campaign_data.campaign_status = CampaignStatus::Start;
+            CampaignDatas::<T>::insert(campaign_id, campaign_data.clone());
+            Self::deposit_event(Event::CampaignRestartSuccess(
+                campaign_id,
+                campaign_data.clone(),
+            ));
             Ok(().into())
         }
 
@@ -370,17 +394,21 @@ pub mod pallet {
             campaign_id: CampaignId,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
-            if CampaignDatas::<T>::contains_key(campaign_id) {
-                CampaignDatas::<T>::mutate(campaign_id, |d| match d {
-                    Some(campaign_data) => {
-                        if campaign_data.campaign_status == CampaignStatus::Start {
-                            campaign_data.campaign_status = CampaignStatus::Stop
-                        }
-                    }
-                    _ => (),
-                });
-            }
-            // Event
+            ensure!(
+                CampaignDatas::<T>::contains_key(campaign_id),
+                Error::<T>::InvalidCampaignId
+            );
+            let mut campaign_data = Self::campaign_datas(campaign_id).unwrap();
+            ensure!(
+                campaign_data.campaign_status == CampaignStatus::Start,
+                Error::<T>::CampaignStatusStoped
+            );
+            campaign_data.campaign_status = CampaignStatus::Stop;
+            CampaignDatas::<T>::insert(campaign_id, campaign_data.clone());
+            Self::deposit_event(Event::CampaignRestartSuccess(
+                campaign_id,
+                campaign_data.clone(),
+            ));
             Ok(().into())
         }
 
@@ -392,6 +420,10 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             if let Some(campaign_data) = Self::campaign_datas(campaign_id) {
+                ensure!(
+                    campaign_data.campaign_status == CampaignStatus::Start,
+                    Error::<T>::CampaignStatusStoped
+                );
                 if let Some(credit_data) = Self::user_credit(&sender) {
                     // upgradable
                     let onboard_era = Self::get_onboard_era(&sender);

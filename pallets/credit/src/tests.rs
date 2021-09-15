@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
+use super::{CampaignData, CampaignStatus, CreditData, CreditLevel, CreditSetting, UserCredit};
 use crate::{mock::*, CreditInterface, Error};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use frame_system::RawOrigin;
@@ -459,5 +459,163 @@ fn slash_offline_devices_credit() {
         run_to_block(BLOCKS_PER_ERA * 9);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
+    });
+}
+
+#[test]
+fn set_campaign_data() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        // root
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        // not root
+        assert_noop!(
+            Credit::set_campaign_data(Origin::signed(1), campagin_data),
+            BadOrigin
+        );
+
+        // multi stake_list
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![
+                (2000, 400u64, CreditLevel::Four),
+                (3000, 500u64, CreditLevel::Five),
+                (1000, 100u64, CreditLevel::One),
+            ],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        let campaign_data1 = Credit::campaign_datas(3).unwrap();
+        assert_eq!(
+            campaign_data1.stake_list,
+            vec![
+                (1000, 100u64, CreditLevel::One),
+                (2000, 400u64, CreditLevel::Four),
+                (3000, 500u64, CreditLevel::Five)
+            ]
+        );
+
+        //campagin data error
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Six)],
+        };
+        assert_eq!(
+            Credit::set_campaign_data(RawOrigin::Root.into(), campagin_data),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::CampaignDataError
+            ))
+        );
+    });
+}
+
+#[test]
+fn restart_campaign() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Stop,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        // root: Stop-> Start
+        assert_ok!(Credit::restart_campaign(RawOrigin::Root.into(), 3));
+        // not root
+        assert_noop!(Credit::restart_campaign(Origin::signed(1), 3), BadOrigin);
+
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        // root: Start-> Start
+        assert_eq!(
+            Credit::restart_campaign(RawOrigin::Root.into(), 3),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::CampaignStatusStarted
+            ))
+        );
+        // root: InvalidCampaignId
+        assert_eq!(
+            Credit::restart_campaign(RawOrigin::Root.into(), 1),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::InvalidCampaignId
+            ))
+        );
+    });
+}
+
+#[test]
+fn stop_campaign() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        // root: Start-> Stop
+        assert_ok!(Credit::stop_campaign(RawOrigin::Root.into(), 3));
+        // not root
+        assert_noop!(Credit::stop_campaign(Origin::signed(1), 3), BadOrigin);
+
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Stop,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        // root: Stop-> Stop
+        assert_eq!(
+            Credit::stop_campaign(RawOrigin::Root.into(), 3),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::CampaignStatusStoped
+            ))
+        );
+        // root: InvalidCampaignId
+        assert_eq!(
+            Credit::stop_campaign(RawOrigin::Root.into(), 1),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::InvalidCampaignId
+            ))
+        );
     });
 }
