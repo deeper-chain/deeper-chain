@@ -17,6 +17,7 @@ use super::{CampaignData, CampaignStatus, CreditData, CreditLevel, CreditSetting
 use crate::{mock::*, CreditInterface, Error};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use frame_system::RawOrigin;
+use pallet_balances::Error as BalancesError;
 use sp_runtime::traits::BadOrigin;
 use sp_runtime::Percent;
 
@@ -617,5 +618,362 @@ fn stop_campaign() {
                 Error::<Test>::InvalidCampaignId
             ))
         );
+    });
+}
+
+#[test]
+fn construct_credit_data() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 400,
+            initial_credit_level: CreditLevel::Four,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Four,
+            reward_eras: 270,
+        };
+        assert_eq!(
+            Credit::construct_credit_data(1000, campagin_data.clone()),
+            None
+        );
+        assert_eq!(
+            Credit::construct_credit_data(2000, campagin_data.clone()),
+            Some(credit_data.clone())
+        );
+        assert_eq!(
+            Credit::construct_credit_data(3000, campagin_data),
+            Some(credit_data)
+        );
+
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![
+                (2000, 400u64, CreditLevel::Four),
+                (4000, 500u64, CreditLevel::Five),
+            ],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 400,
+            initial_credit_level: CreditLevel::Four,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Four,
+            reward_eras: 270,
+        };
+        assert_eq!(
+            Credit::construct_credit_data(2000, campagin_data.clone()),
+            Some(credit_data.clone())
+        );
+        assert_eq!(
+            Credit::construct_credit_data(3000, campagin_data.clone()),
+            Some(credit_data)
+        );
+
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 500,
+            initial_credit_level: CreditLevel::Five,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Five,
+            reward_eras: 270,
+        };
+        assert_eq!(
+            Credit::construct_credit_data(4000, campagin_data.clone()),
+            Some(credit_data.clone())
+        );
+        assert_eq!(
+            Credit::construct_credit_data(5000, campagin_data),
+            Some(credit_data)
+        );
+    });
+}
+
+#[test]
+fn stake_use_new_account() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        assert_eq!(Balances::free_balance(12), 8000);
+        assert_ok!(Credit::stake(Origin::signed(12), 3, 2000));
+        assert_eq!(Balances::reserved_balance(12), 2000);
+
+        assert_eq!(
+            Credit::stake(Origin::signed(12), 2, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::InvalidCampaignId
+            ))
+        );
+        assert_eq!(
+            Credit::stake(Origin::signed(13), 3, 1000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakeBalanceTooLow
+            ))
+        );
+        assert_eq!(
+            Credit::stake(Origin::signed(13), 3, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                BalancesError::<Test, _>::InsufficientBalance
+            ))
+        );
+    });
+}
+
+#[test]
+fn stake_use_new_account_and_upgrade() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: true,
+            stake_list: vec![
+                (2000, 400u64, CreditLevel::Four),
+                (4000, 500u64, CreditLevel::Five),
+            ],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        // upgrade work
+        assert_eq!(Balances::free_balance(12), 8000);
+        assert_ok!(Credit::stake(Origin::signed(12), 3, 2000));
+        assert_eq!(Balances::reserved_balance(12), 2000);
+
+        assert_ok!(Credit::stake(Origin::signed(12), 3, 4000));
+        assert_eq!(Balances::reserved_balance(12), 4000);
+
+        // Onboarded
+        assert_eq!(Balances::free_balance(14), 8000);
+        assert_ok!(Credit::stake(Origin::signed(14), 3, 2000));
+        assert_eq!(Balances::reserved_balance(14), 2000);
+        assert_ok!(DeeperNode::im_online(Origin::signed(14)));
+        assert_eq!(
+            Credit::stake(Origin::signed(14), 3, 2000),
+            Err(DispatchErrorWithPostInfo::from(Error::<Test>::Onboarded))
+        );
+
+        // InvalidUpgradeCreditLevel
+        assert_eq!(Balances::free_balance(15), 8000);
+        assert_ok!(Credit::stake(Origin::signed(15), 3, 4000));
+        assert_eq!(Balances::reserved_balance(15), 4000);
+        assert_eq!(
+            Credit::stake(Origin::signed(15), 3, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::InvalidUpgradeCreditLevel
+            ))
+        );
+    });
+}
+
+#[test]
+fn stake_to_another_campaign_when_expired() {
+    new_test_ext().execute_with(|| {
+        // stake one
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: true,
+            stake_list: vec![
+                (2000, 400u64, CreditLevel::Four),
+                (4000, 500u64, CreditLevel::Five),
+            ],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        assert_eq!(Balances::free_balance(12), 8000);
+        assert_ok!(Credit::stake(Origin::signed(12), 3, 2000));
+        assert_eq!(Balances::reserved_balance(12), 2000);
+        assert_ok!(DeeperNode::im_online(Origin::signed(12)));
+
+        // stake two
+        let campagin_data = CampaignData {
+            campaign_id: 4,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: true,
+            stake_list: vec![
+                (2000, 400u64, CreditLevel::Four),
+                (4000, 500u64, CreditLevel::Five),
+            ],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+
+        run_to_block(BLOCKS_PER_ERA * 270 - 1);
+        assert_eq!(
+            Credit::stake(Origin::signed(12), 4, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakedCampaignUnExpired
+            ))
+        );
+
+        run_to_block(BLOCKS_PER_ERA * 270);
+        Credit::update_credit((12, 190 * 1_000_000_000_000_000));
+        assert_eq!(Credit::user_credit(&12).unwrap().credit, 400 + 270 / 2);
+        assert_eq!(
+            Credit::stake(Origin::signed(12), 4, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakedOnAnotherCampaign
+            ))
+        );
+
+        assert_ok!(Credit::unstake(Origin::signed(12)));
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 135,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+        assert_eq!(Credit::user_credit(12).unwrap_or_default(), credit_data);
+
+        assert_ok!(Credit::stake(Origin::signed(12), 4, 4000));
+        let credit_data = CreditData {
+            campaign_id: 4,
+            credit: 635,
+            initial_credit_level: CreditLevel::Six,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Six,
+            reward_eras: 540,
+        };
+        assert_eq!(Credit::user_credit(12).unwrap_or_default(), credit_data);
+        assert_eq!(Balances::reserved_balance(12), 4000);
+
+        // stake three
+        run_to_block(BLOCKS_PER_ERA * 540 - 1);
+        assert_eq!(
+            Credit::stake(Origin::signed(12), 3, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakedCampaignUnExpired
+            ))
+        );
+
+        run_to_block(BLOCKS_PER_ERA * 540);
+        assert_eq!(
+            Credit::stake(Origin::signed(12), 3, 2000),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakedOnAnotherCampaign
+            ))
+        );
+
+        assert_ok!(Credit::unstake(Origin::signed(12)));
+        assert_ok!(Credit::stake(Origin::signed(12), 3, 2000));
+        assert_eq!(Balances::reserved_balance(12), 2000);
+    });
+}
+
+#[test]
+fn unstake_staked_account() {
+    new_test_ext().execute_with(|| {
+        let campagin_data = CampaignData {
+            campaign_id: 3,
+            campaign_status: CampaignStatus::Start,
+            reward_eras: 270,
+            upgradable: false,
+            stake_list: vec![(2000, 400u64, CreditLevel::Four)],
+        };
+        assert_ok!(Credit::set_campaign_data(
+            RawOrigin::Root.into(),
+            campagin_data.clone()
+        ));
+        assert_eq!(Balances::free_balance(12), 8000);
+        assert_ok!(Credit::stake(Origin::signed(12), 3, 2000));
+        assert_eq!(Balances::reserved_balance(12), 2000);
+
+        assert_eq!(
+            Credit::unstake(Origin::signed(12)),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakedCampaignUnExpired
+            ))
+        );
+
+        assert_ok!(DeeperNode::im_online(Origin::signed(12)));
+        run_to_block(BLOCKS_PER_ERA * 270);
+        assert_ok!(Credit::unstake(Origin::signed(12)));
+        assert_eq!(Balances::reserved_balance(12), 0);
+    });
+}
+
+#[test]
+fn unstake_unstaked_account() {
+    new_test_ext().execute_with(|| {
+        let credit_data = CreditData {
+            campaign_id: 0,
+            credit: 203,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::Two,
+            reward_eras: 270,
+        };
+
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            12,
+            credit_data.clone()
+        ));
+
+        assert_eq!(
+            Credit::unstake(Origin::signed(12)),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::StakedCampaignUnExpired
+            ))
+        );
+
+        assert_ok!(DeeperNode::im_online(Origin::signed(12)));
+        run_to_block(BLOCKS_PER_ERA * 270);
+        assert_ok!(Credit::unstake(Origin::signed(12)));
+
+        let credit_data = CreditData {
+            campaign_id: 0,
+            credit: 103,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+        assert_eq!(Credit::user_credit(12).unwrap_or_default(), credit_data);
     });
 }

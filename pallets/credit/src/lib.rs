@@ -282,6 +282,8 @@ pub mod pallet {
         CampaignDataSetted(CampaignId, CampaignData<BalanceOf<T>>),
         CampaignRestartSuccess(CampaignId, CampaignData<BalanceOf<T>>),
         CampaignStopSuccess(CampaignId, CampaignData<BalanceOf<T>>),
+        Staked(T::AccountId, CampaignId, BalanceOf<T>),
+        UnStaked(T::AccountId),
     }
 
     #[pallet::error]
@@ -298,6 +300,18 @@ pub mod pallet {
         CampaignStatusStarted,
         /// ivalid campaign id
         InvalidCampaignId,
+        /// balance is too low
+        StakeBalanceTooLow,
+        /// campaign is unppgradable
+        CampaignUnUpgradable,
+        /// onboarded is unppgradable
+        Onboarded,
+        /// staked on another campaign, must call unstake() at first
+        StakedOnAnotherCampaign,
+        /// staked campaign is unexpired
+        StakedCampaignUnExpired,
+        /// upgrade credit level is lower
+        InvalidUpgradeCreditLevel,
     }
 
     #[pallet::hooks]
@@ -419,108 +433,126 @@ pub mod pallet {
             balance: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            if let Some(campaign_data) = Self::campaign_datas(campaign_id) {
-                ensure!(
-                    campaign_data.campaign_status == CampaignStatus::Start,
-                    Error::<T>::CampaignStatusStoped
-                );
-                if let Some(credit_data) = Self::user_credit(&sender) {
+            ensure!(
+                CampaignDatas::<T>::contains_key(campaign_id),
+                Error::<T>::InvalidCampaignId
+            );
+
+            let campaign_data = Self::campaign_datas(campaign_id).unwrap();
+            ensure!(
+                campaign_data.campaign_status == CampaignStatus::Start,
+                Error::<T>::CampaignStatusStoped
+            );
+            if let Some(credit_data) = Self::user_credit(&sender) {
+                if campaign_id == credit_data.campaign_id {
                     // upgradable
+                    ensure!(
+                        campaign_data.upgradable == true,
+                        Error::<T>::CampaignUnUpgradable
+                    );
                     let onboard_era = Self::get_onboard_era(&sender);
-                    if campaign_id == credit_data.campaign_id
-                        && campaign_data.upgradable == true
-                        && onboard_era.is_none()
-                    {
-                        // call upgrade()
-                        if let Some(c_d) =
-                            Self::construct_credit_data(balance, campaign_data.clone())
-                        {
-                            if c_d.initial_credit_level > credit_data.initial_credit_level {
-                                T::Currency::reserve(&sender, balance)?;
-                                StakeBalances::<T>::insert(&sender, balance);
-                                UserCredit::<T>::insert(&sender, c_d.clone());
-                                Self::deposit_event(Event::CreditDataUpdated(sender, c_d));
-                                return Ok(().into());
-                            }
-                        }
-                    }
-                    if campaign_id != credit_data.campaign_id
-                        && !StakeBalances::<T>::contains_key(&sender)
-                        && Self::reward_expired(&sender)
-                    {
-                        // switch to anthor campaign
-                        // get current credit
-                        if let Some(credit_data) =
-                            Self::construct_credit_data(balance, campaign_data)
-                        {
-                            let current_credit_data = Self::user_credit(&sender).unwrap();
-                            let mut credit_data = credit_data;
-                            credit_data.credit += current_credit_data.credit;
-                            credit_data.current_credit_level =
-                                Self::get_credit_level(credit_data.credit);
+                    ensure!(onboard_era.is_none(), Error::<T>::Onboarded);
 
-                            let mut delta_era = 0;
-                            if let Some(onboard_era) = Self::get_onboard_era(&sender) {
-                                let current_era = Self::get_current_era();
-                                delta_era = current_era - onboard_era;
-                            }
-                            credit_data.reward_eras += delta_era;
+                    let result = Self::construct_credit_data(balance, campaign_data);
+                    ensure!(result.is_some(), Error::<T>::StakeBalanceTooLow);
+                    let c_d = result.unwrap();
+                    ensure!(
+                        c_d.initial_credit_level > credit_data.initial_credit_level,
+                        Error::<T>::InvalidUpgradeCreditLevel
+                    );
 
-                            T::Currency::reserve(&sender, balance)?;
-                            StakeBalances::<T>::insert(&sender, balance);
-                            UserCredit::<T>::insert(&sender, credit_data.clone());
-                            Self::deposit_event(Event::CreditDataUpdated(sender, credit_data));
-                            return Ok(().into());
-                        }
-                    }
+                    let reserve_balance = Self::stake_balances(&sender).unwrap_or_default();
+                    T::Currency::unreserve(&sender, reserve_balance);
+                    T::Currency::reserve(&sender, balance)?;
+                    StakeBalances::<T>::insert(&sender, balance);
+                    UserCredit::<T>::insert(&sender, c_d.clone());
+                    Self::deposit_event(Event::CreditDataUpdated(sender.clone(), c_d));
                 } else {
-                    // reserve and stake
-                    if let Some(credit_data) = Self::construct_credit_data(balance, campaign_data) {
-                        T::Currency::reserve(&sender, balance)?;
-                        StakeBalances::<T>::insert(&sender, balance);
-                        UserCredit::<T>::insert(&sender, credit_data.clone());
-                        Self::deposit_event(Event::CreditDataAdded(sender, credit_data));
-                        return Ok(().into());
+                    // switch to anthor campaign
+                    ensure!(
+                        Self::reward_expired(&sender) == true,
+                        Error::<T>::StakedCampaignUnExpired
+                    );
+                    ensure!(
+                        !StakeBalances::<T>::contains_key(&sender),
+                        Error::<T>::StakedOnAnotherCampaign
+                    );
+
+                    let result = Self::construct_credit_data(balance, campaign_data);
+                    ensure!(result.is_some(), Error::<T>::StakeBalanceTooLow);
+                    let credit_data = result.unwrap();
+
+                    let current_credit_data = Self::user_credit(&sender).unwrap();
+                    let mut credit_data = credit_data;
+                    credit_data.credit += current_credit_data.credit;
+                    credit_data.initial_credit_level = Self::get_credit_level(credit_data.credit);
+                    credit_data.current_credit_level = credit_data.initial_credit_level;
+
+                    let mut delta_era = 0;
+                    if let Some(onboard_era) = Self::get_onboard_era(&sender) {
+                        let current_era = Self::get_current_era();
+                        delta_era = current_era - onboard_era;
                     }
+                    credit_data.reward_eras += delta_era;
+
+                    T::Currency::reserve(&sender, balance)?;
+                    StakeBalances::<T>::insert(&sender, balance);
+                    UserCredit::<T>::insert(&sender, credit_data.clone());
+                    Self::deposit_event(Event::CreditDataUpdated(sender.clone(), credit_data));
                 }
             } else {
-                // error campaign_id
+                // reserve and stake
+                let result = Self::construct_credit_data(balance, campaign_data);
+                ensure!(result.is_some(), Error::<T>::StakeBalanceTooLow);
+                let credit_data = result.unwrap();
+                T::Currency::reserve(&sender, balance)?;
+                StakeBalances::<T>::insert(&sender, balance);
+                UserCredit::<T>::insert(&sender, credit_data.clone());
+                Self::deposit_event(Event::CreditDataAdded(sender.clone(), credit_data));
             }
-            // Event
+            Self::deposit_event(Event::Staked(sender, campaign_id, balance));
             Ok(().into())
         }
 
         #[pallet::weight(100000)]
         pub fn unstake(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            if Self::reward_expired(&sender) {
-                let reserve_balance = Self::stake_balances(&sender).unwrap_or_default();
-                T::Currency::unreserve(&sender, reserve_balance);
-                if let Some(mut credit_data) = Self::user_credit(&sender) {
-                    let initial_score = match credit_data.initial_credit_level {
-                        CreditLevel::One => 100,
-                        CreditLevel::Two => 200,
-                        CreditLevel::Three => 300,
-                        CreditLevel::Four => 400,
-                        CreditLevel::Five => 500,
-                        CreditLevel::Six => 600,
-                        CreditLevel::Seven => 700,
-                        CreditLevel::Eight => 800,
-                        _ => 0,
-                    };
-                    let delta_score = if credit_data.credit >= initial_score {
-                        credit_data.credit - initial_score
-                    } else {
-                        0
-                    };
-                    credit_data.credit = delta_score;
-                    StakeBalances::<T>::remove(&sender);
-                    UserCredit::<T>::insert(&sender, credit_data.clone());
-                    Self::deposit_event(Event::CreditDataUpdated(sender, credit_data));
-                }
+            ensure!(
+                Self::reward_expired(&sender) == true,
+                Error::<T>::StakedCampaignUnExpired
+            );
+
+            if let Some(mut credit_data) = Self::user_credit(&sender) {
+                let initial_score = match credit_data.initial_credit_level {
+                    CreditLevel::One => 100,
+                    CreditLevel::Two => 200,
+                    CreditLevel::Three => 300,
+                    CreditLevel::Four => 400,
+                    CreditLevel::Five => 500,
+                    CreditLevel::Six => 600,
+                    CreditLevel::Seven => 700,
+                    CreditLevel::Eight => 800,
+                    _ => 0,
+                };
+                let delta_score = if credit_data.credit >= initial_score {
+                    credit_data.credit - initial_score
+                } else {
+                    0
+                };
+                credit_data.credit = delta_score;
+                credit_data.initial_credit_level = Self::get_credit_level(delta_score);
+                credit_data.current_credit_level = credit_data.initial_credit_level;
+                credit_data.reward_eras = 0;
+                UserCredit::<T>::insert(&sender, credit_data.clone());
+                Self::deposit_event(Event::CreditDataUpdated(sender.clone(), credit_data));
             }
 
-            // Event
+            if StakeBalances::<T>::contains_key(&sender) {
+                let reserve_balance = Self::stake_balances(&sender).unwrap_or_default();
+                T::Currency::unreserve(&sender, reserve_balance);
+                StakeBalances::<T>::remove(&sender);
+            }
+            Self::deposit_event(Event::UnStaked(sender));
             Ok(().into())
         }
     }
@@ -698,7 +730,7 @@ pub mod pallet {
             );
         }
 
-        fn construct_credit_data(
+        pub fn construct_credit_data(
             balance: BalanceOf<T>,
             campaign_data: CampaignData<BalanceOf<T>>,
         ) -> Option<CreditData> {
@@ -730,7 +762,11 @@ pub mod pallet {
             if let Some(onboard_era) = Self::get_onboard_era(&account_id) {
                 let current_era = Self::get_current_era();
                 if let Some(credit_data) = Self::user_credit(&account_id) {
-                    if current_era > onboard_era + credit_data.reward_eras - 1 {
+                    if current_era
+                        > onboard_era
+                            .saturating_add(credit_data.reward_eras)
+                            .saturating_sub(1)
+                    {
                         return true;
                     }
                 }
