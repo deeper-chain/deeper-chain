@@ -122,6 +122,30 @@ pub fn wasm_binary_unwrap() -> &'static [u8] {
     )
 }
 
+/// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
+/// the specifics of the runtime. They can then be made to be agnostic over specific formats
+/// of data like extrinsics, allowing for them to continue syncing the network through upgrades
+/// to even the core data structures.
+pub mod opaque {
+    use super::*;
+
+    pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+
+    /// Opaque block header type.
+    pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    /// Opaque block type.
+    pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+    /// Opaque block identifier type.
+    pub type BlockId = generic::BlockId<Block>;
+
+    impl_opaque_keys! {
+        pub struct SessionKeys {
+            pub babe: Babe,
+            pub grandpa: Grandpa,
+        }
+    }
+}
+
 /// Runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
     spec_name: create_runtime_str!("e2-chain"),
@@ -1151,7 +1175,7 @@ impl pallet_dynamic_fee::Config for Runtime {
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
-        NodeBlock = node_primitives::Block,
+        NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
@@ -1199,6 +1223,30 @@ construct_runtime!(
         DynamicFee: pallet_dynamic_fee::{Module, Call, Storage, Config, Inherent},
     }
 );
+
+pub struct TransactionConverter;
+
+impl fp_rpc::ConvertTransaction<UncheckedExtrinsic> for TransactionConverter {
+    fn convert_transaction(&self, transaction: pallet_ethereum::Transaction) -> UncheckedExtrinsic {
+        UncheckedExtrinsic::new_unsigned(
+            pallet_ethereum::Call::<Runtime>::transact(transaction).into(),
+        )
+    }
+}
+
+impl fp_rpc::ConvertTransaction<opaque::UncheckedExtrinsic> for TransactionConverter {
+    fn convert_transaction(
+        &self,
+        transaction: pallet_ethereum::Transaction,
+    ) -> opaque::UncheckedExtrinsic {
+        let extrinsic = UncheckedExtrinsic::new_unsigned(
+            pallet_ethereum::Call::<Runtime>::transact(transaction).into(),
+        );
+        let encoded = extrinsic.encode();
+        opaque::UncheckedExtrinsic::decode(&mut &encoded[..])
+            .expect("Encoded extrinsic is always valid")
+    }
+}
 
 /// The address format for describing accounts.
 pub type Address = sp_runtime::MultiAddress<AccountId, AccountIndex>;

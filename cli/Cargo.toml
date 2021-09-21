@@ -46,7 +46,7 @@ parking_lot = "0.11.1"
 
 # primitives
 sp-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-consensus-babe = {git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-consensus-babe = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 grandpa-primitives = { package = "sp-finality-grandpa", git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-core = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 sp-runtime = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
@@ -82,6 +82,7 @@ sc-tracing = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sc-telemetry = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sc-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sc-finality-grandpa-warp-sync = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", optional = true }
+sc-executor = { git = "https://github.com/paritytech/substrate.git", tag = "v3.0.0" }
 
 # frontier client dependencies
 fc-consensus = { path = "../frontier/client/consensus" }
@@ -106,6 +107,7 @@ pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
 pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets/credit"}
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 
 # frontier frame dependencies
 pallet-evm = { version = "5.0.0", default-features = false, path = "../frontier/frame/evm"}
