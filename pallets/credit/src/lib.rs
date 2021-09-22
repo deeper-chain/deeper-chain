@@ -290,6 +290,9 @@ pub mod pallet {
                     Some(data) => *data = credit_data.clone(),
                     _ => (),
                 });
+                if !Self::user_credit_history(&account_id).is_empty() {
+                    Self::update_credit_history(&account_id, Self::get_current_era());
+                }
                 Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data));
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
