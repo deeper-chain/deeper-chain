@@ -330,13 +330,11 @@ pub mod pallet {
         fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
             let mut user_credit_history = Self::user_credit_history(&account_id);
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            if !user_credit_history.is_empty() {
-                // update credit history only if it's not empty
-                let last_index = user_credit_history.len() - 1;
-                // user credit data cannot be none unless there is a bug
-                let user_credit_data = Self::user_credit(&account_id).unwrap();
-                if user_credit_history[last_index].0 == current_era {
-                    user_credit_history[last_index] = (current_era, user_credit_data.clone());
+
+            let user_credit_data = Self::user_credit(&account_id).unwrap();
+            if let Some(last) = user_credit_history.last_mut() {
+                if last.0 == current_era {
+                    *last = (current_era, user_credit_data.clone());
                 } else {
                     user_credit_history.push((current_era, user_credit_data));
                 }
@@ -396,14 +394,10 @@ pub mod pallet {
                         credit_history[i - 1].1.clone()
                     };
                     if Self::_pass_threshold(&credit_data) {
-                        if credit_map.contains_key(&credit_data) {
-                            credit_map.insert(
-                                credit_data.clone(),
-                                credit_map.get(&credit_data).unwrap() + 1,
-                            );
-                        } else {
-                            credit_map.insert(credit_data, 1);
-                        }
+                        credit_map
+                            .entry(credit_data)
+                            .and_modify(|num| *num += 1)
+                            .or_insert(1);
                     }
                 }
             }

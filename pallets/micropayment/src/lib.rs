@@ -311,7 +311,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-
         /// Client adds more DPR tokens to the existing channel
         #[pallet::weight(T::WeightInfo::add_balance())]
         pub fn add_balance(
@@ -429,7 +428,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-
         /// Close the channel between the client and server
         fn _close_channel(client: &T::AccountId, server: &T::AccountId) {
             // remove all the session_ids of given channel
