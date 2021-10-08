@@ -1,0 +1,133 @@
+version: "3.7"
+services:
+
+  validator-1:
+    ports:
+      - "9944:9944"
+      - "19933:9933"
+    volumes:
+      - ./chain-spec:/chain-spec
+    image: deeper-chain/deeper-chain:latest
+    networks:
+      - internet
+    command:
+      - "deeper-chain"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000001"
+      - "--base-path"
+      - "/data"
+      - "--chain=/chain-spec/local-dev-raw-4.json"
+      - "--port"
+      - "30333"
+      - "--validator"
+      - "--bootnodes"
+      - "/dns/validator-2/tcp/30333/p2p/12D3KooWHdiAxVd8uMQR1hGWXccidmfCwLqcMpGwR6QcTP6QRMuD"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      # - "--log"
+      # - "sub-libp2p=trace"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      - "--rpc-methods=unsafe"
+
+  validator-2:
+    image: deeper-chain/deeper-chain:latest
+    ports:
+      - "9945:9944"
+      - "19934:9933"
+    volumes:
+      - ./chain-spec:/chain-spec
+    networks:
+      - internet
+    command:
+      - "deeper-chain"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000002"
+      - "--base-path"
+      - "/data"
+      - "--chain=/chain-spec/local-dev-raw-4.json"
+      - "--port"
+      - "30333"
+      - "--validator"
+      - "--bootnodes"
+      - "/dns/validator-1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      # - "--log"
+      # - "sub-libp2p=trace"
+      - "--rpc-methods=unsafe"
+
+  validator-3:
+    image: deeper-chain/deeper-chain:latest
+    ports:
+      - "9946:9944"
+      - "19935:9933"
+    volumes:
+      - ./chain-spec:/chain-spec
+    networks:
+      - internet
+    command:
+      - "deeper-chain"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000003"
+      - "--base-path"
+      - "/data"
+      - "--chain=/chain-spec/local-dev-raw-4.json"
+      - "--port"
+      - "30333"
+      - "--validator"
+      - "--bootnodes"
+      - "/dns/validator-1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp"
+      - "--bootnodes"
+      - "/dns/validator-2/tcp/30333/p2p/12D3KooWHdiAxVd8uMQR1hGWXccidmfCwLqcMpGwR6QcTP6QRMuD"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      # - "--log"
+      # - "sub-libp2p=trace"
+      - "--rpc-methods=unsafe"
+
+  validator-4:
+    image: deeper-chain/deeper-chain:latest
+    ports:
+      - "9947:9944"
+      - "19936:9933"
+    volumes:
+      - ./chain-spec:/chain-spec
+    networks:
+      - internet
+    command:
+      - "deeper-chain"
+      - "--node-key"
+      - "0000000000000000000000000000000000000000000000000000000000000003"
+      - "--base-path"
+      - "/data"
+      - "--chain=/chain-spec/local-dev-raw-4.json"
+      - "--port"
+      - "30333"
+      - "--validator"
+      - "--bootnodes"
+      - "/dns/validator-1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp"
+      - "--bootnodes"
+      - "/dns/validator-2/tcp/30333/p2p/12D3KooWHdiAxVd8uMQR1hGWXccidmfCwLqcMpGwR6QcTP6QRMuD"
+      - "--no-telemetry"
+      - "--rpc-cors"
+      - "all"
+      # Not only bind to localhost.
+      - "--unsafe-ws-external"
+      - "--unsafe-rpc-external"
+      # - "--log"
+      # - "sub-libp2p=trace"
+      - "--rpc-methods=unsafe"
+networks:
+  network-a:
+  internet:
