@@ -566,8 +566,8 @@ impl pallet_democracy::Config for Runtime {
 
 parameter_types! {
     pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
-    pub const CouncilMaxProposals: u32 = 100;
-    pub const CouncilMaxMembers: u32 = 100;
+    pub const CouncilMaxProposals: u32 = 150;
+    pub const CouncilMaxMembers: u32 = 150;
 }
 
 type CouncilCollective = pallet_collective::Instance1;
@@ -589,7 +589,7 @@ parameter_types! {
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
     pub const TermDuration: BlockNumber = 7 * DAYS;
-    pub const DesiredMembers: u32 = 13;
+    pub const DesiredMembers: u32 = 103;
     pub const DesiredRunnersUp: u32 = 7;
     pub const ElectionsPhragmenModuleId: LockIdentifier = *b"phrelect";
 }
