@@ -1,7 +1,8 @@
 const { mnemonicGenerate, cryptoWaitReady } = require('@polkadot/util-crypto');
-const { Keyring }  = require('@polkadot/keyring');
-const { stringToU8a, u8aToHex }   = require( '@polkadot/util');
-const { ApiPromise, WsProvider} = require('@polkadot/api');
+// const { stringToU8a, u8aToHex }   = require( '@polkadot/util');
+const { ApiPromise, WsProvider, Keyring} = require('@polkadot/api');
+const BN = require('bn.js');
+
 // Substrate connection config
 const WEB_SOCKET = 'ws://127.0.0.1:9944';
 
@@ -168,14 +169,14 @@ const main = async () => {
   await cryptoWaitReady();
 
 
-  const keyring = new Keyring({ type: 'sr25519', ss58Format: 42 });
-  const tokeyPareArray = [];
-  for (let index = 0; index < 1000; index++) {
-    const mnemonic = mnemonicGenerate();
-    const pair = keyring.addFromUri(mnemonic, { name: 'first pair' });
-    tokeyPareArray.push({address: pair.address, mnemonic: mnemonic});
-  }
-  console.log("###tokeyPareArray done");
+  // const keyring = new Keyring({ type: 'sr25519', ss58Format: 42 });
+  // const tokeyPareArray = [];
+  // for (let index = 0; index < 1000; index++) {
+  //   const mnemonic = mnemonicGenerate();
+  //   const pair = keyring.addFromUri(mnemonic, { name: 'first pair' });
+  //   tokeyPareArray.push({address: pair.address, mnemonic: mnemonic});
+  // }
+  // console.log("###tokeyPareArray done");
 
   let arrPairs = []
   arr.forEach(element => {
@@ -190,20 +191,67 @@ const main = async () => {
     arrPairs.push(pairSR25519);
   });
 
-  // for (let i = 0; i < arrPairs.length; i++) {
-  //   for (let j = 0; j < arrPairs.length; j++) {
-  //     if (i === j) {
-  //       continue;
-  //     }
+  let i = 0;
 
+  let balance = Date.now();
+  console.log(balance);
+  for(;;) {
+    for (;i < arrPairs.length; i++ ) {
+      const from = arrPairs[i];
+
+      let rawNonce = await api.rpc.system.accountNextIndex(arrPairs[i].address);
+      let tempNonce = new BN(rawNonce.toString());
+      console.log(arrPairs[i].address, tempNonce.toString());
+
+      try {
+        for (let j = 0; j < arrPairs.length; j++) {
+          if (i === j) {
+            continue;
+          }
+          
+          const to = arrPairs[j];
+
+          let temptx = api.tx.balances.transfer(to.address, balance);
+
+          //console.log("##### new tx", from.address, to.address, temptx.toJSON());
+
+          //const unsub = await temptx.signAndSend(from, { nonce: tempNonce }, (result) => {
+          temptx.signAndSend(from, { nonce: tempNonce }, (result) => {
+            //console.log(`Current status is ${result.status}`);
+
+            if (result.status.isInBlock) {
+              //console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
+            } else if (result.status.isFinalized) {
+              //console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`);
+              //unsub();
+            }
+            //console.log(result.status.toJSON());
+          });
+
+          //temptx.signAndSend(from, { nonce: tempNonce });
+          tempNonce = tempNonce.add(new BN(1));
+        }
+
+      } catch (e) {
+        console.log(`########## Iteration ${i} catch block, ${tempNonce}`);
+        tempNonce = tempNonce.add(new BN(1));
+        continue;
+      }
+    }
+  }
+
+  //todo  Value too low to create account due to existential deposit
+  // for (let i = 0; i < tokeyPareArray.length; i++) {
+  //   for (let j = 0; j < arrPairs.length; j++) {
   //     const from = arrPairs[j];
-  //     const to = arrPairs[i];
+  //     const to = tokeyPareArray[i];
 
   //     let temptx = api.tx.balances
   //     .transfer(to.address, Date.now());
   //     //console.log("##### new tx", from.address, to.address, temptx.toJSON());
 
-  //     const unsub = await temptx.signAndSend(from, (result) => {
+  //     let tempNonce = await api.rpc.system.accountNextIndex(from.address);
+  //     const unsub = await temptx.signAndSend(from, { nonce: tempNonce }, (result) => {
   //                         //temptx.signAndSend(from, (result) => {
   //       //console.log(`Current status is ${result.status}`);
 
@@ -214,31 +262,9 @@ const main = async () => {
   //         unsub();
   //       }
   //     });
+
   //   }
   // }
-
-  for (let i = 0; i < tokeyPareArray.length; i++) {
-    for (let j = 0; j < arrPairs.length; j++) {
-      const from = arrPairs[j];
-      const to = tokeyPareArray[i];
-
-      let temptx = api.tx.balances
-      .transfer(to.address, Date.now());
-      console.log("##### new tx", from.address, to.address, temptx.toJSON());
-
-      const unsub = await temptx.signAndSend(from, (result) => {
-                          //temptx.signAndSend(from, (result) => {
-        //console.log(`Current status is ${result.status}`);
-
-        if (result.status.isInBlock) {
-          //console.log(`Transaction included at blockHash ${result.status.asInBlock}`);
-        } else if (result.status.isFinalized) {
-          console.log(`Transaction finalized at blockHash ${result.status.asFinalized}`);
-          unsub();
-        }
-      });
-    }
-  }
 }
 
 main()
