@@ -14,7 +14,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000001"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -30,6 +30,10 @@ services:
       - "--rpc-cors"
       - "all"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-2:
     image: deeper-chain/deeper-chain:latest
@@ -45,7 +49,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000002"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -61,6 +65,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-3:
     image: deeper-chain/deeper-chain:latest
@@ -76,7 +84,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000003"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -94,6 +102,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-4:
     image: deeper-chain/deeper-chain:latest
@@ -109,7 +121,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000004"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -127,6 +139,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-5:
     image: deeper-chain/deeper-chain:latest
@@ -142,7 +158,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000005"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -160,6 +176,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-6:
     image: deeper-chain/deeper-chain:latest
@@ -175,7 +195,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000006"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -193,6 +213,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-7:
     image: deeper-chain/deeper-chain:latest
@@ -208,7 +232,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000007"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -226,6 +250,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-8:
     image: deeper-chain/deeper-chain:latest
@@ -241,7 +269,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000008"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -259,6 +287,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-9:
     image: deeper-chain/deeper-chain:latest
@@ -274,7 +306,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000009"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -292,6 +324,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-10:
     image: deeper-chain/deeper-chain:latest
@@ -307,7 +343,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000010"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -325,6 +361,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-11:
     image: deeper-chain/deeper-chain:latest
@@ -340,7 +380,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000011"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -358,6 +398,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-12:
     image: deeper-chain/deeper-chain:latest
@@ -373,7 +417,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000012"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -391,6 +435,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-13:
     image: deeper-chain/deeper-chain:latest
@@ -406,7 +454,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000013"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -424,6 +472,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-14:
     image: deeper-chain/deeper-chain:latest
@@ -439,7 +491,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000014"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -457,6 +509,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-15:
     image: deeper-chain/deeper-chain:latest
@@ -472,7 +528,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000015"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -490,6 +546,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-16:
     image: deeper-chain/deeper-chain:latest
@@ -505,7 +565,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000016"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -523,6 +583,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-17:
     image: deeper-chain/deeper-chain:latest
@@ -538,7 +602,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000017"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -556,6 +620,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-18:
     image: deeper-chain/deeper-chain:latest
@@ -571,7 +639,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000018"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -589,6 +657,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-19:
     image: deeper-chain/deeper-chain:latest
@@ -604,7 +676,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000019"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -622,6 +694,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-20:
     image: deeper-chain/deeper-chain:latest
@@ -637,7 +713,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000020"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -655,6 +731,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-21:
     image: deeper-chain/deeper-chain:latest
@@ -670,7 +750,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000021"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -688,6 +768,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-22:
     image: deeper-chain/deeper-chain:latest
@@ -703,7 +787,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000022"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -721,6 +805,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-23:
     image: deeper-chain/deeper-chain:latest
@@ -736,7 +824,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000023"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -754,6 +842,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-24:
     image: deeper-chain/deeper-chain:latest
@@ -769,7 +861,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000024"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -787,6 +879,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-25:
     image: deeper-chain/deeper-chain:latest
@@ -802,7 +898,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000025"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -820,6 +916,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-26:
     image: deeper-chain/deeper-chain:latest
@@ -835,7 +935,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000026"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -853,6 +953,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-27:
     image: deeper-chain/deeper-chain:latest
@@ -868,7 +972,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000027"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -886,6 +990,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-28:
     image: deeper-chain/deeper-chain:latest
@@ -901,7 +1009,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000028"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -919,6 +1027,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-29:
     image: deeper-chain/deeper-chain:latest
@@ -934,7 +1046,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000029"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -952,6 +1064,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-30:
     image: deeper-chain/deeper-chain:latest
@@ -967,7 +1083,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000030"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -985,6 +1101,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-31:
     image: deeper-chain/deeper-chain:latest
@@ -1000,7 +1120,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000031"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1018,6 +1138,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-32:
     image: deeper-chain/deeper-chain:latest
@@ -1033,7 +1157,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000032"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1051,6 +1175,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-33:
     image: deeper-chain/deeper-chain:latest
@@ -1066,7 +1194,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000033"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1084,6 +1212,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-34:
     image: deeper-chain/deeper-chain:latest
@@ -1099,7 +1231,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000034"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1117,6 +1249,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-35:
     image: deeper-chain/deeper-chain:latest
@@ -1132,7 +1268,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000035"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1150,6 +1286,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-36:
     image: deeper-chain/deeper-chain:latest
@@ -1165,7 +1305,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000036"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1183,6 +1323,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-37:
     image: deeper-chain/deeper-chain:latest
@@ -1198,7 +1342,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000037"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1216,6 +1360,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-38:
     image: deeper-chain/deeper-chain:latest
@@ -1231,7 +1379,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000038"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1249,6 +1397,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-39:
     image: deeper-chain/deeper-chain:latest
@@ -1264,7 +1416,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000039"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1282,6 +1434,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-40:
     image: deeper-chain/deeper-chain:latest
@@ -1297,7 +1453,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000040"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1315,6 +1471,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-41:
     image: deeper-chain/deeper-chain:latest
@@ -1330,7 +1490,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000041"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1348,6 +1508,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-42:
     image: deeper-chain/deeper-chain:latest
@@ -1363,7 +1527,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000042"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1381,6 +1545,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-43:
     image: deeper-chain/deeper-chain:latest
@@ -1396,7 +1564,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000043"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1414,6 +1582,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-44:
     image: deeper-chain/deeper-chain:latest
@@ -1429,7 +1601,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000044"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1447,6 +1619,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-45:
     image: deeper-chain/deeper-chain:latest
@@ -1462,7 +1638,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000045"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1480,6 +1656,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-46:
     image: deeper-chain/deeper-chain:latest
@@ -1495,7 +1675,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000046"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1513,6 +1693,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-47:
     image: deeper-chain/deeper-chain:latest
@@ -1528,7 +1712,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000047"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1546,6 +1730,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-48:
     image: deeper-chain/deeper-chain:latest
@@ -1561,7 +1749,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000048"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1579,6 +1767,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-49:
     image: deeper-chain/deeper-chain:latest
@@ -1594,7 +1786,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000049"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1612,6 +1804,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-50:
     image: deeper-chain/deeper-chain:latest
@@ -1627,7 +1823,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000050"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1645,6 +1841,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-51:
     image: deeper-chain/deeper-chain:latest
@@ -1660,7 +1860,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000051"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1678,6 +1878,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-52:
     image: deeper-chain/deeper-chain:latest
@@ -1693,7 +1897,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000052"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1711,6 +1915,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-53:
     image: deeper-chain/deeper-chain:latest
@@ -1726,7 +1934,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000053"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1744,6 +1952,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-54:
     image: deeper-chain/deeper-chain:latest
@@ -1759,7 +1971,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000054"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1777,6 +1989,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-55:
     image: deeper-chain/deeper-chain:latest
@@ -1792,7 +2008,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000055"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1810,6 +2026,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-56:
     image: deeper-chain/deeper-chain:latest
@@ -1825,7 +2045,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000056"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1843,6 +2063,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-57:
     image: deeper-chain/deeper-chain:latest
@@ -1858,7 +2082,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000057"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1876,6 +2100,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-58:
     image: deeper-chain/deeper-chain:latest
@@ -1891,7 +2119,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000058"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1909,6 +2137,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-59:
     image: deeper-chain/deeper-chain:latest
@@ -1924,7 +2156,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000059"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1942,6 +2174,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-60:
     image: deeper-chain/deeper-chain:latest
@@ -1957,7 +2193,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000060"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -1975,6 +2211,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-61:
     image: deeper-chain/deeper-chain:latest
@@ -1990,7 +2230,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000061"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2008,6 +2248,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-62:
     image: deeper-chain/deeper-chain:latest
@@ -2023,7 +2267,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000062"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2041,6 +2285,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-63:
     image: deeper-chain/deeper-chain:latest
@@ -2056,7 +2304,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000063"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2074,6 +2322,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-64:
     image: deeper-chain/deeper-chain:latest
@@ -2089,7 +2341,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000064"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2107,6 +2359,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-65:
     image: deeper-chain/deeper-chain:latest
@@ -2122,7 +2378,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000065"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2140,6 +2396,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-66:
     image: deeper-chain/deeper-chain:latest
@@ -2155,7 +2415,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000066"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2173,6 +2433,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-67:
     image: deeper-chain/deeper-chain:latest
@@ -2188,7 +2452,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000067"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2206,6 +2470,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-68:
     image: deeper-chain/deeper-chain:latest
@@ -2221,7 +2489,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000068"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2239,6 +2507,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-69:
     image: deeper-chain/deeper-chain:latest
@@ -2254,7 +2526,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000069"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2272,6 +2544,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-70:
     image: deeper-chain/deeper-chain:latest
@@ -2287,7 +2563,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000070"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2305,6 +2581,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-71:
     image: deeper-chain/deeper-chain:latest
@@ -2320,7 +2600,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000071"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2338,6 +2618,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-72:
     image: deeper-chain/deeper-chain:latest
@@ -2353,7 +2637,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000072"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2371,6 +2655,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-73:
     image: deeper-chain/deeper-chain:latest
@@ -2386,7 +2674,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000073"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2404,6 +2692,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-74:
     image: deeper-chain/deeper-chain:latest
@@ -2419,7 +2711,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000074"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2437,6 +2729,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-75:
     image: deeper-chain/deeper-chain:latest
@@ -2452,7 +2748,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000075"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2470,6 +2766,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-76:
     image: deeper-chain/deeper-chain:latest
@@ -2485,7 +2785,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000076"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2503,6 +2803,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-77:
     image: deeper-chain/deeper-chain:latest
@@ -2518,7 +2822,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000077"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2536,6 +2840,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-78:
     image: deeper-chain/deeper-chain:latest
@@ -2551,7 +2859,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000078"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2569,6 +2877,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-79:
     image: deeper-chain/deeper-chain:latest
@@ -2584,7 +2896,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000079"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2602,6 +2914,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-80:
     image: deeper-chain/deeper-chain:latest
@@ -2617,7 +2933,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000080"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2635,6 +2951,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-81:
     image: deeper-chain/deeper-chain:latest
@@ -2650,7 +2970,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000081"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2668,6 +2988,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-82:
     image: deeper-chain/deeper-chain:latest
@@ -2683,7 +3007,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000082"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2701,6 +3025,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-83:
     image: deeper-chain/deeper-chain:latest
@@ -2716,7 +3044,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000083"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2734,6 +3062,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-84:
     image: deeper-chain/deeper-chain:latest
@@ -2749,7 +3081,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000084"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2767,6 +3099,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-85:
     image: deeper-chain/deeper-chain:latest
@@ -2782,7 +3118,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000085"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2800,6 +3136,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-86:
     image: deeper-chain/deeper-chain:latest
@@ -2815,7 +3155,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000086"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2833,6 +3173,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-87:
     image: deeper-chain/deeper-chain:latest
@@ -2848,7 +3192,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000087"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2866,6 +3210,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-88:
     image: deeper-chain/deeper-chain:latest
@@ -2881,7 +3229,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000088"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2899,6 +3247,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-89:
     image: deeper-chain/deeper-chain:latest
@@ -2914,7 +3266,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000089"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2932,6 +3284,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-90:
     image: deeper-chain/deeper-chain:latest
@@ -2947,7 +3303,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000090"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2965,6 +3321,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-91:
     image: deeper-chain/deeper-chain:latest
@@ -2980,7 +3340,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000091"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -2998,6 +3358,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-92:
     image: deeper-chain/deeper-chain:latest
@@ -3013,7 +3377,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000092"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3031,6 +3395,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-93:
     image: deeper-chain/deeper-chain:latest
@@ -3046,7 +3414,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000093"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3064,6 +3432,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-94:
     image: deeper-chain/deeper-chain:latest
@@ -3079,7 +3451,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000094"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3097,6 +3469,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-95:
     image: deeper-chain/deeper-chain:latest
@@ -3112,7 +3488,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000095"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3130,6 +3506,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-96:
     image: deeper-chain/deeper-chain:latest
@@ -3145,7 +3525,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000096"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3163,6 +3543,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-97:
     image: deeper-chain/deeper-chain:latest
@@ -3178,7 +3562,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000097"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3196,6 +3580,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-98:
     image: deeper-chain/deeper-chain:latest
@@ -3211,7 +3599,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000098"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3229,6 +3617,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-99:
     image: deeper-chain/deeper-chain:latest
@@ -3244,7 +3636,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000099"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3262,6 +3654,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
   validator-100:
     image: deeper-chain/deeper-chain:latest
@@ -3277,7 +3673,7 @@ services:
       - "--node-key"
       - "0000000000000000000000000000000000000000000000000000000000000100"
       - "--base-path"
-      - "/data"
+      - "/tmp"
       - "--chain=/chain-spec/local-dev-raw-100.json"
       - "--port"
       - "30333"
@@ -3295,6 +3691,10 @@ services:
       # - "--log"
       # - "sub-libp2p=trace"
       - "--rpc-methods=unsafe"
+      - "--pool-limit"
+      - "1000000"
+      - "--pool-kbytes"
+      - "20480000"
 
 
 networks:
