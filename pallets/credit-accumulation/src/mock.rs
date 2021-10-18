@@ -35,26 +35,12 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
         CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>},
-=======
->>>>>>> fix judgement of update credit interval from eras to timstamp (#128)
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
-        CreditAccumulation: pallet_credit_accumulation::{Module, Call, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-<<<<<<< HEAD
-=======
->>>>>>> fix judgement of update credit interval from eras to timstamp (#128)
->>>>>>> fix judgement of update credit interval from eras to timstamp (#128)
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
 
