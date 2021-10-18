@@ -1,6 +1,6 @@
 #!groovy
 pipeline {
-    agent { label 'deeper-chain-runner' }
+    agent { label 'rust-runner'&& 'rust-runner-2' }
     environment {
         webhook_key = credentials('webhook_key')
     }
@@ -10,6 +10,7 @@ pipeline {
             when {
                 not {
                     branch 'master'
+                    branch 'ci-test'
                 }
             }
             steps {
@@ -29,6 +30,7 @@ pipeline {
         stage('Code Build') {
             when {
                 branch 'master'
+                branch 'ci-test'
             }
             steps {
                 echo 'Code Building'
