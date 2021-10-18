@@ -485,7 +485,12 @@ pub mod pallet {
         /// Deduct the amount from the account free balance
         fn take_from_account(account: &T::AccountId, amount: BalanceOf<T>) -> bool {
             let result = T::Currency::mutate_account_balance(account, |balance| {
-                if amount > balance.free {
+                let min_balance = T::Currency::minimum_balance();
+                // ensure after taking amount from account, remaining balance is grater than min_balance
+                if amount > balance.free
+                    || balance.free <= min_balance
+                    || amount >= balance.free - min_balance
+                {
                     return Zero::zero();
                 } else {
                     balance.free -= amount;

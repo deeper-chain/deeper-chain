@@ -16,11 +16,9 @@
 use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_ok,
     dispatch::{DispatchError, DispatchErrorWithPostInfo},
-    error::BadOrigin,
 };
-use frame_system::RawOrigin;
 use hex_literal::hex;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
@@ -34,7 +32,7 @@ fn open_channel() {
         assert_ok!(Micropayment::open_channel(
             Origin::signed(alice.clone()),
             bob.clone(),
-            300,
+            399,
             3600
         ));
         assert_eq!(
@@ -42,7 +40,7 @@ fn open_channel() {
             Chan {
                 client: alice.clone(),
                 server: bob.clone(),
-                balance: 300,
+                balance: 399,
                 nonce: 0,
                 opened: 0,
                 expiration: 720
@@ -74,6 +72,20 @@ fn open_channel() {
         // balance of 2 is 500, but channel balance experted is 1000
         if let Err(dispatch_error_with_post_info) =
             Micropayment::open_channel(Origin::signed(bob.clone()), charlie(), 1000, 3600)
+        {
+            assert_eq!(
+                dispatch_error_with_post_info.error,
+                DispatchError::Module {
+                    index: 4,
+                    error: 0,
+                    message: Some("NotEnoughBalance")
+                }
+            );
+        }
+
+        // balance is 500, after open_channel alice should has at least 100 DPR in her account, so can't lock 400 DPR
+        if let Err(dispatch_error_with_post_info) =
+            Micropayment::open_channel(Origin::signed(alice.clone()), charlie(), 400, 3600)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
