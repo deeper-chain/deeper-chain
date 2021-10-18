@@ -255,10 +255,6 @@ services:
       - "1000000"
       - "--pool-kbytes"
       - "20480000"
-      - "--pool-limit"
-      - "1000000"
-      - "--pool-kbytes"
-      - "20480000"
 
   validator-8:
     image: deeper-chain/deeper-chain:latest
