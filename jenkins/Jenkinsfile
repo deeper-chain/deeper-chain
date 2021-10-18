@@ -1,6 +1,6 @@
 #!groovy
 pipeline {
-    agent { label 'rust-runner-ec2'&& 'rust-runner-ec2-2' }
+    agent { node {label 'rust-runner-ec2'&& 'rust-runner-ec2-2'} }
     environment {
         webhook_key = credentials('webhook_key')
     }
@@ -34,7 +34,7 @@ pipeline {
             }
             steps {
                 echo 'Code Building'
-                sh 'cargo build --release'
+         //       sh 'cargo build --release'
             }
         }
     //TODO   stage('Deploy')
