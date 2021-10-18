@@ -165,7 +165,8 @@ function getTps(arrayBlockInfo){
 
   let beginTime = arrayBlockInfo[0].blockTime;
   let endTime = arrayBlockInfo[arrayBlockInfo.length - 1].blockTime;
-  let diffSeconds = endTime.sub(beginTime).toNumber()/1000;
+  let baseSecond = new BN(1000);
+  let diffSeconds = endTime.sub(beginTime).div(baseSecond).toNumber();
 
   let count = 0;
   arrayBlockInfo.forEach(element => {
@@ -176,11 +177,27 @@ function getTps(arrayBlockInfo){
   return tps;
 }
 
+function getTpsForLastBlock(arrayBlockInfo){
+  let beginTime = arrayBlockInfo[0].blockTime;
+  let endTime = arrayBlockInfo[arrayBlockInfo.length - 1].blockTime;
+
+  let baseSecond = new BN(1000);
+  let diffSeconds = endTime.sub(beginTime).div(baseSecond).toNumber();
+
+  let count = arrayBlockInfo[arrayBlockInfo.length - 1].txsCount;;
+
+  let tps = count/diffSeconds;
+  console.log("lastBlock is:", count, diffSeconds, tps);
+
+  return tps;
+}
+
 const main = async () => {
   const api = await connectSubstrate();
 
   let count = 0;
   var arrBlocks = [];
+  var max = 0;
 
   const unsubscribe = await api.rpc.chain.subscribeFinalizedHeads(async header => {
 
@@ -192,12 +209,18 @@ const main = async () => {
     if (1 == signedBlock.block.extrinsics.length) {
       return;
     }
-    let blockTime = new BN(signedBlock.block.extrinsics[0].toHuman().method.args[0].toString());
+    let blockTime = new BN(signedBlock.block.extrinsics[0].toHuman().method.args[0].toString().replace(/,/g, ''));
 
     let blockInfo = {
       blockNum: signedBlock.block.header.number,
       blockTime: blockTime,
       txsCount: signedBlock.block.extrinsics.length
+    }
+
+    if (0 != arrBlocks.length ) {
+      if (arrBlocks[arrBlocks.length - 1].blockNum == blockInfo.blockNum) {
+        return;
+      }
     }
 
     arrBlocks.push(blockInfo);
@@ -206,7 +229,10 @@ const main = async () => {
       arrBlocks.shift();
     }
 
-    if (arrBlocks.length > 3) {
+    if (arrBlocks.length > 1) {
+      let last2Array = arrBlocks.slice(Math.max(arrBlocks.length - 2, 0));
+      console.log("####1 ", getTpsForLastBlock(last2Array));
+
       let last3Array = arrBlocks.slice(Math.max(arrBlocks.length - 3, 0));
       console.log("####3 ", getTps(last3Array));
 
