@@ -29,7 +29,7 @@ pipeline {
         }
         stage('Code Build') {
             when {
-                branch 'master'
+//                branch 'master'
                 branch 'ci-test'
             }
             steps {
