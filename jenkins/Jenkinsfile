@@ -30,7 +30,7 @@ pipeline {
         }
         stage(build){
        parallel {
-        stage('Code Build') {
+        stage('Code Build in runner-01') {
             when {
 //                branch 'master'
                 branch 'ci-test'
@@ -42,7 +42,7 @@ pipeline {
             }
         }
 
-        stage('Code Build') {
+        stage('Code Build in runner-02') {
             when {
 //                branch 'master'
                 branch 'ci-test'
