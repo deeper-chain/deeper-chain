@@ -1,6 +1,7 @@
 #!groovy
 pipeline {
-    agent { label {node ('common-runner && rust-runner-ec2-2') }}
+    //agent { label {node ('common-runner && rust-runner-ec2-2') }}
+    agent none
     environment {
         webhook_key = credentials('webhook_key')
     }
@@ -27,15 +28,33 @@ pipeline {
                         ]
             }
         }
+        stage(build){
+       parallel {
         stage('Code Build') {
             when {
 //                branch 'master'
                 branch 'ci-test'
             }
+            agent {label 'rust-runner-ec2-2'}
             steps {
                 echo 'Code Building'
          //       sh 'cargo build --release'
             }
+        }
+
+        stage('Code Build') {
+            when {
+//                branch 'master'
+                branch 'ci-test'
+            }
+            agent {label 'common-runner'}
+            steps {
+                echo 'Code Building'
+         //       sh 'cargo build --release'
+            }
+        }
+        
+        }
         }
     //TODO   stage('Deploy')
     }
