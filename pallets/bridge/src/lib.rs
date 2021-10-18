@@ -13,11 +13,16 @@ mod tests;
 
 mod types;
 
+mod ethereum;
+
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
 use sp_std::prelude::*;
 pub mod weights;
 use weights::WeightInfo;
+
+use ethereum::GetTransByHashResp;
+use sp_std::str;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -26,6 +31,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use sp_core::H160;
+    use sp_runtime::offchain as rt_offchain;
     use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
     use sp_std::prelude::Vec;
     use types::{
@@ -222,7 +228,9 @@ pub mod pallet {
 
     // Errors inform users that something went wrong.
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        HttpFetchingError,
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -252,6 +260,52 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResultWithPostInfo.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        // after account A deposited some money into DPR's official address in eth
+        // call this function to spend corresponding DPR into this account A
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::deposit_from_eth())]
+        pub fn deposit_from_eth(
+            origin: OriginFor<T>, // 任何人都可以执行造币
+            message_id: T::Hash,  // eth合约执行的id
+        ) -> DispatchResultWithPostInfo {
+            let to = ensure_signed(origin)?;
+            // T::Currency::deposit_creating(&to, 0); // 造币 mint
+            // let transaction_api =
+            //     format!("https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205");
+            // let req_body = vec![format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\": [\"{}\"]}}", message_id)];
+            // let request = rt_offchain::http::Request::post(transaction_api.as_str(), req_body);
+            // const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
+            // let timeout = sp_io::offchain::timestamp()
+            //     .add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
+            // let pending = request
+            //     .add_header("Content-Type", "application/json")
+            //     .deadline(timeout) // Setting the timeout time
+            //     .send() // Sending the request out by the host
+            //     .map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+            // let response = pending
+            //     .try_wait(timeout)
+            //     .map_err(|_| <Error<T>>::HttpFetchingError)?
+            //     .map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+            // if response.code != 200 {
+            //     debug::error!("Unexpected http request status code: {}", response.code);
+            //     // return Err(<Error<T>>::HttpFetchingError);
+            // }
+
+            // // Next we fully read the response body and collect it to a vector of bytes.
+            // let resp_bytes = response.body().collect::<Vec<u8>>();
+            // // let resp2 = resp_bytes.as_ref();
+            // let resp_str =
+            //     str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            // log::info!("{}", resp_str);
+            // // let gh_info: GetTransByHashResp =
+            // serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            let transaction = Self::get_transaction(message_id.to_string())?;
+            log::info!("called by {:?}", transaction);
+
+            Ok(().into())
+        }
+
         // initiate substrate -> ethereum transfer.
         // create transfer and emit the RelayMessage event
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_transfer())]
@@ -502,6 +556,39 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        fn get_transaction(message_id: String) -> Result<GetTransByHashResp, Error<T>> {
+            let transaction_api =
+                format!("https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205");
+            let req_body = vec![format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\": [\"{}\"]}}", message_id)];
+            let request = rt_offchain::http::Request::post(transaction_api.as_str(), req_body);
+            const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
+            let timeout = sp_io::offchain::timestamp()
+                .add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
+            let pending = request
+                .add_header("Content-Type", "application/json")
+                .deadline(timeout) // Setting the timeout time
+                .send() // Sending the request out by the host
+                .map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+            let response = pending
+                .try_wait(timeout)
+                .map_err(|_| <Error<T>>::HttpFetchingError)?
+                .map_err(|_| <Error<T>>::HttpFetchingError)?;
+
+            if response.code != 200 {
+                debug::error!("Unexpected http request status code: {}", response.code);
+                // return Err(<Error<T>>::HttpFetchingError);
+            }
+
+            // Next we fully read the response body and collect it to a vector of bytes.
+            let resp_bytes = response.body().collect::<Vec<u8>>();
+            // let resp2 = resp_bytes.as_ref();
+            let resp_str =
+                str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            log::info!("{}", resp_str);
+            let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            Ok(resp)
+        }
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
 
