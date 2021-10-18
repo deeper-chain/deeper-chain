@@ -161,6 +161,93 @@ fn add_or_update_credit_data() {
 }
 
 #[test]
+fn add_or_update_credit_data_check_credit_history_and_reward() {
+    new_test_ext().execute_with(|| {
+        // era 0
+        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+
+        // era 1
+        run_to_block(BLOCKS_PER_ERA); 
+        assert_eq!(Credit::user_credit_history(3), vec![]);
+        assert_eq!(
+            Credit::get_reward(&3, 0, 0).0,
+            Some((0, 21369858941948251800))
+        );
+        let credit_historys = vec![(
+            0,
+            CreditData {
+                campaign_id: 0,
+                credit: 100,
+                initial_credit_level: CreditLevel::One,
+                rank_in_initial_credit_level: 1,
+                number_of_referees: 1,
+                current_credit_level: CreditLevel::One,
+                reward_eras: 1,
+            },
+        )];
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+
+        let credit_data = CreditData {
+            campaign_id: 0,
+            credit: 400,
+            initial_credit_level: CreditLevel::Four,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::Four,
+            reward_eras: 270,
+        };
+
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        assert_eq!(Credit::user_credit(3), Some(credit_data));
+        let credit_historys = vec![
+            (
+                0,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 1,
+                },
+            ),
+            (
+                1,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::Four,
+                    reward_eras: 270,
+                },
+            ),
+        ];
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+
+        // era 2
+        run_to_block(BLOCKS_PER_ERA * 2); 
+        assert_eq!(
+            Credit::get_reward(&3, 1, 1).0,
+            Some((0, 223068450647875213020))
+        );
+
+        // era 3
+        run_to_block(BLOCKS_PER_ERA * 3); 
+        assert_eq!(
+            Credit::get_reward(&3, 2, 2).0,
+            Some((0, 223068450647875213020))
+        );
+    });
+}
+
+#[test]
 fn get_credit_score() {
     new_test_ext().execute_with(|| {
         UserCredit::<Test>::insert(
@@ -230,6 +317,30 @@ fn update_credit() {
 
         Credit::update_credit((4, 1_000_000_000_000_000 / 10));
         assert_eq!(Credit::user_credit(&4).unwrap().credit, 0);
+    });
+}
+
+#[test]
+fn update_credit_by_traffic() {
+    new_test_ext().execute_with(|| {
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
+
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
+
+        run_to_block(BLOCKS_PER_ERA * 2);
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1); // 0 + 1
+
+        run_to_block(BLOCKS_PER_ERA * 3);
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1); // 1 + 0
+
+        run_to_block(BLOCKS_PER_ERA * 4);
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
     });
 }
 

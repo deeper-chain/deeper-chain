@@ -123,10 +123,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 1,
+    spec_version: 3,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 1,
+    transaction_version: 2,
 };
 
 /// Native version.
@@ -1076,6 +1076,14 @@ impl pallet_credit::Config for Runtime {
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_credit_accumulation::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type CreditInterface = Credit;
+    type AccountCreator = DefaultAccountCreator;
+    type WeightInfo = pallet_credit_accumulation::weights::SubstrateWeight<Runtime>;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1121,6 +1129,7 @@ construct_runtime!(
         Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
+        CreditAccumulation: pallet_credit_accumulation::{Module, Call, Storage, Event<T>},
     }
 );
 
@@ -1459,6 +1468,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_credit, Credit);
             add_benchmark!(params, batches, pallet_deeper_node, DeeperNode);
             add_benchmark!(params, batches, pallet_micropayment, Micropayment);
+            add_benchmark!(params, batches, pallet_credit_accumulation, CreditAccumulation);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

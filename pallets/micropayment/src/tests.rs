@@ -16,9 +16,11 @@
 use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{
-    assert_ok,
+    assert_noop, assert_ok,
     dispatch::{DispatchError, DispatchErrorWithPostInfo},
+    error::BadOrigin,
 };
+use frame_system::RawOrigin;
 use hex_literal::hex;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
@@ -239,7 +241,7 @@ fn claim_payment() {
 }
 
 #[test]
-fn blake2_hash() {
+fn test_blake2_hash() {
     let bob: [u8; 32] = [
         142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37, 252, 82, 135, 97, 54, 147,
         201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,

@@ -3950,6 +3950,7 @@ dependencies = [
  "pallet-contracts-primitives",
  "pallet-contracts-rpc-runtime-api",
  "pallet-credit",
+ "pallet-credit-accumulation",
  "pallet-deeper-node",
  "pallet-democracy",
  "pallet-elections-phragmen",
@@ -4417,6 +4418,30 @@ dependencies = [
  "node-primitives",
  "pallet-balances 3.0.0",
  "pallet-deeper-node",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-credit-accumulation"
+version = "3.0.0"
+dependencies = [
+ "blake2-rfc",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "log",
+ "node-primitives",
+ "pallet-balances 3.0.0",
+ "pallet-credit",
+ "pallet-deeper-node",
+ "pallet-micropayment",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
