@@ -16,6 +16,9 @@ cargo update -p environmental
 # thread_local 1.1.2 has a bug: "memory leak"
 cargo update -p thread_local
 
+# update libp2p-swarm from v0.27.1 to v0.27.2
+cargo update -p libp2p-swarm
+
 # compile
 cargo build --release
 ```
