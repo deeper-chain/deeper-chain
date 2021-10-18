@@ -9,7 +9,7 @@ pipeline {
         stage('Unit Test') {
             when {
                 not {
-                    branch 'master'
+//                    branch 'master'
                     branch 'ci-test'
                 }
             }
