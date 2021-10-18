@@ -1,6 +1,6 @@
 #!groovy
 pipeline {
-    agent { node {label 'common-runner' && 'rust-runner-ec2-2'} }
+    agent { label 'common-runner  && rust-runner-ec2-2' }
     environment {
         webhook_key = credentials('webhook_key')
     }
