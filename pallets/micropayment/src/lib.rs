@@ -58,7 +58,7 @@ pub mod pallet {
     use pallet_credit::CreditInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::traits::{StoredMapError, Zero};
+    use sp_runtime::traits::{Saturating, StoredMapError, Zero};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -487,10 +487,7 @@ pub mod pallet {
             let result = T::Currency::mutate_account_balance(account, |balance| {
                 let min_balance = T::Currency::minimum_balance();
                 // ensure after taking amount from account, remaining balance is grater than min_balance
-                if amount > balance.free
-                    || balance.free <= min_balance
-                    || amount >= balance.free - min_balance
-                {
+                if balance.free <= amount.saturating_add(min_balance) {
                     return Zero::zero();
                 } else {
                     balance.free -= amount;
