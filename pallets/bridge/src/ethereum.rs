@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Map;
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct GetTransByHashResp {
     pub jsonrpc: &'static str,
     pub id: usize,
@@ -18,7 +18,7 @@ pub struct GetTransByHashResp {
     // pub params: Vec<&'static str>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Transaction {
     #[serde(rename="blockHash")]
     pub block_hash: String, // H160?

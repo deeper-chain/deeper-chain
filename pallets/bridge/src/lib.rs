@@ -21,13 +21,13 @@ use sp_std::prelude::*;
 pub mod weights;
 use weights::WeightInfo;
 
-use ethereum::GetTransByHashResp;
+use ethereum::{GetTransByHashResp, Transaction};
 use std::str;
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, ReservableCurrency};
+    use frame_support::traits::{Currency, Get, ReservableCurrency};
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use sp_core::H160;
@@ -556,7 +556,7 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn get_transaction<'a>(message_id: T::Hash) -> Result<GetTransByHashResp, Error<T>> {
+        pub fn get_transaction(message_id: T::Hash) -> Result<GetTransByHashResp, Error<T>> {
             let transaction_api =
                 format!("https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205");
             let req_body = vec![format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\": [\"{}\"]}}", message_id)];
@@ -587,8 +587,9 @@ pub mod pallet {
             //     str::from_utf8(resp_bytes.as_ref()).unwrap();
             // log::info!("{}", resp_str);
             // let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            let resp2 = serde_json::from_slice(&resp_bytes).unwrap();
-            Ok(resp2)
+            let resp2 = serde_json::from_slice::<GetTransByHashResp>(&resp_bytes).unwrap();
+            let res: GetTransByHashResp = GetTransByHashResp {id: 1, jsonrpc: "2.0", result: Transaction::default() };
+            Ok(res)
         }
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
