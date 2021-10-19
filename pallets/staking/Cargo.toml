@@ -34,7 +34,7 @@ pallet-balances = { version = "3.0.0", default-features = false, path = "../bala
 pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
 
 # Optional imports for benchmarking
-frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0", optional = true }
+frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", optional = true }
 rand_chacha = { version = "0.2", default-features = false, optional = true }
 
 [dev-dependencies]

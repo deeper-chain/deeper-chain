@@ -14,8 +14,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 pallet-balances = { version = "3.0.0", path = "../pallets/balances" }
-sc-service = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["test-helpers", "db"]}
-sc-client-db = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["kvdb-rocksdb", "parity-db"] }
+sc-service = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", features = ["test-helpers", "db"]}
+sc-client-db = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", features = ["kvdb-rocksdb", "parity-db"] }
 sc-client-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 codec = { package = "parity-scale-codec", version = "2.0.0" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
@@ -32,7 +32,7 @@ pallet-session = { git = "https://github.com/paritytech/substrate", tag = "v3.0.
 pallet-society = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-staking = { path = "../pallets/staking", version = "3.0.0"}
-sc-executor = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["wasmtime"] }
+sc-executor = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", features = ["wasmtime"] }
 sp-consensus = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 frame-system = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 substrate-test-client = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
@@ -40,7 +40,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", tag = "v3.
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-timestamp = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
+sp-timestamp = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sc-block-builder = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-inherents = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
