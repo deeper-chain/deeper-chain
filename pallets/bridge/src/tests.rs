@@ -718,40 +718,11 @@ fn blocked_account_unblocked_next_day_should_work() {
     })
 }
 
-// #[test]
-// fn test_decode_input() {
-//     new_test_ext().execute_with(|| {
-//         let message_id = H256::from(ETH_MESSAGE_ID);
-//         let eth_address = H160::from(ETH_ADDRESS);
-//         let amount = 99;
-//         let balance_of_user2 = Balances::free_balance(USER2);
-//         let total_issuance = Balances::total_issuance();
-
-//         //substrate <----- ETH
-//         assert_ok!(Bridge::multi_signed_mint(
-//             Origin::signed(V2),
-//             message_id,
-//             eth_address,
-//             USER2,
-//             amount
-//         ));
-//         let mut message = Bridge::messages(message_id);
-//         assert_eq!(message.status, Status::Pending);
-
-//         assert_ok!(Bridge::multi_signed_mint(
-//             Origin::signed(V1),
-//             message_id,
-//             eth_address,
-//             USER2,
-//             amount
-//         ));
-//         message = Bridge::messages(message_id);
-//         assert_eq!(message.status, Status::Confirmed);
-
-//         let transfer = Bridge::transfers(0);
-//         assert_eq!(transfer.open, false);
-
-//         assert_eq!(Balances::free_balance(USER2), amount + balance_of_user2);
-//         assert_eq!(Balances::total_issuance(), amount + total_issuance);
-//     });
-// }
+#[test]
+fn test_deposit_from_eth() {
+    new_test_ext().execute_with(|| {
+        let origin = Origin::signed(USER2);
+        let message_id = H256::from(ETH_MESSAGE_ID);
+        assert_ok!(Bridge::get_transaction(message_id));
+    })
+}

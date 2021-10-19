@@ -22,7 +22,7 @@ pub mod weights;
 use weights::WeightInfo;
 
 use ethereum::GetTransByHashResp;
-use sp_std::str;
+use std::str;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -300,7 +300,7 @@ pub mod pallet {
             // log::info!("{}", resp_str);
             // // let gh_info: GetTransByHashResp =
             // serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            let transaction = Self::get_transaction(message_id.to_string())?;
+            let transaction = Self::get_transaction(message_id)?;
             log::info!("called by {:?}", transaction);
 
             Ok(().into())
@@ -556,7 +556,7 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        fn get_transaction(message_id: String) -> Result<GetTransByHashResp, Error<T>> {
+        pub fn get_transaction<'a>(message_id: T::Hash) -> Result<GetTransByHashResp, Error<T>> {
             let transaction_api =
                 format!("https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205");
             let req_body = vec![format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\": [\"{}\"]}}", message_id)];
@@ -583,11 +583,12 @@ pub mod pallet {
             // Next we fully read the response body and collect it to a vector of bytes.
             let resp_bytes = response.body().collect::<Vec<u8>>();
             // let resp2 = resp_bytes.as_ref();
-            let resp_str =
-                str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            log::info!("{}", resp_str);
-            let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            Ok(resp)
+            // let resp_str =
+            //     str::from_utf8(resp_bytes.as_ref()).unwrap();
+            // log::info!("{}", resp_str);
+            // let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            let resp2 = serde_json::from_slice(&resp_bytes).unwrap();
+            Ok(resp2)
         }
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
