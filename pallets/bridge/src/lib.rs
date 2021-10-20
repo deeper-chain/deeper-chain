@@ -1042,7 +1042,7 @@ pub fn get_transaction(message_id: String) -> GetTransByHashResp {
     //     str::from_utf8(resp_bytes.as_ref()).unwrap();
     // log::info!("{}", resp_str);
     // let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-    let resp2 = serde_json::from_slice::<GetTransByHashResp>(&resp_bytes).unwrap();
+    let resp2 : GetTransByHashResp = serde_json::from_slice(&resp_bytes).unwrap();
     // let res: GetTransByHashResp = GetTransByHashResp {id: 1, jsonrpc: "2.0", result: Transaction::default() };
     // Ok(res)
     resp2

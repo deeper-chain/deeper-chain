@@ -11,7 +11,7 @@ use serde_json::Map;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct GetTransByHashResp {
-    pub jsonrpc: &'static str,
+    pub jsonrpc: String,
     pub id: usize,
     pub result: Transaction,
     // pub method: &'static str,
