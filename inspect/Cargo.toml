@@ -14,6 +14,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 codec = { package = "parity-scale-codec", version = "2.0.0" }
 derive_more = "0.99"
 log = "0.4.8"
+sc-cli = { optional = true, git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sc-service = { default-features = false, git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
