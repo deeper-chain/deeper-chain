@@ -22,9 +22,9 @@ frame-support = { git = "https://github.com/paritytech/substrate", version = "4.
 frame-system = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", default-features = false}
 
 [dev-dependencies]
-sp-io = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-core = {git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
+sp-io = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-core = {git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+pallet-transaction-payment = {git = "https://github.com/paritytech/substrate", version = "4.0.0-dev"}
 
 [features]
 default = ["std"]

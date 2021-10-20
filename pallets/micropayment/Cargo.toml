@@ -15,23 +15,23 @@ targets = ["x86_64-unknown-linux-gnu"]
 log = { default-features = false, version = "0.4.11" }
 blake2-rfc = { version = "0.2.18", default-features = false }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
 pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node"}
-sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-std = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-std = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", optional = true }
 hex-literal = "0.3.1"
 
 [dev-dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 serde = { version = "1.0.101" }
 
 [features]
