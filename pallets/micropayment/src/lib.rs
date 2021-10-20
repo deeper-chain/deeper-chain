@@ -58,7 +58,7 @@ pub mod pallet {
     use pallet_credit::CreditInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::traits::{StoredMapError, Zero};
+    use sp_runtime::traits::{DispatchError, Zero};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -502,7 +502,7 @@ pub mod pallet {
         fn deposit_into_account(
             account: &T::AccountId,
             amount: BalanceOf<T>,
-        ) -> Result<(), StoredMapError> {
+        ) -> Result<(), DispatchError> {
             T::Currency::mutate_account_balance(account, |balance| {
                 balance.free += amount;
             })

@@ -170,7 +170,7 @@ use frame_system as system;
 use sp_runtime::{
     traits::{
         AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
-        Saturating, StaticLookup, StoredMapError, Zero,
+        Saturating, StaticLookup, Zero,
     },
     DispatchError, DispatchResult, RuntimeDebug,
 };
@@ -184,7 +184,7 @@ pub trait MutableCurrency<AccountId>: Currency<AccountId> {
     fn mutate_account_balance<R>(
         who: &AccountId,
         f: impl FnOnce(&mut AccountData<Self::Balance>) -> R,
-    ) -> Result<R, StoredMapError>;
+    ) -> Result<R, DispatchError>;
 }
 
 impl<T: Config<I>, I: 'static> MutableCurrency<T::AccountId> for Pallet<T, I>
@@ -194,7 +194,7 @@ where
     fn mutate_account_balance<R>(
         who: &T::AccountId,
         f: impl FnOnce(&mut AccountData<T::Balance>) -> R,
-    ) -> Result<R, StoredMapError> {
+    ) -> Result<R, DispatchError> {
         Self::mutate_account(who, f)
     }
 }
@@ -313,7 +313,7 @@ pub mod pallet {
 			T::WeightInfo::set_balance_creating() // Creates a new account.
 				.max(T::WeightInfo::set_balance_killing()) // Kills an existing account.
 		)]
-        pub(super) fn set_balance(
+        pub fn set_balance(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] new_free: T::Balance,
@@ -718,8 +718,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     pub fn mutate_account<R>(
         who: &T::AccountId,
         f: impl FnOnce(&mut AccountData<T::Balance>) -> R,
-    ) -> Result<R, StoredMapError> {
-        Self::try_mutate_account(who, |a, _| -> Result<R, StoredMapError> { Ok(f(a)) })
+    ) -> Result<R, DispatchError> {
+        Self::try_mutate_account(who, |a, _| -> Result<R, DispatchError> { Ok(f(a)) })
     }
 
     /// Mutate an account to some new value, or delete it entirely with `None`. Will enforce
@@ -731,7 +731,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ///
     /// NOTE: LOW-LEVEL: This will not attempt to maintain total issuance. It is expected that
     /// the caller will do this.
-    fn try_mutate_account<R, E: From<StoredMapError>>(
+    fn try_mutate_account<R, E: From<DispatchError>>(
         who: &T::AccountId,
         f: impl FnOnce(&mut AccountData<T::Balance>, bool) -> Result<R, E>,
     ) -> Result<R, E> {
@@ -1112,7 +1112,7 @@ where
 
         for attempt in 0..2 {
             match Self::try_mutate_account(who,
-				|account, _is_new| -> Result<(Self::NegativeImbalance, Self::Balance), StoredMapError> {
+				|account, _is_new| -> Result<(Self::NegativeImbalance, Self::Balance), DispatchError> {
 					// Best value is the most amount we can slash following liveness rules.
 					let best_value = match attempt {
 						// First attempt we try to slash the full amount, and see if liveness issues happen.
