@@ -723,6 +723,6 @@ fn test_deposit_from_eth() {
     new_test_ext().execute_with(|| {
         let origin = Origin::signed(USER2);
         let message_id = H256::from(ETH_MESSAGE_ID);
-        assert_ok!(Bridge::get_transaction(message_id));
+        assert_eq!(1, super::get_transaction(message_id.to_string()).id);
     })
 }

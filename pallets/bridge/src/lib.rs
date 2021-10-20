@@ -23,6 +23,7 @@ use weights::WeightInfo;
 
 use ethereum::{GetTransByHashResp, Transaction};
 use std::str;
+use sp_runtime::offchain as rt_offchain;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -31,7 +32,6 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use sp_core::H160;
-    use sp_runtime::offchain as rt_offchain;
     use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
     use sp_std::prelude::Vec;
     use types::{
@@ -300,7 +300,7 @@ pub mod pallet {
             // log::info!("{}", resp_str);
             // // let gh_info: GetTransByHashResp =
             // serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            let transaction = Self::get_transaction(message_id)?;
+            let transaction = get_transaction(message_id.to_string());
             log::info!("called by {:?}", transaction);
 
             Ok(().into())
@@ -556,41 +556,6 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn get_transaction(message_id: T::Hash) -> Result<GetTransByHashResp, Error<T>> {
-            let transaction_api =
-                format!("https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205");
-            let req_body = vec![format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\": [\"{}\"]}}", message_id)];
-            let request = rt_offchain::http::Request::post(transaction_api.as_str(), req_body);
-            const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
-            let timeout = sp_io::offchain::timestamp()
-                .add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
-            let pending = request
-                .add_header("Content-Type", "application/json")
-                .deadline(timeout) // Setting the timeout time
-                .send() // Sending the request out by the host
-                .map_err(|_| <Error<T>>::HttpFetchingError)?;
-
-            let response = pending
-                .try_wait(timeout)
-                .map_err(|_| <Error<T>>::HttpFetchingError)?
-                .map_err(|_| <Error<T>>::HttpFetchingError)?;
-
-            if response.code != 200 {
-                debug::error!("Unexpected http request status code: {}", response.code);
-                // return Err(<Error<T>>::HttpFetchingError);
-            }
-
-            // Next we fully read the response body and collect it to a vector of bytes.
-            let resp_bytes = response.body().collect::<Vec<u8>>();
-            // let resp2 = resp_bytes.as_ref();
-            // let resp_str =
-            //     str::from_utf8(resp_bytes.as_ref()).unwrap();
-            // log::info!("{}", resp_str);
-            // let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            let resp2 = serde_json::from_slice::<GetTransByHashResp>(&resp_bytes).unwrap();
-            let res: GetTransByHashResp = GetTransByHashResp {id: 1, jsonrpc: "2.0", result: Transaction::default() };
-            Ok(res)
-        }
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
 
@@ -1044,4 +1009,41 @@ pub mod pallet {
             Ok(())
         }
     }
+}
+
+use sp_core::{H160, H256};
+
+pub fn get_transaction(message_id: String) -> GetTransByHashResp {
+    let transaction_api =
+        format!("https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205");
+    let req_body = vec![format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getTransactionByHash\",\"params\": [\"{}\"]}}", message_id)];
+    let request = rt_offchain::http::Request::post(transaction_api.as_str(), req_body);
+    const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
+    let timeout = sp_io::offchain::timestamp()
+        .add(rt_offchain::Duration::from_millis(FETCH_TIMEOUT_PERIOD));
+    let pending = request
+        .add_header("Content-Type", "application/json")
+        .deadline(timeout) // Setting the timeout time
+        .send() // Sending the request out by the host
+        .unwrap();
+
+    let response = pending
+        .try_wait(timeout)
+        .unwrap().unwrap();
+
+    if response.code != 200 {
+        panic!("non 200")
+    }
+
+    // Next we fully read the response body and collect it to a vector of bytes.
+    let resp_bytes = response.body().collect::<Vec<u8>>();
+    // let resp2 = resp_bytes.as_ref();
+    // let resp_str =
+    //     str::from_utf8(resp_bytes.as_ref()).unwrap();
+    // log::info!("{}", resp_str);
+    // let resp = serde_json::from_str(resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
+    let resp2 = serde_json::from_slice::<GetTransByHashResp>(&resp_bytes).unwrap();
+    // let res: GetTransByHashResp = GetTransByHashResp {id: 1, jsonrpc: "2.0", result: Transaction::default() };
+    // Ok(res)
+    resp2
 }
