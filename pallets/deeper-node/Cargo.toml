@@ -10,7 +10,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 serde = { version = "1.0.101", optional = true }
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.2.0", default-features = false, features = ["derive", "max-encoded-len"] }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
@@ -31,6 +32,7 @@ default = ['std']
 std = [
     'serde',
     'codec/std',
+    "scale-info/std",
     'frame-support/std',
     'frame-system/std',
     'sp-runtime/std',

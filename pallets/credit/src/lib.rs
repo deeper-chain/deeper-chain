@@ -32,7 +32,7 @@ pub(crate) const LOG_TARGET: &'static str = "credit";
 #[macro_export]
 macro_rules! log {
 	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-		frame_support::debug::$level!(
+		log::$level!(
 			target: crate::LOG_TARGET,
 			$patter $(, $values)*
 		)
@@ -49,9 +49,10 @@ use frame_support::traits::GenesisBuild;
 
 use frame_support::weights::Weight;
 use sp_std::prelude::*;
+use scale_info::TypeInfo;
 pub use weights::WeightInfo;
 
-#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy, Ord, PartialOrd)]
+#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy, Ord, PartialOrd, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
     Zero,
@@ -78,7 +79,7 @@ pub type CampaignId = u16;
 pub type EraIndex = u32;
 
 /// settings for a specific campaign_id and credit level
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditSetting<Balance> {
     pub campaign_id: CampaignId,
@@ -92,7 +93,7 @@ pub struct CreditSetting<Balance> {
     pub reward_per_referee: Balance,
 }
 
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditData {
     pub campaign_id: CampaignId,
@@ -122,7 +123,7 @@ pub trait CreditInterface<AccountId, Balance> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, Vec};
+    use frame_support::traits::{Currency};
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
         pallet_prelude::*,
@@ -237,7 +238,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId")]
+    //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         CreditUpdateSuccess(T::AccountId, u64),

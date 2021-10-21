@@ -37,19 +37,22 @@ pub mod benchmarking;
 #[cfg(any(feature = "runtime-benchmarks"))]
 use sp_std::prelude::*;
 
+use scale_info::TypeInfo;
+
 pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
     use crate::weights::WeightInfo;
     use frame_support::codec::Encode;
-    use frame_support::traits::{Currency, Vec};
+    use frame_support::traits::{Currency};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use pallet_credit::CreditInterface;
     use pallet_micropayment::AccountCreator;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
+    use sp_std::prelude::Vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -83,7 +86,7 @@ pub mod pallet {
     pub(super) type AtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         AtmosSignatureValid(T::AccountId),
