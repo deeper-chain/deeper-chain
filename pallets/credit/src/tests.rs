@@ -167,7 +167,7 @@ fn add_or_update_credit_data_check_credit_history_and_reward() {
         assert_ok!(DeeperNode::im_online(Origin::signed(3)));
 
         // era 1
-        run_to_block(BLOCKS_PER_ERA); 
+        run_to_block(BLOCKS_PER_ERA);
         assert_eq!(Credit::user_credit_history(3), vec![]);
         assert_eq!(
             Credit::get_reward(&3, 0, 0).0,
@@ -232,14 +232,14 @@ fn add_or_update_credit_data_check_credit_history_and_reward() {
         assert_eq!(Credit::user_credit_history(3), credit_historys);
 
         // era 2
-        run_to_block(BLOCKS_PER_ERA * 2); 
+        run_to_block(BLOCKS_PER_ERA * 2);
         assert_eq!(
             Credit::get_reward(&3, 1, 1).0,
             Some((0, 223068450647875213020))
         );
 
         // era 3
-        run_to_block(BLOCKS_PER_ERA * 3); 
+        run_to_block(BLOCKS_PER_ERA * 3);
         assert_eq!(
             Credit::get_reward(&3, 2, 2).0,
             Some((0, 223068450647875213020))
