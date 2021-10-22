@@ -40,7 +40,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", version = 
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
-sp-consensus-babe = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-consensus-babe = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-externalities = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 substrate-test-client = { git = "https://github.com/paritytech/substrate", version = "2.0.0" }
