@@ -14,10 +14,12 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.2.0", default-features = false, features = ["derive","max-encoded-len"] }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0.102", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
+log = { version = "0.4.14", default-features = false }
 
 # primitives
 sp-authority-discovery = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev", default-features = false }
@@ -106,6 +108,7 @@ std = [
 	"pallet-bounties/std",
 	"sp-block-builder/std",
 	"codec/std",
+	"scale-info/std",
 	"pallet-collective/std",
 	"pallet-contracts/std",
 	"pallet-contracts-primitives/std",
