@@ -1,0 +1,24 @@
+name: style_check
+
+on: [push]
+
+jobs:
+  style_check:
+    name: cargo fmt and 
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Install Rust toolchain ${{ matrix.rust }}
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: cache dependencies
+        uses: Swatinem/rust-cache@v1
+      
+      - name: Cargo Fmt Check
+        run: cargo fmt --all -- --check
