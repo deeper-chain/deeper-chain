@@ -36,8 +36,8 @@ crate-type = ["cdylib", "rlib"]
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "2.0.0" }
 serde_json = '1.0'
-serde = { version = "1.0.102", features = ["derive"] }
-futures = { version = "0.3.9", features = ["compat"] }
+serde = { version = "1.0.126", features = ["derive"] }
+futures = { version = "0.3.16", features = ["compat"] }
 hex-literal = "0.3.1"
 log = "0.4.8"
 rand = "0.7.2"
@@ -57,6 +57,8 @@ sp-keystore = { git = "https://github.com/paritytech/substrate", version = "0.10
 sp-io = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-consensus = {git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-transaction-storage-proof = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-authorship = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
@@ -75,6 +77,8 @@ sc-service = { default-features = false, git = "https://github.com/paritytech/su
 sc-tracing = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sc-telemetry = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sc-authority-discovery = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
+sc-executor = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
+sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
@@ -116,13 +120,19 @@ sc-consensus = { git = "https://github.com/paritytech/substrate", version = "0.1
 sc-consensus-babe = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-consensus-epochs = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-service-test = { git = "https://github.com/paritytech/substrate", version = "2.0.0" }
-futures = "0.3.9"
+futures = "0.3.16"
 tempfile = "3.1.0"
 assert_cmd = "1.0"
 nix = "0.19"
 serde_json = "1.0"
 regex = "1"
 platforms = "1.1"
+async-std = { version = "1.10.0", features = ["attributes"] }
+soketto = "0.4.2"
+jsonrpsee-ws-client = { version = "0.3.0", default-features = false, features = ["tokio1"] }
+tokio = { version = "1.10", features = ["macros", "time"] }
+wait-timeout = "0.2"
+
 
 [build-dependencies]
 structopt = { version = "0.3.8", optional = true }
