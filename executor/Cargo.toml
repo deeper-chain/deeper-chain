@@ -13,6 +13,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0" }
+scale-info = { version = "1.0", features = ["derive"] }
 node-primitives = { version = "2.0.0", path = "../primitives" }
 node-runtime = { version = "2.0.0", path = "../runtime" }
 sc-executor = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
@@ -39,10 +40,12 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", version = 
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sp-consensus-babe = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sp-externalities = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 substrate-test-client = { git = "https://github.com/paritytech/substrate", version = "2.0.0" }
 wat = "1.0"
+futures = "0.3.9"
 
 [features]
 wasmtime = [
