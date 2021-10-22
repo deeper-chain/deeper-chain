@@ -1,0 +1,24 @@
+name: build
+
+on: [push]
+
+jobs:
+  build:
+    name: Build
+    runs-on: [self-hosted, linux, deeper-chain-runner]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Install Rust toolchain ${{ matrix.rust }}
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: cache dependencies
+        uses: Swatinem/rust-cache@v1
+      
+      - name: Compile
+        run: cargo build

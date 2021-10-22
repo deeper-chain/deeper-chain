@@ -1794,6 +1794,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "fs_extra"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4970,12 +4980,13 @@ dependencies = [
 
 [[package]]
 name = "parity-db"
-version = "0.2.2"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "111e193c96758d476d272093a853882668da17489f76bf4361b8decae0b6c515"
+checksum = "2e337f62db341435f0da05b8f6b97e984ef4ea5800510cd07c2d624688c40b47"
 dependencies = [
  "blake2-rfc",
  "crc32fast",
+ "fs2",
  "hex",
  "libc",
  "log",
@@ -9073,7 +9084,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
