@@ -17,6 +17,7 @@ pallet-balances = { version = "3.0.0", path = "../pallets/balances" }
 sc-service = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev", features = ["test-helpers", "db"]}
 sc-client-db = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev", features = ["kvdb-rocksdb", "parity-db"] }
 sc-client-api = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sc-consensus = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 codec = { package = "parity-scale-codec", version = "2.0.0" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
