@@ -12,6 +12,7 @@ mod mock;
 mod tests;
 
 mod types;
+mod ethereum;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
@@ -22,15 +23,32 @@ use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use codec::{Decode, Encode};
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
+    use serde::{Deserialize, Serialize};
     use sp_core::H160;
     use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
     use sp_std::prelude::Vec;
+    use sp_std::str;
     use types::{
         BridgeMessage, BridgeTransfer, IntoArray, Kind, LimitMessage, Limits, MemberId, ProposalId,
         Status, TransferMessage, ValidatorMessage,
+    };
+
+    use sp_runtime::{
+        offchain as rt_offchain,
+        offchain::{
+            http,
+            storage::StorageValueRef,
+            storage_lock::{BlockAndTime, StorageLock},
+            Duration,
+        },
+        transaction_validity::{
+            InvalidTransaction, TransactionSource, TransactionValidity, ValidTransaction,
+        },
+        RuntimeDebug,
     };
 
     pub type BalanceOf<T> =
@@ -38,6 +56,12 @@ pub mod pallet {
 
     const MAX_VALIDATORS: u32 = 100_000;
     const DAY: u32 = 86_400;
+
+    const HTTP_REMOTE_REQUEST: &str =
+        "https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205";
+    const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
+    const LOCK_TIMEOUT_EXPIRATION: u64 = FETCH_TIMEOUT_PERIOD + 1000; // in milli-seconds
+    const LOCK_BLOCK_EXPIRATION: u32 = 3; // in block number
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -222,10 +246,17 @@ pub mod pallet {
 
     // Errors inform users that something went wrong.
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        HttpFetchingError,
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn offchain_worker(block_number: T::BlockNumber) {
+            log::info!("offchain_worker_begin: {:?}", block_number);
+            Self::fetch_remote_info();
+        }
+
         fn on_finalize(_n: T::BlockNumber) {
             // clear accounts blocked day earlier (e.g. 18759 - 1)
             let yesterday = Self::get_day_pair().0;
@@ -501,7 +532,158 @@ pub mod pallet {
         }
     }
 
+
+
+    #[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
+    pub struct GetLogsResp {
+        // pub jsonrpc: String,
+        pub result: Vec<EthLog>,
+    }
+
+    #[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
+    pub struct EthLog {
+        pub address: Vec<u8>,
+
+        #[serde(rename = "blockHash")]
+        pub block_hash: Vec<u8>, // H160?
+
+        #[serde(rename = "blockNumber")]
+        pub block_number: Vec<u8>, // H256?
+
+        pub data: Vec<u8>,
+
+
+        pub removed: bool,
+
+        pub topics: Vec<Vec<u8>>,
+
+        #[serde(rename = "transactionHash")]
+        pub transaction_hash: Vec<u8>,
+    }
+
     impl<T: Config> Pallet<T> {
+        fn fetch_remote_info() -> Result<(), Error<T>> {
+            // Create a reference to Local Storage value.
+            // Since the local storage is common for all offchain workers, it's a good practice
+            // to prepend our entry with the pallet name.
+            let s_info = StorageValueRef::persistent(b"offchain-demo::hn-info");
+
+            // Local storage is persisted and shared between runs of the offchain workers,
+            // offchain workers may run concurrently. We can use the `mutate` function to
+            // write a storage entry in an atomic fashion.
+            //
+            // With a similar API as `StorageValue` with the variables `get`, `set`, `mutate`.
+            // We will likely want to use `mutate` to access
+            // the storage comprehensively.
+            //
+            if let Some(Some(info)) = s_info.get::<GetLogsResp>() {
+                // hn-info has already been fetched. Return early.
+                log::info!("cached hn-info: {:?}", info);
+                return Ok(());
+            }
+
+            // Since off-chain storage can be accessed by off-chain workers from multiple runs, it is important to lock
+            //   it before doing heavy computations or write operations.
+            //
+            // There are four ways of defining a lock:
+            //   1) `new` - lock with default time and block exipration
+            //   2) `with_deadline` - lock with default block but custom time expiration
+            //   3) `with_block_deadline` - lock with default time but custom block expiration
+            //   4) `with_block_and_time_deadline` - lock with custom time and block expiration
+            // Here we choose the most custom one for demonstration purpose.
+            let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
+                b"offchain-demo::lock",
+                LOCK_BLOCK_EXPIRATION,
+                Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
+            );
+
+            // We try to acquire the lock here. If failed, we know the `fetch_n_parse` part inside is being
+            //   executed by previous run of ocw, so the function just returns.
+            if let Ok(_guard) = lock.try_lock() {
+                match Self::fetch_n_parse() {
+                    Ok(info) => {
+                        // TODO: parse data here, need sort
+                        // let result = info.result;
+                        // let mut data: Vec<ethereum::SetTransferData> = vec![];
+                        let data: Vec<ethereum::SetTransferData> = info.result.iter().map(|d| ethereum::decode_data(&d.data)).collect();
+                        log::info!("set_transfer_logs: {:?}", data);
+                        s_info.set(&data);
+                    }
+                    Err(err) => {
+                        return Err(err);
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        /// Fetch from remote and deserialize the JSON to a struct
+        fn fetch_n_parse() -> Result<GetLogsResp, Error<T>> {
+            let resp_bytes = Self::fetch_from_remote().map_err(|e| {
+                log::error!("fetch_from_remote error: {:?}", e);
+                <Error<T>>::HttpFetchingError
+            })?;
+
+            let resp_str =
+                str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            // Print out our fetched JSON string
+            log::info!("fetch_n_parse: {}", resp_str);
+
+            // Deserializing JSON to struct, thanks to `serde` and `serde_derive`
+            let info: GetLogsResp =
+                serde_json::from_str(&resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            Ok(info)
+        }
+
+        /// This function uses the `offchain::http` API to query the remote endpoint information,
+        ///   and returns the JSON response as vector of bytes.
+        fn fetch_from_remote() -> Result<Vec<u8>, Error<T>> {
+            // Initiate an external HTTP GET request. This is using high-level wrappers from `sp_runtime`.
+            // let body = vec![
+            //     r#"{"jsonrpc":"2.0","method":"eth_getFilterChanges","params":["0x10ff0e03bb3c79c08b880b73fc1eaccea87d1a4122f5"],"id":1}"#,
+            // ];
+            let body = vec![
+                r#"{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"blockHash": "0x69ea66d10b2952366c4f5de316feece3d34638152863285f6acdce6c46b0f0be", "topics":["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
+            ];
+            let request = http::Request::post(HTTP_REMOTE_REQUEST, body);
+
+            // Keeping the offchain worker execution time reasonable, so limiting the call to be within 3s.
+            let timeout =
+                sp_io::offchain::timestamp().add(Duration::from_millis(FETCH_TIMEOUT_PERIOD));
+
+            let pending = request
+                .add_header("Content-Type", "application/json")
+                .deadline(timeout) // Setting the timeout time
+                .send() // Sending the request out by the host
+                .map_err(|e| {
+                    log::error!("{:?}", e);
+                    <Error<T>>::HttpFetchingError
+                })?;
+
+            // By default, the http request is async from the runtime perspective. So we are asking the
+            //   runtime to wait here
+            // The returning value here is a `Result` of `Result`, so we are unwrapping it twice by two `?`
+            //   ref: https://docs.substrate.io/rustdocs/latest/sp_runtime/offchain/http/struct.PendingRequest.html#method.try_wait
+            let response = pending
+                .try_wait(timeout)
+                .map_err(|e| {
+                    log::error!("{:?}", e);
+                    <Error<T>>::HttpFetchingError
+                })?
+                .map_err(|e| {
+                    log::error!("{:?}", e);
+                    <Error<T>>::HttpFetchingError
+                })?;
+
+            if response.code != 200 {
+                log::error!("Unexpected http request status code: {}", response.code);
+                return Err(<Error<T>>::HttpFetchingError);
+            }
+
+            // Next we fully read the response body and collect it to a vector of bytes.
+            Ok(response.body().collect::<Vec<u8>>())
+        }
+
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
 
@@ -953,6 +1135,13 @@ pub mod pallet {
             }
 
             Ok(())
+        }
+    }
+
+    impl<T: Config> rt_offchain::storage_lock::BlockNumberProvider for Pallet<T> {
+        type BlockNumber = T::BlockNumber;
+        fn current_block_number() -> Self::BlockNumber {
+            <frame_system::Module<T>>::block_number()
         }
     }
 }

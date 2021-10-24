@@ -1051,6 +1051,13 @@ parameter_types! {
     pub const MaxIpLength: usize = 256;
 }
 
+impl pallet_eth_sub_bridge::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type WeightInfo = pallet_eth_sub_bridge::weights::SubstrateWeight<Runtime>;
+    type BlocksPerEra = BlocksPerEra;
+}
+
 impl pallet_deeper_node::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
@@ -1135,6 +1142,7 @@ construct_runtime!(
         Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
         CreditAccumulation: pallet_credit_accumulation::{Module, Call, Storage, Event<T>},
+        Bridge: pallet_eth_sub_bridge::{Module, Call, Storage, Event<T>},
     }
 );
 

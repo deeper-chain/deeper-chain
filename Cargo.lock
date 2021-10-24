@@ -1468,6 +1468,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethabi"
+version = "15.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f76ef192b63e8a44b3d08832acebbb984c3fba154b5c26f70037c860202a0d4b"
+dependencies = [
+ "anyhow",
+ "ethereum-types",
+ "hex",
+ "sha3",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
+name = "ethbloom"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfb684ac8fa8f6c5759f788862bb22ec6fe3cb392f6bfd08e3c64b603661e3f8"
+dependencies = [
+ "crunchy",
+ "fixed-hash",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05136f7057fe789f06e6d41d07b34e6f70d8c86e5693b60f97aaa6553553bdaf"
+dependencies = [
+ "ethbloom",
+ "fixed-hash",
+ "primitive-types 0.10.0",
+ "uint",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2057,9 +2094,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9495705279e7140bf035dde1f6e750c162df8b625267cd52cc44e0b156732c8"
+checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
 dependencies = [
  "cfg-if 1.0.0",
  "js-sys",
@@ -2223,9 +2260,9 @@ dependencies = [
 
 [[package]]
 name = "hex"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hex-literal"
@@ -4512,15 +4549,18 @@ dependencies = [
 name = "pallet-eth-sub-bridge"
 version = "3.0.0"
 dependencies = [
+ "ethabi",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal",
+ "log",
  "node-primitives",
  "pallet-balances 3.0.0",
  "pallet-timestamp",
  "parity-scale-codec",
  "serde",
+ "serde_json",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5074,7 +5114,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "parity-util-mem-derive",
  "parking_lot 0.11.1",
- "primitive-types",
+ "primitive-types 0.9.0",
  "smallvec 1.6.1",
  "winapi 0.3.9",
 ]
@@ -5514,6 +5554,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "primitive-types"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e90f6931e6b3051e208a449c342246cb7c786ef300789b95619f46f1dd75d9b0"
+dependencies = [
+ "fixed-hash",
+ "impl-codec",
+ "uint",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5800,7 +5851,7 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c026d7df8b298d90ccbbc5190bd04d85e159eaf5576caeacf8741da93ccbd2e5"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
 ]
 
 [[package]]
@@ -5922,7 +5973,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "528532f3d801c87aec9def2add9ca802fe569e44a544afe633765267840abe64"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "redox_syscall 0.2.4",
 ]
 
@@ -7349,9 +7400,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.61"
+version = "1.0.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fceb2595057b6891a4ee808f70054bd2d12f0e97f1cbb78689b59f676df325a"
+checksum = "0f690853975602e1bfe1ccbf50504d67174e3bcf340f23b5ea9992e0587a52d8"
 dependencies = [
  "itoa",
  "ryu",
@@ -7771,7 +7822,7 @@ dependencies = [
  "parity-scale-codec",
  "parity-util-mem",
  "parking_lot 0.11.1",
- "primitive-types",
+ "primitive-types 0.9.0",
  "rand 0.7.3",
  "regex",
  "schnorrkel",
@@ -7982,7 +8033,7 @@ source = "git+https://github.com/paritytech/substrate?tag=v3.0.0#49a4103f4bfef55
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.9.0",
  "sp-externalities",
  "sp-runtime-interface-proc-macro",
  "sp-std",
@@ -8314,7 +8365,7 @@ dependencies = [
  "futures 0.1.30",
  "futures 0.3.12",
  "futures-timer 3.0.2",
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "js-sys",
  "kvdb-web",
  "libp2p-wasm-ext",

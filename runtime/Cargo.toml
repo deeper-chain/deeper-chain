@@ -48,7 +48,7 @@ pallet-assets = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-babe = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
-pallet-balances = { version = "3.0.0", path = "../pallets/balances" , default-features = false }
+pallet-balances = { version = "3.0.0", path = "../pallets/balances", default-features = false }
 pallet-bounties = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
 pallet-contracts = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false}
@@ -159,7 +159,7 @@ std = [
 	"pallet-credit/std",
 	"pallet-eth-sub-bridge/std",
 	"pallet-deeper-node/std",
-	"pallet-credit-accumulation/std"
+	"pallet-credit-accumulation/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

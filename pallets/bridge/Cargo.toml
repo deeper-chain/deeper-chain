@@ -7,10 +7,8 @@ license = "Unlicense"
 homepage = "https://deeper.network"
 repository = "https://github.com/deeper-chain/deeper-chain"
 description = "bridge to transfer DPR tokens between Ethereum and Deeper Chain"
-
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
-
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
@@ -20,32 +18,35 @@ sp-std = {default-features = false, git = "https://github.com/paritytech/substra
 sp-io = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-serde = { version = "1.0.101", optional = true, features = ["derive"] }
+serde = { version = "1.0.101", default-features = false, features = ["derive", "alloc"] }
+serde_json = { version = '1.0.67', default-features = false, features = ['alloc'] }
 pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 hex-literal = "0.3.1"
+log = "0.4.11"
+ethabi = { default-features = false,version = "15.0.0"}
+
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0", optional = true }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-
 [features]
 default = ['std']
 std = [
-	'codec/std',
-	'frame-support/std',
-	'frame-system/std',
-	'sp-core/std',
-	'sp-io/std',
-	'sp-std/std',
-	'sp-runtime/std',
-	'pallet-timestamp/std',
-	'pallet-balances/std',
-	'node-primitives/std',
-	'serde',
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    'sp-core/std',
+    'sp-io/std',
+    'sp-std/std',
+    'sp-runtime/std',
+    'pallet-timestamp/std',
+    'pallet-balances/std',
+    'node-primitives/std',
+    'ethabi/std',
 ]
 runtime-benchmarks = [
-	"frame-benchmarking",
+    "frame-benchmarking",
 ]
