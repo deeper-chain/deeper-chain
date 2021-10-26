@@ -11,8 +11,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod types;
 mod ethereum;
+mod types;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
@@ -37,6 +37,9 @@ pub mod pallet {
         Status, TransferMessage, ValidatorMessage,
     };
 
+    use frame_system::offchain::{
+        AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer,
+    };
     use sp_runtime::{
         offchain as rt_offchain,
         offchain::{
@@ -65,13 +68,17 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_timestamp::Config {
+    pub trait Config:
+        frame_system::Config + pallet_timestamp::Config + CreateSignedTransaction<Call<Self>>
+    {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+        type Call: From<Call<Self>>;
+        type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
     }
 
     #[pallet::pallet]
@@ -189,6 +196,10 @@ pub mod pallet {
     #[pallet::getter(fn validator_accounts)]
     pub type ValidatorAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn eth_filter_ids)]
+    pub type EthFilterIds<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub current_limits: Vec<BalanceOf<T>>,
@@ -248,13 +259,28 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         HttpFetchingError,
+        GetLockError,
     }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
             log::info!("offchain_worker_begin: {:?}", block_number);
-            Self::fetch_remote_info();
+            let logs = Self::fetch_remote_info().unwrap();
+            // submit online
+            let signer = Signer::<T, T::AuthorityId>::all_accounts();
+            if !signer.can_sign() {
+                // TODO: handle error
+                // return Err(
+                //     "No local accounts available. Consider adding one via `author_insertKey` RPC.",
+                // )?
+            }
+            let results = signer.send_signed_transaction(|_account| {
+                // Received price is wrapped into a call to `submit_price` public function of this
+                // pallet. This means that the transaction, when executed, will simply call that
+                // function passing `price` as an argument.
+                Call::submit_logs(logs.clone())
+            });
         }
 
         fn on_finalize(_n: T::BlockNumber) {
@@ -283,6 +309,18 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResultWithPostInfo.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(0)]
+        pub fn submit_logs(
+            origin: OriginFor<T>,
+            logs: Vec<ethereum::SetTransferData>,
+        ) -> DispatchResultWithPostInfo {
+            // Retrieve sender of the transaction.
+            let who = ensure_signed(origin)?;
+            // Add the price to the on-chain list.
+            // Self::add_price(who, price);
+            Ok(().into())
+        }
+
         // initiate substrate -> ethereum transfer.
         // create transfer and emit the RelayMessage event
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_transfer())]
@@ -532,8 +570,6 @@ pub mod pallet {
         }
     }
 
-
-
     #[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
     pub struct GetLogsResp {
         // pub jsonrpc: String,
@@ -552,7 +588,6 @@ pub mod pallet {
 
         pub data: Vec<u8>,
 
-
         pub removed: bool,
 
         pub topics: Vec<Vec<u8>>,
@@ -562,7 +597,7 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        fn fetch_remote_info() -> Result<(), Error<T>> {
+        fn fetch_remote_info() -> Result<Vec<ethereum::SetTransferData>, Error<T>> {
             // Create a reference to Local Storage value.
             // Since the local storage is common for all offchain workers, it's a good practice
             // to prepend our entry with the pallet name.
@@ -576,10 +611,10 @@ pub mod pallet {
             // We will likely want to use `mutate` to access
             // the storage comprehensively.
             //
-            if let Some(Some(info)) = s_info.get::<GetLogsResp>() {
+            if let Some(Some(info)) = s_info.get::<Vec<ethereum::SetTransferData>>() {
                 // hn-info has already been fetched. Return early.
                 log::info!("cached hn-info: {:?}", info);
-                return Ok(());
+                return Ok(info);
             }
 
             // Since off-chain storage can be accessed by off-chain workers from multiple runs, it is important to lock
@@ -605,16 +640,21 @@ pub mod pallet {
                         // TODO: parse data here, need sort
                         // let result = info.result;
                         // let mut data: Vec<ethereum::SetTransferData> = vec![];
-                        let data: Vec<ethereum::SetTransferData> = info.result.iter().map(|d| ethereum::decode_data(&d.data)).collect();
+                        let data: Vec<ethereum::SetTransferData> = info
+                            .result
+                            .iter()
+                            .map(|d| ethereum::decode_data(&d.data))
+                            .collect();
                         log::info!("set_transfer_logs: {:?}", data);
                         s_info.set(&data);
+                        return Ok(data);
                     }
                     Err(err) => {
                         return Err(err);
                     }
                 }
             }
-            Ok(())
+            Err(<Error<T>>::GetLockError)
         }
 
         /// Fetch from remote and deserialize the JSON to a struct
@@ -638,6 +678,7 @@ pub mod pallet {
         /// This function uses the `offchain::http` API to query the remote endpoint information,
         ///   and returns the JSON response as vector of bytes.
         fn fetch_from_remote() -> Result<Vec<u8>, Error<T>> {
+            // TODO: need to get topic id from chain first
             // Initiate an external HTTP GET request. This is using high-level wrappers from `sp_runtime`.
             // let body = vec![
             //     r#"{"jsonrpc":"2.0","method":"eth_getFilterChanges","params":["0x10ff0e03bb3c79c08b880b73fc1eaccea87d1a4122f5"],"id":1}"#,
