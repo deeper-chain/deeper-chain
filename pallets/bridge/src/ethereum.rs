@@ -40,3 +40,9 @@ fn test_decode_data() {
         amount: 20000000000000000000000,
     }, decode_data(&hex!("3b63ad0b9c134cc87a287b22e17ab6475553edeed90096c93e2c73ed58f49114000000000000000000000000a56403cd96695f590638ba1af16a37f12d26f1f20e6409835f9b350d57feaa750d1396a5493e2537bd72e908e2e24ce95de47e3d00000000000000000000000000000000000000000000043c33c1937564800000")));
 }
+
+#[test]
+fn test_deserilize() {
+    let s = r#"{"jsonrpc":"2.0","id":1,"result":"0x10ff0e058a85e8b479fa3214d856f96b22fb9c28679a"}"#;
+    let info: super::CreateNewFilterResp = serde_json::from_slice(s.as_bytes()).unwrap();
+}

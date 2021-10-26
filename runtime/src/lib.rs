@@ -1056,6 +1056,8 @@ impl pallet_eth_sub_bridge::Config for Runtime {
     type Currency = Balances;
     type WeightInfo = pallet_eth_sub_bridge::weights::SubstrateWeight<Runtime>;
     type BlocksPerEra = BlocksPerEra;
+    type Call = Call;
+    type AuthorityId = pallet_eth_sub_bridge::crypto::TestAuthId;
 }
 
 impl pallet_deeper_node::Config for Runtime {

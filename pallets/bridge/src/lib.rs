@@ -18,7 +18,38 @@ mod types;
 pub mod benchmarking;
 use sp_std::prelude::*;
 pub mod weights;
+use hex_literal::hex;
+use sp_core::crypto::KeyTypeId;
 use weights::WeightInfo;
+
+pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"btc!");
+pub mod crypto {
+    use super::KEY_TYPE;
+    use sp_core::sr25519::Signature as Sr25519Signature;
+    use sp_runtime::{
+        app_crypto::{app_crypto, sr25519},
+        traits::Verify,
+        MultiSignature, MultiSigner,
+    };
+    app_crypto!(sr25519, KEY_TYPE);
+
+    pub struct TestAuthId;
+
+    // implemented for runtime
+    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for TestAuthId {
+        type RuntimeAppPublic = Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
+
+    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature>
+        for TestAuthId
+    {
+        type RuntimeAppPublic = Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
+}
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -28,6 +59,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use serde::{Deserialize, Serialize};
+    // use serde_with::{serde_as, Bytes};
     use sp_core::H160;
     use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
     use sp_std::prelude::Vec;
@@ -260,6 +292,7 @@ pub mod pallet {
     pub enum Error<T> {
         HttpFetchingError,
         GetLockError,
+        DeserializeError,
     }
 
     #[pallet::hooks]
@@ -318,6 +351,7 @@ pub mod pallet {
             let who = ensure_signed(origin)?;
             // Add the price to the on-chain list.
             // Self::add_price(who, price);
+
             Ok(().into())
         }
 
@@ -570,9 +604,19 @@ pub mod pallet {
         }
     }
 
+    // #[serde_as]
+    #[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
+    pub struct CreateNewFilterResp {
+        // #[serde_as(as = "Bytes")]
+        pub result: Vec<u8>,
+
+        pub jsonrpc: Vec<u8>,
+
+        pub id: u8,
+    }
+
     #[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
     pub struct GetLogsResp {
-        // pub jsonrpc: String,
         pub result: Vec<EthLog>,
     }
 
@@ -627,7 +671,7 @@ pub mod pallet {
             //   4) `with_block_and_time_deadline` - lock with custom time and block expiration
             // Here we choose the most custom one for demonstration purpose.
             let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
-                b"offchain-demo::lock",
+                b"offchain-demo::lock1",
                 LOCK_BLOCK_EXPIRATION,
                 Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
             );
@@ -680,11 +724,137 @@ pub mod pallet {
         fn fetch_from_remote() -> Result<Vec<u8>, Error<T>> {
             // TODO: need to get topic id from chain first
             // Initiate an external HTTP GET request. This is using high-level wrappers from `sp_runtime`.
+            let mut filter_id =
+                <EthFilterIds<T>>::get(hex!("75284d8d0fb14ab88520b949270fe205").to_vec());
+            if !<EthFilterIds<T>>::contains_key(&hex!("75284d8d0fb14ab88520b949270fe205").to_vec())
+            {
+                // filter_id = Self::create_new_filter_id().unwrap();
+                if let Ok(id) = Self::create_new_filter_id() {
+                    filter_id = id;
+                } else {
+                    log::info!("create_filter_id failed");
+                }
+            }
+            // let a = format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getFilterChanges\",\"params\":[\"{}\"],\"id\":1}}", str::from_utf8(&filter_id).unwrap());
             // let body = vec![
-            //     r#"{"jsonrpc":"2.0","method":"eth_getFilterChanges","params":["0x10ff0e03bb3c79c08b880b73fc1eaccea87d1a4122f5"],"id":1}"#,
+            //     a.as_str(),
             // ];
+            let mut part1 =
+                "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getFilterChanges\",\"params\":[\""
+                    .as_bytes()
+                    .to_vec();
+            let mut part2 = "\"],\"id\":1}".as_bytes().to_vec();
+            part1.append(&mut filter_id);
+            part1.append(&mut part2);
+            let body_str = str::from_utf8(&part1).unwrap();
+            let body = vec![body_str];
+            log::info!("fetch_from_remote: {:?}", body);
+
+            // let body = vec![
+            //     r#"{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"blockHash": "0x69ea66d10b2952366c4f5de316feece3d34638152863285f6acdce6c46b0f0be", "topics":["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
+            // ];
+            let request = http::Request::post(HTTP_REMOTE_REQUEST, body);
+
+            // Keeping the offchain worker execution time reasonable, so limiting the call to be within 3s.
+            let timeout =
+                sp_io::offchain::timestamp().add(Duration::from_millis(FETCH_TIMEOUT_PERIOD));
+
+            let pending = request
+                .add_header("Content-Type", "application/json")
+                .deadline(timeout) // Setting the timeout time
+                .send() // Sending the request out by the host
+                .map_err(|e| {
+                    log::error!("{:?}", e);
+                    <Error<T>>::HttpFetchingError
+                })?;
+
+            // By default, the http request is async from the runtime perspective. So we are asking the
+            //   runtime to wait here
+            // The returning value here is a `Result` of `Result`, so we are unwrapping it twice by two `?`
+            //   ref: https://docs.substrate.io/rustdocs/latest/sp_runtime/offchain/http/struct.PendingRequest.html#method.try_wait
+            let response = pending
+                .try_wait(timeout)
+                .map_err(|e| {
+                    log::error!("{:?}", e);
+                    <Error<T>>::HttpFetchingError
+                })?
+                .map_err(|e| {
+                    log::error!("{:?}", e);
+                    <Error<T>>::HttpFetchingError
+                })?;
+
+            if response.code != 200 {
+                log::error!("Unexpected http request status code: {}", response.code);
+                return Err(<Error<T>>::HttpFetchingError);
+            }
+
+            // Next we fully read the response body and collect it to a vector of bytes.
+            Ok(response.body().collect::<Vec<u8>>())
+        }
+
+        fn create_new_filter_id() -> Result<Vec<u8>, Error<T>> {
+            let s_info = StorageValueRef::persistent(b"offchain-demo::create_new_filter_id");
+
+            // Local storage is persisted and shared between runs of the offchain workers,
+            // offchain workers may run concurrently. We can use the `mutate` function to
+            // write a storage entry in an atomic fashion.
+            //
+            // With a similar API as `StorageValue` with the variables `get`, `set`, `mutate`.
+            // We will likely want to use `mutate` to access
+            // the storage comprehensively.
+            //
+            if let Some(Some(info)) = s_info.get::<Vec<u8>>() {
+                // hn-info has already been fetched. Return early.
+                log::info!("cached new-filter-info: {:?}", info);
+                return Ok(info);
+            }
+
+            let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
+                b"offchain-demo::lock2",
+                LOCK_BLOCK_EXPIRATION,
+                Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
+            );
+
+            if let Ok(_guard) = lock.try_lock() {
+                match Self::create_new_filter_id_n_parse() {
+                    Ok(info) => {
+                        s_info.set(&info);
+                        return Ok(info);
+                    }
+                    Err(err) => {
+                        log::info!("create_new_filter_id_n_parse error, {:?}", err);
+                        return Err(err);
+                    }
+                }
+            }
+            Err(<Error<T>>::GetLockError)
+        }
+
+        /// Fetch from remote and deserialize the JSON to a struct
+        fn create_new_filter_id_n_parse() -> Result<Vec<u8>, Error<T>> {
+            let resp_bytes = Self::create_new_filter_id_from_remote().map_err(|e| {
+                log::error!("create_new_filter_id_n_parse error: {:?}", e);
+                <Error<T>>::HttpFetchingError
+            })?;
+
+            let resp_str =
+                str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
+            // Print out our fetched JSON string
+            log::info!("create_new_filter_id_n_parse: {}", resp_str);
+
+            // Deserializing JSON to struct, thanks to `serde` and `serde_derive`
+            let info: CreateNewFilterResp =
+                serde_json::from_str(&resp_str).map_err(|_| <Error<T>>::DeserializeError)?;
+            log::info!("create_new_filter_id_n_parse: {}, {:?}", resp_str, info);
+
+            Ok(info.result)
+        }
+
+        /// This function uses the `offchain::http` API to query the remote endpoint information,
+        ///   and returns the JSON response as vector of bytes.
+        fn create_new_filter_id_from_remote() -> Result<Vec<u8>, Error<T>> {
             let body = vec![
-                r#"{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"blockHash": "0x69ea66d10b2952366c4f5de316feece3d34638152863285f6acdce6c46b0f0be", "topics":["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
+                r#"{"jsonrpc":"2.0","method":"eth_newFilter","params":[{"topics": ["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
             ];
             let request = http::Request::post(HTTP_REMOTE_REQUEST, body);
 

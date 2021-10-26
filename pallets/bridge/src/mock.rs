@@ -1,4 +1,4 @@
-use crate as pallet_eth_sub_bridge;
+use crate::{self as pallet_eth_sub_bridge, crypto::TestAuthId};
 use frame_support::{
     parameter_types,
     traits::{GenesisBuild, OnFinalize, OnInitialize},
@@ -6,14 +6,31 @@ use frame_support::{
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    testing::{Header, TestXt},
+    traits::{BlakeTwo256, IdentityLookup, Extrinsic as ExtrinsicT, IdentifyAccount, Verify},
+};
+use frame_system::offchain::{
+    AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer,
+};
+use sp_core::{
+	offchain::{
+		testing::{self, OffchainState, PoolState},
+		OffchainExt, TransactionPoolExt,
+	},
+	sr25519::{self, Signature},
+    Pair, Public,
+};
+use sp_runtime::{
+    MultiSignature, MultiSigner,
 };
 
 use node_primitives::{Balance, BlockNumber, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type Extrinsic = TestXt<Call, ()>;
+type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
+type AccountPublic = <Signature as Verify>::Signer;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -45,7 +62,7 @@ impl system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = sr25519::Public;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -94,13 +111,108 @@ impl pallet_eth_sub_bridge::Config for Test {
     type Currency = Balances;
     type BlocksPerEra = BlocksPerEra;
     type WeightInfo = ();
+    type AuthorityId = TestAuthId;
+    type Call = Call;
 }
 
-const V1: u64 = 1;
-const V2: u64 = 2;
-const V3: u64 = 3;
-const USER1: u64 = 5;
-const USER2: u64 = 6;
+impl frame_system::offchain::SigningTypes for Test {
+	type Public = <Signature as Verify>::Signer;
+	type Signature = Signature;
+}
+
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
+where
+	Call: From<C>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = Extrinsic;
+}
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test
+where
+	Call: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: Call,
+		_public: <Signature as Verify>::Signer,
+		_account: AccountId,
+		nonce: u64,
+	) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
+		Some((call, (nonce, ())))
+	}
+}
+
+/// Helper function to generate a crypto pair from seed
+pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+    TPublic::Pair::from_string(&format!("//{}", seed), None)
+        .expect("static values are valid; qed")
+        .public()
+}
+
+/// Helper function to generate an account ID from seed
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+// pub const V1: AccountId = get_account_id_from_seed::<sr25519::Public>("V1");
+// pub const V2: AccountId = get_account_id_from_seed::<sr25519::Public>("V2");
+// pub const V3: AccountId = get_account_id_from_seed::<sr25519::Public>("V3");
+// pub const V4: AccountId = get_account_id_from_seed::<sr25519::Public>("V4");
+
+// pub const USER1: AccountId = get_account_id_from_seed::<sr25519::Public>("U1");
+// pub const USER2: AccountId = get_account_id_from_seed::<sr25519::Public>("U2");
+// pub const USER3: AccountId = get_account_id_from_seed::<sr25519::Public>("U3");
+// pub const USER4: AccountId = get_account_id_from_seed::<sr25519::Public>("U4");
+// pub const USER5: AccountId = get_account_id_from_seed::<sr25519::Public>("U5");
+// pub const USER6: AccountId = get_account_id_from_seed::<sr25519::Public>("U6");
+// pub const USER7: AccountId = get_account_id_from_seed::<sr25519::Public>("U7");
+// pub const USER8: AccountId = get_account_id_from_seed::<sr25519::Public>("U8");
+// pub const USER9: AccountId = get_account_id_from_seed::<sr25519::Public>("U9");
+
+pub fn V1() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("V1")
+}
+pub fn V2() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("V2")
+}
+pub fn V3() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("V3")
+}
+pub fn V4() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("V4")
+}
+
+pub fn USER1() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER1")
+}
+pub fn USER2() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER2")
+}
+pub fn USER3() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER3")
+}
+pub fn USER4() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER4")
+}
+pub fn USER5() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER5")
+}
+pub fn USER6() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER6")
+}
+pub fn USER7() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER7")
+}
+pub fn USER8() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER8")
+}
+pub fn USER9() -> AccountId {
+    get_account_id_from_seed::<sr25519::Public>("USER9")
+}
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -110,18 +222,18 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
     let _ = pallet_balances::GenesisConfig::<Test> {
         balances: vec![
-            (V1, 100000),
-            (V2, 100000),
-            (V3, 100000),
-            (USER1, 100000),
-            (USER2, 300000),
+            (V1(), 100000),
+            (V2(), 100000),
+            (V3(), 100000),
+            (USER1(), 100000),
+            (USER2(), 300000),
         ],
     }
     .assimilate_storage(&mut storage);
 
     let _ = pallet_eth_sub_bridge::GenesisConfig::<Test> {
         validators_count: 3u32,
-        validator_accounts: vec![V1, V2, V3],
+        validator_accounts: vec![V1(), V2(), V3()],
         current_limits: vec![100, 200, 50, 400, 10],
     }
     .assimilate_storage(&mut storage);
