@@ -24,7 +24,7 @@ use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
-    CouncilConfig, CreditConfig, DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig,
+    CreditConfig, DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig,
     ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
     StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
@@ -389,7 +389,7 @@ pub fn testnet_genesis(
                 .map(|member| (member.0, stash))
                 .collect(),
         }),
-        pallet_collective_Instance1: Some(CouncilConfig::default()),
+        //pallet_collective_Instance1: Some(CouncilConfig::default()),
         pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
             members: endowed_accounts
                 .iter()
