@@ -23,10 +23,17 @@ use hex_literal::hex;
 use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
+<<<<<<< HEAD
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CreditConfig,
     DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig,
     IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig,
     SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+=======
+    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
+    CreditConfig, DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig,
+    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
+    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+>>>>>>> merge dev to master (#95)
 };
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
