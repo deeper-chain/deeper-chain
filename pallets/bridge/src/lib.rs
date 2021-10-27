@@ -18,7 +18,6 @@ mod types;
 pub mod benchmarking;
 use sp_std::prelude::*;
 pub mod weights;
-use hex_literal::hex;
 use sp_core::crypto::KeyTypeId;
 use weights::WeightInfo;
 
@@ -59,7 +58,6 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use serde::{Deserialize, Serialize};
-    // use serde_with::{serde_as, Bytes};
     use sp_core::H160;
     use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
     use sp_std::prelude::Vec;
@@ -72,18 +70,11 @@ pub mod pallet {
     use frame_system::offchain::{
         AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer,
     };
-    use sp_runtime::{
-        offchain as rt_offchain,
-        offchain::{
-            http,
-            storage::StorageValueRef,
-            storage_lock::{BlockAndTime, StorageLock},
-            Duration,
-        },
-        transaction_validity::{
-            InvalidTransaction, TransactionSource, TransactionValidity, ValidTransaction,
-        },
-        RuntimeDebug,
+    use sp_runtime::offchain::{
+        http,
+        storage::StorageValueRef,
+        storage_lock::{BlockAndTime, BlockNumberProvider, StorageLock},
+        Duration,
     };
 
     pub type BalanceOf<T> =
@@ -228,9 +219,35 @@ pub mod pallet {
     #[pallet::getter(fn validator_accounts)]
     pub type ValidatorAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
+    /// key is infura request url, value is filter_id
     #[pallet::storage]
     #[pallet::getter(fn eth_filter_ids)]
     pub type EthFilterIds<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
+
+    // #[derive(
+    //     Serialize,
+    //     Deserialize,
+    //     Decode,
+    //     Encode,
+    //     Default,
+    //     Clone,
+    //     Debug,
+    //     PartialEq,
+    //     Eq,
+    //     Ord,
+    //     PartialOrd,
+    // )]
+    // pub struct EthDprTransaction<T: Config> {
+    //     pub message_id: T::Hash,
+    //     pub sender: H160,
+    //     pub reciver: T::AccountId,
+    //     pub amount: BalanceOf<T>,
+    // }
+
+    #[pallet::storage]
+    #[pallet::getter(fn eth_dpr_transactions)]
+    pub type EthDprTransactions<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::Hash, ethereum::SetTransferData, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -285,6 +302,7 @@ pub mod pallet {
         BurnedMessage(T::Hash, T::AccountId, H160, BalanceOf<T>),
         AccountPausedMessage(T::Hash, T::AccountId, T::Moment),
         AccountResumedMessage(T::Hash, T::AccountId, T::Moment),
+        ApprovedEthDprTransaction(T::Hash, T::AccountId, H160, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -298,22 +316,17 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
-            log::info!("offchain_worker_begin: {:?}", block_number);
-            let logs = Self::fetch_remote_info().unwrap();
-            // submit online
-            let signer = Signer::<T, T::AuthorityId>::all_accounts();
-            if !signer.can_sign() {
-                // TODO: handle error
-                // return Err(
-                //     "No local accounts available. Consider adding one via `author_insertKey` RPC.",
-                // )?
+            // sync eth->dpr transactions every 100 blocks
+            if block_number % 100u32.into() == Zero::zero() {
+                let logs = Self::get_eth_logs().unwrap();
+                let signer = Signer::<T, T::AuthorityId>::all_accounts();
+                if !signer.can_sign() {
+                    log::error!(
+                        "No local accounts available. Consider adding one via `author_insertKey` RPC"
+                    );
+                }
+                signer.send_signed_transaction(|_account| Call::submit_logs(logs.clone()));
             }
-            let results = signer.send_signed_transaction(|_account| {
-                // Received price is wrapped into a call to `submit_price` public function of this
-                // pallet. This means that the transaction, when executed, will simply call that
-                // function passing `price` as an argument.
-                Call::submit_logs(logs.clone())
-            });
         }
 
         fn on_finalize(_n: T::BlockNumber) {
@@ -342,15 +355,31 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResultWithPostInfo.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(0)]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::submit_logs())]
         pub fn submit_logs(
             origin: OriginFor<T>,
             logs: Vec<ethereum::SetTransferData>,
         ) -> DispatchResultWithPostInfo {
             // Retrieve sender of the transaction.
             let who = ensure_signed(origin)?;
-            // Add the price to the on-chain list.
-            // Self::add_price(who, price);
+            for log in logs.iter() {
+                let message_id = log
+                    .message_id
+                    .using_encoded(<T as frame_system::Config>::Hashing::hash);
+                if !<EthDprTransactions<T>>::contains_key(message_id) {
+                    <EthDprTransactions<T>>::insert(message_id, log);
+
+                    let amount = log.amount as u32;
+                    let amount = BalanceOf::<T>::from(amount);
+                    let sender = H160::from_slice(&log.sender);
+                    Self::deposit_event(Event::ApprovedEthDprTransaction(
+                        message_id,
+                        who.clone(),
+                        sender,
+                        amount,
+                    ));
+                }
+            }
 
             Ok(().into())
         }
@@ -641,11 +670,11 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        fn fetch_remote_info() -> Result<Vec<ethereum::SetTransferData>, Error<T>> {
+        fn get_eth_logs() -> Result<Vec<ethereum::SetTransferData>, Error<T>> {
             // Create a reference to Local Storage value.
             // Since the local storage is common for all offchain workers, it's a good practice
             // to prepend our entry with the pallet name.
-            let s_info = StorageValueRef::persistent(b"offchain-demo::hn-info");
+            let s_info = StorageValueRef::persistent(b"pallet-eth-sub-bridge::get-eth-logs");
 
             // Local storage is persisted and shared between runs of the offchain workers,
             // offchain workers may run concurrently. We can use the `mutate` function to
@@ -671,7 +700,7 @@ pub mod pallet {
             //   4) `with_block_and_time_deadline` - lock with custom time and block expiration
             // Here we choose the most custom one for demonstration purpose.
             let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
-                b"offchain-demo::lock1",
+                b"pallet-eth-sub-bridge::lock::get-eth-logs",
                 LOCK_BLOCK_EXPIRATION,
                 Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
             );
@@ -679,17 +708,13 @@ pub mod pallet {
             // We try to acquire the lock here. If failed, we know the `fetch_n_parse` part inside is being
             //   executed by previous run of ocw, so the function just returns.
             if let Ok(_guard) = lock.try_lock() {
-                match Self::fetch_n_parse() {
+                match Self::get_eth_logs_n_parse() {
                     Ok(info) => {
-                        // TODO: parse data here, need sort
-                        // let result = info.result;
-                        // let mut data: Vec<ethereum::SetTransferData> = vec![];
                         let data: Vec<ethereum::SetTransferData> = info
                             .result
                             .iter()
                             .map(|d| ethereum::decode_data(&d.data))
                             .collect();
-                        log::info!("set_transfer_logs: {:?}", data);
                         s_info.set(&data);
                         return Ok(data);
                     }
@@ -701,17 +726,15 @@ pub mod pallet {
             Err(<Error<T>>::GetLockError)
         }
 
-        /// Fetch from remote and deserialize the JSON to a struct
-        fn fetch_n_parse() -> Result<GetLogsResp, Error<T>> {
-            let resp_bytes = Self::fetch_from_remote().map_err(|e| {
+        fn get_eth_logs_n_parse() -> Result<GetLogsResp, Error<T>> {
+            let resp_bytes = Self::get_eth_logs_from_remote().map_err(|e| {
                 log::error!("fetch_from_remote error: {:?}", e);
                 <Error<T>>::HttpFetchingError
             })?;
 
             let resp_str =
                 str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            // Print out our fetched JSON string
-            log::info!("fetch_n_parse: {}", resp_str);
+            log::info!("get_eth_logs_n_parse: {}", resp_str);
 
             // Deserializing JSON to struct, thanks to `serde` and `serde_derive`
             let info: GetLogsResp =
@@ -721,38 +744,25 @@ pub mod pallet {
 
         /// This function uses the `offchain::http` API to query the remote endpoint information,
         ///   and returns the JSON response as vector of bytes.
-        fn fetch_from_remote() -> Result<Vec<u8>, Error<T>> {
-            // TODO: need to get topic id from chain first
-            // Initiate an external HTTP GET request. This is using high-level wrappers from `sp_runtime`.
-            let mut filter_id =
-                <EthFilterIds<T>>::get(hex!("75284d8d0fb14ab88520b949270fe205").to_vec());
-            if !<EthFilterIds<T>>::contains_key(&hex!("75284d8d0fb14ab88520b949270fe205").to_vec())
-            {
-                // filter_id = Self::create_new_filter_id().unwrap();
-                if let Ok(id) = Self::create_new_filter_id() {
+        fn get_eth_logs_from_remote() -> Result<Vec<u8>, Error<T>> {
+            let mut filter_id = <EthFilterIds<T>>::get(HTTP_REMOTE_REQUEST.as_bytes().to_vec());
+            if !<EthFilterIds<T>>::contains_key(&HTTP_REMOTE_REQUEST.as_bytes().to_vec()) {
+                if let Ok(id) = Self::create_eth_filter_id() {
                     filter_id = id;
-                } else {
-                    log::info!("create_filter_id failed");
                 }
             }
-            // let a = format!("{{\"jsonrpc\":\"2.0\",\"method\":\"eth_getFilterChanges\",\"params\":[\"{}\"],\"id\":1}}", str::from_utf8(&filter_id).unwrap());
-            // let body = vec![
-            //     a.as_str(),
-            // ];
-            let mut part1 =
+
+            // string format doesn't work in no_std, so concat Vec<u8> to construct the http request body
+            let mut body_bytes =
                 "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getFilterChanges\",\"params\":[\""
                     .as_bytes()
                     .to_vec();
-            let mut part2 = "\"],\"id\":1}".as_bytes().to_vec();
-            part1.append(&mut filter_id);
-            part1.append(&mut part2);
-            let body_str = str::from_utf8(&part1).unwrap();
+            body_bytes.append(&mut filter_id);
+            body_bytes.append(&mut "\"],\"id\":1}".as_bytes().to_vec());
+            let body_str = str::from_utf8(&body_bytes).unwrap();
             let body = vec![body_str];
-            log::info!("fetch_from_remote: {:?}", body);
+            log::info!("get_eth_logs_from_remote: {:?}", body);
 
-            // let body = vec![
-            //     r#"{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"blockHash": "0x69ea66d10b2952366c4f5de316feece3d34638152863285f6acdce6c46b0f0be", "topics":["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
-            // ];
             let request = http::Request::post(HTTP_REMOTE_REQUEST, body);
 
             // Keeping the offchain worker execution time reasonable, so limiting the call to be within 3s.
@@ -792,8 +802,9 @@ pub mod pallet {
             Ok(response.body().collect::<Vec<u8>>())
         }
 
-        fn create_new_filter_id() -> Result<Vec<u8>, Error<T>> {
-            let s_info = StorageValueRef::persistent(b"offchain-demo::create_new_filter_id");
+        fn create_eth_filter_id() -> Result<Vec<u8>, Error<T>> {
+            let s_info =
+                StorageValueRef::persistent(b"pallet-eth-sub-bridge::create-eth-filter-id");
 
             // Local storage is persisted and shared between runs of the offchain workers,
             // offchain workers may run concurrently. We can use the `mutate` function to
@@ -804,25 +815,24 @@ pub mod pallet {
             // the storage comprehensively.
             //
             if let Some(Some(info)) = s_info.get::<Vec<u8>>() {
-                // hn-info has already been fetched. Return early.
                 log::info!("cached new-filter-info: {:?}", info);
                 return Ok(info);
             }
 
             let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
-                b"offchain-demo::lock2",
+                b"pallet-eth-sub-bridge::lock::create-eth-filter-id",
                 LOCK_BLOCK_EXPIRATION,
                 Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
             );
 
             if let Ok(_guard) = lock.try_lock() {
-                match Self::create_new_filter_id_n_parse() {
+                match Self::create_eth_filter_id_n_parse() {
                     Ok(info) => {
                         s_info.set(&info);
                         return Ok(info);
                     }
                     Err(err) => {
-                        log::info!("create_new_filter_id_n_parse error, {:?}", err);
+                        log::info!("create_eth_filter_id error, {:?}", err);
                         return Err(err);
                     }
                 }
@@ -831,28 +841,25 @@ pub mod pallet {
         }
 
         /// Fetch from remote and deserialize the JSON to a struct
-        fn create_new_filter_id_n_parse() -> Result<Vec<u8>, Error<T>> {
-            let resp_bytes = Self::create_new_filter_id_from_remote().map_err(|e| {
+        fn create_eth_filter_id_n_parse() -> Result<Vec<u8>, Error<T>> {
+            let resp_bytes = Self::create_eth_filter_id_from_remote().map_err(|e| {
                 log::error!("create_new_filter_id_n_parse error: {:?}", e);
                 <Error<T>>::HttpFetchingError
             })?;
 
             let resp_str =
                 str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            // Print out our fetched JSON string
             log::info!("create_new_filter_id_n_parse: {}", resp_str);
 
-            // Deserializing JSON to struct, thanks to `serde` and `serde_derive`
-            let info: CreateNewFilterResp =
-                serde_json::from_str(&resp_str).map_err(|_| <Error<T>>::DeserializeError)?;
-            log::info!("create_new_filter_id_n_parse: {}, {:?}", resp_str, info);
-
-            Ok(info.result)
+            let filter_id = parse_new_eth_filter_response(resp_str);
+            if !filter_id.is_empty() {
+                return Ok(filter_id);
+            }
+            Err(<Error<T>>::DeserializeError)
         }
 
-        /// This function uses the `offchain::http` API to query the remote endpoint information,
-        ///   and returns the JSON response as vector of bytes.
-        fn create_new_filter_id_from_remote() -> Result<Vec<u8>, Error<T>> {
+        fn create_eth_filter_id_from_remote() -> Result<Vec<u8>, Error<T>> {
+            // the topic_id is hard coded, see:https://etherscan.io/tx/0x1f3387c160289cf864d7f5e0ba8b87793095f404c0a19ec00aa1f1c7f581b7dc#eventlog
             let body = vec![
                 r#"{"jsonrpc":"2.0","method":"eth_newFilter","params":[{"topics": ["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
             ];
@@ -1349,10 +1356,22 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> rt_offchain::storage_lock::BlockNumberProvider for Pallet<T> {
+    impl<T: Config> BlockNumberProvider for Pallet<T> {
         type BlockNumber = T::BlockNumber;
         fn current_block_number() -> Self::BlockNumber {
             <frame_system::Module<T>>::block_number()
         }
+    }
+
+    // parse response of new_filter into a struct is hard in no_std, so use a
+    // string matching to get the filter_id
+    pub fn parse_new_eth_filter_response(resp_str: &str) -> Vec<u8> {
+        if let Some(pos) = resp_str.find("result") {
+            let start = pos + 9;
+            let end = start + 46;
+            let result = &resp_str[start..end];
+            return result.as_bytes().to_vec();
+        }
+        vec![]
     }
 }

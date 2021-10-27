@@ -4,25 +4,21 @@ use frame_support::{
     traits::{GenesisBuild, OnFinalize, OnInitialize},
 };
 use frame_system as system;
+use frame_system::offchain::{AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer};
 use sp_core::H256;
-use sp_runtime::{
-    testing::{Header, TestXt},
-    traits::{BlakeTwo256, IdentityLookup, Extrinsic as ExtrinsicT, IdentifyAccount, Verify},
-};
-use frame_system::offchain::{
-    AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer,
-};
 use sp_core::{
-	offchain::{
-		testing::{self, OffchainState, PoolState},
-		OffchainExt, TransactionPoolExt,
-	},
-	sr25519::{self, Signature},
+    offchain::{
+        testing::{self, OffchainState, PoolState},
+        OffchainExt, TransactionPoolExt,
+    },
+    sr25519::{self, Signature},
     Pair, Public,
 };
 use sp_runtime::{
-    MultiSignature, MultiSigner,
+    testing::{Header, TestXt},
+    traits::{BlakeTwo256, Extrinsic as ExtrinsicT, IdentifyAccount, IdentityLookup, Verify},
 };
+use sp_runtime::{MultiSignature, MultiSigner};
 
 use node_primitives::{Balance, BlockNumber, Moment};
 
@@ -116,31 +112,30 @@ impl pallet_eth_sub_bridge::Config for Test {
 }
 
 impl frame_system::offchain::SigningTypes for Test {
-	type Public = <Signature as Verify>::Signer;
-	type Signature = Signature;
+    type Public = <Signature as Verify>::Signer;
+    type Signature = Signature;
 }
-
 
 impl<C> frame_system::offchain::SendTransactionTypes<C> for Test
 where
-	Call: From<C>,
+    Call: From<C>,
 {
-	type OverarchingCall = Call;
-	type Extrinsic = Extrinsic;
+    type OverarchingCall = Call;
+    type Extrinsic = Extrinsic;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test
 where
-	Call: From<LocalCall>,
+    Call: From<LocalCall>,
 {
-	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-		call: Call,
-		_public: <Signature as Verify>::Signer,
-		_account: AccountId,
-		nonce: u64,
-	) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-		Some((call, (nonce, ())))
-	}
+    fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+        call: Call,
+        _public: <Signature as Verify>::Signer,
+        _account: AccountId,
+        nonce: u64,
+    ) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
+        Some((call, (nonce, ())))
+    }
 }
 
 /// Helper function to generate a crypto pair from seed
@@ -158,59 +153,44 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-// pub const V1: AccountId = get_account_id_from_seed::<sr25519::Public>("V1");
-// pub const V2: AccountId = get_account_id_from_seed::<sr25519::Public>("V2");
-// pub const V3: AccountId = get_account_id_from_seed::<sr25519::Public>("V3");
-// pub const V4: AccountId = get_account_id_from_seed::<sr25519::Public>("V4");
-
-// pub const USER1: AccountId = get_account_id_from_seed::<sr25519::Public>("U1");
-// pub const USER2: AccountId = get_account_id_from_seed::<sr25519::Public>("U2");
-// pub const USER3: AccountId = get_account_id_from_seed::<sr25519::Public>("U3");
-// pub const USER4: AccountId = get_account_id_from_seed::<sr25519::Public>("U4");
-// pub const USER5: AccountId = get_account_id_from_seed::<sr25519::Public>("U5");
-// pub const USER6: AccountId = get_account_id_from_seed::<sr25519::Public>("U6");
-// pub const USER7: AccountId = get_account_id_from_seed::<sr25519::Public>("U7");
-// pub const USER8: AccountId = get_account_id_from_seed::<sr25519::Public>("U8");
-// pub const USER9: AccountId = get_account_id_from_seed::<sr25519::Public>("U9");
-
-pub fn V1() -> AccountId {
+pub fn v1() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("V1")
 }
-pub fn V2() -> AccountId {
+pub fn v2() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("V2")
 }
-pub fn V3() -> AccountId {
+pub fn v3() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("V3")
 }
-pub fn V4() -> AccountId {
+pub fn v4() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("V4")
 }
 
-pub fn USER1() -> AccountId {
+pub fn user1() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER1")
 }
-pub fn USER2() -> AccountId {
+pub fn user2() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER2")
 }
-pub fn USER3() -> AccountId {
+pub fn user3() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER3")
 }
-pub fn USER4() -> AccountId {
+pub fn user4() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER4")
 }
-pub fn USER5() -> AccountId {
+pub fn user5() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER5")
 }
-pub fn USER6() -> AccountId {
+pub fn user6() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER6")
 }
-pub fn USER7() -> AccountId {
+pub fn user7() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER7")
 }
-pub fn USER8() -> AccountId {
+pub fn user8() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER8")
 }
-pub fn USER9() -> AccountId {
+pub fn user9() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("USER9")
 }
 
@@ -222,18 +202,18 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
     let _ = pallet_balances::GenesisConfig::<Test> {
         balances: vec![
-            (V1(), 100000),
-            (V2(), 100000),
-            (V3(), 100000),
-            (USER1(), 100000),
-            (USER2(), 300000),
+            (v1(), 100000),
+            (v2(), 100000),
+            (v3(), 100000),
+            (user1(), 100000),
+            (user2(), 300000),
         ],
     }
     .assimilate_storage(&mut storage);
 
     let _ = pallet_eth_sub_bridge::GenesisConfig::<Test> {
         validators_count: 3u32,
-        validator_accounts: vec![V1(), V2(), V3()],
+        validator_accounts: vec![v1(), v2(), v3()],
         current_limits: vec![100, 200, 50, 400, 10],
     }
     .assimilate_storage(&mut storage);

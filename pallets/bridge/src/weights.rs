@@ -46,6 +46,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_eth_sub_bridge.
 pub trait WeightInfo {
+    fn submit_logs() -> Weight;
     fn set_transfer() -> Weight;
     fn multi_signed_mint() -> Weight;
     fn update_limits() -> Weight;
@@ -60,6 +61,11 @@ pub trait WeightInfo {
 /// Weights for pallet_eth_sub_bridge using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+    fn submit_logs() -> Weight {
+        (108_413_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(8 as Weight))
+            .saturating_add(T::DbWeight::get().writes(6 as Weight))
+    }
     fn set_transfer() -> Weight {
         (108_414_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(8 as Weight))
@@ -109,6 +115,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
+    fn submit_logs() -> Weight {
+        (108_413_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(8 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(6 as Weight))
+    }
     fn set_transfer() -> Weight {
         (108_414_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(8 as Weight))
