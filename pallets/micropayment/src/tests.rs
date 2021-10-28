@@ -190,7 +190,7 @@ fn add_balance() {
         assert_ok!(Micropayment::add_balance(
             Origin::signed(alice()),
             bob(),
-            100
+            99 // open_channel cost 300DPR, account must keep 100 DPR, so at most add 99 DPR
         ));
 
         // Channel not exists
