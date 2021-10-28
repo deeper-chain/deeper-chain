@@ -1,6 +1,41 @@
 use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
+use sp_std::vec;
+
+// pub type Result<T> = std::result::Result<T, Error>;
+
+/// Errors that can occur only when interacting with
+/// an Ethereum node through RPC.
+#[derive(Debug)]
+pub enum Error {
+    Network,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
+pub struct GetLogsResp {
+    pub result: Vec<EthLog>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Encode, Decode, Clone)]
+pub struct EthLog {
+    pub address: Vec<u8>,
+
+    #[serde(rename = "blockHash")]
+    pub block_hash: Vec<u8>,
+
+    #[serde(rename = "blockNumber")]
+    pub block_number: Vec<u8>,
+
+    pub data: Vec<u8>,
+
+    pub removed: bool,
+
+    pub topics: Vec<Vec<u8>>,
+
+    #[serde(rename = "transactionHash")]
+    pub transaction_hash: Vec<u8>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Encode, Decode, Clone, PartialEq, Eq, Default)]
 pub struct SetTransferData {
@@ -10,6 +45,18 @@ pub struct SetTransferData {
     pub amount: u128,
 }
 
+pub trait Client {
+    fn get_eth_logs(&self) -> Result<(Vec<SetTransferData>, Vec<u8>), Error>;
+}
+
+#[derive(Default)]
+pub struct DefaultEthClient;
+
+impl Client for DefaultEthClient {
+    fn get_eth_logs(&self) -> Result<(Vec<SetTransferData>, Vec<u8>), Error> {
+        Ok((vec![SetTransferData::default()], "abc".as_bytes().to_vec()))
+    }
+}
 pub fn decode_data(data: &[u8]) -> SetTransferData {
     let decoded_data = ethabi::decode(
         &[
