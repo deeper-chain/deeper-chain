@@ -140,7 +140,7 @@
     "poc_reward": "Balance"
   },
   "ValidatorPrefs": {
-    "commission": "Perbill",
+    "commission": "Compact<Perbill>",
     "blocked": "bool"
   }
 }
