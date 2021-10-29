@@ -19,11 +19,10 @@
 #![warn(unused_extern_crates)]
 
 //! Service implementation. Specialized wrapper over substrate service.
-
 use futures::prelude::*;
 use node_executor::Executor;
 use node_primitives::Block;
-use node_runtime::RuntimeApi;
+use node_runtime::{self,RuntimeApi};
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_consensus_babe;
 use sc_network::{Event, NetworkService};
@@ -222,7 +221,15 @@ pub fn new_full_base(
             block_announce_validator_builder: None,
         })?;
 
+    let keystore = keystore_container.sync_keystore();
     if config.offchain_worker.enabled {
+        sp_keystore::SyncCryptoStore::sr25519_generate_new(
+            &*keystore,
+            node_runtime::pallet_eth_sub_bridge::KEY_TYPE,
+            Some("//Alice"),
+        )
+        .expect("Creating key with account Alice should succeed.");
+
         sc_service::build_offchain_workers(
             &config,
             backend.clone(),
@@ -448,7 +455,20 @@ pub fn new_light_base(
         })?;
     network_starter.start_network();
 
-    if config.offchain_worker.enabled {
+    let keystore = keystore_container.sync_keystore();
+    //if config.offchain_worker.enabled {
+
+        // keystore.write().insert_ephemeral_from_seed_by_type::<node_runtime::pallet_eth_sub_bridge::crypto::Pair>(
+        //     "//Alice", node_runtime::pallet_eth_sub_bridge::KEY_TYPE
+        // ).expect("Creating key with account Alice should succeed.");
+
+        sp_keystore::SyncCryptoStore::sr25519_generate_new(
+            &*keystore,
+            node_runtime::pallet_eth_sub_bridge::KEY_TYPE,
+            Some("//Alice"),
+        )
+        .expect("Creating key with account Alice should succeed.");
+		
         sc_service::build_offchain_workers(
             &config,
             backend.clone(),
@@ -456,7 +476,7 @@ pub fn new_light_base(
             client.clone(),
             network.clone(),
         );
-    }
+    //}
 
     let light_deps = node_rpc::LightDeps {
         remote_blockchain: backend.remote_blockchain(),

@@ -75,6 +75,7 @@ use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
 pub use pallet_micropayment;
+pub use pallet_eth_sub_bridge;
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;

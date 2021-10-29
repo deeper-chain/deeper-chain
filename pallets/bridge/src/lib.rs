@@ -322,7 +322,7 @@ pub mod pallet {
                 // let (logs, filter_id) = Self::get_eth_logs().unwrap();
                 let client = ethereum::DefaultEthClient::default();
                 let (logs, filter_id) = client.get_eth_logs().unwrap();
-                let signer = Signer::<T, T::AuthorityId>::all_accounts();
+                let signer = Signer::<T, T::AuthorityId>::any_account();
                 if !signer.can_sign() {
                     log::error!(
                         "No local accounts available. Consider adding one via `author_insertKey` RPC"
