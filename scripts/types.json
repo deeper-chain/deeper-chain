@@ -46,14 +46,6 @@
       "Confirmed"
     ]
   },
-  "Kind": {
-    "_enum": [
-      "Transfer",
-      "Limits",
-      "Validator",
-      "Bridge"
-    ]
-  },
   "TransferMessage": {
     "message_id": "H256",
     "eth_address": "H160",
@@ -79,13 +71,6 @@
     "accounts": "Vec<AccountId>",
     "status": "Status",
     "action": "Status"
-  },
-  "BridgeTransfer": {
-    "transfer_id": "ProposalId",
-    "message_id": "H256",
-    "open": "bool",
-    "votes": "MemberId",
-    "kind": "Kind"
   },
   "CreditLevel": {
     "_enum": [
