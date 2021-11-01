@@ -15,63 +15,13 @@
         "expire": "BlockNumber"
     },
     "ChannelOf": {
-        "sender": "AccountId",
-        "receiver": "AccountId",
+        "client": "AccountId",
+        "server": "AccountId",
         "balance": "Balance",
         "nonce": "u64",
         "opened": "BlockNumber",
         "expiration": "BlockNumber"
     },
-    "MemberId": "u64",
-  "ProposalId": "u64",
-  "Limits": {
-    "max_tx_value": "u128",
-    "day_max_limit": "u128",
-    "day_max_limit_for_one_address": "u128",
-    "max_pending_tx_limit": "u128",
-    "min_tx_value": "u128"
-  },
-  "Status": {
-    "_enum": [
-      "Revoked",
-      "Pending",
-      "PauseTheBridge",
-      "ResumeTheBridge",
-      "UpdateValidatorSet",
-      "UpdateLimits",
-      "Deposit",
-      "Withdraw",
-      "Approved",
-      "Canceled",
-      "Confirmed"
-    ]
-  },
-  "TransferMessage": {
-    "message_id": "H256",
-    "eth_address": "H160",
-    "substrate_address": "AccountId",
-    "amount": "TokenBalance",
-    "status": "Status",
-    "action": "Status"
-  },
-  "LimitMessage": {
-    "id": "H256",
-    "limits": "Limits",
-    "status": "Status"
-  },
-  "BridgeMessage": {
-    "message_id": "H256",
-    "account": "AccountId",
-    "status": "Status",
-    "action": "Status"
-  },
-  "ValidatorMessage": {
-    "message_id": "H256",
-    "quorum": "u64",
-    "accounts": "Vec<AccountId>",
-    "status": "Status",
-    "action": "Status"
-  },
   "CreditLevel": {
     "_enum": [
       "Zero",
@@ -97,6 +47,7 @@
     "max_referees_with_rewards": "u8",
     "reward_per_referee": "Balance"
   },
+  "EraIndex": "u32",
   "CreditData": {
     "campaign_id": "CampaignId",
     "credit": "u64",
@@ -112,7 +63,6 @@
     "unrewarded_since": "Option<EraIndex>",
     "delegating": "bool"
   },
-  "EraIndex": "u32",
   "ValidatorData": {
     "delegators": "Vec<AccountId>",
     "elected_era": "EraIndex"
