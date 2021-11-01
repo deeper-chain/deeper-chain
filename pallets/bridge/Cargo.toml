@@ -14,6 +14,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
+sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
 sp-std = {default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-io = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}

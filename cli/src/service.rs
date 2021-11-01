@@ -223,12 +223,12 @@ pub fn new_full_base(
 
     let keystore = keystore_container.sync_keystore();
     if config.offchain_worker.enabled {
-        sp_keystore::SyncCryptoStore::sr25519_generate_new(
-            &*keystore,
-            node_runtime::pallet_eth_sub_bridge::KEY_TYPE,
-            Some("//Alice"),
-        )
-        .expect("Creating key with account Alice should succeed.");
+        // sp_keystore::SyncCryptoStore::sr25519_generate_new(
+        //     &*keystore,
+        //     node_runtime::pallet_eth_sub_bridge::KEY_TYPE,
+        //     Some("//Alice"),
+        // )
+        // .expect("Creating key with account Alice should succeed.");
 
         sc_service::build_offchain_workers(
             &config,
@@ -462,12 +462,13 @@ pub fn new_light_base(
         //     "//Alice", node_runtime::pallet_eth_sub_bridge::KEY_TYPE
         // ).expect("Creating key with account Alice should succeed.");
 
-        sp_keystore::SyncCryptoStore::sr25519_generate_new(
-            &*keystore,
-            node_runtime::pallet_eth_sub_bridge::KEY_TYPE,
-            Some("//Alice"),
-        )
-        .expect("Creating key with account Alice should succeed.");
+        // sp_keystore::SyncCryptoStore::sr25519_generate_new(
+        //     &*keystore,
+        //     node_runtime::pallet_eth_sub_bridge::KEY_TYPE,
+        //     Some("//Alice"),
+        // )
+        // .expect("Creating key with account Alice should succeed.");
+        // sp_keystore::SyncCryptoStore::
 		
         sc_service::build_offchain_workers(
             &config,

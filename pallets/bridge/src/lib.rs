@@ -19,18 +19,19 @@ pub mod benchmarking;
 use sp_std::prelude::*;
 pub mod weights;
 use ethereum::Client;
-use sp_core::crypto::KeyTypeId;
 use weights::WeightInfo;
 
-pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"btc!");
 pub mod crypto {
-    use super::KEY_TYPE;
+    use sp_core::crypto::KeyTypeId;
+
     use sp_core::sr25519::Signature as Sr25519Signature;
     use sp_runtime::{
         app_crypto::{app_crypto, sr25519},
         traits::Verify,
         MultiSignature, MultiSigner,
     };
+    const KEY_TYPE: KeyTypeId = KeyTypeId(*b"brgt"); // bridge test
+
     app_crypto!(sr25519, KEY_TYPE);
 
     pub struct TestAuthId;
@@ -46,6 +47,31 @@ pub mod crypto {
         for TestAuthId
     {
         type RuntimeAppPublic = Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
+}
+
+pub mod sr25519 {
+    use sp_core::sr25519::Signature as Sr25519Signature;
+    use sp_runtime::{traits::Verify, MultiSignature, MultiSigner};
+    mod app_sr25519 {
+        use sp_application_crypto::{app_crypto, key_types::BABE, sr25519};
+        app_crypto!(sr25519, BABE);
+    }
+
+    pub type AuthorityId = app_sr25519::Public;
+
+    impl frame_system::offchain::AppCrypto<MultiSigner, MultiSignature> for AuthorityId {
+        type RuntimeAppPublic = app_sr25519::Public;
+        type GenericSignature = sp_core::sr25519::Signature;
+        type GenericPublic = sp_core::sr25519::Public;
+    }
+
+    impl frame_system::offchain::AppCrypto<<Sr25519Signature as Verify>::Signer, Sr25519Signature>
+        for AuthorityId
+    {
+        type RuntimeAppPublic = app_sr25519::Public;
         type GenericSignature = sp_core::sr25519::Signature;
         type GenericPublic = sp_core::sr25519::Public;
     }
@@ -329,18 +355,17 @@ pub mod pallet {
                     );
                     return;
                 }
-                log::info!("send_signed_transaction, filter: {:?}", filter_id.clone());
                 let results = signer.send_signed_transaction(|_account| {
-                    log::info!("send_signed_transaction_before_callback");
                     Call::submit_logs(logs.clone(), filter_id.clone())
                 });
                 for (acc, res) in &results {
                     match res {
-                        Ok(()) => log::info!("[{:?}] after_callback_ok", acc.id),
-                        Err(e) => log::error!("[{:?}] after_callback_error: {:?}", acc.id, e),
+                        Ok(()) => log::info!("submit_logs [{:?}] after_callback_ok", acc.id),
+                        Err(e) => {
+                            log::error!("submit_logs [{:?}] after_callback_error: {:?}", acc.id, e)
+                        }
                     }
                 }
-                log::info!("after send_signed_transaction");
             }
         }
 
@@ -377,14 +402,16 @@ pub mod pallet {
             filter_id: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             // Retrieve sender of the transaction.
-            log::info!("submit_logs_begin,");
             let who = ensure_signed(origin)?;
-            log::info!("submit_logs_begin_who, {:?}", who);
             for log in logs.iter() {
+                if log.message_id.is_empty() {
+                    continue;
+                }
+                // let recipient = ensure_signed(log.recipient)?;
+
                 let message_id = log
                     .message_id
                     .using_encoded(<T as frame_system::Config>::Hashing::hash);
-                log::info!("submit_logs_in_loop, {:?}", message_id);
 
                 if !<EthDprTransactions<T>>::contains_key(message_id) {
                     <EthDprTransactions<T>>::insert(message_id, log);
@@ -392,6 +419,8 @@ pub mod pallet {
                     let amount = log.amount as u32;
                     let amount = BalanceOf::<T>::from(amount);
                     let sender = H160::from_slice(&log.sender);
+                    // T::Currency::deposit_creating(&recipient, amount); // mint
+
                     Self::deposit_event(Event::ApprovedEthDprTransaction(
                         message_id,
                         who.clone(),
