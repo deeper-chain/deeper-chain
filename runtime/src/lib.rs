@@ -1059,6 +1059,7 @@ impl pallet_eth_sub_bridge::Config for Runtime {
     type BlocksPerEra = BlocksPerEra;
     type Call = Call;
     type AuthorityId = pallet_eth_sub_bridge::sr25519::AuthorityId;
+    type EthClient = pallet_eth_sub_bridge::ethereum::MockEthClient;
 }
 
 impl pallet_deeper_node::Config for Runtime {

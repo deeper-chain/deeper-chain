@@ -11,7 +11,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod ethereum;
+pub mod ethereum;
 mod types;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -129,6 +129,7 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
         type Call: From<Call<Self>>;
         type AuthorityId: AppCrypto<Self::Public, Self::Signature>;
+        type EthClient: ethereum::Client;
     }
 
     #[pallet::pallet]
@@ -346,9 +347,7 @@ pub mod pallet {
         fn offchain_worker(block_number: T::BlockNumber) {
             // sync eth->dpr transactions every 100 blocks
             if block_number % 2u32.into() == Zero::zero() {
-                // let (logs, filter_id) = Self::get_eth_logs().unwrap();
-                let client = ethereum::DefaultEthClient::default();
-                let (logs, filter_id) = client.get_eth_logs().unwrap();
+                let (logs, filter_id) = Self::get_eth_logs().unwrap();
                 let signer = Signer::<T, T::AuthorityId>::any_account();
                 if !signer.can_sign() {
                     log::error!(

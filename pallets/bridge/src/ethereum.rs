@@ -51,9 +51,9 @@ pub trait Client {
 }
 
 #[derive(Default)]
-pub struct DefaultEthClient;
+pub struct MockEthClient;
 
-impl Client for DefaultEthClient {
+impl Client for MockEthClient {
     fn get_eth_logs(&self) -> Result<(Vec<SetTransferData>, Vec<u8>), Error> {
         Ok((vec![SetTransferData::default()], "abc".as_bytes().to_vec()))
     }

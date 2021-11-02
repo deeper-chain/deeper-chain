@@ -1,4 +1,4 @@
-use crate::{self as pallet_eth_sub_bridge, crypto::TestAuthId};
+use crate::{self as pallet_eth_sub_bridge, crypto::TestAuthId, ethereum};
 use frame_support::{
     parameter_types,
     traits::{GenesisBuild, OnFinalize, OnInitialize},
@@ -109,6 +109,7 @@ impl pallet_eth_sub_bridge::Config for Test {
     type WeightInfo = ();
     type AuthorityId = TestAuthId;
     type Call = Call;
+    type EthClient = ethereum::MockEthClient;
 }
 
 impl frame_system::offchain::SigningTypes for Test {
