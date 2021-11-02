@@ -1,3 +1,4 @@
+use core::convert::TryInto;
 use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_std::vec::Vec;
@@ -41,7 +42,7 @@ pub struct EthLog {
 pub struct SetTransferData {
     pub message_id: Vec<u8>, // H256, bytes32
     pub sender: Vec<u8>,     // H160, Bytes20
-    pub recipient: Vec<u8>,  // H256, bytes32
+    pub recipient: [u8; 32],  // H256, bytes32
     pub amount: u128,
 }
 
@@ -76,7 +77,7 @@ pub fn decode_data(data: &[u8]) -> SetTransferData {
             .unwrap()
             .as_bytes()
             .to_vec(),
-        recipient: decoded_data[2].clone().into_fixed_bytes().unwrap(),
+        recipient: decoded_data[2].clone().into_fixed_bytes().unwrap().try_into().unwrap(),
         amount: decoded_data[3].clone().into_uint().unwrap().low_u128(),
     }
 }
@@ -88,7 +89,7 @@ fn test_decode_data() {
     assert_eq!(SetTransferData{
         message_id: hex!("3B63AD0B9C134CC87A287B22E17AB6475553EDEED90096C93E2C73ED58F49114").to_vec(),
         sender: hex!("a56403cd96695f590638ba1af16a37f12d26f1f2").to_vec(),
-        recipient: hex!("0E6409835F9B350D57FEAA750D1396A5493E2537BD72E908E2E24CE95DE47E3D").to_vec(),
+        recipient: hex!("0E6409835F9B350D57FEAA750D1396A5493E2537BD72E908E2E24CE95DE47E3D").to_vec().try_into().unwrap(),
         amount: 20000000000000000000000,
     }, decode_data(&hex!("3b63ad0b9c134cc87a287b22e17ab6475553edeed90096c93e2c73ed58f49114000000000000000000000000a56403cd96695f590638ba1af16a37f12d26f1f20e6409835f9b350d57feaa750d1396a5493e2537bd72e908e2e24ce95de47e3d00000000000000000000000000000000000000000000043c33c1937564800000")));
 }

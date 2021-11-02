@@ -338,6 +338,7 @@ pub mod pallet {
         HttpFetchingError,
         GetLockError,
         DeserializeError,
+        InvalidSubAddress,
     }
 
     #[pallet::hooks]
@@ -407,7 +408,11 @@ pub mod pallet {
                 if log.message_id.is_empty() {
                     continue;
                 }
-                // let recipient = ensure_signed(log.recipient)?;
+                let recipient_result = T::AccountId::decode(&mut &log.recipient[..]);
+                if recipient_result.is_err() {
+                    continue;
+                }
+                let recipient = recipient_result.unwrap();
 
                 let message_id = log
                     .message_id
@@ -419,7 +424,7 @@ pub mod pallet {
                     let amount = log.amount as u32;
                     let amount = BalanceOf::<T>::from(amount);
                     let sender = H160::from_slice(&log.sender);
-                    // T::Currency::deposit_creating(&recipient, amount); // mint
+                    T::Currency::deposit_creating(&recipient, amount); // mint
 
                     Self::deposit_event(Event::ApprovedEthDprTransaction(
                         message_id,
