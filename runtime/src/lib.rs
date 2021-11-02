@@ -74,8 +74,8 @@ use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
-pub use pallet_micropayment;
 pub use pallet_eth_sub_bridge;
+pub use pallet_micropayment;
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
@@ -1059,7 +1059,7 @@ impl pallet_eth_sub_bridge::Config for Runtime {
     type BlocksPerEra = BlocksPerEra;
     type Call = Call;
     type AuthorityId = pallet_eth_sub_bridge::sr25519::AuthorityId;
-    type EthClient = pallet_eth_sub_bridge::ethereum::MockEthClient;
+    type EthClient = pallet_eth_sub_bridge::ethereum::RealEthClient;
 }
 
 impl pallet_deeper_node::Config for Runtime {

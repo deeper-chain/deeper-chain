@@ -1,6 +1,9 @@
 use crate::{mock::*, types::Status};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
-use sp_core::{sr25519, H160, H256};
+use sp_core::{
+    offchain::{testing, OffchainExt},
+    sr25519, H160, H256,
+};
 
 const DAY_IN_BLOCKS: u32 = 14_400;
 
@@ -794,4 +797,17 @@ fn blocked_account_unblocked_next_day_should_work() {
             amount2
         ));
     })
+}
+
+#[test]
+fn test_get_eth_logs_lock() {
+    let (offchain, _) = testing::TestOffchainExt::new();
+    let mut t = sp_io::TestExternalities::default();
+    t.register_extension(OffchainExt::new(offchain));
+
+    t.execute_with(|| {
+        let (_, filter_id) = Bridge::get_eth_logs_lock("abc".as_bytes().to_vec()).unwrap();
+
+        assert_eq!("abc".as_bytes().to_vec(), filter_id);
+    });
 }

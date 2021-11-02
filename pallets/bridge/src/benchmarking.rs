@@ -23,15 +23,12 @@ use codec::Encode;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use hex_literal::hex;
 pub use node_primitives::{AccountId, Signature};
 use sp_core::{sr25519, Hasher, H160};
 use sp_io::crypto::{sr25519_generate, sr25519_sign};
-use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{MultiSignature, MultiSigner};
 use sp_std::{convert::TryFrom, vec::Vec};
 use types::Status;
-type AccountPublic = <Signature as Verify>::Signer;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;

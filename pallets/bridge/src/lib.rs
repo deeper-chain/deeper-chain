@@ -84,7 +84,6 @@ pub mod pallet {
     use frame_support::traits::{Currency, ReservableCurrency};
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
-    use serde::{Deserialize, Serialize};
     use sp_core::H160;
     use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
     use sp_std::prelude::Vec;
@@ -98,7 +97,6 @@ pub mod pallet {
         AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer,
     };
     use sp_runtime::offchain::{
-        http,
         storage::StorageValueRef,
         storage_lock::{BlockAndTime, BlockNumberProvider, StorageLock},
         Duration,
@@ -252,26 +250,6 @@ pub mod pallet {
     #[pallet::getter(fn eth_filter_ids)]
     pub type EthFilterIds<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
 
-    // #[derive(
-    //     Serialize,
-    //     Deserialize,
-    //     Decode,
-    //     Encode,
-    //     Default,
-    //     Clone,
-    //     Debug,
-    //     PartialEq,
-    //     Eq,
-    //     Ord,
-    //     PartialOrd,
-    // )]
-    // pub struct EthDprTransaction<T: Config> {
-    //     pub message_id: T::Hash,
-    //     pub sender: H160,
-    //     pub reciver: T::AccountId,
-    //     pub amount: BalanceOf<T>,
-    // }
-
     #[pallet::storage]
     #[pallet::getter(fn eth_dpr_transactions)]
     pub type EthDprTransactions<T: Config> =
@@ -346,8 +324,10 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn offchain_worker(block_number: T::BlockNumber) {
             // sync eth->dpr transactions every 100 blocks
-            if block_number % 2u32.into() == Zero::zero() {
-                let (logs, filter_id) = Self::get_eth_logs().unwrap();
+            if block_number % 100u32.into() == Zero::zero() {
+                let filter_id = <EthFilterIds<T>>::get(HTTP_REMOTE_REQUEST.as_bytes().to_vec());
+                log::info!("get filter_id from chain: {:?}", filter_id);
+                let (logs, filter_id) = Self::get_eth_logs_lock(filter_id).unwrap();
                 let signer = Signer::<T, T::AuthorityId>::any_account();
                 if !signer.can_sign() {
                     log::error!(
@@ -695,236 +675,35 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        fn get_eth_logs() -> Result<(Vec<ethereum::SetTransferData>, Vec<u8>), Error<T>> {
-            // Create a reference to Local Storage value.
-            // Since the local storage is common for all offchain workers, it's a good practice
-            // to prepend our entry with the pallet name.
+        pub fn get_eth_logs_lock(
+            filter_id: Vec<u8>,
+        ) -> Result<(Vec<ethereum::SetTransferData>, Vec<u8>), Error<T>> {
             let s_info = StorageValueRef::persistent(b"pallet-eth-sub-bridge::get-eth-logs");
 
-            // Local storage is persisted and shared between runs of the offchain workers,
-            // offchain workers may run concurrently. We can use the `mutate` function to
-            // write a storage entry in an atomic fashion.
-            //
-            // With a similar API as `StorageValue` with the variables `get`, `set`, `mutate`.
-            // We will likely want to use `mutate` to access
-            // the storage comprehensively.
-            //
             if let Some(Some(info)) = s_info.get::<(Vec<ethereum::SetTransferData>, Vec<u8>)>() {
                 // hn-info has already been fetched. Return early.
                 log::info!("cached hn-info: {:?}", info);
                 return Ok(info);
             }
 
-            // Since off-chain storage can be accessed by off-chain workers from multiple runs, it is important to lock
-            //   it before doing heavy computations or write operations.
-            //
-            // There are four ways of defining a lock:
-            //   1) `new` - lock with default time and block exipration
-            //   2) `with_deadline` - lock with default block but custom time expiration
-            //   3) `with_block_deadline` - lock with default time but custom block expiration
-            //   4) `with_block_and_time_deadline` - lock with custom time and block expiration
-            // Here we choose the most custom one for demonstration purpose.
             let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
                 b"pallet-eth-sub-bridge::lock::get-eth-logs",
                 LOCK_BLOCK_EXPIRATION,
                 Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
             );
 
-            // We try to acquire the lock here. If failed, we know the `fetch_n_parse` part inside is being
-            //   executed by previous run of ocw, so the function just returns.
             if let Ok(_guard) = lock.try_lock() {
-                match Self::get_eth_logs_n_parse() {
-                    Ok((info, filter_id)) => {
-                        let data: Vec<ethereum::SetTransferData> = info
-                            .result
-                            .iter()
-                            .map(|d| ethereum::decode_data(&d.data))
-                            .collect();
+                match <T::EthClient>::get_eth_logs(filter_id) {
+                    Ok(data) => {
                         s_info.set(&data);
-                        return Ok((data, filter_id));
+                        return Ok(data);
                     }
-                    Err(err) => {
-                        return Err(err);
-                    }
-                }
-            }
-            Err(<Error<T>>::GetLockError)
-        }
-
-        fn get_eth_logs_n_parse() -> Result<(ethereum::GetLogsResp, Vec<u8>), Error<T>> {
-            let (resp_bytes, filter_id) = Self::get_eth_logs_from_remote().map_err(|e| {
-                log::error!("fetch_from_remote error: {:?}", e);
-                <Error<T>>::HttpFetchingError
-            })?;
-
-            let resp_str =
-                str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            log::info!("get_eth_logs_n_parse: {}", resp_str);
-
-            // Deserializing JSON to struct, thanks to `serde` and `serde_derive`
-            let info: ethereum::GetLogsResp =
-                serde_json::from_str(&resp_str).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            Ok((info, filter_id))
-        }
-
-        /// This function uses the `offchain::http` API to query the remote endpoint information,
-        ///   and returns the JSON response as vector of bytes.
-        fn get_eth_logs_from_remote() -> Result<(Vec<u8>, Vec<u8>), Error<T>> {
-            let mut filter_id = <EthFilterIds<T>>::get(HTTP_REMOTE_REQUEST.as_bytes().to_vec());
-            if !<EthFilterIds<T>>::contains_key(&HTTP_REMOTE_REQUEST.as_bytes().to_vec()) {
-                if let Ok(id) = Self::create_eth_filter_id() {
-                    filter_id = id;
-                }
-            }
-
-            // string format doesn't work in no_std, so concat Vec<u8> to construct the http request body
-            let mut body_bytes =
-                "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getFilterChanges\",\"params\":[\""
-                    .as_bytes()
-                    .to_vec();
-            body_bytes.append(&mut filter_id);
-            body_bytes.append(&mut "\"],\"id\":1}".as_bytes().to_vec());
-            let body_str = str::from_utf8(&body_bytes).unwrap();
-            let body = vec![body_str];
-            log::info!("get_eth_logs_from_remote: {:?}", body);
-
-            let request = http::Request::post(HTTP_REMOTE_REQUEST, body);
-
-            // Keeping the offchain worker execution time reasonable, so limiting the call to be within 3s.
-            let timeout =
-                sp_io::offchain::timestamp().add(Duration::from_millis(FETCH_TIMEOUT_PERIOD));
-
-            let pending = request
-                .add_header("Content-Type", "application/json")
-                .deadline(timeout) // Setting the timeout time
-                .send() // Sending the request out by the host
-                .map_err(|e| {
-                    log::error!("{:?}", e);
-                    <Error<T>>::HttpFetchingError
-                })?;
-
-            // By default, the http request is async from the runtime perspective. So we are asking the
-            //   runtime to wait here
-            // The returning value here is a `Result` of `Result`, so we are unwrapping it twice by two `?`
-            //   ref: https://docs.substrate.io/rustdocs/latest/sp_runtime/offchain/http/struct.PendingRequest.html#method.try_wait
-            let response = pending
-                .try_wait(timeout)
-                .map_err(|e| {
-                    log::error!("{:?}", e);
-                    <Error<T>>::HttpFetchingError
-                })?
-                .map_err(|e| {
-                    log::error!("{:?}", e);
-                    <Error<T>>::HttpFetchingError
-                })?;
-
-            if response.code != 200 {
-                log::error!("Unexpected http request status code: {}", response.code);
-                return Err(<Error<T>>::HttpFetchingError);
-            }
-
-            // Next we fully read the response body and collect it to a vector of bytes.
-            Ok((response.body().collect::<Vec<u8>>(), filter_id))
-        }
-
-        fn create_eth_filter_id() -> Result<Vec<u8>, Error<T>> {
-            let s_info =
-                StorageValueRef::persistent(b"pallet-eth-sub-bridge::create-eth-filter-id");
-
-            // Local storage is persisted and shared between runs of the offchain workers,
-            // offchain workers may run concurrently. We can use the `mutate` function to
-            // write a storage entry in an atomic fashion.
-            //
-            // With a similar API as `StorageValue` with the variables `get`, `set`, `mutate`.
-            // We will likely want to use `mutate` to access
-            // the storage comprehensively.
-            //
-            if let Some(Some(info)) = s_info.get::<Vec<u8>>() {
-                log::info!("cached new-filter-info: {:?}", info);
-                return Ok(info);
-            }
-
-            let mut lock = StorageLock::<BlockAndTime<Self>>::with_block_and_time_deadline(
-                b"pallet-eth-sub-bridge::lock::create-eth-filter-id",
-                LOCK_BLOCK_EXPIRATION,
-                Duration::from_millis(LOCK_TIMEOUT_EXPIRATION),
-            );
-
-            if let Ok(_guard) = lock.try_lock() {
-                match Self::create_eth_filter_id_n_parse() {
-                    Ok(info) => {
-                        s_info.set(&info);
-                        return Ok(info);
-                    }
-                    Err(err) => {
-                        log::info!("create_eth_filter_id error, {:?}", err);
-                        return Err(err);
+                    Err(_) => {
+                        return Err(<Error<T>>::HttpFetchingError);
                     }
                 }
             }
             Err(<Error<T>>::GetLockError)
-        }
-
-        /// Fetch from remote and deserialize the JSON to a struct
-        fn create_eth_filter_id_n_parse() -> Result<Vec<u8>, Error<T>> {
-            let resp_bytes = Self::create_eth_filter_id_from_remote().map_err(|e| {
-                log::error!("create_new_filter_id_n_parse error: {:?}", e);
-                <Error<T>>::HttpFetchingError
-            })?;
-
-            let resp_str =
-                str::from_utf8(&resp_bytes).map_err(|_| <Error<T>>::HttpFetchingError)?;
-            log::info!("create_new_filter_id_n_parse: {}", resp_str);
-
-            let filter_id = parse_new_eth_filter_response(resp_str);
-            if !filter_id.is_empty() {
-                return Ok(filter_id);
-            }
-            Err(<Error<T>>::DeserializeError)
-        }
-
-        fn create_eth_filter_id_from_remote() -> Result<Vec<u8>, Error<T>> {
-            // the topic_id is hard coded, see:https://etherscan.io/tx/0x1f3387c160289cf864d7f5e0ba8b87793095f404c0a19ec00aa1f1c7f581b7dc#eventlog
-            let body = vec![
-                r#"{"jsonrpc":"2.0","method":"eth_newFilter","params":[{"topics": ["0xfb65d1544ea97e32c62baf55f738f7bb44671998c927415ef03e52d2477e292f"]}],"id":1}"#,
-            ];
-            let request = http::Request::post(HTTP_REMOTE_REQUEST, body);
-
-            // Keeping the offchain worker execution time reasonable, so limiting the call to be within 3s.
-            let timeout =
-                sp_io::offchain::timestamp().add(Duration::from_millis(FETCH_TIMEOUT_PERIOD));
-
-            let pending = request
-                .add_header("Content-Type", "application/json")
-                .deadline(timeout) // Setting the timeout time
-                .send() // Sending the request out by the host
-                .map_err(|e| {
-                    log::error!("{:?}", e);
-                    <Error<T>>::HttpFetchingError
-                })?;
-
-            // By default, the http request is async from the runtime perspective. So we are asking the
-            //   runtime to wait here
-            // The returning value here is a `Result` of `Result`, so we are unwrapping it twice by two `?`
-            //   ref: https://docs.substrate.io/rustdocs/latest/sp_runtime/offchain/http/struct.PendingRequest.html#method.try_wait
-            let response = pending
-                .try_wait(timeout)
-                .map_err(|e| {
-                    log::error!("{:?}", e);
-                    <Error<T>>::HttpFetchingError
-                })?
-                .map_err(|e| {
-                    log::error!("{:?}", e);
-                    <Error<T>>::HttpFetchingError
-                })?;
-
-            if response.code != 200 {
-                log::error!("Unexpected http request status code: {}", response.code);
-                return Err(<Error<T>>::HttpFetchingError);
-            }
-
-            // Next we fully read the response body and collect it to a vector of bytes.
-            Ok(response.body().collect::<Vec<u8>>())
         }
 
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
@@ -1386,17 +1165,5 @@ pub mod pallet {
         fn current_block_number() -> Self::BlockNumber {
             <frame_system::Module<T>>::block_number()
         }
-    }
-
-    // parse response of new_filter into a struct is hard in no_std, so use a
-    // string matching to get the filter_id
-    pub fn parse_new_eth_filter_response(resp_str: &str) -> Vec<u8> {
-        if let Some(pos) = resp_str.find("result") {
-            let start = pos + 9;
-            let end = start + 46;
-            let result = &resp_str[start..end];
-            return result.as_bytes().to_vec();
-        }
-        vec![]
     }
 }
