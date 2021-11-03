@@ -335,16 +335,12 @@ pub mod pallet {
         fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
             let mut user_credit_history = Self::user_credit_history(&account_id);
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
+
+            // update credit history only if it's not empty
             if !user_credit_history.is_empty() {
-                // update credit history only if it's not empty
-                let last_index = user_credit_history.len() - 1;
                 // user credit data cannot be none unless there is a bug
                 let user_credit_data = Self::user_credit(&account_id).unwrap();
-                if user_credit_history[last_index].0 == current_era {
-                    user_credit_history[last_index] = (current_era, user_credit_data.clone());
-                } else {
-                    user_credit_history.push((current_era, user_credit_data));
-                }
+                user_credit_history.push((current_era, user_credit_data));
                 UserCreditHistory::<T>::insert(&account_id, user_credit_history);
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             }
