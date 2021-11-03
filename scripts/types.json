@@ -1,27 +1,27 @@
 {
-    "Address": "MultiAddress",
-    "LookupSource": "MultiAddress",
-    "AccountInfo": "AccountInfoWithDualRefCount",
-    "Balance": "u128",
-    "Timestamp": "Moment",
-    "BlockNumber": "u32",
-    "IpV4": "Vec<u8>",
-    "CountryRegion": "Vec<u8>",
-    "DurationEras": "u8",
-    "Node": {
-        "account_id": "AccountId",
-        "ipv4": "IpV4",
-        "country": "CountryRegion",
-        "expire": "BlockNumber"
-    },
-    "ChannelOf": {
-        "client": "AccountId",
-        "server": "AccountId",
-        "balance": "Balance",
-        "nonce": "u64",
-        "opened": "BlockNumber",
-        "expiration": "BlockNumber"
-    },
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
+  "AccountInfo": "AccountInfoWithDualRefCount",
+  "Balance": "u128",
+  "Timestamp": "Moment",
+  "BlockNumber": "u32",
+  "IpV4": "Vec<u8>",
+  "CountryRegion": "Vec<u8>",
+  "DurationEras": "u8",
+  "Node": {
+      "account_id": "AccountId",
+      "ipv4": "IpV4",
+      "country": "CountryRegion",
+      "expire": "BlockNumber"
+  },
+  "ChannelOf": {
+      "client": "AccountId",
+      "server": "AccountId",
+      "balance": "Balance",
+      "nonce": "u64",
+      "opened": "BlockNumber",
+      "expiration": "BlockNumber"
+  },
   "CreditLevel": {
     "_enum": [
       "Zero",
@@ -64,7 +64,7 @@
     "delegating": "bool"
   },
   "ValidatorData": {
-    "delegators": "Vec<AccountId>",
+    "delegators": "BTreeSet<AccountId>",
     "elected_era": "EraIndex"
   },
   "RewardData": {
