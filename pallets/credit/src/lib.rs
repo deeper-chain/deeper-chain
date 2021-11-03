@@ -245,6 +245,7 @@ pub mod pallet {
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
         CreditDataAdded(T::AccountId, CreditData),
         CreditDataUpdated(T::AccountId, CreditData),
+        CreditSlashed(T::AccountId,T::BlockNumber),
     }
 
     #[pallet::error]
@@ -502,6 +503,8 @@ pub mod pallet {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty);
                         credit_data.current_credit_level =
                             Self::get_credit_level(credit_data.credit);
+                        let current_block_numbers = <frame_system::Module<T>>::block_number();
+                        Self::deposit_event(Event::CreditSlashed(account_id.clone(),current_block_numbers));
                     }
                     _ => (),
                 });
