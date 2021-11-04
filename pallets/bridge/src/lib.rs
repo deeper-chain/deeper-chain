@@ -20,6 +20,10 @@ use sp_std::prelude::*;
 pub mod weights;
 use ethereum::Client;
 use weights::WeightInfo;
+use substrate_prometheus_endpoint::{
+	prometheus::core::{Atomic, Collector},
+	register, Counter, CounterVec, Gauge, GaugeVec, Opts, PrometheusError, Registry, F64, U64,
+};
 
 pub mod crypto {
     use sp_core::crypto::KeyTypeId;
