@@ -109,8 +109,8 @@ pub trait CreditInterface<AccountId, Balance> {
     fn pass_threshold(account_id: &AccountId) -> bool;
     fn slash_credit(account_id: &AccountId) -> Weight;
     fn get_credit_level(credit_score: u64) -> CreditLevel;
-    fn set_latest_expiry_eras(new_careward_eras: EraIndex, account_id: &AccountId) -> Weight;
-    fn get_latest_expiry_eras(account_id: &AccountId) -> (EraIndex,Weight);
+    fn set_latest_expiry_eras(campaign_end_eras: EraIndex, account_id: &AccountId) -> Weight;
+    fn get_latest_expiry_eras(account_id: &AccountId) -> (EraIndex, Weight);
     fn get_reward(
         account_id: &AccountId,
         from: EraIndex,
@@ -253,7 +253,7 @@ pub mod pallet {
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
         CreditDataAdded(T::AccountId, CreditData),
         CreditDataUpdated(T::AccountId, CreditData),
-        CreditSlashed(T::AccountId,T::BlockNumber),
+        CreditSlashed(T::AccountId, T::BlockNumber),
     }
 
     #[pallet::error]
@@ -348,6 +348,14 @@ pub mod pallet {
             if !user_credit_history.is_empty() {
                 // user credit data cannot be none unless there is a bug
                 let user_credit_data = Self::user_credit(&account_id).unwrap();
+
+                // update the latest end eras for account.
+                let current_campaign_end_eras = &user_credit_data.reward_eras - current_era;
+                weight = weight.saturating_add(Self::set_latest_expiry_eras(
+                    current_campaign_end_eras,
+                    account_id,
+                ));
+
                 user_credit_history.push((current_era, user_credit_data));
                 UserCreditHistory::<T>::insert(&account_id, user_credit_history);
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
@@ -420,7 +428,9 @@ pub mod pallet {
         }
 
         /// calculate the latest stacking campaign expiration point of the account from the credit history.
-        fn calculate_expiry_era_from_history(credit_history: &Vec<(EraIndex, CreditData)>) -> EraIndex {
+        fn calculate_expiry_era_from_history(
+            credit_history: &Vec<(EraIndex, CreditData)>,
+        ) -> EraIndex {
             if credit_history.is_empty() {
                 return 0;
             }
@@ -428,7 +438,7 @@ pub mod pallet {
             let mut expiry_era = 0;
             let mut campaign_Map = BTreeMap::<CampaignId, u16>::new();
 
-            for (eras,creditdata)  in credit_history  {
+            for (eras, creditdata) in credit_history {
                 if !campaign_Map.contains_key(&creditdata.campaign_id) {
                     if (eras + creditdata.reward_eras) > expiry_era {
                         expiry_era = eras + creditdata.reward_eras;
@@ -529,7 +539,10 @@ pub mod pallet {
                         credit_data.current_credit_level =
                             Self::get_credit_level(credit_data.credit);
                         let current_block_numbers = <frame_system::Module<T>>::block_number();
-                        Self::deposit_event(Event::CreditSlashed(account_id.clone(),current_block_numbers));
+                        Self::deposit_event(Event::CreditSlashed(
+                            account_id.clone(),
+                            current_block_numbers,
+                        ));
                     }
                     _ => (),
                 });
@@ -558,21 +571,23 @@ pub mod pallet {
         }
 
         /// set the latest campaign expiration point of the account.
-        fn set_latest_expiry_eras(new_careward_eras: EraIndex, account_id: &T::AccountId) -> Weight {
-            let pre_latest_expiry_era = Self::latest_expiry(account_id).unwrap_or(0);;//  read 1
-
-            let current_lates_expiry_era = Self::get_current_era() + new_careward_eras;
-            if current_lates_expiry_era > pre_latest_expiry_era{ //Replace the latest expiration point.
-                LatestExpiryForCampaign::<T>::insert(account_id, current_lates_expiry_era);//write 1
+        fn set_latest_expiry_eras(
+            campaign_end_eras: EraIndex,
+            account_id: &T::AccountId,
+        ) -> Weight {
+            let pre_latest_expiry_era = Self::latest_expiry(account_id).unwrap_or(0); //  read 1
+            if campaign_end_eras > pre_latest_expiry_era {
+                //Replace the latest expiration point.
+                LatestExpiryForCampaign::<T>::insert(account_id, campaign_end_eras);
+                //write 1
             }
             let mut weight = T::DbWeight::get().reads_writes(1, 1);
             weight
         }
 
         /// get the latest campaign expiration point of the account.
-        fn get_latest_expiry_eras(account_id: &T::AccountId) -> (EraIndex,Weight){
-
-            let mut  latest_expiry_eras = Self::latest_expiry(account_id).unwrap_or(0);;//  read 1
+        fn get_latest_expiry_eras(account_id: &T::AccountId) -> (EraIndex, Weight) {
+            let mut latest_expiry_eras = Self::latest_expiry(account_id).unwrap_or(0); //  read 1
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
 
             // adapt to situations where account have previously participated in some campaigns.
@@ -582,12 +597,12 @@ pub mod pallet {
                 if !credit_history.is_empty() {
                     latest_expiry_eras = Self::calculate_expiry_era_from_history(&credit_history);
                     // write latest_expiry_eras to storage for fix pre campaign that account has participated.
-                    LatestExpiryForCampaign::<T>::insert(account_id, latest_expiry_eras);//write 1
+                    LatestExpiryForCampaign::<T>::insert(account_id, latest_expiry_eras); //write 1
                     weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
                 }
             }
 
-            (latest_expiry_eras,weight)
+            (latest_expiry_eras, weight)
         }
 
         fn get_reward(
@@ -623,9 +638,10 @@ pub mod pallet {
                 return (None, weight);
             }
 
-            let(latest_expiry_eras,ret_wight) = Self::get_latest_expiry_eras(account_id);
-            weight = weight.saturating_add(ret_wight);
-            let expiry_era = latest_expiry_eras- 1;
+            let (latest_expiry_eras, ret_weight) = Self::get_latest_expiry_eras(account_id);
+            weight = weight.saturating_add(ret_weight);
+            let expiry_era = latest_expiry_eras - 1;
+
             if from > expiry_era {
                 return (None, weight);
             }
