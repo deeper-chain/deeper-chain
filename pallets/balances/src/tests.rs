@@ -26,7 +26,7 @@ macro_rules! decl_tests {
 		use crate::*;
 		use sp_runtime::{FixedPointNumber, traits::{SignedExtension, BadOrigin}};
 		use frame_support::{
-			assert_noop, assert_storage_noop, assert_ok, assert_err, StorageValue,
+			assert_noop, assert_storage_noop, assert_ok, assert_err,
 			traits::{
 				LockableCurrency, LockIdentifier, WithdrawReasons,
 				Currency, ReservableCurrency, ExistenceRequirement::AllowDeath
@@ -55,7 +55,7 @@ macro_rules! decl_tests {
 		}
 
 		fn last_event() -> Event {
-			system::Module::<Test>::events().pop().expect("Event expected").event
+			system::Pallet::<Test>::events().pop().expect("Event expected").event
 		}
 
 		#[test]
