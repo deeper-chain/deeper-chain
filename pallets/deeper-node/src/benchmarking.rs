@@ -18,7 +18,7 @@
 //! Staking pallet benchmarking.
 
 use super::*;
-use crate::Module as DeeperNode;
+use crate::Pallet as DeeperNode;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
@@ -116,12 +116,12 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_register_device::<Test>());
-            assert_ok!(test_benchmark_unregister_device::<Test>());
-            assert_ok!(test_benchmark_register_server::<Test>());
-            assert_ok!(test_benchmark_update_server::<Test>());
-            assert_ok!(test_benchmark_unregister_server::<Test>());
-            assert_ok!(test_benchmark_im_online::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_register_device());
+            assert_ok!(Pallet::<Test>::test_benchmark_unregister_device());
+            assert_ok!(Pallet::<Test>::test_benchmark_register_server());
+            assert_ok!(Pallet::<Test>::test_benchmark_update_server());
+            assert_ok!(Pallet::<Test>::test_benchmark_unregister_server());
+            assert_ok!(Pallet::<Test>::test_benchmark_im_online());
         });
     }
 }
