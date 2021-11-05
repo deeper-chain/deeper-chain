@@ -436,13 +436,13 @@ pub mod pallet {
             }
 
             let mut expiry_era = 0;
-            let mut campaign_Map = BTreeMap::<CampaignId, u16>::new();
+            let mut campaign_map = BTreeMap::<CampaignId, u16>::new();
 
             for (eras, creditdata) in credit_history {
-                if !campaign_Map.contains_key(&creditdata.campaign_id) {
+                if !campaign_map.contains_key(&creditdata.campaign_id) {
                     if (eras + creditdata.reward_eras) > expiry_era {
                         expiry_era = eras + creditdata.reward_eras;
-                        campaign_Map.insert(creditdata.campaign_id.clone(), 1);
+                        campaign_map.insert(creditdata.campaign_id.clone(), 1);
                     }
                 }
             }
@@ -581,7 +581,7 @@ pub mod pallet {
                 LatestExpiryForCampaign::<T>::insert(account_id, campaign_end_eras);
                 //write 1
             }
-            let mut weight = T::DbWeight::get().reads_writes(1, 1);
+            let weight = T::DbWeight::get().reads_writes(1, 1);
             weight
         }
 
@@ -593,12 +593,12 @@ pub mod pallet {
             // adapt to situations where account have previously participated in some campaigns.
             if 0 == latest_expiry_eras {
                 let credit_history = Self::user_credit_history(account_id); //  read 1
-                weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
                 if !credit_history.is_empty() {
                     latest_expiry_eras = Self::calculate_expiry_era_from_history(&credit_history);
                     // write latest_expiry_eras to storage for fix pre campaign that account has participated.
                     LatestExpiryForCampaign::<T>::insert(account_id, latest_expiry_eras); //write 1
-                    weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
                 }
             }
 
