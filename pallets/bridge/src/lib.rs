@@ -19,6 +19,7 @@ pub mod benchmarking;
 use sp_std::prelude::*;
 pub mod weights;
 use ethereum::Client;
+use sp_runtime::SaturatedConversion;
 use weights::WeightInfo;
 
 pub mod crypto {
@@ -243,10 +244,14 @@ pub mod pallet {
     #[pallet::getter(fn validator_accounts)]
     pub type ValidatorAccounts<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
-    /// key is infura request url, value is filter_id
+    #[pallet::type_value]
+    pub fn DefaultEthLastFromBlockNumber<T: Config>() -> Vec<u8> {
+        "0x1a1fd77".as_bytes().to_vec()
+    }
     #[pallet::storage]
-    #[pallet::getter(fn eth_filter_ids)]
-    pub type EthFilterIds<T> = StorageMap<_, Blake2_128Concat, Vec<u8>, Vec<u8>, ValueQuery>;
+    #[pallet::getter(fn eth_last_from_block_hash)]
+    pub type EthLastFromBlockNumber<T> =
+        StorageValue<_, Vec<u8>, ValueQuery, DefaultEthLastFromBlockNumber<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn eth_dpr_transactions)]
@@ -323,10 +328,8 @@ pub mod pallet {
         fn offchain_worker(block_number: T::BlockNumber) {
             // sync eth->dpr transactions every 100 blocks
             if block_number % 100u32.into() == Zero::zero() {
-                let filter_id =
-                    <EthFilterIds<T>>::get(ethereum::HTTP_REMOTE_REQUEST.as_bytes().to_vec());
-                log::info!("get filter_id from chain: {:?}", filter_id);
-                let (logs, filter_id) = Self::get_eth_logs_lock(filter_id).unwrap();
+                let from_block_hash = Self::eth_last_from_block_hash();
+                let (logs, from_block_hash) = Self::get_eth_logs_lock(from_block_hash).unwrap();
                 let signer = Signer::<T, T::AuthorityId>::any_account();
                 if !signer.can_sign() {
                     log::error!(
@@ -335,11 +338,11 @@ pub mod pallet {
                     return;
                 }
                 let results = signer.send_signed_transaction(|_account| {
-                    Call::submit_logs(logs.clone(), filter_id.clone())
+                    Call::submit_logs(logs.clone(), from_block_hash.clone())
                 });
                 for (acc, res) in &results {
                     match res {
-                        Ok(()) => log::info!("submit_logs [{:?}] after_callback_ok", acc.id),
+                        Ok(()) => log::debug!("submit_logs [{:?}] after_callback_ok", acc.id),
                         Err(e) => {
                             log::error!("submit_logs [{:?}] after_callback_error: {:?}", acc.id, e)
                         }
@@ -378,16 +381,17 @@ pub mod pallet {
         pub fn submit_logs(
             origin: OriginFor<T>,
             logs: Vec<ethereum::SetTransferData>,
-            filter_id: Vec<u8>,
+            from_block_number: Vec<u8>,
         ) -> DispatchResultWithPostInfo {
             // Retrieve sender of the transaction.
-            let who = ensure_signed(origin)?;
+            let _ = ensure_signed(origin)?;
             for log in logs.iter() {
                 if log.message_id.is_empty() {
                     continue;
                 }
                 let recipient_result = T::AccountId::decode(&mut &log.recipient[..]);
                 if recipient_result.is_err() {
+                    log::error!("dpr account error, recipient: {:?}", log.recipient);
                     continue;
                 }
                 let recipient = recipient_result.unwrap();
@@ -399,29 +403,23 @@ pub mod pallet {
                 if !<EthDprTransactions<T>>::contains_key(message_id) {
                     <EthDprTransactions<T>>::insert(message_id, log);
 
-                    let amount = log.amount as u32;
-                    let amount = BalanceOf::<T>::from(amount);
+                    let amount = log.amount.saturated_into();
                     let sender = H160::from_slice(&log.sender);
                     T::Currency::deposit_creating(&recipient, amount); // mint
 
                     Self::deposit_event(Event::ApprovedEthDprTransaction(
                         message_id,
-                        who.clone(),
+                        recipient.clone(),
                         sender,
                         amount,
                     ));
+
+                    log::info!("submit_log, message_id: {:?}, log_amount: {}, amount: {:?}, recipient: {:?}", message_id, log.amount, amount, recipient);
                 }
             }
-            log::info!(
-                "eth_filter_ids: {:?}, {:?}",
-                ethereum::HTTP_REMOTE_REQUEST.as_bytes().to_vec(),
-                filter_id.clone()
-            );
 
             // save filter_id back online
-            <EthFilterIds<T>>::mutate(ethereum::HTTP_REMOTE_REQUEST.as_bytes().to_vec(), |v| {
-                *v = filter_id
-            });
+            <EthLastFromBlockNumber<T>>::put(from_block_number);
 
             Ok(().into())
         }
@@ -677,7 +675,7 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         pub fn get_eth_logs_lock(
-            filter_id: Vec<u8>,
+            from_block_number: Vec<u8>,
         ) -> Result<(Vec<ethereum::SetTransferData>, Vec<u8>), Error<T>> {
             let s_info = StorageValueRef::persistent(b"pallet-eth-sub-bridge::get-eth-logs");
 
@@ -694,7 +692,7 @@ pub mod pallet {
             );
 
             if let Ok(_guard) = lock.try_lock() {
-                match <T::EthClient>::get_eth_logs(filter_id) {
+                match <T::EthClient>::get_eth_logs(from_block_number) {
                     Ok(data) => {
                         s_info.set(&data);
                         return Ok(data);
