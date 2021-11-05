@@ -75,7 +75,7 @@ impl Client for RealEthClient {
     }
 }
 
-const HTTP_REMOTE_REQUEST: &str = "https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205";
+pub const HTTP_REMOTE_REQUEST: &str = "https://kovan.infura.io/v3/bd22e70259d546dd832b63b7cab12ed0";
 const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
 
 impl RealEthClient {

@@ -20,10 +20,6 @@ use sp_std::prelude::*;
 pub mod weights;
 use ethereum::Client;
 use weights::WeightInfo;
-use substrate_prometheus_endpoint::{
-	prometheus::core::{Atomic, Collector},
-	register, Counter, CounterVec, Gauge, GaugeVec, Opts, PrometheusError, Registry, F64, U64,
-};
 
 pub mod crypto {
     use sp_core::crypto::KeyTypeId;
@@ -112,8 +108,6 @@ pub mod pallet {
     const MAX_VALIDATORS: u32 = 100_000;
     const DAY: u32 = 86_400;
 
-    const HTTP_REMOTE_REQUEST: &str =
-        "https://mainnet.infura.io/v3/75284d8d0fb14ab88520b949270fe205";
     const FETCH_TIMEOUT_PERIOD: u64 = 3000; // in milli-seconds
     const LOCK_TIMEOUT_EXPIRATION: u64 = FETCH_TIMEOUT_PERIOD + 1000; // in milli-seconds
     const LOCK_BLOCK_EXPIRATION: u32 = 3; // in block number
@@ -329,7 +323,8 @@ pub mod pallet {
         fn offchain_worker(block_number: T::BlockNumber) {
             // sync eth->dpr transactions every 100 blocks
             if block_number % 100u32.into() == Zero::zero() {
-                let filter_id = <EthFilterIds<T>>::get(HTTP_REMOTE_REQUEST.as_bytes().to_vec());
+                let filter_id =
+                    <EthFilterIds<T>>::get(ethereum::HTTP_REMOTE_REQUEST.as_bytes().to_vec());
                 log::info!("get filter_id from chain: {:?}", filter_id);
                 let (logs, filter_id) = Self::get_eth_logs_lock(filter_id).unwrap();
                 let signer = Signer::<T, T::AuthorityId>::any_account();
@@ -419,12 +414,14 @@ pub mod pallet {
             }
             log::info!(
                 "eth_filter_ids: {:?}, {:?}",
-                HTTP_REMOTE_REQUEST.as_bytes().to_vec(),
+                ethereum::HTTP_REMOTE_REQUEST.as_bytes().to_vec(),
                 filter_id.clone()
             );
 
             // save filter_id back online
-            <EthFilterIds<T>>::mutate(HTTP_REMOTE_REQUEST.as_bytes().to_vec(), |v| *v = filter_id);
+            <EthFilterIds<T>>::mutate(ethereum::HTTP_REMOTE_REQUEST.as_bytes().to_vec(), |v| {
+                *v = filter_id
+            });
 
             Ok(().into())
         }
