@@ -1,0 +1,35 @@
+name: coverage
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - dev
+
+jobs:
+  coverage:
+    name: Code Coverage
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: cache dependencies
+        uses: Swatinem/rust-cache@v1
+      
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v1
+        with:
+          name: code-coverage-report
+          path: cobertura.xml
