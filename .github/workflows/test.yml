@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     name: Unit test
-    runs-on: [self-hosted]
+    runs-on: [deeper-chain-runner]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@master
