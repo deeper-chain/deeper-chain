@@ -10,7 +10,7 @@ on:
 jobs:
   coverage:
     name: Code Coverage
-    runs-on: [self-hosted]
+    runs-on: [ubuntu-latest]
     steps:
       - name: update ubuntu system
         run: sudo apt install -y build-essential
