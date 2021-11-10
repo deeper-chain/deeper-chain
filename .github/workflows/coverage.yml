@@ -12,8 +12,8 @@ jobs:
     name: Code Coverage
     runs-on: [self-hosted]
     steps:
-      -name: update ubuntu system
-      -run: sudo apt install -y build-essential
+      - name: update ubuntu system
+      - run: sudo apt install -y build-essential
 
       - name: Checkout Repository
         uses: actions/checkout@master
