@@ -1,0 +1,34 @@
+[package]
+name = 'pallet-staking2'
+version = "3.0.0"
+description = 'FRAME pallet template for defining custom runtime logic.'
+authors = ['']
+homepage = 'https://substrate.io/'
+edition = "2018"
+license = 'Unlicense'
+publish = false
+repository = ''
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+
+codec = { default-features = false, features = ['derive'], package = 'parity-scale-codec', version = '2.0.0' }
+frame-system = { default-features = false, version = '3.0.0' }
+frame-support = { default-features = false, version = '3.0.0' }
+frame-benchmarking = { default-features = false, optional = true, version = '3.1.0' }
+#sp-std = { default-features = false, version = '3.0.0' }
+lib_staking = { default-features = false, version = '3.0.0',package = "pallet-staking"}
+
+[features]
+default = ['std']
+runtime-benchmarks = ['frame-benchmarking']
+std = [
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    'frame-benchmarking/std',
+    'lib_staking/std',
+]
