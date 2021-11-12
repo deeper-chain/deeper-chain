@@ -19,8 +19,12 @@ codec = { default-features = false, features = ['derive'], package = 'parity-sca
 frame-system = { default-features = false, version = '3.0.0' }
 frame-support = { default-features = false, version = '3.0.0' }
 frame-benchmarking = { default-features = false, optional = true, version = '3.1.0' }
-#sp-std = { default-features = false, version = '3.0.0' }
+sp-std = { default-features = false, version = '3.0.0' }
 lib_staking = { default-features = false, version = '3.0.0',package = "pallet-staking"}
+pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
+pallet-deeper-node = {version = '3.0.0', default-features =false, path = "../deeper-node"}
+node-primitives = { version = '2.0.0', default-features = false, path = "../../primitives" }
+pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
 
 [features]
 default = ['std']
@@ -31,4 +35,8 @@ std = [
     'frame-system/std',
     'frame-benchmarking/std',
     'lib_staking/std',
+    "pallet-credit/std",
+	"pallet-deeper-node/std",
+	"pallet-micropayment/std",
+    "sp-std/std",
 ]
