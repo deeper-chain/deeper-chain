@@ -253,10 +253,18 @@ impl<T: Config> Pallet<T> {
                 }
                 _ => (),
             });
-            Self::deposit_event(Event::CreditUpdateSuccess((*account_id).clone(), score,<frame_system::Module<T>>::block_number()));
+            Self::deposit_event(Event::CreditUpdateSuccess(
+                (*account_id).clone(),
+                score,
+                <frame_system::Module<T>>::block_number(),
+            ));
             true
         } else {
-            Self::deposit_event(Event::CreditUpdateFailed((*account_id).clone(), score,<frame_system::Module<T>>::block_number()));
+            Self::deposit_event(Event::CreditUpdateFailed(
+                (*account_id).clone(),
+                score,
+                <frame_system::Module<T>>::block_number(),
+            ));
             false
         }
     }

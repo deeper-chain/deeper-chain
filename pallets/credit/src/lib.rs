@@ -208,8 +208,10 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
             Self::_update_credit_setting(credit_setting.clone());
-            Self::deposit_event(Event::CreditSettingUpdated(credit_setting,
-                                                            <frame_system::Module<T>>::block_number()));
+            Self::deposit_event(Event::CreditSettingUpdated(
+                credit_setting,
+                <frame_system::Module<T>>::block_number(),
+            ));
             Ok(().into())
         }
 
@@ -231,13 +233,17 @@ pub mod pallet {
                 if !Self::user_credit_history(&account_id).is_empty() {
                     Self::update_credit_history(&account_id, Self::current_era());
                 }
-                Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data,
-                                                             <frame_system::Module<T>>::block_number()
+                Self::deposit_event(Event::CreditDataUpdated(
+                    account_id,
+                    credit_data,
+                    <frame_system::Module<T>>::block_number(),
                 ));
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
-                Self::deposit_event(Event::CreditDataAdded(account_id, credit_data,
-                                                           <frame_system::Module<T>>::block_number()
+                Self::deposit_event(Event::CreditDataAdded(
+                    account_id,
+                    credit_data,
+                    <frame_system::Module<T>>::block_number(),
                 ));
             }
 
@@ -280,10 +286,8 @@ pub mod pallet {
                     _ => (),
                 });
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                weight = weight.saturating_add(Self::update_credit_history(
-                    account_id,
-                    Self::current_era(),
-                ));
+                weight = weight
+                    .saturating_add(Self::update_credit_history(account_id, Self::current_era()));
             }
             weight
         }
