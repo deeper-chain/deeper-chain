@@ -109,6 +109,6 @@ pub trait CreditInterface<AccountId, Balance> {
         to: EraIndex,
     ) -> (Option<(Balance, Balance)>, Weight);
     fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
-    fn update_credit(micropayment: (AccountId, Balance)); // 考虑从这里移除
+    fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
 }
