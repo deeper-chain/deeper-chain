@@ -96,7 +96,7 @@ impl<T: Config> Pallet<T> {
 
             // update remaining eras info
             if !campaign_map.contains_key(&credit_data.campaign_id) {
-                let w = Self::update_remaining_eras(account_id, credit_data.campaign_id, to);
+                let w = Self::refresh_remaining_eras(account_id, credit_data.campaign_id, to);
                 weight = weight.saturating_add(w);
                 campaign_map.insert(credit_data.campaign_id.clone(), 1);
             }

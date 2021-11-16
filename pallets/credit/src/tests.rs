@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
-use crate::{mock::*, CreditInterface, Error};
+use crate::{mock::*, CampaignErasData, CreditInterface, Error};
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use frame_system::RawOrigin;
 use sp_runtime::traits::BadOrigin;
@@ -157,6 +157,239 @@ fn add_or_update_credit_data() {
                 Error::<Test>::InvalidCreditData
             ))
         );
+    });
+}
+
+#[test]
+fn latest_expiry_eras_and_remaining_eras() {
+    new_test_ext().execute_with(|| {
+        // era 0
+        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+
+        // era 1
+        run_to_block(BLOCKS_PER_ERA);
+        assert_eq!(Credit::user_credit_history(3), vec![]);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 0);
+        assert_eq!(Credit::campaign_participated_info(3, 0), None);
+
+        // When calculating reward, if the credit score history is empty,
+        // the history will be initialized with the current credit score data.
+        Credit::get_reward(&3, 0, 0);
+        let credit_historys = vec![(
+            0,
+            CreditData {
+                campaign_id: 0,
+                credit: 100,
+                initial_credit_level: CreditLevel::One,
+                rank_in_initial_credit_level: 1,
+                number_of_referees: 1,
+                current_credit_level: CreditLevel::One,
+                reward_eras: 1,
+            },
+        )];
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 1);
+        assert_eq!(Credit::campaign_participated_info(3, 0), None);
+
+        run_to_block(BLOCKS_PER_ERA * 2);
+        let credit_data = CreditData {
+            campaign_id: 1,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 50,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+
+        let credit_historys = vec![
+            (
+                0,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 1,
+                },
+            ),
+            (
+                2,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 50,
+                },
+            ),
+        ];
+
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 52);
+        let eras_data = CampaignErasData {
+            campaign_id: 1,
+            start_era: 2,
+            reward_eras: 50,
+            ending_era: 52,
+            remaining_eras: 50,
+        };
+        assert_eq!(Credit::campaign_participated_info(3, 1).unwrap(), eras_data);
+
+        run_to_block(BLOCKS_PER_ERA * 50);
+        Credit::get_reward(&3, 2, 49);
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 52);
+        let eras_data = CampaignErasData {
+            campaign_id: 1,
+            start_era: 2,
+            reward_eras: 50,
+            ending_era: 52,
+            remaining_eras: 2,
+        };
+        assert_eq!(Credit::campaign_participated_info(3, 1).unwrap(), eras_data);
+        // bcs campaign was overed
+        assert_eq!(Credit::campaign_participated_info(3, 0), None);
+
+        run_to_block(BLOCKS_PER_ERA * 52);
+        Credit::get_reward(&3, 50, 50);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 52);
+        let eras_data = CampaignErasData {
+            campaign_id: 1,
+            start_era: 2,
+            reward_eras: 50,
+            ending_era: 52,
+            remaining_eras: 1,
+        };
+        assert_eq!(Credit::campaign_participated_info(3, 1).unwrap(), eras_data);
+
+        run_to_block(BLOCKS_PER_ERA * 55);
+        Credit::get_reward(&3, 51, 54);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 52);
+        assert_eq!(Credit::campaign_participated_info(3, 1), None);
+
+        run_to_block(BLOCKS_PER_ERA * 60);
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 400,
+            initial_credit_level: CreditLevel::Four,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Four,
+            reward_eras: 100,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        let credit_historys = vec![
+            (
+                0,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 1,
+                },
+            ),
+            (
+                2,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 50,
+                },
+            ),
+            (
+                60,
+                CreditData {
+                    campaign_id: 3,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 0,
+                    current_credit_level: CreditLevel::Four,
+                    reward_eras: 100,
+                },
+            ),
+        ];
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 160);
+        assert_eq!(Credit::campaign_participated_info(3, 0), None);
+        assert_eq!(Credit::campaign_participated_info(3, 1), None);
+
+        run_to_block(BLOCKS_PER_ERA * 155);
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 600,
+            initial_credit_level: CreditLevel::Six,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Six,
+            reward_eras: 100,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 160);
+
+        Credit::get_reward(&3, 60, 154);
+        let eras_data = CampaignErasData {
+            campaign_id: 3,
+            start_era: 60,
+            reward_eras: 100,
+            ending_era: 160,
+            remaining_eras: 5,
+        };
+        assert_eq!(Credit::campaign_participated_info(3, 3).unwrap(), eras_data);
+
+        run_to_block(BLOCKS_PER_ERA * 170);
+        let credit_data = CreditData {
+            campaign_id: 2,
+            credit: 600,
+            initial_credit_level: CreditLevel::Six,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Six,
+            reward_eras: 200,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        assert_eq!(Credit::latest_expiry_eras(3).unwrap_or(0), 370);
+
+        run_to_block(BLOCKS_PER_ERA * 200);
+        Credit::get_reward(&3, 155, 199);
+        assert_eq!(Credit::campaign_participated_info(3, 3), None);
+        let eras_data = CampaignErasData {
+            campaign_id: 2,
+            start_era: 170,
+            reward_eras: 200,
+            ending_era: 370,
+            remaining_eras: 170,
+        };
+        assert_eq!(Credit::campaign_participated_info(3, 2).unwrap(), eras_data);
     });
 }
 

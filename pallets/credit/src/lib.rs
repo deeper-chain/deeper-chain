@@ -127,7 +127,7 @@ pub mod pallet {
 
     /// record the last end era of the campaign in which the Account is currently participating
     #[pallet::storage]
-    #[pallet::getter(fn latest_expiry)]
+    #[pallet::getter(fn latest_expiry_eras)]
     pub type LatestExpiryInCampaigns<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, EraIndex, OptionQuery>;
 
@@ -298,7 +298,8 @@ pub mod pallet {
             to: EraIndex,
         ) -> (Option<(BalanceOf<T>, BalanceOf<T>)>, Weight) {
             // silently ignore invalid inputs
-            if from > to || to >= Self::current_era() {
+            let current_era = Self::current_era();
+            if from > to || to >= current_era {
                 return (None, Weight::zero());
             }
 
@@ -326,24 +327,17 @@ pub mod pallet {
                 return (None, weight);
             }
 
-            let (latest_expiry_eras, ret_weight) = Self::fetch_latest_expiry_eras(account_id);
-            weight = weight.saturating_add(ret_weight);
+            weight = weight.saturating_add(Self::fix_eras_from_history_if_needed(
+                account_id,
+                &credit_history,
+            ));
+            let latest_expiry_eras = Self::latest_expiry_eras(account_id).unwrap_or(0);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
             let expiry_era = latest_expiry_eras - 1;
 
             if from > expiry_era {
                 return (None, weight);
-            }
-
-            let user_credit_data: CreditData = credit_history[0].1.clone();
-            let campgin_id = user_credit_data.campaign_id;
-            let (has_init_campaign_eras, w) = Self::existed_campaign_eras(&account_id, campgin_id);
-            weight = weight.saturating_add(w);
-            if !has_init_campaign_eras {
-                weight = weight.saturating_add(Self::fix_campaign_eras(
-                    &account_id,
-                    from,
-                    credit_history.clone(),
-                ));
             }
 
             let (reward_count, w) =

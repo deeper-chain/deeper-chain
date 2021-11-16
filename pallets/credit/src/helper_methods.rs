@@ -42,195 +42,6 @@ use sp_std::{collections::btree_map::BTreeMap, convert::TryInto};
 
 use sp_std::prelude::*;
 
-/// staking campaign's eras related segment
-impl<T: Config> Pallet<T> {
-    /// set the latest campaign expiration point of the account.
-    pub fn refresh_latest_expiry_eras(
-        campaign_end_eras: EraIndex,
-        account_id: &T::AccountId,
-    ) -> Weight {
-        let (pre_latest_expiry_era, mut weight) = Self::fetch_latest_expiry_eras(account_id);
-        if campaign_end_eras > pre_latest_expiry_era {
-            //Replace the latest expiration point.
-            LatestExpiryInCampaigns::<T>::insert(account_id, campaign_end_eras); //write 1
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-        }
-        weight
-    }
-
-    /// get the latest campaign expiration point of the account.
-    pub fn fetch_latest_expiry_eras(account_id: &T::AccountId) -> (EraIndex, Weight) {
-        let mut latest_expiry_eras = Self::latest_expiry(account_id).unwrap_or(0); //  read 1
-        let mut weight = T::DbWeight::get().reads_writes(1, 0);
-
-        // adapt to situations where account have previously participated in some campaigns.
-        if 0 == latest_expiry_eras {
-            let credit_history = Self::user_credit_history(account_id); //  read 1
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-            if !credit_history.is_empty() {
-                latest_expiry_eras = Self::calculate_expiry_era_from_history(&credit_history);
-                // write latest_expiry_eras to storage for fix pre campaign that account has participated.
-                LatestExpiryInCampaigns::<T>::insert(account_id, latest_expiry_eras); //write 1
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-            }
-        }
-
-        (latest_expiry_eras, weight)
-    }
-
-    /// calculate the latest stacking campaign expiration point of the account from the credit history.
-    pub fn calculate_expiry_era_from_history(
-        credit_history: &Vec<(EraIndex, CreditData)>,
-    ) -> EraIndex {
-        if credit_history.is_empty() {
-            return 0;
-        }
-
-        let mut expiry_era = 0;
-        let mut campaign_map = BTreeMap::<CampaignId, u16>::new();
-
-        for (eras, creditdata) in credit_history {
-            if !campaign_map.contains_key(&creditdata.campaign_id) {
-                if (eras + creditdata.reward_eras) > expiry_era {
-                    expiry_era = eras + creditdata.reward_eras;
-                    campaign_map.insert(creditdata.campaign_id.clone(), 1);
-                }
-            }
-        }
-
-        expiry_era
-    }
-
-    pub fn existed_campaign_eras(
-        account_id: &T::AccountId,
-        campaign_id: CampaignId,
-    ) -> (bool, Weight) {
-        (
-            CampaignErasInfo::<T>::contains_key(account_id, campaign_id),
-            T::DbWeight::get().reads_writes(1, 0),
-        )
-    }
-
-    pub fn fix_campaign_eras(
-        account_id: &T::AccountId,
-        from_era: EraIndex,
-        credit_history: Vec<(EraIndex, CreditData)>,
-    ) -> Weight {
-        let mut weight = T::DbWeight::get().reads_writes(0, 0);
-        let mut i = 0;
-        while i < credit_history.len() {
-            let credit_data = &credit_history[i].1;
-            let campaign_id = credit_data.campaign_id.clone();
-            let mut campaign_eras_info = CampaignErasData::default();
-            campaign_eras_info.start_era = credit_history[i].0;
-            campaign_eras_info.reward_eras = credit_data.reward_eras;
-            campaign_eras_info.ending_era =
-                campaign_eras_info.start_era + campaign_eras_info.reward_eras;
-            campaign_eras_info.remaining_eras = campaign_eras_info.reward_eras;
-
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-            if !CampaignErasInfo::<T>::contains_key(account_id, campaign_id) {
-                if campaign_eras_info.start_era < from_era {
-                    campaign_eras_info.remaining_eras =
-                        campaign_eras_info.ending_era - from_era - 1;
-                    if campaign_eras_info.remaining_eras > 0 {
-                        CampaignErasInfo::<T>::insert(account_id, campaign_id, campaign_eras_info);
-                        weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                    }
-                } else {
-                    CampaignErasInfo::<T>::insert(account_id, campaign_id, campaign_eras_info);
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                }
-            }
-            i += 1;
-        }
-
-        weight
-    }
-
-    pub fn add_campaign_eras(
-        account_id: &T::AccountId,
-        campaign_id: CampaignId,
-        campaign_eras_info: CampaignErasData,
-    ) -> Weight {
-        let mut weight = T::DbWeight::get().reads_writes(1, 0);
-        if !CampaignErasInfo::<T>::contains_key(account_id, campaign_id) {
-            CampaignErasInfo::<T>::insert(account_id, campaign_id, campaign_eras_info);
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-        }
-
-        weight
-    }
-
-    pub fn update_remaining_eras(
-        account_id: &T::AccountId,
-        campaign_id: CampaignId,
-        rewarded_era: EraIndex,
-    ) -> Weight {
-        let remaining_eras: EraIndex;
-        let mut weight = T::DbWeight::get().reads_writes(1, 0);
-        match CampaignErasInfo::<T>::get(account_id, campaign_id) {
-            Some(eras_info) => {
-                remaining_eras = eras_info.reward_eras.saturating_sub(rewarded_era);
-                if remaining_eras <= 0 {
-                    weight = weight.saturating_add(Self::remove_campaign_participated_info(
-                        account_id,
-                        campaign_id,
-                    ));
-                } else {
-                    weight = T::DbWeight::get().reads_writes(0, 1);
-                    CampaignErasInfo::<T>::mutate(account_id, campaign_id, |v| match v {
-                        Some(campaign_eras_info) => {
-                            campaign_eras_info.remaining_eras = remaining_eras;
-                        }
-                        _ => (),
-                    });
-                }
-            }
-            _ => (),
-        }
-        weight
-    }
-
-    pub fn remove_campaign_participated_info(
-        account_id: &T::AccountId,
-        campaign_id: CampaignId,
-    ) -> Weight {
-        let weight = T::DbWeight::get().reads_writes(0, 1);
-        CampaignErasInfo::<T>::remove(account_id, campaign_id);
-        weight
-    }
-
-    pub fn add_or_update_eras_if_needed(
-        account_id: &T::AccountId,
-        user_credit_data: CreditData,
-        current_era: EraIndex,
-    ) -> Weight {
-        let mut weight = T::DbWeight::get().reads_writes(1, 0);
-
-        let mut campaign_info = CampaignErasData::default();
-        // assume its a new campaign, assign current era to start_era
-        campaign_info.start_era = current_era;
-        let reward_eras = user_credit_data.reward_eras;
-        campaign_info.reward_eras = user_credit_data.reward_eras;
-        //saturating_sub
-        campaign_info.ending_era = campaign_info
-            .start_era
-            .saturating_add(campaign_info.reward_eras);
-        campaign_info.remaining_eras = campaign_info.reward_eras;
-        weight = weight.saturating_add(Self::add_campaign_eras(
-            &account_id,
-            user_credit_data.campaign_id,
-            campaign_info,
-        ));
-
-        // update the latest end eras for account.
-        weight = weight.saturating_add(Self::refresh_latest_expiry_eras(reward_eras, &account_id));
-
-        weight
-    }
-}
-
 /// CreditData related methods
 impl<T: Config> Pallet<T> {
     pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
@@ -276,18 +87,25 @@ impl<T: Config> Pallet<T> {
         // update credit history only if it's not empty
         if !user_credit_history.is_empty() {
             // user credit data cannot be none unless there is a bug
-            let user_credit_data = Self::user_credit(&account_id).unwrap();
+            let user_credit_data: CreditData = Self::user_credit(&account_id).unwrap();
             user_credit_history.push((current_era, user_credit_data.clone()));
-            UserCreditHistory::<T>::insert(&account_id, user_credit_history);
+            UserCreditHistory::<T>::insert(&account_id, user_credit_history.clone());
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
 
+            Self::fix_eras_from_history_if_needed(account_id, &user_credit_history);
             //If there is a new campaign added, add or update the era-related information.
-            weight = weight.saturating_add(Self::add_or_update_eras_if_needed(
-                &account_id,
-                user_credit_data,
-                current_era,
-            ));
+            if Self::campaign_participated_info(&account_id, &user_credit_data.campaign_id)
+                .is_none()
+            {
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+                weight = weight.saturating_add(Self::add_or_update_eras_if_needed(
+                    &account_id,
+                    user_credit_data,
+                    current_era,
+                ));
+            }
         }
+
         weight
     }
 
@@ -391,5 +209,150 @@ impl<T: Config> Pallet<T> {
             _ => CreditLevel::Eight,
         };
         credit_level
+    }
+}
+
+/// staking campaign's eras related segment
+impl<T: Config> Pallet<T> {
+    /// set the latest campaign expiration point of the account.
+    pub fn refresh_latest_expiry_eras(
+        account_id: &T::AccountId,
+        campaign_end_eras: EraIndex,
+    ) -> Weight {
+        let pre_latest_expiry_era = Self::latest_expiry_eras(account_id).unwrap_or(0);
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        if campaign_end_eras > pre_latest_expiry_era {
+            //Replace the latest expiration point.
+            LatestExpiryInCampaigns::<T>::insert(account_id, campaign_end_eras); //write 1
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+        }
+        weight
+    }
+
+    pub fn add_campaign_eras(
+        account_id: &T::AccountId,
+        campaign_id: CampaignId,
+        campaign_eras_info: CampaignErasData,
+    ) -> Weight {
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        if !CampaignErasInfo::<T>::contains_key(account_id, campaign_id) {
+            CampaignErasInfo::<T>::insert(account_id, campaign_id, campaign_eras_info);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+        }
+
+        weight
+    }
+
+    pub fn refresh_remaining_eras(
+        account_id: &T::AccountId,
+        campaign_id: CampaignId,
+        rewarded_era: EraIndex,
+    ) -> Weight {
+        let remaining_eras: EraIndex;
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        match CampaignErasInfo::<T>::get(account_id, campaign_id) {
+            Some(eras_info) => {
+                remaining_eras = eras_info.ending_era.saturating_sub(rewarded_era + 1); //bcs era index start 0.
+                if remaining_eras <= 0 {
+                    weight = weight.saturating_add(Self::remove_campaign_participated_info(
+                        account_id,
+                        campaign_id,
+                    ));
+                } else {
+                    weight = T::DbWeight::get().reads_writes(0, 1);
+                    CampaignErasInfo::<T>::mutate(account_id, campaign_id, |v| match v {
+                        Some(campaign_eras_info) => {
+                            campaign_eras_info.remaining_eras = remaining_eras;
+                        }
+                        _ => (),
+                    });
+                }
+            }
+            _ => (),
+        }
+
+        weight
+    }
+
+    pub fn remove_campaign_participated_info(
+        account_id: &T::AccountId,
+        campaign_id: CampaignId,
+    ) -> Weight {
+        let weight = T::DbWeight::get().reads_writes(0, 1);
+        CampaignErasInfo::<T>::remove(account_id, campaign_id);
+        weight
+    }
+
+    pub fn add_or_update_eras_if_needed(
+        account_id: &T::AccountId,
+        user_credit_data: CreditData,
+        current_era: EraIndex,
+    ) -> Weight {
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+
+        let mut campaign_info = CampaignErasData::default();
+        // assume its a new campaign, assign current era to start_era
+        campaign_info.campaign_id = user_credit_data.campaign_id;
+        campaign_info.start_era = current_era;
+        // For a particular campaign, we assume that its 'reward_eras' does not change.
+        campaign_info.reward_eras = user_credit_data.reward_eras;
+        //saturating_sub
+        campaign_info.ending_era = campaign_info
+            .start_era
+            .saturating_add(campaign_info.reward_eras);
+        let reward_eras = campaign_info.ending_era;
+        campaign_info.remaining_eras = user_credit_data.reward_eras;
+
+        weight = weight.saturating_add(Self::add_campaign_eras(
+            &account_id,
+            user_credit_data.campaign_id,
+            campaign_info,
+        ));
+
+        // update the latest end eras for account.
+        weight = weight.saturating_add(Self::refresh_latest_expiry_eras(&account_id, reward_eras));
+
+        weight
+    }
+
+    pub fn fix_eras_from_history_if_needed(
+        account_id: &T::AccountId,
+        credit_history: &Vec<(EraIndex, CreditData)>,
+    ) -> Weight {
+        if credit_history.is_empty() {
+            return T::DbWeight::get().reads_writes(0, 0);
+        }
+
+        let latest_expiry_eras = Self::latest_expiry_eras(account_id).unwrap_or(0); //  read 1
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        if latest_expiry_eras > 0 {
+            return weight;
+        }
+
+        let mut expiry_era = 0;
+        let mut campaign_map = BTreeMap::<CampaignId, u16>::new();
+        for (eras, creditdata) in credit_history {
+            if !campaign_map.contains_key(&creditdata.campaign_id) {
+                if (eras + creditdata.reward_eras) > expiry_era {
+                    expiry_era = eras + creditdata.reward_eras;
+                }
+                let mut campaign_eras_data = CampaignErasData::default();
+                campaign_eras_data.start_era = *eras;
+                campaign_eras_data.reward_eras = creditdata.reward_eras;
+                campaign_eras_data.ending_era = eras + creditdata.reward_eras;
+                campaign_eras_data.remaining_eras = campaign_eras_data.ending_era - eras;
+                weight = weight.saturating_add(Self::add_campaign_eras(
+                    account_id,
+                    creditdata.campaign_id,
+                    campaign_eras_data,
+                ));
+            }
+            campaign_map.insert(creditdata.campaign_id.clone(), 1);
+        }
+
+        LatestExpiryInCampaigns::<T>::insert(account_id, expiry_era); //write 1
+        weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+
+        weight
     }
 }
