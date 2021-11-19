@@ -526,11 +526,10 @@ pub mod pallet {
                         credit_data.current_credit_level =
                             Self::get_credit_level(credit_data.credit);
 
-                        let current_block_numbers = <frame_system::Module<T>>::block_number();
                         Self::deposit_event(Event::CreditScoreSlashed(
                             (*account_id).clone(),
                             (*credit_data).clone().credit,
-                            current_block_numbers,
+                            <frame_system::Module<T>>::block_number(),
                         ));
                     }
                     _ => (),
@@ -731,11 +730,10 @@ pub mod pallet {
                         LastCreditUpdate::<T>::insert(&server_id, current_era);
                         Self::update_credit_history(&server_id, current_era);
 
-                        let current_block_numbers = <frame_system::Module<T>>::block_number();
                         Self::deposit_event(Event::CreditScoreIncreased(
                             server_id,
                             new_credit,
-                            current_block_numbers,
+                            <frame_system::Module<T>>::block_number(),
                         ));
                     } else {
                         log!(
@@ -770,11 +768,10 @@ pub mod pallet {
                     LastCreditUpdate::<T>::insert(&server_id, current_era);
                     Self::update_credit_history(&server_id, current_era);
 
-                    let current_block_numbers = <frame_system::Module<T>>::block_number();
                     Self::deposit_event(Event::CreditScoreIncreased(
                         server_id,
                         new_credit,
-                        current_block_numbers,
+                        <frame_system::Module<T>>::block_number(),
                     ));
                 } else {
                     log!(
