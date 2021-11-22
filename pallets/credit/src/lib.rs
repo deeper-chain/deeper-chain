@@ -250,12 +250,22 @@ pub mod pallet {
     #[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+<<<<<<< HEAD
         CreditUpdateSuccess(T::AccountId, u64),
         CreditUpdateFailed(T::AccountId, u64),
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
         CreditDataAdded(T::AccountId, CreditData),
         CreditDataUpdated(T::AccountId, CreditData),
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), //status: 0,Normal; 1-6, Error
+=======
+        CreditUpdateSuccess(T::AccountId, u64, T::BlockNumber),
+        CreditUpdateFailed(T::AccountId, u64, T::BlockNumber),
+        CreditSettingUpdated(CreditSetting<BalanceOf<T>>, T::BlockNumber),
+        CreditDataAdded(T::AccountId, CreditData, T::BlockNumber),
+        CreditDataUpdated(T::AccountId, CreditData, T::BlockNumber),
+        CreditScoreIncreased(T::AccountId, u64, T::BlockNumber),
+        CreditScoreSlashed(T::AccountId, u64, T::BlockNumber),
+>>>>>>> Some changes related to events in the credit pallet. (#110)
     }
 
     #[pallet::error]
@@ -282,7 +292,10 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
             Self::_update_credit_setting(credit_setting.clone());
-            Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
+            Self::deposit_event(Event::CreditSettingUpdated(
+                credit_setting,
+                <frame_system::Module<T>>::block_number(),
+            ));
             Ok(().into())
         }
 
@@ -296,6 +309,7 @@ pub mod pallet {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
 
+            let current_block_numbers = <frame_system::Module<T>>::block_number();
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
                     Some(data) => *data = credit_data.clone(),
@@ -304,10 +318,18 @@ pub mod pallet {
                 if !Self::user_credit_history(&account_id).is_empty() {
                     Self::update_credit_history(&account_id, Self::get_current_era());
                 }
-                Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data));
+                Self::deposit_event(Event::CreditDataUpdated(
+                    account_id,
+                    credit_data,
+                    current_block_numbers,
+                ));
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
-                Self::deposit_event(Event::CreditDataAdded(account_id, credit_data));
+                Self::deposit_event(Event::CreditDataAdded(
+                    account_id,
+                    credit_data,
+                    current_block_numbers,
+                ));
             }
             Ok(().into())
         }
@@ -326,6 +348,7 @@ pub mod pallet {
 
         /// inner: update credit score
         fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
+            let current_block_numbers = <frame_system::Module<T>>::block_number();
             if UserCredit::<T>::contains_key(account_id) {
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
@@ -334,10 +357,18 @@ pub mod pallet {
                     }
                     _ => (),
                 });
-                Self::deposit_event(Event::CreditUpdateSuccess((*account_id).clone(), score));
+                Self::deposit_event(Event::CreditUpdateSuccess(
+                    (*account_id).clone(),
+                    score,
+                    current_block_numbers,
+                ));
                 true
             } else {
-                Self::deposit_event(Event::CreditUpdateFailed((*account_id).clone(), score));
+                Self::deposit_event(Event::CreditUpdateFailed(
+                    (*account_id).clone(),
+                    score,
+                    current_block_numbers,
+                ));
                 false
             }
         }
@@ -542,6 +573,12 @@ pub mod pallet {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty);
                         credit_data.current_credit_level =
                             Self::get_credit_level(credit_data.credit);
+
+                        Self::deposit_event(Event::CreditScoreSlashed(
+                            (*account_id).clone(),
+                            (*credit_data).clone().credit,
+                            <frame_system::Module<T>>::block_number(),
+                        ));
                     }
                     _ => (),
                 });
@@ -799,6 +836,12 @@ pub mod pallet {
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
+
+                    Self::deposit_event(Event::CreditScoreIncreased(
+                        server_id,
+                        new_credit,
+                        <frame_system::Module<T>>::block_number(),
+                    ));
                 } else {
                     log!(
                         error,
