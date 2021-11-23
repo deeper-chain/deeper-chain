@@ -32,7 +32,7 @@ pub(crate) const LOG_TARGET: &'static str = "credit";
 #[macro_export]
 macro_rules! log {
 	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-		frame_support::debug::$level!(
+		log::$level!(
 			target: crate::LOG_TARGET,
 			$patter $(, $values)*
 		)
@@ -48,10 +48,11 @@ use sp_runtime::{Deserialize, Serialize};
 use frame_support::traits::GenesisBuild;
 
 use frame_support::weights::Weight;
+use scale_info::TypeInfo;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy, Ord, PartialOrd)]
+#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy, Ord, PartialOrd, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum CreditLevel {
     Zero,
@@ -78,7 +79,7 @@ pub type CampaignId = u16;
 pub type EraIndex = u32;
 
 /// settings for a specific campaign_id and credit level
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq)]
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditSetting<Balance> {
     pub campaign_id: CampaignId,
@@ -92,7 +93,7 @@ pub struct CreditSetting<Balance> {
     pub reward_per_referee: Balance,
 }
 
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct CreditData {
     pub campaign_id: CampaignId,
@@ -122,7 +123,7 @@ pub trait CreditInterface<AccountId, Balance> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, Vec};
+    use frame_support::traits::Currency;
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
         pallet_prelude::*,
@@ -237,7 +238,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId")]
+    //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         CreditUpdateSuccess(T::AccountId, u64),
@@ -419,7 +420,7 @@ pub mod pallet {
         }
 
         fn get_current_era() -> EraIndex {
-            Self::block_to_era(<frame_system::Module<T>>::block_number())
+            Self::block_to_era(<frame_system::Pallet<T>>::block_number())
         }
 
         fn block_to_era(block_number: T::BlockNumber) -> EraIndex {
@@ -448,20 +449,19 @@ pub mod pallet {
                 .saturating_mul(credit_setting.max_referees_with_rewards.into());
 
             // poc reward
-            let base_total_reward = Perbill::from_rational_approximation(270u32, 365u32)
+            let base_total_reward = Perbill::from_rational(270u32, 365u32)
                 * (credit_setting.base_apy * credit_setting.staking_balance);
-            let base_daily_poc_reward = (Perbill::from_rational_approximation(1u32, 270u32)
-                * base_total_reward)
+            let base_daily_poc_reward = (Perbill::from_rational(1u32, 270u32) * base_total_reward)
                 .saturating_sub(daily_referee_reward);
 
-            let base_total_reward_with_bonus = Perbill::from_rational_approximation(270u32, 365u32)
+            let base_total_reward_with_bonus = Perbill::from_rational(270u32, 365u32)
                 * (credit_setting
                     .base_apy
                     .saturating_add(credit_setting.bonus_apy)
                     * credit_setting.staking_balance);
-            let base_daily_poc_reward_with_bonus =
-                (Perbill::from_rational_approximation(1u32, 270u32) * base_total_reward_with_bonus)
-                    .saturating_sub(daily_referee_reward);
+            let base_daily_poc_reward_with_bonus = (Perbill::from_rational(1u32, 270u32)
+                * base_total_reward_with_bonus)
+                .saturating_sub(daily_referee_reward);
 
             DailyPocReward::<T>::insert(
                 credit_setting.campaign_id,
@@ -476,7 +476,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Module<T> {
+    impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
             if let Some(credit_data) = Self::user_credit(account_id) {
                 Some(credit_data.credit)

@@ -39,10 +39,10 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
     }
 );
 
@@ -52,7 +52,8 @@ parameter_types! {
 }
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything; // modified by james.soong
+    type OnSetCode = ();
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();

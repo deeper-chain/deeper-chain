@@ -1,4 +1,5 @@
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_std::prelude::Vec;
 
@@ -49,7 +50,7 @@ pub enum Action<AccountId, Balance, Timeout> {
 }
 
 //bridge
-#[derive(Encode, Decode, Clone, PartialEq)]
+#[derive(Encode, Decode, Clone, PartialEq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct Limits<Balance> {
     pub max_tx_value: Balance,
@@ -60,7 +61,7 @@ pub struct Limits<Balance> {
 }
 
 // bridge types
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct BridgeTransfer<Hash> {
     pub transfer_id: ProposalId,
@@ -70,7 +71,7 @@ pub struct BridgeTransfer<Hash> {
     pub kind: Kind,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+#[derive(Encode, Decode, Clone, PartialEq, Debug, TypeInfo)]
 pub enum Status {
     Revoked,
     Pending,
@@ -85,7 +86,7 @@ pub enum Status {
     Confirmed,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+#[derive(Encode, Decode, Clone, PartialEq, Debug, TypeInfo)]
 pub enum Kind {
     Transfer,
     Limits,
@@ -93,7 +94,7 @@ pub enum Kind {
     Bridge,
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct TransferMessage<AccountId, Hash, Balance> {
     pub message_id: Hash,
@@ -104,7 +105,7 @@ pub struct TransferMessage<AccountId, Hash, Balance> {
     pub action: Status,
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct LimitMessage<Hash, Balance> {
     pub id: Hash,
@@ -112,7 +113,7 @@ pub struct LimitMessage<Hash, Balance> {
     pub status: Status,
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct BridgeMessage<AccountId, Hash> {
     pub message_id: Hash,
@@ -121,7 +122,7 @@ pub struct BridgeMessage<AccountId, Hash> {
     pub status: Status,
 }
 
-#[derive(Encode, Decode, Clone)]
+#[derive(Encode, Decode, Clone, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct ValidatorMessage<AccountId, Hash> {
     pub message_id: Hash,

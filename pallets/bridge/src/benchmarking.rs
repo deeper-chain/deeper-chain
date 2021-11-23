@@ -18,7 +18,7 @@
 //! Staking pallet benchmarking.
 
 use super::*;
-use crate::Module as Bridge;
+use crate::Pallet as Bridge;
 use codec::Encode;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;
