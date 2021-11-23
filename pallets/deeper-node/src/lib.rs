@@ -16,7 +16,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::Vec;
+use scale_info::TypeInfo;
 
 pub use pallet::*;
 
@@ -37,7 +37,7 @@ pub type CountryRegion = Vec<u8>;
 pub type DurationEras = u8;
 
 // struct to store the registered Device Information
-#[derive(Decode, Encode, Default)]
+#[derive(Decode, Encode, Default, TypeInfo)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
     ipv4: IpV4, // IP will not be exposed in future version
@@ -59,7 +59,7 @@ pub trait NodeInterface<AccountId, BlockNumber> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, Get, ReservableCurrency, Vec};
+    use frame_support::traits::{Currency, Get, ReservableCurrency};
     use frame_support::{dispatch::DispatchResult, ensure};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
@@ -153,7 +153,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         // register node: AccountId, ipv4, country
