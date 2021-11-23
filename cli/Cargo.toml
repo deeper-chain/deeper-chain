@@ -66,6 +66,7 @@ sc-client-api = { git = "https://github.com/paritytech/substrate", version = "4.
 sc-chain-spec = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sc-consensus = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
 sc-network = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-consensus-slots = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-consensus-babe = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
@@ -123,6 +124,8 @@ sc-consensus = { git = "https://github.com/paritytech/substrate", version = "0.1
 sc-consensus-babe = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-consensus-epochs = { git = "https://github.com/paritytech/substrate", version = "0.10.0-dev" }
 sc-service-test = { git = "https://github.com/paritytech/substrate", version = "2.0.0" }
+sp-tracing = { git = "https://github.com/paritytech/substrate", version = "4.0.0-dev" }
+
 futures = "0.3.16"
 tempfile = "3.1.0"
 assert_cmd = "1.0"
