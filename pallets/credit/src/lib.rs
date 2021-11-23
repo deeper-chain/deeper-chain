@@ -208,6 +208,28 @@ pub mod pallet {
     pub type LastCreditUpdate<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, EraIndex, OptionQuery>;
 
+    #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    pub struct CampaignErasData {
+        pub campaign_id: CampaignId,
+        pub start_era: EraIndex,
+        pub reward_eras: EraIndex,
+    }
+
+    /// Information about the campaigns attended.
+    #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+    #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+    pub struct ParticipatedCampaigns {
+        pub latest_expiry_era: EraIndex,
+        pub campaigns: BTreeMap<CampaignId, CampaignErasData>,
+    }
+
+    /// Record information about the staking campaigns the account has participated in.
+    #[pallet::storage]
+    #[pallet::getter(fn participated_campaigns_info)]
+    pub type ParticipatedCampaignsInfo<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, ParticipatedCampaigns, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -365,11 +387,19 @@ pub mod pallet {
                 if user_credit_history[last_index].0 == current_era {
                     user_credit_history[last_index] = (current_era, user_credit_data.clone());
                 } else {
-                    user_credit_history.push((current_era, user_credit_data));
+                    user_credit_history.push((current_era, user_credit_data.clone()));
                 }
-                UserCreditHistory::<T>::insert(&account_id, user_credit_history);
+                UserCreditHistory::<T>::insert(&account_id, user_credit_history.clone());
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+
+                weight = weight.saturating_add(Self::refresh_latest_expiry_eras(
+                    account_id,
+                    current_era,
+                    &user_credit_history,
+                    &user_credit_data,
+                ));
             }
+
             weight
         }
 
@@ -497,6 +527,156 @@ pub mod pallet {
                 credit_setting,
             );
         }
+
+        /// get the latest campaign expiration point of the account.
+        pub fn latest_expiry_era_in_campaigns(account_id: &T::AccountId) -> (EraIndex, Weight) {
+            let optional_participated_campaigns: Option<ParticipatedCampaigns> =
+                Self::participated_campaigns_info(account_id);
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+
+            if !optional_participated_campaigns.is_none() {
+                let latest_expiry_era = optional_participated_campaigns.unwrap().latest_expiry_era;
+                if latest_expiry_era > 0 {
+                    return (latest_expiry_era, weight);
+                }
+            }
+
+            let credit_history = Self::user_credit_history(account_id); //  read 1
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
+            let (participated_campaigns, ret_weight) =
+                Self::fix_eras_from_history(account_id, &credit_history);
+            weight = weight.saturating_add(ret_weight);
+
+            return (participated_campaigns.latest_expiry_era, weight);
+        }
+
+        /// set or refresh the latest campaign expiration point of the account.
+        fn refresh_latest_expiry_eras(
+            account_id: &T::AccountId,
+            current_era: EraIndex,
+            credit_history: &Vec<(EraIndex, CreditData)>,
+            user_credit: &CreditData,
+        ) -> Weight {
+            let (mut participated_campaigns, ret_weight) =
+                Self::fix_eras_from_history_if_needed(account_id, credit_history);
+            let campaign_id = user_credit.campaign_id;
+            let reward_eras = user_credit.reward_eras;
+
+            let mut campaign_eras_data = CampaignErasData::default();
+            if !participated_campaigns.campaigns.contains_key(&campaign_id) {
+                campaign_eras_data.campaign_id = campaign_id;
+                campaign_eras_data.start_era = current_era;
+                campaign_eras_data.reward_eras = reward_eras;
+                let end_era = current_era + reward_eras;
+                if end_era > participated_campaigns.latest_expiry_era {
+                    participated_campaigns.latest_expiry_era = end_era;
+                }
+            } else {
+                /// The following code may be removed in the future.
+                /// It is reasonable to say that the reward_eras of the same campaign_id is the same.
+                /// To fit the code in the test, the following code is added to solve the scenario
+                /// that the reward_eras of the same campaign_id is not the same.
+                let ori_campaign_eras_data =
+                    participated_campaigns.campaigns.get(&campaign_id).unwrap();
+                if ori_campaign_eras_data.reward_eras != reward_eras {
+                    if ori_campaign_eras_data.reward_eras + ori_campaign_eras_data.start_era
+                        < reward_eras + current_era
+                    {
+                        campaign_eras_data.campaign_id = ori_campaign_eras_data.campaign_id;
+                        campaign_eras_data.reward_eras = reward_eras;
+                        campaign_eras_data.start_era = current_era;
+                        participated_campaigns.latest_expiry_era = current_era + reward_eras;
+                    }
+                }
+            }
+
+            participated_campaigns
+                .campaigns
+                .insert(campaign_id, campaign_eras_data);
+
+            ParticipatedCampaignsInfo::<T>::mutate(&account_id, |d| match d {
+                Some(campaigns_value) => *campaigns_value = participated_campaigns,
+                _ => (),
+            });
+
+            let mut weight = T::DbWeight::get().reads_writes(0, 1);
+            weight = weight.saturating_add(ret_weight);
+
+            weight
+        }
+
+        fn fix_eras_from_history(
+            account_id: &T::AccountId,
+            credit_history: &Vec<(EraIndex, CreditData)>,
+        ) -> (ParticipatedCampaigns, Weight) {
+            let mut participated_campaigns: ParticipatedCampaigns =
+                ParticipatedCampaigns::default();
+            let mut campaigns_map: BTreeMap<CampaignId, CampaignErasData> =
+                BTreeMap::<CampaignId, CampaignErasData>::new();
+            for (eras, credit_data) in credit_history {
+                let mut campaign_eras_data = CampaignErasData::default();
+                if !campaigns_map.contains_key(&credit_data.campaign_id) {
+                    campaign_eras_data.campaign_id = credit_data.campaign_id;
+                    campaign_eras_data.start_era = *eras;
+                    campaign_eras_data.reward_eras = credit_data.reward_eras;
+                    if (campaign_eras_data.start_era + campaign_eras_data.reward_eras)
+                        > participated_campaigns.latest_expiry_era
+                    {
+                        participated_campaigns.latest_expiry_era =
+                            campaign_eras_data.start_era + campaign_eras_data.reward_eras;
+                    }
+                } else {
+                    /// The following code may be removed in the future.
+                    /// It is reasonable to say that the reward_eras of the same campaign_id is the same.
+                    /// To fit the code in the test, the following code is added to solve the scenario
+                    /// that the reward_eras of the same campaign_id is not the same.
+                    let ori_campaign_eras_data =
+                        campaigns_map.get(&credit_data.campaign_id).unwrap();
+                    if ori_campaign_eras_data.reward_eras != credit_data.reward_eras {
+                        if credit_data.reward_eras + eras
+                            > ori_campaign_eras_data.reward_eras + ori_campaign_eras_data.start_era
+                        {
+                            campaign_eras_data.campaign_id = ori_campaign_eras_data.campaign_id;
+                            campaign_eras_data.reward_eras = credit_data.reward_eras;
+                            campaign_eras_data.start_era = *eras;
+                            participated_campaigns.latest_expiry_era =
+                                credit_data.reward_eras + eras;
+                        }
+                    }
+                }
+
+                campaigns_map.insert(credit_data.campaign_id, campaign_eras_data);
+            }
+
+            participated_campaigns.campaigns = campaigns_map;
+            ParticipatedCampaignsInfo::<T>::insert(account_id, participated_campaigns.clone());
+            let mut weight = T::DbWeight::get().reads_writes(0, 1);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+
+            (participated_campaigns, weight)
+        }
+
+        fn fix_eras_from_history_if_needed(
+            account_id: &T::AccountId,
+            credit_history: &Vec<(EraIndex, CreditData)>,
+        ) -> (ParticipatedCampaigns, Weight) {
+            let optional_participated_campaigns: Option<ParticipatedCampaigns> =
+                Self::participated_campaigns_info(account_id);
+            let mut weight = T::DbWeight::get().reads_writes(1, 0);
+            if !optional_participated_campaigns.is_none() {
+                let participated_campaigns = optional_participated_campaigns.unwrap();
+                if participated_campaigns.latest_expiry_era > 0 {
+                    return (participated_campaigns, weight);
+                }
+            }
+
+            let (participated_campaigns, ret_weight) =
+                Self::fix_eras_from_history(account_id, credit_history);
+            weight = weight.saturating_add(ret_weight);
+
+            return (participated_campaigns, weight);
+        }
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Module<T> {
@@ -591,8 +771,9 @@ pub mod pallet {
                 return (None, weight);
             }
 
-            let onboard_era = credit_history[0].0;
-            let expiry_era = onboard_era + credit_data.reward_eras - 1;
+            let (latest_expiry_era, ret_weight) = Self::latest_expiry_era_in_campaigns(account_id);
+            weight = weight.saturating_add(ret_weight);
+            let expiry_era = latest_expiry_era - 1;
             if from > expiry_era {
                 return (None, weight);
             }

@@ -161,6 +161,214 @@ fn add_or_update_credit_data() {
 }
 
 #[test]
+fn latest_expiry_era() {
+    new_test_ext().execute_with(|| {
+        // era 0
+        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+
+        // era 1
+        run_to_block(BLOCKS_PER_ERA);
+        assert_eq!(Credit::user_credit_history(3), vec![]);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 0);
+
+        // When calculating reward, if the credit score history is empty,
+        // the history will be initialized with the current credit score data.
+        Credit::get_reward(&3, 0, 0);
+        let credit_historys = vec![(
+            0,
+            CreditData {
+                campaign_id: 0,
+                credit: 100,
+                initial_credit_level: CreditLevel::One,
+                rank_in_initial_credit_level: 1,
+                number_of_referees: 1,
+                current_credit_level: CreditLevel::One,
+                reward_eras: 1,
+            },
+        )];
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 1);
+
+        run_to_block(BLOCKS_PER_ERA * 2);
+        let credit_data = CreditData {
+            campaign_id: 1,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 50,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+
+        let credit_historys = vec![
+            (
+                0,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 1,
+                },
+            ),
+            (
+                2,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 50,
+                },
+            ),
+        ];
+
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 52);
+
+        run_to_block(BLOCKS_PER_ERA * 50);
+        Credit::get_reward(&3, 2, 49);
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 52);
+
+        run_to_block(BLOCKS_PER_ERA * 52);
+        Credit::get_reward(&3, 50, 50);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 52);
+
+        run_to_block(BLOCKS_PER_ERA * 55);
+        Credit::get_reward(&3, 51, 54);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 52);
+
+        run_to_block(BLOCKS_PER_ERA * 60);
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 400,
+            initial_credit_level: CreditLevel::Four,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Four,
+            reward_eras: 100,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        let credit_historys = vec![
+            (
+                0,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 1,
+                },
+            ),
+            (
+                2,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 50,
+                },
+            ),
+            (
+                60,
+                CreditData {
+                    campaign_id: 3,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 0,
+                    number_of_referees: 0,
+                    current_credit_level: CreditLevel::Four,
+                    reward_eras: 100,
+                },
+            ),
+        ];
+        assert_eq!(Credit::user_credit_history(3), credit_historys);
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 160);
+
+        run_to_block(BLOCKS_PER_ERA * 155);
+        let credit_data = CreditData {
+            campaign_id: 3,
+            credit: 600,
+            initial_credit_level: CreditLevel::Six,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Six,
+            reward_eras: 100,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 160);
+        Credit::get_reward(&3, 60, 154);
+
+        run_to_block(BLOCKS_PER_ERA * 170);
+        let credit_data = CreditData {
+            campaign_id: 2,
+            credit: 600,
+            initial_credit_level: CreditLevel::Six,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Six,
+            reward_eras: 200,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 370);
+
+        run_to_block(BLOCKS_PER_ERA * 200);
+        let credit_data = CreditData {
+            campaign_id: 2,
+            credit: 600,
+            initial_credit_level: CreditLevel::Six,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Six,
+            reward_eras: 300,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data.clone()
+        ));
+        let (latest_expiry_era, _) = Credit::latest_expiry_era_in_campaigns(&3);
+        assert_eq!(latest_expiry_era, 500);
+    });
+}
+
+#[test]
 fn add_or_update_credit_data_check_credit_history_and_reward() {
     new_test_ext().execute_with(|| {
         // era 0
