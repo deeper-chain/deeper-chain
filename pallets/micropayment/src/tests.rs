@@ -144,6 +144,32 @@ fn close_channel() {
                 Error::<Test>::ChannelNotExist
             ))
         );
+
+        // when a server is offline longer then 1 era, client can close_channel
+        assert_ok!(Micropayment::open_channel(
+            Origin::signed(alice()),
+            bob(),
+            300,
+            3600 * 24
+        ));
+        assert_ok!(DeeperNode::im_online(Origin::signed(alice())));
+        assert_ok!(DeeperNode::im_online(Origin::signed(bob())));
+        assert_eq!(
+            Micropayment::close_channel(Origin::signed(alice()), bob()),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::UnexpiredChannelCannotBeClosedBySender
+            ))
+        ); // can't close channel after channel is created immediately
+        run_to_block(24 * 720 + 2 + 1);
+        assert_eq!(
+            Micropayment::close_channel(Origin::signed(alice()), bob()),
+            Err(DispatchErrorWithPostInfo::from(
+                Error::<Test>::UnexpiredChannelCannotBeClosedBySender
+            ))
+        ); // can't close channel after channel is created only 2 block
+        run_to_block(24 * 720 + 2 + crate::mock::BLOCKS_PER_ERA);
+        // can close channel when server is offline longer then 1 era
+        assert_ok!(Micropayment::close_channel(Origin::signed(alice()), bob()));
     });
 }
 
@@ -190,7 +216,7 @@ fn add_balance() {
         assert_ok!(Micropayment::add_balance(
             Origin::signed(alice()),
             bob(),
-            100
+            99 // open_channel cost 300DPR, account must keep 100 DPR, so at most add 99 DPR
         ));
 
         // Channel not exists

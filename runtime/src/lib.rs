@@ -1075,6 +1075,7 @@ impl pallet_micropayment::Config for Runtime {
     type DataPerDPR = DataPerDPR;
     type AccountCreator = DefaultAccountCreator;
     type WeightInfo = pallet_micropayment::weights::SubstrateWeight<Runtime>;
+    type NodeInterface = DeeperNode;
 }
 
 parameter_types! {

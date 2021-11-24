@@ -56,6 +56,7 @@ pub mod pallet {
     use log::error;
     use pallet_balances::MutableCurrency;
     use pallet_credit::CreditInterface;
+    use pallet_deeper_node::NodeInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{Saturating, Zero};
@@ -78,6 +79,8 @@ pub mod pallet {
         type AccountCreator: AccountCreator<Self::AccountId>;
         // Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+        /// NodeInterface of deeper-node pallet
+        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
     }
 
     type BalanceOf<T> =
@@ -263,8 +266,11 @@ pub mod pallet {
             } else if Channel::<T>::contains_key(&signer, &account_id) {
                 // signer is client
                 let chan = Channel::<T>::get(&signer, &account_id);
+
                 let current_block = <frame_system::Pallet<T>>::block_number();
-                if chan.expiration < current_block {
+                if chan.expiration < current_block
+                    || T::NodeInterface::get_eras_offline(&chan.server) >= 1
+                {
                     TotalMicropaymentChannelBalance::<T>::mutate_exists(&signer, |b| {
                         let total_balance = b.take().unwrap_or_default();
                         *b = if total_balance > chan.balance {

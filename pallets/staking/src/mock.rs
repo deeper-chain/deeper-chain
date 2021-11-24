@@ -192,6 +192,7 @@ impl pallet_micropayment::Config for Test {
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
+    type NodeInterface = DeeperNode;
 }
 
 parameter_types! {
