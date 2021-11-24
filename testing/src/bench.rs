@@ -28,8 +28,10 @@ use std::{
     sync::Arc,
 };
 
-use crate::client::{Backend, Client};
-use crate::keyring::*;
+use crate::{
+    client::{Backend, Client},
+    keyring::*,
+};
 use codec::{Decode, Encode};
 use futures::executor;
 use node_primitives::Block;
@@ -332,8 +334,8 @@ impl<'a> Iterator for BlockContentIterator<'a> {
                     BlockType::RandomTransfersReaping => {
                         Call::Balances(BalancesCall::transfer {
                             dest: sp_runtime::MultiAddress::Id(receiver),
-                            // Transfer so that ending balance would be 1 less than existential deposit
-                            // so that we kill the sender account.
+                            // Transfer so that ending balance would be 1 less than existential
+                            // deposit so that we kill the sender account.
                             value: 100 * DOLLARS - (node_runtime::ExistentialDeposit::get() - 1),
                         })
                     }
@@ -490,9 +492,7 @@ impl BenchDb {
             match block.push(opaque) {
                 Err(sp_blockchain::Error::ApplyExtrinsicFailed(
                     sp_blockchain::ApplyExtrinsicFailed::Validity(e),
-                )) if e.exhausted_resources() => {
-                    break;
-                }
+                )) if e.exhausted_resources() => break,
                 Err(err) => panic!("Error pushing transaction: {:?}", err),
                 Ok(_) => {}
             }

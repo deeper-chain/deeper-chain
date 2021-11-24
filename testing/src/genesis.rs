@@ -20,9 +20,9 @@
 
 use crate::keyring::*;
 use node_runtime::{
-    constants::currency::*, wasm_binary_unwrap, AccountId, BalancesConfig, GenesisConfig,
-    GrandpaConfig, IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig,
-    SystemConfig,
+    constants::currency::*, wasm_binary_unwrap, AccountId, BabeConfig, BalancesConfig,
+    GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SocietyConfig, StakerStatus,
+    StakingConfig, SystemConfig, BABE_GENESIS_EPOCH_CONFIG,
 };
 use sp_core::ChangesTrieConfiguration;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
@@ -102,14 +102,16 @@ pub fn config_endowed(
             invulnerables: vec![alice(), bob(), charlie()],
             ..Default::default()
         },
-        babe: Default::default(),
+        babe: BabeConfig {
+            authorities: vec![],
+            epoch_config: Some(BABE_GENESIS_EPOCH_CONFIG),
+        },
         grandpa: GrandpaConfig {
             authorities: vec![],
         },
         im_online: Default::default(),
         authority_discovery: Default::default(),
         democracy: Default::default(),
-        //council: Default::default(),
         technical_committee: Default::default(),
         technical_membership: Default::default(),
         elections: Default::default(),
