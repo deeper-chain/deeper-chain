@@ -18,6 +18,7 @@ jobs:
       - name: Install Rust toolchain ${{ matrix.rust }}
         uses: actions-rs/toolchain@v1
         with:
+          toolchain: nightly-2021-10-21
           components: rustfmt, clippy
           target: wasm32-unknown-unknown
           override: true
