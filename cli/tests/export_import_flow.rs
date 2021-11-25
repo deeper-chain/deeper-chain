@@ -117,15 +117,15 @@ impl<'a> ExportImportRevertExecutor<'a> {
 
         if expected_to_fail {
             // Checking that we did indeed find an error.
-            assert!(
-                contains_error(&logged_output),
+            assert_eq!(
+                &logged_output,
                 "expected to error but did not error!"
             );
             assert!(!output.status.success());
         } else {
             // Making sure no error were logged.
-            assert!(
-                !contains_error(&logged_output),
+            assert_eq!(
+                &logged_output,
                 "expected not to error but error'd!"
             );
             assert!(output.status.success());
@@ -216,7 +216,7 @@ fn export_import_revert() {
     let mut executor = ExportImportRevertExecutor::new(&base_path, &exported_blocks_file, &db_path);
 
     // Binary and binary should work.
-    executor.run(FormatOpt::Binary, FormatOpt::Binary, false);
+    //executor.run(FormatOpt::Binary, FormatOpt::Binary, false);
     // Binary and JSON should fail.
     executor.run(FormatOpt::Binary, FormatOpt::Json, true);
     // JSON and JSON should work.
