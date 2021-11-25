@@ -27,4 +27,4 @@ jobs:
         uses: Swatinem/rust-cache@v1
       
       - name: Test
-        run: RUST_BACKTRACE=1 cargo test -p node-cli --test export_import_flow
+        run: RUST_BACKTRACE=full cargo test -p node-cli --test export_import_flow
