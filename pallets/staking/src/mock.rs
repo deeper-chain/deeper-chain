@@ -21,7 +21,9 @@ use crate as staking;
 use crate::*;
 use frame_support::{
     assert_ok, parameter_types,
-    traits::{Currency, FindAuthor, Get, OnFinalize, OnInitialize, OneSessionHandler},
+    traits::{
+        Currency, FindAuthor, GenesisBuild, Get, OnFinalize, OnInitialize, OneSessionHandler,
+    },
     weights::constants::RocksDbWeight,
     IterableStorageMap, StorageDoubleMap, StorageValue,
 };
@@ -71,10 +73,10 @@ impl OneSessionHandler<AccountId> for OtherSessionHandler {
         });
     }
 
-    fn on_disabled(validator_index: usize) {
+    fn on_disabled(validator_index: u32) {
         SESSION.with(|d| {
             let mut d = d.borrow_mut();
-            let value = d.0[validator_index];
+            let value = d.0[validator_index as usize];
             d.1.insert(value);
         })
     }
@@ -98,14 +100,15 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        Staking: staking::{Module, Call, Config<T>, Storage, Event<T>},
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
-        Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Staking: staking::{Pallet, Call, Config<T>, Storage, Event<T>},
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -135,7 +138,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = RocksDbWeight;
@@ -157,6 +160,7 @@ impl frame_system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
@@ -250,7 +254,6 @@ impl pallet_session::Config for Test {
     type Event = Event;
     type ValidatorId = AccountId;
     type ValidatorIdOf = crate::StashOf<Test>;
-    type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type WeightInfo = ();
 }
@@ -263,7 +266,7 @@ impl pallet_authorship::Config for Test {
     type FindAuthor = Author11;
     type UncleGenerations = UncleGenerations;
     type FilterUncle = ();
-    type EventHandler = Module<Test>;
+    type EventHandler = Pallet<Test>;
 }
 parameter_types! {
     pub const MinimumPeriod: u64 = 5;
@@ -838,7 +841,7 @@ pub(crate) fn on_offence_in_era(
     let bonded_eras = crate::BondedEras::get();
     for &(bonded_era, start_session) in bonded_eras.iter() {
         if bonded_era == era {
-            let _ = Staking::on_offence(offenders, slash_fraction, start_session).unwrap();
+            let _ = Staking::on_offence(offenders, slash_fraction, start_session);
             return;
         } else if bonded_era > era {
             break;
@@ -850,8 +853,7 @@ pub(crate) fn on_offence_in_era(
             offenders,
             slash_fraction,
             Staking::eras_start_session_index(era).unwrap(),
-        )
-        .unwrap();
+        );
     } else {
         panic!("cannot slash in era {}", era);
     }

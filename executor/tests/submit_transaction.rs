@@ -42,7 +42,10 @@ fn should_submit_unsigned_transaction() {
             validators_len: 0,
         };
 
-        let call = pallet_im_online::Call::heartbeat(heartbeat_data, signature);
+        let call = pallet_im_online::Call::heartbeat {
+            heartbeat: heartbeat_data,
+            signature,
+        };
         SubmitTransaction::<Runtime, pallet_im_online::Call<Runtime>>::submit_unsigned_transaction(
             call.into(),
         )
@@ -84,7 +87,10 @@ fn should_submit_signed_transaction() {
     t.execute_with(|| {
         let results =
             Signer::<Runtime, TestAuthorityId>::all_accounts().send_signed_transaction(|_| {
-                pallet_balances::Call::transfer(Default::default(), Default::default())
+                pallet_balances::Call::transfer {
+                    dest: Default::default(),
+                    value: Default::default(),
+                }
             });
 
         let len = results.len();
@@ -118,7 +124,10 @@ fn should_submit_signed_twice_from_the_same_account() {
     t.execute_with(|| {
         let result =
             Signer::<Runtime, TestAuthorityId>::any_account().send_signed_transaction(|_| {
-                pallet_balances::Call::transfer(Default::default(), Default::default())
+                pallet_balances::Call::transfer {
+                    dest: Default::default(),
+                    value: Default::default(),
+                }
             });
 
         assert!(result.is_some());
@@ -127,7 +136,10 @@ fn should_submit_signed_twice_from_the_same_account() {
         // submit another one from the same account. The nonce should be incremented.
         let result =
             Signer::<Runtime, TestAuthorityId>::any_account().send_signed_transaction(|_| {
-                pallet_balances::Call::transfer(Default::default(), Default::default())
+                pallet_balances::Call::transfer {
+                    dest: Default::default(),
+                    value: Default::default(),
+                }
             });
 
         assert!(result.is_some());
@@ -173,7 +185,7 @@ fn should_submit_signed_twice_from_all_accounts() {
     t.execute_with(|| {
 		let results = Signer::<Runtime, TestAuthorityId>::all_accounts()
 			.send_signed_transaction(|_| {
-				pallet_balances::Call::transfer(Default::default(), Default::default())
+				pallet_balances::Call::transfer { dest: Default::default(), value: Default::default() }
 			});
 
 		let len = results.len();
@@ -184,7 +196,7 @@ fn should_submit_signed_twice_from_all_accounts() {
 		// submit another one from the same account. The nonce should be incremented.
 		let results = Signer::<Runtime, TestAuthorityId>::all_accounts()
 			.send_signed_transaction(|_| {
-				pallet_balances::Call::transfer(Default::default(), Default::default())
+				pallet_balances::Call::transfer { dest: Default::default(), value: Default::default() }
 			});
 
 		let len = results.len();
@@ -235,7 +247,10 @@ fn submitted_transaction_should_be_valid() {
     t.execute_with(|| {
         let results =
             Signer::<Runtime, TestAuthorityId>::all_accounts().send_signed_transaction(|_| {
-                pallet_balances::Call::transfer(Default::default(), Default::default())
+                pallet_balances::Call::transfer {
+                    dest: Default::default(),
+                    value: Default::default(),
+                }
             });
         let len = results.len();
         assert_eq!(len, 1);
@@ -257,20 +272,23 @@ fn submitted_transaction_should_be_valid() {
             ..Default::default()
         };
         let account = frame_system::AccountInfo {
-            nonce: 0,
-            consumers: 0,
-            providers: 0,
             data,
+            ..Default::default()
         };
         <frame_system::Account<Runtime>>::insert(&address, account);
 
         // check validity
-        let res = Executive::validate_transaction(source, extrinsic).unwrap();
+        let res = Executive::validate_transaction(
+            source,
+            extrinsic,
+            frame_system::BlockHash::<Runtime>::get(0),
+        )
+        .unwrap();
 
         // We ignore res.priority since this number can change based on updates to weights and such.
         assert_eq!(res.requires, Vec::<TransactionTag>::new());
         assert_eq!(res.provides, vec![(address, 0).encode()]);
-        assert_eq!(res.longevity, 2048);
+        assert_eq!(res.longevity, 2047);
         assert_eq!(res.propagate, true);
     });
 }

@@ -206,6 +206,7 @@ impl<'a> ExportImportRevertExecutor<'a> {
 }
 
 #[test]
+#[ignore]
 fn export_import_revert() {
     let base_path = tempdir().expect("could not create a temp dir");
     let exported_blocks_file = base_path.path().join("exported_blocks");
