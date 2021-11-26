@@ -23,10 +23,10 @@ use hex_literal::hex;
 use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
-    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig,
-    CreditConfig, DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig,
-    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
-    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CreditConfig,
+    DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig,
+    IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig,
+    SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -62,6 +62,8 @@ pub struct Extensions {
     pub fork_blocks: sc_client_api::ForkBlocks<Block>,
     /// Known bad block hashes.
     pub bad_blocks: sc_client_api::BadBlocks<Block>,
+    /// The light sync state extension used by the sync-state rpc.
+    pub light_sync_state: sc_sync_state_rpc::LightSyncStateExtension,
 }
 
 /// Specialized `ChainSpec`.
@@ -329,7 +331,7 @@ pub fn testnet_genesis(
     endowment: Balance,
     credit_settings: Vec<CreditSetting<Balance>>,
     user_credit_data: Vec<(AccountId, CreditData)>,
-    enable_println: bool,
+    _enable_println: bool,
 ) -> GenesisConfig {
     let mut accounts: BTreeSet<AccountId> = BTreeSet::new();
     let mut balances: Vec<(AccountId, Balance)> = vec![];
@@ -350,13 +352,13 @@ pub fn testnet_genesis(
         }
     }
     GenesisConfig {
-        frame_system: Some(SystemConfig {
+        system: SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
             changes_trie_config: Default::default(),
-        }),
-        pallet_balances: Some(BalancesConfig { balances }),
-        pallet_indices: Some(IndicesConfig { indices: vec![] }),
-        pallet_session: Some(SessionConfig {
+        },
+        balances: BalancesConfig { balances },
+        indices: IndicesConfig { indices: vec![] },
+        session: SessionConfig {
             keys: initial_authorities
                 .iter()
                 .map(|x| {
@@ -367,8 +369,8 @@ pub fn testnet_genesis(
                     )
                 })
                 .collect::<Vec<_>>(),
-        }),
-        pallet_staking: Some(StakingConfig {
+        },
+        staking: StakingConfig {
             validator_count: initial_authorities.len() as u32,
             era_validator_reward: 57534 * DPR, // about 21 million DPR per year
             minimum_validator_count: initial_authorities.len() as u32,
@@ -379,43 +381,37 @@ pub fn testnet_genesis(
             invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
             slash_reward_fraction: Perbill::from_percent(10),
             ..Default::default()
-        }),
-        pallet_democracy: Some(DemocracyConfig::default()),
-        pallet_elections_phragmen: Some(ElectionsConfig {
+        },
+        democracy: DemocracyConfig::default(),
+        elections: ElectionsConfig {
             members: initial_authorities
                 .iter()
                 .take((initial_authorities.len() + 1) / 2)
                 .cloned()
                 .map(|member| (member.0, stash))
                 .collect(),
-        }),
-        //pallet_collective_Instance1: Some(CouncilConfig::default()),
-        pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
+        },
+        technical_committee: TechnicalCommitteeConfig {
             members: endowed_accounts
                 .iter()
                 .take((endowed_accounts.len() + 1) / 2)
                 .cloned()
                 .collect(),
             phantom: Default::default(),
-        }),
-        pallet_contracts: Some(ContractsConfig {
-            current_schedule: pallet_contracts::Schedule {
-                enable_println, // this should only be enabled on development chains
-                ..Default::default()
-            },
-        }),
-        pallet_sudo: Some(SudoConfig { key: root_key }),
-        pallet_babe: Some(BabeConfig {
+        },
+        sudo: SudoConfig { key: root_key },
+        babe: BabeConfig {
             authorities: vec![],
-        }),
-        pallet_im_online: Some(ImOnlineConfig { keys: vec![] }),
-        pallet_authority_discovery: Some(AuthorityDiscoveryConfig { keys: vec![] }),
-        pallet_grandpa: Some(GrandpaConfig {
+            epoch_config: Some(node_runtime::BABE_GENESIS_EPOCH_CONFIG),
+        },
+        im_online: ImOnlineConfig { keys: vec![] },
+        authority_discovery: AuthorityDiscoveryConfig { keys: vec![] },
+        grandpa: GrandpaConfig {
             authorities: vec![],
-        }),
-        pallet_membership_Instance1: Some(Default::default()),
-        pallet_treasury: Some(Default::default()),
-        pallet_society: Some(SocietyConfig {
+        },
+        technical_membership: Default::default(),
+        treasury: Default::default(),
+        society: SocietyConfig {
             members: endowed_accounts
                 .iter()
                 .take((endowed_accounts.len() + 1) / 2)
@@ -423,13 +419,13 @@ pub fn testnet_genesis(
                 .collect(),
             pot: 0,
             max_members: 999,
-        }),
-        pallet_vesting: Some(Default::default()),
-        pallet_deeper_node: Some(DeeperNodeConfig { tmp: 0 }),
-        pallet_credit: Some(CreditConfig {
+        },
+        vesting: Default::default(),
+        deeper_node: DeeperNodeConfig { tmp: 0 },
+        credit: CreditConfig {
             credit_settings,
             user_credit_data,
-        }),
+        },
     }
 }
 
@@ -28924,7 +28920,8 @@ pub fn local_testnet_config() -> ChainSpec {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::service::{new_full_base, new_light_base, NewFullBase};
+    use crate::service::new_light_base;
+    use crate::service::{new_full_base, NewFullBase};
     use sc_service_test;
     use sp_runtime::BuildStorage;
 
@@ -28978,6 +28975,8 @@ pub(crate) mod tests {
     #[test]
     #[ignore]
     fn test_connectivity() {
+        sp_tracing::try_init_simple();
+
         sc_service_test::connectivity(
             integration_test_config_with_two_authorities(),
             |config| {
@@ -28996,7 +28995,7 @@ pub(crate) mod tests {
                 ))
             },
             |config| {
-                let (keep_alive, _, _, client, network, transaction_pool) = new_light_base(config)?;
+                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     keep_alive,
                     client,

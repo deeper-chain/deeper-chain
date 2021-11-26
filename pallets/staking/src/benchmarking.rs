@@ -18,7 +18,7 @@
 //! Staking pallet benchmarking.
 
 use super::*;
-use crate::Module as Staking;
+use crate::Pallet as Staking;
 use testing_utils::*;
 
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
@@ -438,33 +438,33 @@ mod tests {
             .has_stakers(true)
             .build()
             .execute_with(|| {
-                assert_ok!(test_benchmark_bond::<Test>());
-                assert_ok!(test_benchmark_bond_extra::<Test>());
-                assert_ok!(test_benchmark_unbond::<Test>());
-                assert_ok!(test_benchmark_withdraw_unbonded_update::<Test>());
-                assert_ok!(test_benchmark_withdraw_unbonded_kill::<Test>());
-                assert_ok!(test_benchmark_validate::<Test>());
-                assert_ok!(test_benchmark_chill::<Test>());
-                assert_ok!(test_benchmark_set_payee::<Test>());
-                assert_ok!(test_benchmark_set_controller::<Test>());
-                assert_ok!(test_benchmark_set_validator_count::<Test>());
-                assert_ok!(test_benchmark_increase_validator_count::<Test>());
-                assert_ok!(test_benchmark_scale_validator_count::<Test>());
-                assert_ok!(test_benchmark_force_no_eras::<Test>());
-                assert_ok!(test_benchmark_force_new_era::<Test>());
-                assert_ok!(test_benchmark_set_invulnerables::<Test>());
-                assert_ok!(test_benchmark_set_validator_whitelist::<Test>());
-                assert_ok!(test_benchmark_force_unstake::<Test>());
-                assert_ok!(test_benchmark_force_new_era_always::<Test>());
-                assert_ok!(test_benchmark_increase_mining_reward::<Test>());
-                assert_ok!(test_benchmark_cancel_deferred_slash::<Test>());
-                assert_ok!(test_benchmark_rebond::<Test>());
-                assert_ok!(test_benchmark_set_history_depth::<Test>());
-                assert_ok!(test_benchmark_reap_stash::<Test>());
-                assert_ok!(test_benchmark_delegate::<Test>());
-                assert_ok!(test_benchmark_undelegate::<Test>());
-                assert_ok!(test_benchmark_do_slash::<Test>());
-                assert_ok!(test_benchmark_new_era::<Test>());
+                assert_ok!(Pallet::<Test>::test_benchmark_bond());
+                assert_ok!(Pallet::<Test>::test_benchmark_bond_extra());
+                assert_ok!(Pallet::<Test>::test_benchmark_unbond());
+                assert_ok!(Pallet::<Test>::test_benchmark_withdraw_unbonded_update());
+                assert_ok!(Pallet::<Test>::test_benchmark_withdraw_unbonded_kill());
+                assert_ok!(Pallet::<Test>::test_benchmark_validate());
+                assert_ok!(Pallet::<Test>::test_benchmark_chill());
+                assert_ok!(Pallet::<Test>::test_benchmark_set_payee());
+                assert_ok!(Pallet::<Test>::test_benchmark_set_controller());
+                assert_ok!(Pallet::<Test>::test_benchmark_set_validator_count());
+                assert_ok!(Pallet::<Test>::test_benchmark_increase_validator_count());
+                assert_ok!(Pallet::<Test>::test_benchmark_scale_validator_count());
+                assert_ok!(Pallet::<Test>::test_benchmark_force_no_eras());
+                assert_ok!(Pallet::<Test>::test_benchmark_force_new_era());
+                assert_ok!(Pallet::<Test>::test_benchmark_set_invulnerables());
+                assert_ok!(Pallet::<Test>::test_benchmark_set_validator_whitelist());
+                assert_ok!(Pallet::<Test>::test_benchmark_force_unstake());
+                assert_ok!(Pallet::<Test>::test_benchmark_force_new_era_always());
+                assert_ok!(Pallet::<Test>::test_benchmark_increase_mining_reward());
+                assert_ok!(Pallet::<Test>::test_benchmark_cancel_deferred_slash());
+                assert_ok!(Pallet::<Test>::test_benchmark_rebond());
+                assert_ok!(Pallet::<Test>::test_benchmark_set_history_depth());
+                assert_ok!(Pallet::<Test>::test_benchmark_reap_stash());
+                assert_ok!(Pallet::<Test>::test_benchmark_delegate());
+                assert_ok!(Pallet::<Test>::test_benchmark_undelegate());
+                assert_ok!(Pallet::<Test>::test_benchmark_do_slash());
+                assert_ok!(Pallet::<Test>::test_benchmark_new_era());
             });
     }
 }

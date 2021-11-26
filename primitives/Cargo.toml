@@ -12,19 +12,21 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-frame-system = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0"}
-sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+frame-system = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
+sp-application-crypto = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sp-core = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 [dev-dependencies]
-sp-serializer = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sp-serializer = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
 pretty_assertions = "0.6.1"
 
 [features]
 default = ["std"]
 std = [
 	"codec/std",
+	"scale-info/std",
 	"frame-system/std",
 	"sp-application-crypto/std",
 	"sp-core/std",

@@ -50,7 +50,7 @@ pub mod pallet {
     use crate::weights::WeightInfo;
     use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
-    use frame_support::traits::{Currency, Get, Vec};
+    use frame_support::traits::{Currency, Get};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use log::error;
@@ -59,7 +59,9 @@ pub mod pallet {
     use pallet_deeper_node::NodeInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::traits::{Saturating, StoredMapError, Zero};
+    use sp_runtime::traits::{Saturating, Zero};
+    use sp_runtime::DispatchError;
+    use sp_std::prelude::Vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -91,7 +93,7 @@ pub mod pallet {
     >;
 
     // struct to store micro-payment channel
-    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug)]
+    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, scale_info::TypeInfo)]
     pub struct Chan<AccountId, BlockNumber, Balance> {
         pub client: AccountId,
         pub server: AccountId,
@@ -140,7 +142,7 @@ pub mod pallet {
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         ChannelOpened(
@@ -199,7 +201,7 @@ pub mod pallet {
             );
             ensure!(client != server, Error::<T>::SameChannelEnds);
             let nonce = Nonce::<T>::get((&client, &server));
-            let start_block = <frame_system::Module<T>>::block_number();
+            let start_block = <frame_system::Pallet<T>>::block_number();
             let duration_blocks = duration / T::SecsPerBlock::get();
             let expiration = start_block + T::BlockNumber::from(duration_blocks);
             let chan = ChannelOf::<T> {
@@ -258,13 +260,14 @@ pub mod pallet {
                 // return the remaining balance in the channel to the client
                 Self::deposit_into_account(&account_id, chan.balance)?;
                 Self::_close_channel(&account_id, &signer);
-                let end_block = <frame_system::Module<T>>::block_number();
+                let end_block = <frame_system::Pallet<T>>::block_number();
                 Self::deposit_event(Event::ChannelClosed(account_id, signer, end_block));
                 return Ok(().into());
             } else if Channel::<T>::contains_key(&signer, &account_id) {
                 // signer is client
                 let chan = Channel::<T>::get(&signer, &account_id);
-                let current_block = <frame_system::Module<T>>::block_number();
+
+                let current_block = <frame_system::Pallet<T>>::block_number();
                 if chan.expiration < current_block
                     || T::NodeInterface::get_eras_offline(&chan.server) >= 1
                 {
@@ -296,7 +299,7 @@ pub mod pallet {
         pub fn close_expired_channels(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let client = ensure_signed(origin)?;
             for (server, chan) in Channel::<T>::iter_prefix(&client) {
-                let current_block = <frame_system::Module<T>>::block_number();
+                let current_block = <frame_system::Pallet<T>>::block_number();
                 if chan.expiration < current_block {
                     TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
                         let total_balance = b.take().unwrap_or_default();
@@ -339,7 +342,7 @@ pub mod pallet {
                 let total_balance = b.take().unwrap_or_default();
                 *b = Some(total_balance + amount);
             });
-            let end_block = <frame_system::Module<T>>::block_number();
+            let end_block = <frame_system::Pallet<T>>::block_number();
             Self::deposit_event(Event::BalanceAdded(client, server, amount, end_block));
             Ok(().into())
         }
@@ -361,7 +364,7 @@ pub mod pallet {
 
             // close channel if it expires
             let mut chan = Channel::<T>::get(&client, &server);
-            let current_block = <frame_system::Module<T>>::block_number();
+            let current_block = <frame_system::Pallet<T>>::block_number();
             if chan.expiration < current_block {
                 TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
                     let total_balance = b.take().unwrap_or_default();
@@ -403,7 +406,7 @@ pub mod pallet {
                 //T::CreditInterface::update_credit((server.clone(), chan.balance));
                 // no balance in channel now, just close it
                 Self::_close_channel(&client, &server);
-                let end_block = <frame_system::Module<T>>::block_number();
+                let end_block = <frame_system::Pallet<T>>::block_number();
                 Self::deposit_event(Event::ChannelClosed(
                     client.clone(),
                     server.clone(),
@@ -509,7 +512,7 @@ pub mod pallet {
         fn deposit_into_account(
             account: &T::AccountId,
             amount: BalanceOf<T>,
-        ) -> Result<(), StoredMapError> {
+        ) -> Result<(), DispatchError> {
             T::Currency::mutate_account_balance(account, |balance| {
                 balance.free += amount;
             })

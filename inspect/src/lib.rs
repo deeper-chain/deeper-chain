@@ -71,7 +71,7 @@ impl<TBlock: Block> PrettyPrinter<TBlock> for DebugPrinter {
         fmt: &mut fmt::Formatter,
         extrinsic: &TBlock::Extrinsic,
     ) -> fmt::Result {
-        writeln!(fmt, " {:?}", extrinsic)?;
+        writeln!(fmt, " {:#?}", extrinsic)?;
         writeln!(fmt, " Bytes: {:?}", HexDisplay::from(&extrinsic.encode()))?;
         Ok(())
     }
@@ -303,6 +303,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn should_parse_extrinsic_address() {
         type BlockAddress = super::BlockAddress<Hash, u64>;
         type ExtrinsicAddress = super::ExtrinsicAddress<Hash, u64>;

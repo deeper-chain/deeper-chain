@@ -73,6 +73,8 @@ use sp_std::{
 };
 pub use weights::WeightInfo;
 
+use scale_info::TypeInfo;
+
 const STAKING_ID: LockIdentifier = *b"staking ";
 pub const MAX_UNLOCKING_CHUNKS: usize = 32;
 
@@ -82,7 +84,7 @@ pub(crate) const LOG_TARGET: &'static str = "staking";
 #[macro_export]
 macro_rules! log {
 	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-		frame_support::debug::$level!(
+		log::$level!(
 			target: crate::LOG_TARGET,
 			$patter $(, $values)*
 		)
@@ -107,7 +109,7 @@ type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 >>::NegativeImbalance;
 
 /// Information regarding the active era (era in used in session).
-#[derive(Encode, Decode, RuntimeDebug)]
+#[derive(Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct ActiveEraInfo {
     /// Index of era.
     pub index: EraIndex,
@@ -121,7 +123,7 @@ pub struct ActiveEraInfo {
 /// Reward points of an era. Used to split era total payout between validators.
 ///
 /// This points will be used to reward validators.
-#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug)]
+#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 pub struct EraRewardPoints<AccountId: Ord> {
     /// Total number of points. Equals the sum of reward points for each validator.
     total: RewardPoint,
@@ -140,7 +142,7 @@ pub enum StakerStatus {
 }
 
 /// A destination account for payment.
-#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum RewardDestination<AccountId> {
     /// Pay into the stash account, increasing the amount at stake accordingly.
     Staked,
@@ -158,7 +160,7 @@ impl<AccountId> Default for RewardDestination<AccountId> {
     }
 }
 
-#[derive(Encode, Decode, Default, RuntimeDebug)]
+#[derive(Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 pub struct RewardData<Balance: HasCompact> {
     pub total_referee_reward: Balance,
     pub received_referee_reward: Balance,
@@ -168,7 +170,7 @@ pub struct RewardData<Balance: HasCompact> {
 }
 
 /// Preference of what happens regarding validation.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct ValidatorPrefs {
     /// not used. It may be removed in future.
     #[codec(compact)]
@@ -189,7 +191,7 @@ impl Default for ValidatorPrefs {
 }
 
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct UnlockChunk<Balance: HasCompact> {
     /// Amount of funds to be unlocked.
     #[codec(compact)]
@@ -200,7 +202,7 @@ pub struct UnlockChunk<Balance: HasCompact> {
 }
 
 /// The ledger of a (bonded) stash.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct StakingLedger<AccountId, Balance: HasCompact> {
     /// The stash account whose balance is actually locked and at stake.
     pub stash: AccountId,
@@ -328,7 +330,9 @@ where
 }
 
 /// A snapshot of the stake backing a single validator in the system.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebug)]
+#[derive(
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo,
+)]
 pub struct Exposure<AccountId, Balance: HasCompact> {
     /// The total balance backing this validator.
     #[codec(compact)]
@@ -342,7 +346,7 @@ pub struct Exposure<AccountId, Balance: HasCompact> {
 
 /// A pending slash record. The value of the slash has been computed but not applied yet,
 /// rather deferred for several eras.
-#[derive(Encode, Decode, Default, RuntimeDebug)]
+#[derive(Encode, Decode, Default, RuntimeDebug, TypeInfo)]
 pub struct UnappliedSlash<AccountId, Balance: HasCompact> {
     /// The stash ID of the offending validator.
     validator: AccountId,
@@ -357,7 +361,7 @@ pub struct UnappliedSlash<AccountId, Balance: HasCompact> {
 }
 
 /// Indicate how an election round was computed.
-#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum ElectionCompute {
     /// Result was forcefully computed on chain at the end of the session.
     OnChain,
@@ -381,7 +385,7 @@ pub struct ElectionResult<AccountId, Balance: HasCompact> {
 }
 
 /// The status of the upcoming (offchain) election.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum ElectionStatus<BlockNumber> {
     /// Nothing has and will happen for now. submission window is not open.
     Closed,
@@ -443,11 +447,11 @@ where
     >,
 {
     fn disable_validator(validator: &<T as frame_system::Config>::AccountId) -> Result<bool, ()> {
-        <pallet_session::Module<T>>::disable(validator)
+        Ok(<pallet_session::Pallet<T>>::disable(validator))
     }
 
     fn validators() -> Vec<<T as frame_system::Config>::AccountId> {
-        <pallet_session::Module<T>>::validators()
+        <pallet_session::Pallet<T>>::validators()
     }
 
     fn prune_historical_up_to(up_to: SessionIndex) {
@@ -513,7 +517,7 @@ pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
     type ExistentialDeposit: Get<BalanceOf<Self>>;
 }
 
-#[derive(Decode, Encode, Default, Debug)]
+#[derive(Decode, Encode, Default, Debug, TypeInfo)]
 pub struct DelegatorData<AccountId> {
     // delegator itself
     pub delegator: AccountId,
@@ -525,14 +529,14 @@ pub struct DelegatorData<AccountId> {
     pub delegating: bool,
 }
 
-#[derive(Decode, Encode, Default)]
+#[derive(Decode, Encode, Default, TypeInfo)]
 pub struct ValidatorData<AccountId: Ord> {
     pub delegators: BTreeSet<AccountId>,
     pub elected_era: EraIndex,
 }
 
 /// Mode of era-forcing.
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug)]
+#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum Forcing {
     /// Not forcing anything - just let whatever happen.
@@ -554,7 +558,7 @@ impl Default for Forcing {
 // A value placed in storage that represents the current version of the Staking storage. This value
 // is used by the `on_runtime_upgrade` logic to determine whether we run storage migration logic.
 // This should match directly with the semantic versions of the Rust crate.
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 enum Releases {
     V1_0_0Ancient,
     V2_0_0,
@@ -1003,7 +1007,7 @@ decl_module! {
                 Err(Error::<T>::InsufficientValue)?
             }
 
-            system::Module::<T>::inc_consumers(&stash).map_err(|_| Error::<T>::BadState)?;
+            system::Pallet::<T>::inc_consumers(&stash).map_err(|_| Error::<T>::BadState)?;
 
             // You're auto-bonded forever, here. We might improve this by only bonding when
             // you actually validate and remove once you unbond __everything__.
@@ -1840,10 +1844,8 @@ impl<T: Config> Module<T> {
                 .map(|points| *points)
                 .unwrap_or_else(|| Zero::zero());
             if !validator_reward_points.is_zero() {
-                let validator_total_reward_part = Perbill::from_rational_approximation(
-                    validator_reward_points,
-                    total_reward_points,
-                );
+                let validator_total_reward_part =
+                    Perbill::from_rational(validator_reward_points, total_reward_points);
                 // This is how much validator is entitled to.
                 let validator_total_payout = validator_total_reward_part * era_payout;
                 total_payout += validator_total_payout;
@@ -2152,15 +2154,15 @@ impl<T: Config> Module<T> {
         <Payee<T>>::remove(stash);
         <Validators<T>>::remove(stash);
 
-        system::Module::<T>::dec_consumers(stash);
+        system::Pallet::<T>::dec_consumers(stash);
 
         Ok(())
     }
 
     /// Clear all era information for given era.
     fn clear_era_information(era_index: EraIndex) {
-        <ErasStakers<T>>::remove_prefix(era_index);
-        <ErasValidatorPrefs<T>>::remove_prefix(era_index);
+        <ErasStakers<T>>::remove_prefix(era_index, None);
+        <ErasValidatorPrefs<T>>::remove_prefix(era_index, None);
         <ErasRewardPoints<T>>::remove(era_index);
         <ErasTotalStake<T>>::remove(era_index);
         <ErasValidators<T>>::remove(era_index);
@@ -2287,28 +2289,28 @@ impl<T: Config> Module<T> {
 /// some session can lag in between the newest session planned and the latest session started.
 impl<T: Config> pallet_session::SessionManager<T::AccountId> for Module<T> {
     fn new_session(new_index: SessionIndex) -> Option<Vec<T::AccountId>> {
-        frame_support::debug::native::trace!(
+        log::trace!(
             target: LOG_TARGET,
-            "[{}] planning new_session({})",
-            <frame_system::Module<T>>::block_number(),
+            "[{:#?}] planning new_session({})",
+            <frame_system::Pallet<T>>::block_number(),
             new_index
         );
         Self::new_session(new_index)
     }
     fn start_session(start_index: SessionIndex) {
-        frame_support::debug::native::trace!(
+        log::trace!(
             target: LOG_TARGET,
-            "[{}] starting start_session({})",
-            <frame_system::Module<T>>::block_number(),
+            "[{:#?}] starting start_session({})",
+            <frame_system::Pallet<T>>::block_number(),
             start_index
         );
         Self::start_session(start_index)
     }
     fn end_session(end_index: SessionIndex) {
-        frame_support::debug::native::trace!(
+        log::trace!(
             target: LOG_TARGET,
-            "[{}] ending end_session({})",
-            <frame_system::Module<T>>::block_number(),
+            "[{:#?}] ending end_session({})",
+            <frame_system::Pallet<T>>::block_number(),
             end_index
         );
         Self::end_session(end_index)
@@ -2356,7 +2358,7 @@ where
     }
     fn note_uncle(author: T::AccountId, _age: T::BlockNumber) {
         Self::reward_by_ids(vec![
-            (<pallet_authorship::Module<T>>::author(), 2),
+            (<pallet_authorship::Pallet<T>>::author(), 2),
             (author, 1),
         ])
     }
@@ -2412,9 +2414,9 @@ where
         >],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
-    ) -> Result<Weight, ()> {
-        if !Self::can_report() {
-            return Err(());
+    ) -> Weight {
+        if !Self::era_election_status().is_closed() {
+            return 0;
         }
 
         let reward_proportion = SlashRewardFraction::get();
@@ -2428,7 +2430,7 @@ where
             add_db_reads_writes(1, 0);
             if active_era.is_none() {
                 // this offence need not be re-submitted.
-                return Ok(consumed_weight);
+                return consumed_weight;
             }
             active_era
                 .expect("value checked not to be `None`; qed")
@@ -2460,7 +2462,7 @@ where
             {
                 Some(&(ref slash_era, _)) => *slash_era,
                 // before bonding period. defensive - should be filtered out.
-                None => return Ok(consumed_weight),
+                None => return consumed_weight,
             }
         };
 
@@ -2527,11 +2529,7 @@ where
             }
         }
 
-        Ok(consumed_weight)
-    }
-
-    fn can_report() -> bool {
-        Self::era_election_status().is_closed()
+        consumed_weight
     }
 }
 

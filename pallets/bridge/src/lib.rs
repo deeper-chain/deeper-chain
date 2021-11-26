@@ -208,7 +208,7 @@ pub mod pallet {
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId")]
+    //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         RelayMessage(T::Hash),
@@ -237,7 +237,7 @@ pub mod pallet {
                     .iter()
                     .for_each(|a| <DailyLimits<T>>::remove(a));
                 blocked_yesterday.iter().for_each(|a| {
-                    let now = <pallet_timestamp::Module<T>>::get();
+                    let now = <pallet_timestamp::Pallet<T>>::get();
                     let hash = (now.clone(), a.clone())
                         .using_encoded(<T as frame_system::Config>::Hashing::hash);
                     Self::deposit_event(Event::AccountResumedMessage(hash, a.clone(), now));
@@ -267,7 +267,7 @@ pub mod pallet {
             Self::check_pending_burn(amount)?;
             Self::check_daily_account_volume(from.clone(), amount)?;
 
-            let transfer_hash = (&from, &to, amount, <pallet_timestamp::Module<T>>::get())
+            let transfer_hash = (&from, &to, amount, <pallet_timestamp::Pallet<T>>::get())
                 .using_encoded(<T as frame_system::Config>::Hashing::hash);
 
             let message = TransferMessage {
@@ -546,13 +546,13 @@ pub mod pallet {
 
         //     ///get (yesterday,today) pair
         fn get_day_pair() -> (T::Moment, T::Moment) {
-            let now = <pallet_timestamp::Module<T>>::get();
+            let now = <pallet_timestamp::Pallet<T>>::get();
             let day = T::Moment::from(DAY);
-            let today = <pallet_timestamp::Module<T>>::get() / T::Moment::from(DAY);
+            let today = <pallet_timestamp::Pallet<T>>::get() / T::Moment::from(DAY);
             let yesterday = if now < day {
                 T::Moment::from(0u32)
             } else {
-                <pallet_timestamp::Module<T>>::get() / day - T::Moment::from(1u32)
+                <pallet_timestamp::Pallet<T>>::get() / day - T::Moment::from(1u32)
             };
             (yesterday, today)
         }
@@ -864,7 +864,7 @@ pub mod pallet {
                 <DailyBlocked<T>>::mutate(today, |v| {
                     if !v.contains(&account) {
                         v.push(account.clone());
-                        let now = <pallet_timestamp::Module<T>>::get();
+                        let now = <pallet_timestamp::Pallet<T>>::get();
                         let hash = (now.clone(), account.clone()).using_encoded(T::Hashing::hash);
                         Self::deposit_event(Event::AccountPausedMessage(hash, account, now))
                     }

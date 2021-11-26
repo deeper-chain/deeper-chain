@@ -73,8 +73,8 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_add_credit_by_traffic::<Test>());
-            assert_ok!(test_benchmark_set_atmos_pubkey::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_add_credit_by_traffic());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_atmos_pubkey());
         });
     }
 }

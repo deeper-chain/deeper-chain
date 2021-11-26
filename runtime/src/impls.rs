@@ -30,7 +30,11 @@ impl OnUnbalanced<NegativeImbalance> for Author {
 #[cfg(test)]
 mod multiplier_tests {
     use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
-    use sp_runtime::{assert_eq_error_rate, traits::Convert, FixedPointNumber};
+    use sp_runtime::{
+        assert_eq_error_rate,
+        traits::{Convert, One, Zero},
+        FixedPointNumber,
+    };
 
     use crate::{
         constants::{currency::*, time::*},
@@ -75,7 +79,7 @@ mod multiplier_tests {
         let m = max_normal() as f64;
         // block weight always truncated to max weight
         let block_weight = (block_weight as f64).min(m);
-        let v: f64 = AdjustmentVariable::get().to_fraction();
+        let v: f64 = AdjustmentVariable::get().to_float();
 
         // Ideal saturation in terms of weight
         let ss = target() as f64;
@@ -85,7 +89,7 @@ mod multiplier_tests {
         let t1 = v * (s / m - ss / m);
         let t2 = v.powi(2) * (s / m - ss / m).powi(2) / 2.0;
         let next_float = previous_float * (1.0 + t1 + t2);
-        Multiplier::from_fraction(next_float)
+        Multiplier::from_float(next_float)
     }
 
     fn run_with_system_weight<F>(w: Weight, assertions: F)
@@ -326,7 +330,7 @@ mod multiplier_tests {
     fn weight_to_fee_should_not_overflow_on_large_weights() {
         let kb = 1024 as Weight;
         let mb = kb * kb;
-        let max_fm = Multiplier::saturating_from_integer(i128::max_value());
+        let max_fm = Multiplier::saturating_from_integer(i128::MAX);
 
         // check that for all values it can compute, correctly.
         vec![
