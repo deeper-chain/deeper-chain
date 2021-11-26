@@ -117,6 +117,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
     fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
+    fn get_current_era() -> EraIndex;
 }
 
 #[frame_support::pallet]
@@ -418,10 +419,6 @@ pub mod pallet {
             credit_data.credit >= T::MinCreditToDelegate::get()
         }
 
-        fn get_current_era() -> EraIndex {
-            Self::block_to_era(<frame_system::Module<T>>::block_number())
-        }
-
         fn block_to_era(block_number: T::BlockNumber) -> EraIndex {
             TryInto::<u32>::try_into(block_number / T::BlocksPerEra::get())
                 .ok()
@@ -477,6 +474,10 @@ pub mod pallet {
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Module<T> {
+        fn get_current_era() -> EraIndex {
+            Self::block_to_era(<frame_system::Module<T>>::block_number())
+        }
+
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
             if let Some(credit_data) = Self::user_credit(account_id) {
                 Some(credit_data.credit)
