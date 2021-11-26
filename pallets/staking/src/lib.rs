@@ -1903,7 +1903,7 @@ impl<T: Config> Module<T> {
         let mut next_key = Self::next_delegators_key(&last_key); // 1 read
         let mut counter = 0;
         let delegator_payouts_per_block = Self::delegator_payouts_per_block(); // 1 read
-        let current_era = Self::active_era().unwrap().index; // 1 read
+        let current_era = T::CreditInterface::get_current_era(); // 1 read
 
         weight = weight.saturating_add(T::DbWeight::get().reads_writes(5, 0));
         while next_key.starts_with(&prefix) && counter < delegator_payouts_per_block {
