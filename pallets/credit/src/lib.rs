@@ -246,6 +246,7 @@ pub mod pallet {
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
         CreditDataAdded(T::AccountId, CreditData),
         CreditDataUpdated(T::AccountId, CreditData),
+        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),  //status: 0,Normal; 1-6, Error
     }
 
     #[pallet::error]
@@ -537,17 +538,20 @@ pub mod pallet {
         ) -> (Option<(BalanceOf<T>, BalanceOf<T>)>, Weight) {
             // silently ignore invalid inputs
             if from > to || to >= Self::get_current_era() {
+                Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 1));
                 return (None, Weight::zero());
             }
 
             let optional_credit_data = Self::user_credit(account_id); // 1 db read
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             if optional_credit_data.is_none() {
+                Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 2));
                 return (None, weight);
             }
 
             let credit_data = optional_credit_data.unwrap();
             if credit_data.reward_eras == 0 {
+                Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 3));
                 return (None, weight);
             }
 
@@ -560,17 +564,20 @@ pub mod pallet {
             let credit_history = Self::user_credit_history(account_id);
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
             if credit_history.is_empty() {
+                Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 4));
                 return (None, weight);
             }
 
             let onboard_era = credit_history[0].0;
             let expiry_era = onboard_era + credit_data.reward_eras - 1;
             if from > expiry_era {
+                Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 5));
                 return (None, weight);
             }
 
             let credit_map = Self::get_credit_map(credit_history, from, cmp::min(to, expiry_era));
             if credit_map.is_empty() {
+                Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 6));
                 return (None, weight);
             }
 
@@ -626,6 +633,7 @@ pub mod pallet {
                 poc_reward =
                     poc_reward.saturating_add(daily_poc_reward.saturating_mul(num_of_eras.into()));
             }
+            Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 0));
             (Some((referee_reward, poc_reward)), weight)
         }
 
