@@ -432,7 +432,7 @@ pub fn new_full_base(
             link: grandpa_link,
             network: network.clone(),
             telemetry: telemetry.as_ref().map(|x| x.handle()),
-            voting_rule: grandpa::VotingRulesBuilder::default().build(),
+            voting_rule: grandpa::VotingRulesBuilder::new().build(),
             prometheus_registry,
             shared_voter_state,
         };
