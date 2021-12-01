@@ -190,7 +190,7 @@ fn add_balance() {
         assert_ok!(Micropayment::add_balance(
             Origin::signed(alice()),
             bob(),
-            100
+            99
         ));
 
         // Channel not exists

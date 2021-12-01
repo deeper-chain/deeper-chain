@@ -40,6 +40,7 @@ frame_support::construct_runtime!(
         Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
         CreditAccumulation: pallet_credit_accumulation::{Module, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
     }
 );
 
@@ -106,6 +107,17 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
 }
 
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
@@ -116,6 +128,8 @@ impl pallet_credit::Config for Test {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
 }
 
 parameter_types! {
