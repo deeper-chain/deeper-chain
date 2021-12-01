@@ -235,6 +235,8 @@ impl pallet_credit::Config for Test {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
 }
 
 parameter_types! {

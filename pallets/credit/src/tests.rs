@@ -407,6 +407,7 @@ fn get_reward_work() {
 #[test]
 fn get_reward_with_update_credit_no_bonus() {
     new_test_ext().execute_with(|| {
+        Timestamp::set_timestamp(INIT_TIMESTAMP);
         assert_ok!(DeeperNode::im_online(Origin::signed(6)));
         assert_eq!(Credit::user_credit(&6).unwrap().credit, 100);
         run_to_block(BLOCKS_PER_ERA);

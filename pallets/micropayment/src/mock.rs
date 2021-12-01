@@ -42,6 +42,7 @@ frame_support::construct_runtime!(
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
         Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
 
@@ -118,6 +119,19 @@ impl pallet_credit::Config for Test {
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
+    type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+}
+
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
 }
 
