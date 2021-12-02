@@ -17,7 +17,7 @@
 
 //! A slashing implementation for Delegated Proof of Credit system (DPoCr)de.
 
-use super::{
+use crate::{
     BalanceOf, Config, EraIndex, Error, Exposure, Module, NegativeImbalanceOf, Perbill,
     SessionInterface, Store, UnappliedSlash,
 };
