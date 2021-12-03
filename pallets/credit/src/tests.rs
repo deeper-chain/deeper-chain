@@ -407,6 +407,7 @@ fn get_reward_work() {
 #[test]
 fn get_reward_with_update_credit_no_bonus() {
     new_test_ext().execute_with(|| {
+        Timestamp::set_timestamp(INIT_TIMESTAMP);
         assert_ok!(DeeperNode::im_online(Origin::signed(6)));
         assert_eq!(Credit::user_credit(&6).unwrap().credit, 100);
         run_to_block(BLOCKS_PER_ERA);
@@ -546,5 +547,108 @@ fn slash_offline_devices_credit() {
         run_to_block(BLOCKS_PER_ERA * 9);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
+    });
+}
+
+#[test]
+fn reward_remain_eras_count() {
+    new_test_ext().execute_with(|| {
+        // era 0
+        assert_ok!(DeeperNode::im_online(Origin::signed(12)));
+        //reward_countdown
+        // era 1
+        run_to_block(BLOCKS_PER_ERA);
+        assert_eq!(Credit::user_credit_history(12), vec![]);
+        Credit::get_reward(&12, 0, 0);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 269);
+
+        let credit_historys = vec![(
+            0,
+            CreditData {
+                campaign_id: 1,
+                credit: 200,
+                initial_credit_level: CreditLevel::Two,
+                rank_in_initial_credit_level: 801u32,
+                number_of_referees: 2,
+                current_credit_level: CreditLevel::Two,
+                reward_eras: 270,
+            },
+        )];
+        assert_eq!(Credit::user_credit_history(12), credit_historys);
+
+        // era 10
+        run_to_block(BLOCKS_PER_ERA * 10);
+        Credit::get_reward(&12, 1, 9);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 260);
+
+        // era 50
+        run_to_block(BLOCKS_PER_ERA * 50);
+        Credit::get_reward(&12, 10, 49);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 220);
+
+        // era 100
+        run_to_block(BLOCKS_PER_ERA * 100);
+        let credit_data = CreditData {
+            campaign_id: 1,
+            credit: 400,
+            initial_credit_level: CreditLevel::Four,
+            rank_in_initial_credit_level: 801u32,
+            number_of_referees: 2,
+            current_credit_level: CreditLevel::Four,
+            reward_eras: 270,
+        };
+
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            12,
+            credit_data.clone()
+        ));
+
+        let credit_historys = vec![
+            (
+                0,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 200,
+                    initial_credit_level: CreditLevel::Two,
+                    rank_in_initial_credit_level: 801u32,
+                    number_of_referees: 2,
+                    current_credit_level: CreditLevel::Two,
+                    reward_eras: 270,
+                },
+            ),
+            (
+                100,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 400,
+                    initial_credit_level: CreditLevel::Four,
+                    rank_in_initial_credit_level: 801u32,
+                    number_of_referees: 2,
+                    current_credit_level: CreditLevel::Four,
+                    reward_eras: 270,
+                },
+            ),
+        ];
+        assert_eq!(Credit::user_credit_history(12), credit_historys);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 220);
+        Credit::get_reward(&12, 50, 99);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 170);
+
+        // era 270
+        run_to_block(BLOCKS_PER_ERA * 270);
+        Credit::get_reward(&12, 100, 269);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 0);
+
+        // era 270
+        run_to_block(BLOCKS_PER_ERA * 370);
+        let remain_eras = Credit::reward_countdown(12).unwrap_or(0);
+        assert_eq!(remain_eras, 0);
     });
 }

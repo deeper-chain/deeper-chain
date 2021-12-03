@@ -123,7 +123,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 5,
+    spec_version: 6,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 3,
@@ -1112,6 +1112,8 @@ impl pallet_credit::Config for Runtime {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
+    type SecsPerBlock = SecsPerBlock;
+    type UnixTime = Timestamp;
 }
 
 impl pallet_credit_accumulation::Config for Runtime {

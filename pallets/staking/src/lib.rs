@@ -1777,6 +1777,58 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::UnDelegated(delegator));
             Ok(())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(4,2))]
+        pub fn compensation(
+            origin: OriginFor<T>,
+            delegator: T::AccountId,
+            from: EraIndex,
+            to: EraIndex,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            let remainder_mining_reward = T::NumberToCurrency::convert(
+                Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
+            );
+
+            if T::NodeInterface::im_ever_online(&delegator) {
+                let (rewards, _) = T::CreditInterface::get_reward(&delegator, from, to);
+                if let Some((referee_reward, poc_reward)) = rewards {
+                    // update RewardData
+                    if Reward::<T>::contains_key(&delegator) {
+                        // 1 read
+                        Reward::<T>::mutate(&delegator, |data| match data {
+                            // 1 write
+                            Some(reward_data) => {
+                                reward_data.received_referee_reward += referee_reward;
+                                reward_data.referee_reward = referee_reward;
+                                reward_data.received_pocr_reward += poc_reward;
+                                reward_data.poc_reward = poc_reward;
+                            }
+                            _ => (),
+                        });
+                    } else {
+                        let (total_referee_reward, _) =
+                            T::CreditInterface::get_top_referee_reward(&delegator);
+                        let reward_data = RewardData::<BalanceOf<T>> {
+                            total_referee_reward,
+                            received_referee_reward: referee_reward,
+                            referee_reward: referee_reward,
+                            received_pocr_reward: poc_reward,
+                            poc_reward: poc_reward,
+                        };
+                        Reward::<T>::insert(&delegator, reward_data);
+                    }
+                    let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
+                    let imbalance = T::Currency::deposit_creating(&delegator, reward);
+                    Self::deposit_event(Event::DelegatorReward(
+                        delegator.clone(),
+                        imbalance.peek(),
+                    ));
+                }
+            }
+
+            Ok(())
+        }
     }
 
     #[pallet::hooks]
@@ -2173,7 +2225,7 @@ impl<T: Config> pallet::Pallet<T> {
         let mut next_key = Self::next_delegators_key(&last_key); // 1 read
         let mut counter = 0;
         let delegator_payouts_per_block = Self::delegator_payouts_per_block(); // 1 read
-        let current_era = Self::active_era().unwrap().index; // 1 read
+        let current_era = T::CreditInterface::get_current_era(); // 1 read
 
         weight = weight.saturating_add(T::DbWeight::get().reads_writes(5, 0));
         while next_key.starts_with(&prefix) && counter < delegator_payouts_per_block {
