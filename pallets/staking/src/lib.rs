@@ -622,12 +622,12 @@ pub mod pallet {
     /// Validator WhiteList
     #[pallet::storage]
     #[pallet::getter(fn validator_whitelist)]
-    pub type ValidatorWhiteList<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+    pub type ValidatorWhiteList<T:Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     /// Map from all locked "stash" accounts to the controller account.
     #[pallet::storage]
     #[pallet::getter(fn bonded)]
-    pub type Bonded<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, T::AccountId>;
+    pub type Bonded<T:Config> = StorageMap<_, Twox64Concat, T::AccountId, T::AccountId>;
 
     /// Map from all (unlocked) "controller" accounts to the info regarding the staking.
     #[pallet::storage]
@@ -808,42 +808,42 @@ pub mod pallet {
     /// validator -> ValidatorData
     #[pallet::storage]
     #[pallet::getter(fn candidate_validators)]
-    pub type CandidateValidators<T: Config> =
+    pub(crate) type CandidateValidators<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, ValidatorData<T::AccountId>, ValueQuery>;
 
     /// delegator -> DelegatorData
     #[pallet::storage]
     #[pallet::getter(fn delegators)]
-    pub type Delegators<T: Config> =
+    pub(crate) type Delegators<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, DelegatorData<T::AccountId>, ValueQuery>;
 
     /// active delegator count
     #[pallet::storage]
     #[pallet::getter(fn active_delegator_count)]
-    pub type ActiveDelegatorCount<T> = StorageValue<_, u32, ValueQuery>;
+    pub(crate) type ActiveDelegatorCount<T> = StorageValue<_, u32,ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn delegator_count)]
-    pub type DelegatorCount<T> = StorageValue<_, u32, ValueQuery>;
+    pub(crate) type DelegatorCount<T> = StorageValue<_, u32,ValueQuery>;
 
     /// delegators key prefix
     #[pallet::storage]
     #[pallet::getter(fn delegators_key_prefix)]
-    pub type DelegatorsKeyPrefix<T> = StorageValue<_, Vec<u8>, ValueQuery>;
+    pub(crate) type DelegatorsKeyPrefix<T> = StorageValue<_, Vec<u8>,ValueQuery>;
 
     /// delegators last key
     #[pallet::storage]
     #[pallet::getter(fn delegators_last_key)]
-    pub type DelegatorsLastKey<T> = StorageValue<_, Vec<u8>, ValueQuery>;
+    pub(crate) type DelegatorsLastKey<T> = StorageValue<_, Vec<u8>,ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn delegator_payouts_per_block)]
-    pub type DelegatorPayoutsPerBlock<T> = StorageValue<_, u32, ValueQuery>;
+    pub(crate) type DelegatorPayoutsPerBlock<T> = StorageValue<_, u32,ValueQuery>;
 
     /// EraIndex -> validators
     #[pallet::storage]
     #[pallet::getter(fn eras_validators)]
-    pub type ErasValidators<T: Config> =
+    pub(crate) type ErasValidators<T: Config> =
         StorageMap<_, Blake2_128Concat, EraIndex, Vec<T::AccountId>, ValueQuery>;
 
     /// reward of delegator
@@ -860,51 +860,47 @@ pub mod pallet {
     pub(crate) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
     #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config> {
+	pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
         pub validator_count: u32,
-        pub minimum_validator_count: u32,
-        pub invulnerables: Vec<T::AccountId>,
+		pub minimum_validator_count: u32,
+		pub invulnerables: Vec<T::AccountId>,
         pub force_era: Forcing,
         pub era_validator_reward: BalanceOf<T>,
-        pub slash_reward_fraction: Perbill,
-        pub stakers: Vec<(
-            T::AccountId,
-            T::AccountId,
-            BalanceOf<T>,
-            crate::StakerStatus,
-        )>,
-        pub delegations: Vec<(T::AccountId, Vec<T::AccountId>)>,
-    }
+		pub slash_reward_fraction: Perbill,
+		pub stakers:
+			Vec<(T::AccountId, T::AccountId, BalanceOf<T>, crate::StakerStatus)>,
+        pub delegations:  Vec<(T::AccountId, Vec<T::AccountId>)>,
+	}
 
     #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            GenesisConfig {
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			GenesisConfig {
                 history_depth: 84u32,
-                validator_count: Default::default(),
+                validator_count:Default::default(),
                 minimum_validator_count: Default::default(),
                 force_era: Default::default(),
                 era_validator_reward: Default::default(),
                 invulnerables: Default::default(),
                 slash_reward_fraction: Default::default(),
-                stakers: Default::default(),
+				stakers: Default::default(),
                 delegations: Default::default(),
-            }
-        }
-    }
+			}
+		}
+	}
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
-        fn build(&self) {
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
             HistoryDepth::<T>::put(self.history_depth);
-            ValidatorCount::<T>::put(self.validator_count);
-            MinimumValidatorCount::<T>::put(self.minimum_validator_count);
-            Invulnerables::<T>::put(&self.invulnerables);
-            ForceEra::<T>::put(self.force_era);
+			ValidatorCount::<T>::put(self.validator_count);
+			MinimumValidatorCount::<T>::put(self.minimum_validator_count);
+			Invulnerables::<T>::put(&self.invulnerables);
+			ForceEra::<T>::put(self.force_era);
             EraValidatorReward::<T>::put(self.era_validator_reward);
-            SlashRewardFraction::<T>::put(self.slash_reward_fraction);
-            StorageVersion::<T>::put(Releases::V5_0_0);
+			SlashRewardFraction::<T>::put(self.slash_reward_fraction);
+			StorageVersion::<T>::put(Releases::V5_0_0);
             for &(ref stash, ref controller, balance, ref status) in &self.stakers {
                 assert!(
                     T::Currency::free_balance(&stash) >= balance,
@@ -917,22 +913,22 @@ pub mod pallet {
                     RewardDestination::Staked,
                 );
                 let _ = match status {
-                    StakerStatus::Validator => <Pallet<T>>::validate(
-                        T::Origin::from(Some(controller.clone()).into()),
-                        Default::default(),
-                    ),
-                    _ => Ok(()),
+                    StakerStatus::Validator => {
+                        <Pallet<T>>::validate(
+                            T::Origin::from(Some(controller.clone()).into()),
+                            Default::default(),
+                        )
+                    }, _ => Ok(())
                 };
             }
             for &(ref delegator, ref validators) in &self.delegations {
                 <Pallet<T>>::delegate(
                     T::Origin::from(Some(delegator.clone()).into()),
-                    (*validators).clone(),
-                )
-                .unwrap();
+                    (*validators).clone()
+                ).unwrap();
             }
-        }
-    }
+		}
+	}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -1029,10 +1025,7 @@ pub mod pallet {
         /// - Write: [Origin Account], Locks, Ledger
         /// # </weight>
         #[pallet::weight(T::WeightInfo::bond_extra())]
-        pub fn bond_extra(
-            origin: OriginFor<T>,
-            #[pallet::compact] max_additional: BalanceOf<T>,
-        ) -> DispatchResult {
+        pub fn bond_extra(origin: OriginFor<T>, #[pallet::compact] max_additional: BalanceOf<T>) -> DispatchResult {
             ensure!(
                 Self::era_election_status().is_closed(),
                 Error::<T>::CallNotAllowed
@@ -1092,10 +1085,7 @@ pub mod pallet {
         /// - Write: Locks, Ledger, BalanceOf Stash,
         /// </weight>
         #[pallet::weight(T::WeightInfo::unbond())]
-        pub fn unbond(
-            origin: OriginFor<T>,
-            #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResult {
+        pub fn unbond(origin: OriginFor<T>, #[pallet::compact] value: BalanceOf<T>) -> DispatchResult{
             ensure!(
                 Self::era_election_status().is_closed(),
                 Error::<T>::CallNotAllowed
@@ -1279,10 +1269,7 @@ pub mod pallet {
         ///     - Write: Payee
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_payee())]
-        pub fn set_payee(
-            origin: OriginFor<T>,
-            payee: RewardDestination<T::AccountId>,
-        ) -> DispatchResult {
+        pub fn set_payee(origin: OriginFor<T>, payee: RewardDestination<T::AccountId>)  -> DispatchResult{
             let controller = ensure_signed(origin)?;
             let ledger = Self::ledger(&controller).ok_or(Error::<T>::NotController)?;
             let stash = &ledger.stash;
@@ -1307,10 +1294,7 @@ pub mod pallet {
         /// - Write: Bonded, Ledger New Controller, Ledger Old Controller
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_controller())]
-        pub fn set_controller(
-            origin: OriginFor<T>,
-            controller: <T::Lookup as StaticLookup>::Source,
-        ) -> DispatchResult {
+        pub fn set_controller(origin: OriginFor<T>, controller: <T::Lookup as StaticLookup>::Source)-> DispatchResult {
             let stash = ensure_signed(origin)?;
             let old_controller = Self::bonded(&stash).ok_or(Error::<T>::NotStash)?;
             let controller = T::Lookup::lookup(controller)?;
@@ -1335,10 +1319,7 @@ pub mod pallet {
         /// Write: EraValidatorReward
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_era_validator_reward())]
-        pub fn set_era_validator_reward(
-            origin: OriginFor<T>,
-            #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResult {
+        pub fn set_era_validator_reward(origin: OriginFor<T>, #[pallet::compact] value: BalanceOf<T>) -> DispatchResult{
             ensure_root(origin)?;
             EraValidatorReward::<T>::put(value);
             Ok(())
@@ -1353,10 +1334,7 @@ pub mod pallet {
         /// Write: Validator Count
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_validator_count())]
-        pub fn set_validator_count(
-            origin: OriginFor<T>,
-            #[pallet::compact] new: u32,
-        ) -> DispatchResult {
+        pub fn set_validator_count(origin: OriginFor<T>, #[pallet::compact] new: u32)-> DispatchResult {
             ensure_root(origin)?;
             ValidatorCount::<T>::put(new);
             Ok(())
@@ -1370,10 +1348,7 @@ pub mod pallet {
         /// Same as [`set_validator_count`].
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_validator_count())]
-        pub fn increase_validator_count(
-            origin: OriginFor<T>,
-            #[pallet::compact] additional: u32,
-        ) -> DispatchResult {
+        pub fn increase_validator_count(origin: OriginFor<T>, #[pallet::compact] additional: u32) -> DispatchResult{
             ensure_root(origin)?;
             ValidatorCount::<T>::mutate(|n| *n += additional);
             Ok(())
@@ -1387,7 +1362,7 @@ pub mod pallet {
         /// Same as [`set_validator_count`].
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_validator_count())]
-        pub fn scale_validator_count(origin: OriginFor<T>, factor: Percent) -> DispatchResult {
+        pub fn scale_validator_count(origin: OriginFor<T>, factor: Percent) -> DispatchResult{
             ensure_root(origin)?;
             ValidatorCount::<T>::mutate(|n| *n += factor * *n);
             Ok(())
@@ -1403,7 +1378,7 @@ pub mod pallet {
         /// - Write: ForceEra
         /// # </weight>
         #[pallet::weight(T::WeightInfo::force_no_eras())]
-        pub fn force_no_eras(origin: OriginFor<T>) -> DispatchResult {
+        pub fn force_no_eras(origin: OriginFor<T>) -> DispatchResult{
             ensure_root(origin)?;
             ForceEra::<T>::put(Forcing::ForceNone);
             Ok(())
@@ -1420,7 +1395,7 @@ pub mod pallet {
         /// - Write ForceEra
         /// # </weight>
         #[pallet::weight(T::WeightInfo::force_new_era())]
-        pub fn force_new_era(origin: OriginFor<T>) -> DispatchResult {
+        pub fn force_new_era(origin: OriginFor<T>)-> DispatchResult {
             ensure_root(origin)?;
             ForceEra::<T>::put(Forcing::ForceNew);
             Ok(())
@@ -1435,10 +1410,7 @@ pub mod pallet {
         /// - Write: Invulnerables
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_invulnerables(invulnerables.len() as u32))]
-        pub fn set_invulnerables(
-            origin: OriginFor<T>,
-            invulnerables: Vec<T::AccountId>,
-        ) -> DispatchResult {
+        pub fn set_invulnerables(origin: OriginFor<T>, invulnerables: Vec<T::AccountId>)-> DispatchResult {
             ensure_root(origin)?;
             <Invulnerables<T>>::put(invulnerables);
             Ok(())
@@ -1453,10 +1425,7 @@ pub mod pallet {
         /// - Write: ValidatorWhiteList
         /// # </weight>
         #[pallet::weight(T::WeightInfo::set_validator_whitelist(whitelist.len() as u32))]
-        pub fn set_validator_whitelist(
-            origin: OriginFor<T>,
-            whitelist: Vec<T::AccountId>,
-        ) -> DispatchResult {
+        pub fn set_validator_whitelist(origin: OriginFor<T>, whitelist: Vec<T::AccountId>) -> DispatchResult{
             ensure_root(origin)?;
             <ValidatorWhiteList<T>>::put(whitelist);
             Ok(())
@@ -1473,11 +1442,7 @@ pub mod pallet {
         /// Writes Each: SpanSlash * S
         /// # </weight>
         #[pallet::weight(T::WeightInfo::force_unstake(*num_slashing_spans))]
-        pub fn force_unstake(
-            origin: OriginFor<T>,
-            stash: T::AccountId,
-            num_slashing_spans: u32,
-        ) -> DispatchResult {
+        pub fn force_unstake(origin: OriginFor<T>, stash: T::AccountId, num_slashing_spans: u32) -> DispatchResult{
             ensure_root(origin)?;
 
             // remove all staking-related information.
@@ -1497,17 +1462,14 @@ pub mod pallet {
         /// - Write: ForceEra
         /// # </weight>
         #[pallet::weight(T::WeightInfo::force_new_era_always())]
-        pub fn force_new_era_always(origin: OriginFor<T>) -> DispatchResult {
+        pub fn force_new_era_always(origin: OriginFor<T>) -> DispatchResult{
             ensure_root(origin)?;
             ForceEra::<T>::put(Forcing::ForceAlways);
             Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::increase_mining_reward(1))]
-        pub fn increase_mining_reward(
-            origin: OriginFor<T>,
-            additional_reward: u128,
-        ) -> DispatchResult {
+        pub fn increase_mining_reward(origin: OriginFor<T>, additional_reward: u128)-> DispatchResult {
             ensure_root(origin)?;
             let remainder = Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get());
             RemainderMiningReward::<T>::put(remainder + additional_reward);
@@ -1528,11 +1490,7 @@ pub mod pallet {
         /// - Write: Unapplied Slashes
         /// # </weight>
         #[pallet::weight(T::WeightInfo::cancel_deferred_slash(slash_indices.len() as u32))]
-        pub fn cancel_deferred_slash(
-            origin: OriginFor<T>,
-            era: EraIndex,
-            slash_indices: Vec<u32>,
-        ) -> DispatchResult {
+        pub fn cancel_deferred_slash(origin: OriginFor<T>, era: EraIndex, slash_indices: Vec<u32>)-> DispatchResult {
             T::SlashCancelOrigin::ensure_origin(origin)?;
 
             ensure!(!slash_indices.is_empty(), Error::<T>::EmptyTargets);
@@ -1626,7 +1584,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             #[pallet::compact] new_history_depth: EraIndex,
             #[pallet::compact] _era_items_deleted: u32,
-        ) -> DispatchResult {
+        ) -> DispatchResult{
             ensure_root(origin)?;
             if let Some(current_era) = Self::current_era() {
                 HistoryDepth::<T>::mutate(|history_depth| {
@@ -1657,11 +1615,7 @@ pub mod pallet {
         /// - Writes Each: SpanSlash * S
         /// # </weight>
         #[pallet::weight(T::WeightInfo::reap_stash(*num_slashing_spans))]
-        pub fn reap_stash(
-            _origin: OriginFor<T>,
-            stash: T::AccountId,
-            num_slashing_spans: u32,
-        ) -> DispatchResult {
+        pub fn reap_stash(_origin: OriginFor<T>, stash: T::AccountId, num_slashing_spans: u32)-> DispatchResult {
             let at_minimum = T::Currency::total_balance(&stash) == T::Currency::minimum_balance();
             ensure!(at_minimum, Error::<T>::FundedTarget);
             Self::kill_stash(&stash, num_slashing_spans)?;

@@ -206,10 +206,10 @@ fn rewards_should_work() {
             Payee::<Test>::insert(11, RewardDestination::Controller);
             Payee::<Test>::insert(21, RewardDestination::Controller);
 
-            <Module<Test>>::reward_by_ids(vec![(11, 50)]);
-            <Module<Test>>::reward_by_ids(vec![(11, 50)]);
+            <Pallet<Test>>::reward_by_ids(vec![(11, 50)]);
+            <Pallet<Test>>::reward_by_ids(vec![(11, 50)]);
             // This is the second validator of the current elected set.
-            <Module<Test>>::reward_by_ids(vec![(21, 50)]);
+            <Pallet<Test>>::reward_by_ids(vec![(21, 50)]);
 
             start_session(1);
 
@@ -780,7 +780,7 @@ fn forcing_new_era_works() {
         assert_eq!(active_era(), 1);
 
         // no era change.
-        ForceEra::put(Forcing::ForceNone);
+        ForceEra::<T>::put(Forcing::ForceNone);
 
         start_session(4);
         assert_eq!(active_era(), 1);
@@ -1623,12 +1623,12 @@ fn reward_from_authorship_event_handler_works() {
     ExtBuilder::default().build_and_execute(|| {
         use pallet_authorship::EventHandler;
 
-        assert_eq!(<pallet_authorship::Module<Test>>::author(), 11);
+        assert_eq!(<pallet_authorship::Pallet<Test>>::author(), 11);
 
-        <Module<Test>>::note_author(11);
-        <Module<Test>>::note_uncle(21, 1);
+        <Pallet<Test>>::note_author(11);
+        <Pallet<Test>>::note_uncle(21, 1);
         // Rewarding the same two times works.
-        <Module<Test>>::note_uncle(11, 1);
+        <Pallet<Test>>::note_uncle(11, 1);
 
         // Not mandatory but must be coherent with rewards
         assert_eq_uvec!(Session::validators(), vec![11, 21]);
@@ -1651,9 +1651,9 @@ fn add_reward_points_fns_works() {
         // Not mandatory but must be coherent with rewards
         assert_eq_uvec!(Session::validators(), vec![21, 11]);
 
-        <Module<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
+        <Pallet<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
 
-        <Module<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
+        <Pallet<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
 
         assert_eq!(
             ErasRewardPoints::<Test>::get(Staking::active_era().unwrap().index),
@@ -1698,7 +1698,7 @@ fn era_is_always_same_length() {
         );
 
         let session = Session::current_index();
-        ForceEra::put(Forcing::ForceNew);
+        ForceEra::<Test>::put(Forcing::ForceNew);
         advance_session();
         advance_session();
         assert_eq!(current_era(), 3);

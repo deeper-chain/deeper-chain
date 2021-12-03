@@ -18,7 +18,7 @@
 //! A slashing implementation for Delegated Proof of Credit system (DPoCr)de.
 
 use crate::{
-    BalanceOf, Config, EraIndex, Error, Exposure, NegativeImbalanceOf, Pallet, Perbill,
+    BalanceOf, Config, EraIndex, Error, Exposure, Pallet, NegativeImbalanceOf, Perbill,
     SessionInterface, Store, UnappliedSlash,
 };
 use codec::{Decode, Encode};
