@@ -36,5 +36,13 @@ sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-consensus-babe = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sc-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+jsonrpc-pubsub = "18.0.0"
+fc-db = { path = "../frontier/client/db" }
+fc-rpc = { path = "../frontier/client/rpc" }
+fc-rpc-core = { path = "../frontier/client/rpc-core" }
+fp-rpc = { path = "../frontier/primitives/rpc" }
+pallet-ethereum = { path = "../frontier/frame/ethereum" }
+sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
