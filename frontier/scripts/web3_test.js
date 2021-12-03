@@ -4,8 +4,6 @@ const web3 = new Web3("http://localhost:9933");
 
 //const private_key = 'YOUR-PRIVATE-KEY-HERE';
 //const my_address = 'PUBLIC-ADDRESS-OF-PK-HERE';
-const private_key = '0xf64400f20ffd595d9e66dc4addf6af30530067ea23e4d5534c80aafe4b14534a';
-const my_address = '0x3d0e26278Cb3C2Bf17fa933C9E65Fd63973c0Be0';
 
 const alice_addr = '0xd43593c715fdd31c61141abd04a99fd6822c8558';
 const bob_addr = '0x8eaf04151687736326c9fea17e25fc5287613693';

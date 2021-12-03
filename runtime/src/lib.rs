@@ -79,7 +79,7 @@ pub use pallet_micropayment;
 use fp_rpc::TransactionStatus;
 use pallet_evm::FeeCalculator;
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
-use pallet_evm::{Account as EVMAccount, EnsureAddressTruncated, HashedAddressMapping, Runner};
+use pallet_evm::{Account as EVMAccount, PairedAddressMapping, Runner};
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -1179,9 +1179,7 @@ impl pallet_evm::Config for Runtime {
     type FeeCalculator = BaseFee;
     type GasWeightMapping = ();
     type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
-    type CallOrigin = EnsureAddressTruncated;
-    type WithdrawOrigin = EnsureAddressTruncated;
-    type AddressMapping = HashedAddressMapping<BlakeTwo256>;
+    type AddressMapping = PairedAddressMapping<Runtime>;
     type Currency = Balances;
     type Event = Event;
     type Runner = pallet_evm::runner::stack::Runner<Self>;
@@ -1271,7 +1269,7 @@ construct_runtime!(
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
         CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>},
         Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin},
-        EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>},
+        EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>},
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent},
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event},
     }

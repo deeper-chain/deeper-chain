@@ -34,6 +34,7 @@ sha3 = { version = "0.8", default-features = false }
 log = { version = "0.4", default-features = false }
 hex = { version = "0.4", default-features = false }
 scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
+libsecp256k1 = { version = "0.6", default-features = false, features = ["hmac", "static-context"], optional = true }
 
 [features]
 default = ["std"]
@@ -60,7 +61,10 @@ std = [
 	"log/std",
 	"hex/std",
 	"scale-info/std",
+	"libsecp256k1",
+	"libsecp256k1/std",
 ]
 runtime-benchmarks = [
+	"libsecp256k1",
 	"frame-benchmarking",
 ]

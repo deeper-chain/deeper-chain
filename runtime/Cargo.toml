@@ -93,6 +93,7 @@ pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = ".
 pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
 
 # frontier frame dependencies
+libsecp256k1 = { version = "0.6", default-features = false, optional = true }
 pallet-ethereum = { default-features = false, path = "../frontier/frame/ethereum" }
 pallet-evm = { default-features = false, path = "../frontier/frame/evm" }
 pallet-dynamic-fee = { default-features = false, path = "../frontier/frame/dynamic-fee" }
@@ -187,6 +188,7 @@ std = [
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
+	"libsecp256k1/hmac",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
