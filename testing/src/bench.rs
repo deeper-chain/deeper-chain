@@ -617,7 +617,6 @@ impl BenchKeyring {
                 UncheckedExtrinsic::new_signed(payload.0, sp_runtime::MultiAddress::Id(signed), signature, extra)
             }
             CheckedSignature::Unsigned => UncheckedExtrinsic::new_unsigned(xt.function),
-            // todo
             CheckedSignature::SelfContained(_) => UncheckedExtrinsic::new_unsigned(xt.function),
         }
     }

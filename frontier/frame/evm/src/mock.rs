@@ -16,12 +16,13 @@
 // limitations under the License.
 
 //! Test mock for unit tests and benchmarking
-use crate::{EnsureAddressNever, EnsureAddressRoot, FeeCalculator, IdentityAddressMapping};
+use crate::{FeeCalculator, PairedAddressMapping};
 use frame_support::{parameter_types, traits::FindAuthor, ConsensusEngineId};
 use sp_core::{H160, H256, U256};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
+	AccountId32,
 };
 use sp_std::{boxed::Box, prelude::*, str::FromStr};
 
@@ -37,7 +38,7 @@ frame_support::construct_runtime! {
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage},
-		EVM: crate::{Pallet, Call, Storage, Config, Event<T>},
+		EVM: crate::{Pallet, Call, Storage, Event<T>},
 	}
 }
 
@@ -57,7 +58,7 @@ impl frame_system::Config for Test {
 	type Hash = H256;
 	type Call = Call;
 	type Hashing = BlakeTwo256;
-	type AccountId = H160;
+	type AccountId = AccountId32;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = generic::Header<u64, BlakeTwo256>;
 	type Event = Event;
@@ -117,10 +118,7 @@ impl crate::Config for Test {
 	type FeeCalculator = FixedGasPrice;
 	type GasWeightMapping = ();
 
-	type CallOrigin = EnsureAddressRoot<Self::AccountId>;
-	type WithdrawOrigin = EnsureAddressNever<Self::AccountId>;
-
-	type AddressMapping = IdentityAddressMapping;
+	type AddressMapping = PairedAddressMapping<Test>;
 	type Currency = Balances;
 	type Runner = crate::runner::stack::Runner<Self>;
 

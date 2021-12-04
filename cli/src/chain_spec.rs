@@ -28989,6 +28989,8 @@ pub(crate) mod tests {
     use crate::service::{new_full_base, NewFullBase};
     use sc_service_test;
     use sp_runtime::BuildStorage;
+    use crate::cli::Cli;
+    use sc_cli::SubstrateCli;
 
     fn local_testnet_genesis_instant_single() -> GenesisConfig {
         let endowed_accounts: Vec<AccountId> = vec![];
@@ -29045,13 +29047,14 @@ pub(crate) mod tests {
         sc_service_test::connectivity(
             integration_test_config_with_two_authorities(),
             |config| {
+                let cli = Cli::from_args();
                 let NewFullBase {
                     task_manager,
                     client,
                     network,
                     transaction_pool,
                     ..
-                } = new_full_base(config, |_, _| ())?;
+                } = new_full_base(config, |_, _| (), &cli)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     task_manager,
                     client,

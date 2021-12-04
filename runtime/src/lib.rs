@@ -1330,8 +1330,10 @@ pub type UncheckedExtrinsic =
         fp_self_contained::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = fp_self_contained::CheckedExtrinsic<AccountId, Call, SignedExtra, H160>;
-/// Added for the compiling of "testing/src"
+/// Added for "testing/src" and "cargo test"
 pub type CheckedSignature = fp_self_contained::CheckedSignature<AccountId, SignedExtra, H160>;
+/// Unchecked extrinsic type as expected by this runtime.
+pub type GenericUncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
     Runtime,

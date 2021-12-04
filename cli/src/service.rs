@@ -862,7 +862,7 @@ mod tests {
     use node_primitives::{Block, DigestItem, Signature};
     use node_runtime::{
         constants::{currency::CENTS, time::SLOT_DURATION},
-        Address, BalancesCall, Call, UncheckedExtrinsic,
+        Address, BalancesCall, Call, GenericUncheckedExtrinsic,
     };
     use sc_client_api::BlockBackend;
     use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy};
@@ -884,6 +884,8 @@ mod tests {
     };
     use sp_timestamp;
     use std::{borrow::Cow, convert::TryInto, sync::Arc};
+    use crate::cli::Cli;
+    use sc_cli::SubstrateCli;
 
     type AccountPublic = <Signature as Verify>::Signer;
 
@@ -916,6 +918,7 @@ mod tests {
             chain_spec,
             |config| {
                 let mut setup_handles = None;
+                let cli = Cli::from_args();
                 let NewFullBase {
                     task_manager,
                     client,
@@ -928,6 +931,7 @@ mod tests {
                      babe_link: &sc_consensus_babe::BabeLink<Block>| {
                         setup_handles = Some((block_import.clone(), babe_link.clone()));
                     },
+                    &cli
                 )?;
 
                 let node = sc_service_test::TestNetComponents::new(
@@ -1110,7 +1114,7 @@ mod tests {
                 let signature = raw_payload.using_encoded(|payload| signer.sign(payload));
                 let (function, extra, _) = raw_payload.deconstruct();
                 index += 1;
-                UncheckedExtrinsic::new_signed(function, from.into(), signature.into(), extra)
+                GenericUncheckedExtrinsic::new_signed(function, from.into(), signature.into(), extra)
                     .into()
             },
         );
@@ -1124,13 +1128,14 @@ mod tests {
         sc_service_test::consensus(
             crate::chain_spec::tests::integration_test_config_with_two_authorities(),
             |config| {
+                let cli = Cli::from_args();
                 let NewFullBase {
                     task_manager,
                     client,
                     network,
                     transaction_pool,
                     ..
-                } = new_full_base(config, |_, _| ())?;
+                } = new_full_base(config, |_, _| (), &cli)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     task_manager,
                     client,

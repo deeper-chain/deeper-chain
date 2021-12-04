@@ -34,6 +34,16 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		.build_storage::<Test>()
 		.unwrap();
 
+	let mut account_pairs = BTreeMap::new();
+	account_pairs.insert(
+		H160::from_str("1000000000000000000000000000000000000001").unwrap(),
+		AccountId32::new([1u8; 32]),
+	);
+	account_pairs.insert(
+		H160::from_str("1000000000000000000000000000000000000002").unwrap(),
+		AccountId32::new([2u8; 32]),
+	);
+
 	let mut accounts = BTreeMap::new();
 	accounts.insert(
 		H160::from_str("1000000000000000000000000000000000000001").unwrap(),
@@ -70,13 +80,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	pallet_balances::GenesisConfig::<Test> {
 		// Create the block author account with some balance.
 		balances: vec![(
-			H160::from_str("0x1234500000000000000000000000000000000000").unwrap(),
+			AccountId32::new([3u8; 32]),
 			12345,
 		)],
 	}
 	.assimilate_storage(&mut t)
 	.expect("Pallet balances storage can be assimilated");
-	GenesisBuild::<Test>::assimilate_storage(&crate::GenesisConfig { accounts }, &mut t).unwrap();
+	GenesisBuild::<Test>::assimilate_storage(&crate::GenesisConfig { account_pairs, accounts }, &mut t).unwrap();
 	t.into()
 }
 

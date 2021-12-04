@@ -21,8 +21,8 @@ use super::*;
 use crate::IntermediateStateRoot;
 use codec::{WrapperTypeDecode, WrapperTypeEncode};
 use ethereum::{TransactionAction, TransactionSignature};
-use frame_support::{parameter_types, traits::FindAuthor, ConsensusEngineId, PalletId};
-use pallet_evm::{AddressMapping, EnsureAddressTruncated, FeeCalculator};
+use frame_support::{parameter_types, traits::{FindAuthor, IsType}, ConsensusEngineId, PalletId};
+use pallet_evm::{AddressMapping, FeeCalculator};
 use rlp::*;
 use sha3::Digest;
 use sp_core::{H160, H256, U256};
@@ -46,7 +46,7 @@ frame_support::construct_runtime! {
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage},
-		EVM: pallet_evm::{Pallet, Call, Storage, Config, Event<T>},
+		EVM: pallet_evm::{Pallet, Call, Storage, Event<T>},
 		Ethereum: crate::{Pallet, Call, Storage, Event, Origin},
 	}
 }
@@ -135,22 +135,38 @@ parameter_types! {
 	pub const BlockGasLimit: U256 = U256::MAX;
 }
 
-pub struct HashedAddressMapping;
+pub struct PairedAddressMapping<T>(sp_std::marker::PhantomData<T>);
 
-impl AddressMapping<AccountId32> for HashedAddressMapping {
-	fn into_account_id(address: H160) -> AccountId32 {
-		let mut data = [0u8; 32];
-		data[0..20].copy_from_slice(&address[..]);
-		AccountId32::from(Into::<[u8; 32]>::into(data))
+impl<T: Config> AddressMapping<T::AccountId> for PairedAddressMapping<T>
+where
+	T::AccountId: IsType<AccountId32>,
+{
+	// Returns the AccountId used go generate the given Eth Address.
+	fn into_account_id(address: H160) -> T::AccountId {
+		if pallet_evm::Accounts::<T>::contains_key(&address) {
+			pallet_evm::Accounts::<T>::get(address)
+		} else {
+			let mut data: [u8; 32] = [0u8; 32];
+			data[0..4].copy_from_slice(b"evm:");
+			data[4..24].copy_from_slice(&address[..]);
+			AccountId32::from(data).into()
+		}
+	}
+
+	fn ensure_address_origin(address: &H160, origin: &T::AccountId) -> Result<(), DispatchError> {
+		if pallet_evm::Accounts::<T>::contains_key(&address) &&
+		   pallet_evm::Accounts::<T>::get(address) == *origin {
+			Ok(())
+		} else {
+			Err(DispatchError::Other("eth and substrate addresses are not paired"))
+		}
 	}
 }
 
 impl pallet_evm::Config for Test {
 	type FeeCalculator = FixedGasPrice;
 	type GasWeightMapping = ();
-	type CallOrigin = EnsureAddressTruncated;
-	type WithdrawOrigin = EnsureAddressTruncated;
-	type AddressMapping = HashedAddressMapping;
+	type AddressMapping = PairedAddressMapping<Test>;
 	type Currency = Balances;
 	type Event = Event;
 	type PrecompilesType = ();
