@@ -56,6 +56,3 @@ wasmi-errno = [
 ]
 stress-test = []
 
-[[bench]]
-name = "bench"
-harness = false

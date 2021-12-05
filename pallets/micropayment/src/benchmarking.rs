@@ -28,7 +28,7 @@ use frame_system::RawOrigin;
 use codec::Encode;
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_sign;
-use sp_std::vec;
+
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
     let user = T::AccountCreator::create_account(string);

@@ -23,7 +23,6 @@ use frame_support::{
     assert_ok, parameter_types,
     traits::{Currency, FindAuthor, GenesisBuild, Get, Hooks, OneSessionHandler},
     weights::constants::RocksDbWeight,
-    IterableStorageMap, StorageDoubleMap, StorageValue,
 };
 use node_primitives::Moment;
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
