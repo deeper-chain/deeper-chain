@@ -25,22 +25,22 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 pub struct CallRequest {
-	/// From
-	pub from: Option<H160>,
-	/// To
-	pub to: Option<H160>,
-	/// Gas Price
-	pub gas_price: Option<U256>,
-	/// EIP-1559 Max base fee the caller is willing to pay
-	pub max_fee_per_gas: Option<U256>,
-	/// EIP-1559 Priority fee the caller is paying to the block author
-	pub max_priority_fee_per_gas: Option<U256>,
-	/// Gas
-	pub gas: Option<U256>,
-	/// Value
-	pub value: Option<U256>,
-	/// Data
-	pub data: Option<Bytes>,
-	/// Nonce
-	pub nonce: Option<U256>,
+    /// From
+    pub from: Option<H160>,
+    /// To
+    pub to: Option<H160>,
+    /// Gas Price
+    pub gas_price: Option<U256>,
+    /// EIP-1559 Max base fee the caller is willing to pay
+    pub max_fee_per_gas: Option<U256>,
+    /// EIP-1559 Priority fee the caller is paying to the block author
+    pub max_priority_fee_per_gas: Option<U256>,
+    /// Gas
+    pub gas: Option<U256>,
+    /// Value
+    pub value: Option<U256>,
+    /// Data
+    pub data: Option<Bytes>,
+    /// Nonce
+    pub nonce: Option<U256>,
 }

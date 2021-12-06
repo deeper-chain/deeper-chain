@@ -29,8 +29,8 @@ use sp_runtime::{
 use node_primitives::{Balance, Hash};
 use node_runtime::{
     constants::{currency::*, time::SLOT_DURATION},
-    Balances, Block, Call, CheckedExtrinsic, Event, Header, Runtime, System, TransactionPayment,
-    UncheckedExtrinsic, CheckedSignature,
+    Balances, Block, Call, CheckedExtrinsic, CheckedSignature, Event, Header, Runtime, System,
+    TransactionPayment, UncheckedExtrinsic,
 };
 use node_testing::keyring::*;
 use wat;

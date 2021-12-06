@@ -30,16 +30,15 @@
 
 #![warn(missing_docs)]
 
-use std::sync::Arc;
 use fc_rpc::{
     EthBlockDataCache, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
     SchemaV2Override, StorageOverride,
 };
 use fc_rpc_core::types::FilterPool;
 use jsonrpc_pubsub::manager::SubscriptionManager;
-use pallet_ethereum::EthereumStorageSchema;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
-use node_runtime::{opaque::Block};
+use node_runtime::opaque::Block;
+use pallet_ethereum::EthereumStorageSchema;
 use sc_client_api::{
     backend::{AuxStore, StorageProvider},
     client::BlockchainEvents,
@@ -63,6 +62,7 @@ use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 use sp_keystore::SyncCryptoStorePtr;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {

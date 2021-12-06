@@ -24,9 +24,9 @@ use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CreditConfig,
-    DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig,
-    IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig,
-    SudoConfig, SystemConfig, TechnicalCommitteeConfig, EVMConfig, EthereumConfig,
+    DeeperNodeConfig, DemocracyConfig, EVMConfig, ElectionsConfig, EthereumConfig, GrandpaConfig,
+    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
+    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -37,15 +37,15 @@ use serde::{Deserialize, Serialize};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{H160, U256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     Perbill, Percent,
 };
 use std::{
-    collections::{BTreeSet, BTreeMap},
+    collections::{BTreeMap, BTreeSet},
     str::FromStr,
 };
-use sp_core::{H160, U256};
 
 pub use node_primitives::{AccountId, Balance, BlockNumber, Signature};
 pub use node_runtime::GenesisConfig;
@@ -441,7 +441,7 @@ pub fn testnet_genesis(
                     // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
                     H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
                         .expect("internal H160 is valid; qed"),
-                    hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d").into()
+                    hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d").into(),
                 );
                 map.insert(
                     // H160 address of Bob dev account
@@ -451,7 +451,7 @@ pub fn testnet_genesis(
                     // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
                     H160::from_str("8eaf04151687736326c9fea17e25fc5287613693")
                         .expect("internal H160 is valid; qed"),
-                    hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into()
+                    hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into(),
                 );
                 map
             },
@@ -28985,12 +28985,12 @@ pub fn local_testnet_config() -> ChainSpec {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::cli::Cli;
     use crate::service::new_light_base;
     use crate::service::{new_full_base, NewFullBase};
+    use sc_cli::SubstrateCli;
     use sc_service_test;
     use sp_runtime::BuildStorage;
-    use crate::cli::Cli;
-    use sc_cli::SubstrateCli;
 
     fn local_testnet_genesis_instant_single() -> GenesisConfig {
         let endowed_accounts: Vec<AccountId> = vec![];

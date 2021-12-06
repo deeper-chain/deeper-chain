@@ -16,8 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{chain_spec, service,
-    service::{new_partial, frontier_database_dir},
+use crate::{
+    chain_spec, service,
+    service::{frontier_database_dir, new_partial},
     Cli, Subcommand,
 };
 use node_executor::ExecutorDispatch;
@@ -166,7 +167,6 @@ pub fn run() -> Result<()> {
                 cmd.run(frontier_database_config)?;
                 cmd.run(config.database)
             })
-
         }
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;

@@ -20,7 +20,9 @@
 
 use codec::Encode;
 use node_primitives::{AccountId, Balance, Index};
-use node_runtime::{CheckedExtrinsic, SessionKeys, SignedExtra, UncheckedExtrinsic, CheckedSignature};
+use node_runtime::{
+    CheckedExtrinsic, CheckedSignature, SessionKeys, SignedExtra, UncheckedExtrinsic,
+};
 use sp_keyring::{AccountKeyring, Ed25519Keyring, Sr25519Keyring};
 use sp_runtime::generic::Era;
 
@@ -107,7 +109,12 @@ pub fn sign(
                     }
                 })
                 .into();
-            UncheckedExtrinsic::new_signed(payload.0, sp_runtime::MultiAddress::Id(signed), signature, extra)
+            UncheckedExtrinsic::new_signed(
+                payload.0,
+                sp_runtime::MultiAddress::Id(signed),
+                signature,
+                extra,
+            )
         }
         CheckedSignature::Unsigned => UncheckedExtrinsic::new_unsigned(xt.function),
         CheckedSignature::SelfContained(_) => UncheckedExtrinsic::new_unsigned(xt.function),

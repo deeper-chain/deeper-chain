@@ -26,8 +26,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        Currency, Everything, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
-        Nothing, OnUnbalanced, U128CurrencyToVote, FindAuthor,
+        Currency, Everything, FindAuthor, Imbalance, InstanceFilter, KeyOwnerProofSystem,
+        LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -57,12 +57,11 @@ use sp_core::{
 };
 use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::traits::{
-    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, NumberFor, OpaqueKeys,
-    SaturatedConversion, StaticLookup, PostDispatchInfoOf, Dispatchable,
+    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, Dispatchable, NumberFor, OpaqueKeys,
+    PostDispatchInfoOf, SaturatedConversion, StaticLookup,
 };
 use sp_runtime::transaction_validity::{
-    TransactionPriority, TransactionSource, TransactionValidity,
-    TransactionValidityError,
+    TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber, Perbill,
@@ -77,8 +76,8 @@ use static_assertions::const_assert;
 pub use pallet_micropayment;
 
 use fp_rpc::TransactionStatus;
-use pallet_evm::FeeCalculator;
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
+use pallet_evm::FeeCalculator;
 use pallet_evm::{Account as EVMAccount, PairedAddressMapping, Runner};
 
 mod precompiles;
@@ -127,23 +126,23 @@ pub fn wasm_binary_unwrap() -> &'static [u8] {
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
 /// to even the core data structures.
 pub mod opaque {
-	use super::*;
+    use super::*;
 
-	pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
+    pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
-	/// Opaque block header type.
-	pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	/// Opaque block type.
-	pub type Block = generic::Block<Header, UncheckedExtrinsic>;
-	/// Opaque block identifier type.
-	pub type BlockId = generic::BlockId<Block>;
+    /// Opaque block header type.
+    pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+    /// Opaque block type.
+    pub type Block = generic::Block<Header, UncheckedExtrinsic>;
+    /// Opaque block identifier type.
+    pub type BlockId = generic::BlockId<Block>;
 
-	impl_opaque_keys! {
-		pub struct SessionKeys {
-			pub babe: Babe,
-			pub grandpa: Grandpa,
-		}
-	}
+    impl_opaque_keys! {
+        pub struct SessionKeys {
+            pub babe: Babe,
+            pub grandpa: Grandpa,
+        }
+    }
 }
 
 /// Runtime version.
@@ -1327,13 +1326,14 @@ pub type SignedExtra = (
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic =
-        fp_self_contained::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+    fp_self_contained::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = fp_self_contained::CheckedExtrinsic<AccountId, Call, SignedExtra, H160>;
 /// Added for "testing/src" and "cargo test"
 pub type CheckedSignature = fp_self_contained::CheckedSignature<AccountId, SignedExtra, H160>;
 /// Unchecked extrinsic type as expected by this runtime.
-pub type GenericUncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+pub type GenericUncheckedExtrinsic =
+    generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<
     Runtime,

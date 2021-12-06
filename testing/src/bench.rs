@@ -36,8 +36,8 @@ use codec::{Decode, Encode};
 use futures::executor;
 use node_primitives::Block;
 use node_runtime::{
-    constants::currency::DOLLARS, AccountId, BalancesCall, Call, CheckedExtrinsic, MinimumPeriod,
-    Signature, SystemCall, UncheckedExtrinsic, CheckedSignature,
+    constants::currency::DOLLARS, AccountId, BalancesCall, Call, CheckedExtrinsic,
+    CheckedSignature, MinimumPeriod, Signature, SystemCall, UncheckedExtrinsic,
 };
 use sc_block_builder::BlockBuilderProvider;
 use sc_client_api::{
@@ -614,7 +614,12 @@ impl BenchKeyring {
                         }
                     })
                     .into();
-                UncheckedExtrinsic::new_signed(payload.0, sp_runtime::MultiAddress::Id(signed), signature, extra)
+                UncheckedExtrinsic::new_signed(
+                    payload.0,
+                    sp_runtime::MultiAddress::Id(signed),
+                    signature,
+                    extra,
+                )
             }
             CheckedSignature::Unsigned => UncheckedExtrinsic::new_unsigned(xt.function),
             CheckedSignature::SelfContained(_) => UncheckedExtrinsic::new_unsigned(xt.function),

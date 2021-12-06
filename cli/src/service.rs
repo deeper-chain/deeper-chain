@@ -23,42 +23,38 @@
 use futures::prelude::*;
 use node_runtime::RuntimeApi;
 use sc_cli::SubstrateCli;
-use sc_client_api::{ExecutorProvider, RemoteBackend, BlockchainEvents};
+use sc_client_api::{BlockchainEvents, ExecutorProvider, RemoteBackend};
 use sc_consensus_babe::{self, SlotProportion};
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, RpcHandlers, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker};
-use sp_runtime::{traits::Block as BlockT};
+use sp_runtime::traits::Block as BlockT;
 use std::sync::Arc;
 
 use crate::cli::Cli;
-use node_runtime::{self, opaque::Block};
 use fc_consensus::FrontierBlockImport;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::EthTask;
 use fc_rpc_core::types::FilterPool;
-use sc_service::{BasePath};
+use node_runtime::{self, opaque::Block};
+use sc_service::BasePath;
 use sp_core::U256;
-use std::{
-	collections::BTreeMap,
-	sync::Mutex,
-	time::Duration,
-};
+use std::{collections::BTreeMap, sync::Mutex, time::Duration};
 
 // Our native executor instance.
 pub struct ExecutorDispatch;
 
 impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+    type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		node_runtime::api::dispatch(method, data)
-	}
+    fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+        node_runtime::api::dispatch(method, data)
+    }
 
-	fn native_version() -> sc_executor::NativeVersion {
-		node_runtime::native_version()
-	}
+    fn native_version() -> sc_executor::NativeVersion {
+        node_runtime::native_version()
+    }
 }
 
 /// The full client type definition.
@@ -74,26 +70,26 @@ type LightClient =
 pub type TransactionPool = sc_transaction_pool::FullPool<Block, FullClient>;
 
 pub fn frontier_database_dir(config: &Configuration) -> std::path::PathBuf {
-	let config_dir = config
-		.base_path
-		.as_ref()
-		.map(|base_path| base_path.config_dir(config.chain_spec.id()))
-		.unwrap_or_else(|| {
-			BasePath::from_project("", "", &crate::cli::Cli::executable_name())
-				.config_dir(config.chain_spec.id())
-		});
-	config_dir.join("frontier").join("db")
+    let config_dir = config
+        .base_path
+        .as_ref()
+        .map(|base_path| base_path.config_dir(config.chain_spec.id()))
+        .unwrap_or_else(|| {
+            BasePath::from_project("", "", &crate::cli::Cli::executable_name())
+                .config_dir(config.chain_spec.id())
+        });
+    config_dir.join("frontier").join("db")
 }
 
 pub fn open_frontier_backend(config: &Configuration) -> Result<Arc<fc_db::Backend<Block>>, String> {
-	Ok(Arc::new(fc_db::Backend::<Block>::new(
-		&fc_db::DatabaseSettings {
-			source: fc_db::DatabaseSettingsSrc::RocksDb {
-				path: frontier_database_dir(&config),
-				cache_size: 0,
-			},
-		},
-	)?))
+    Ok(Arc::new(fc_db::Backend::<Block>::new(
+        &fc_db::DatabaseSettings {
+            source: fc_db::DatabaseSettingsSrc::RocksDb {
+                path: frontier_database_dir(&config),
+                cache_size: 0,
+            },
+        },
+    )?))
 }
 
 /// Creates a new partial node.
@@ -109,7 +105,11 @@ pub fn new_partial(
         sc_transaction_pool::FullPool<Block, FullClient>,
         (
             (
-                sc_consensus_babe::BabeBlockImport<Block, FullClient, FrontierBlockImport<Block, FullGrandpaBlockImport, FullClient>>,
+                sc_consensus_babe::BabeBlockImport<
+                    Block,
+                    FullClient,
+                    FrontierBlockImport<Block, FullGrandpaBlockImport, FullClient>,
+                >,
                 grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
                 sc_consensus_babe::BabeLink<Block>,
             ),
@@ -226,12 +226,7 @@ pub fn new_partial(
         select_chain,
         import_queue,
         transaction_pool,
-        other: (
-            import_setup,
-            filter_pool,
-            frontier_backend,
-            telemetry
-        ),
+        other: (import_setup, filter_pool, frontier_backend, telemetry),
     })
 }
 
@@ -251,10 +246,14 @@ pub struct NewFullBase {
 pub fn new_full_base(
     mut config: Configuration,
     with_startup_data: impl FnOnce(
-        &sc_consensus_babe::BabeBlockImport<Block, FullClient, FrontierBlockImport<Block, FullGrandpaBlockImport, FullClient>>,
+        &sc_consensus_babe::BabeBlockImport<
+            Block,
+            FullClient,
+            FrontierBlockImport<Block, FullGrandpaBlockImport, FullClient>,
+        >,
         &sc_consensus_babe::BabeLink<Block>,
     ),
-    cli: &Cli
+    cli: &Cli,
 ) -> Result<NewFullBase, ServiceError> {
     let sc_service::PartialComponents {
         client,
@@ -264,12 +263,7 @@ pub fn new_full_base(
         keystore_container,
         select_chain,
         transaction_pool,
-        other: (
-            import_setup,
-            filter_pool,
-            frontier_backend,
-            mut telemetry
-        ),
+        other: (import_setup, filter_pool, frontier_backend, mut telemetry),
     } = new_partial(&config, cli)?;
 
     let auth_disc_publish_non_global_ips = config.network.allow_non_globals_in_dht;
@@ -770,6 +764,7 @@ pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 
 #[cfg(test)]
 mod tests {
+    use crate::cli::Cli;
     use crate::service::{new_full_base, new_light_base, NewFullBase};
     use codec::Encode;
     use node_primitives::{Block, DigestItem, Signature};
@@ -777,6 +772,7 @@ mod tests {
         constants::{currency::CENTS, time::SLOT_DURATION},
         Address, BalancesCall, Call, GenericUncheckedExtrinsic,
     };
+    use sc_cli::SubstrateCli;
     use sc_client_api::BlockBackend;
     use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy};
     use sc_consensus_babe::{BabeIntermediate, CompatibleDigestItem, INTERMEDIATE_KEY};
@@ -797,8 +793,6 @@ mod tests {
     };
     use sp_timestamp;
     use std::{borrow::Cow, convert::TryInto, sync::Arc};
-    use crate::cli::Cli;
-    use sc_cli::SubstrateCli;
 
     type AccountPublic = <Signature as Verify>::Signer;
 
@@ -844,7 +838,7 @@ mod tests {
                      babe_link: &sc_consensus_babe::BabeLink<Block>| {
                         setup_handles = Some((block_import.clone(), babe_link.clone()));
                     },
-                    &cli
+                    &cli,
                 )?;
 
                 let node = sc_service_test::TestNetComponents::new(
@@ -1027,8 +1021,13 @@ mod tests {
                 let signature = raw_payload.using_encoded(|payload| signer.sign(payload));
                 let (function, extra, _) = raw_payload.deconstruct();
                 index += 1;
-                GenericUncheckedExtrinsic::new_signed(function, from.into(), signature.into(), extra)
-                    .into()
+                GenericUncheckedExtrinsic::new_signed(
+                    function,
+                    from.into(),
+                    signature.into(),
+                    extra,
+                )
+                .into()
             },
         );
     }

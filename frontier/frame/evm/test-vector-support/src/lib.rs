@@ -25,10 +25,10 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug)]
 #[cfg(feature = "std")]
 struct EthConsensusTest {
-	Input: String,
-	Expected: String,
-	Name: String,
-	Gas: Option<u64>,
+    Input: String,
+    Expected: String,
+    Name: String,
+    Gas: Option<u64>,
 }
 
 /// Tests a precompile against the ethereum consensus tests defined in the given file at filepath.
@@ -36,53 +36,53 @@ struct EthConsensusTest {
 /// vector can be deserialized into an "EthConsensusTest".
 #[cfg(feature = "std")]
 pub fn test_precompile_test_vectors<P: Precompile>(
-	filepath: &str,
+    filepath: &str,
 ) -> std::result::Result<(), String> {
-	use std::fs;
+    use std::fs;
 
-	let data = fs::read_to_string(&filepath).expect("Failed to read blake2F.json");
+    let data = fs::read_to_string(&filepath).expect("Failed to read blake2F.json");
 
-	let tests: Vec<EthConsensusTest> = serde_json::from_str(&data).expect("expected json array");
+    let tests: Vec<EthConsensusTest> = serde_json::from_str(&data).expect("expected json array");
 
-	for test in tests {
-		let input: Vec<u8> = hex::decode(test.Input).expect("Could not hex-decode test input data");
+    for test in tests {
+        let input: Vec<u8> = hex::decode(test.Input).expect("Could not hex-decode test input data");
 
-		let cost: u64 = 10000000;
+        let cost: u64 = 10000000;
 
-		let context: Context = Context {
-			address: Default::default(),
-			caller: Default::default(),
-			apparent_value: From::from(0),
-		};
+        let context: Context = Context {
+            address: Default::default(),
+            caller: Default::default(),
+            apparent_value: From::from(0),
+        };
 
-		match P::execute(&input, Some(cost), &context, false) {
-			Ok(result) => {
-				let as_hex: String = hex::encode(result.output);
-				assert_eq!(
-					result.exit_status,
-					ExitSucceed::Returned,
-					"test '{}' returned {:?} (expected 'Returned')",
-					test.Name,
-					result.exit_status
-				);
-				assert_eq!(
-					as_hex, test.Expected,
-					"test '{}' failed (different output)",
-					test.Name
-				);
-				if let Some(expected_gas) = test.Gas {
-					assert_eq!(
-						result.cost, expected_gas,
-						"test '{}' failed (different gas cost)",
-						test.Name
-					);
-				}
-			}
-			Err(err) => {
-				return Err(format!("Test '{}' returned error: {:?}", test.Name, err));
-			}
-		}
-	}
+        match P::execute(&input, Some(cost), &context, false) {
+            Ok(result) => {
+                let as_hex: String = hex::encode(result.output);
+                assert_eq!(
+                    result.exit_status,
+                    ExitSucceed::Returned,
+                    "test '{}' returned {:?} (expected 'Returned')",
+                    test.Name,
+                    result.exit_status
+                );
+                assert_eq!(
+                    as_hex, test.Expected,
+                    "test '{}' failed (different output)",
+                    test.Name
+                );
+                if let Some(expected_gas) = test.Gas {
+                    assert_eq!(
+                        result.cost, expected_gas,
+                        "test '{}' failed (different gas cost)",
+                        test.Name
+                    );
+                }
+            }
+            Err(err) => {
+                return Err(format!("Test '{}' returned error: {:?}", test.Name, err));
+            }
+        }
+    }
 
-	Ok(())
+    Ok(())
 }
