@@ -20,7 +20,7 @@
 use super::*;
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{Currency, OnInitialize, ReservableCurrency},
+    traits::{Currency, Hooks, ReservableCurrency},
     StorageMap,
 };
 use frame_system::RawOrigin;
@@ -780,7 +780,7 @@ fn forcing_new_era_works() {
         assert_eq!(active_era(), 1);
 
         // no era change.
-        ForceEra::<T>::put(Forcing::ForceNone);
+        ForceEra::<Test>::put(Forcing::ForceNone);
 
         start_session(4);
         assert_eq!(active_era(), 1);
@@ -796,7 +796,7 @@ fn forcing_new_era_works() {
 
         // back to normal.
         // this immediately starts a new session.
-        ForceEra::put(Forcing::NotForcing);
+        ForceEra::<Test>::put(Forcing::NotForcing);
 
         start_session(8);
         assert_eq!(active_era(), 1);
@@ -804,7 +804,7 @@ fn forcing_new_era_works() {
         start_session(9);
         assert_eq!(active_era(), 2);
         // forceful change
-        ForceEra::put(Forcing::ForceAlways);
+        ForceEra::<Test>::put(Forcing::ForceAlways);
 
         start_session(10);
         assert_eq!(active_era(), 2);
@@ -816,10 +816,10 @@ fn forcing_new_era_works() {
         assert_eq!(active_era(), 4);
 
         // just one forceful change
-        ForceEra::put(Forcing::ForceNew);
+        ForceEra::<Test>::put(Forcing::ForceNew);
         start_session(13);
         assert_eq!(active_era(), 5);
-        assert_eq!(ForceEra::get(), Forcing::NotForcing);
+        assert_eq!(ForceEra::<Test>::get(), Forcing::NotForcing);
 
         start_session(14);
         assert_eq!(active_era(), 6);
