@@ -20,34 +20,27 @@
 
 //! Service implementation. Specialized wrapper over substrate service.
 
-use codec::Encode;
-use frame_system_rpc_runtime_api::AccountNonceApi;
 use futures::prelude::*;
 use node_runtime::RuntimeApi;
 use sc_cli::SubstrateCli;
-use sc_client_api::{BlockBackend, ExecutorProvider, RemoteBackend, BlockchainEvents};
+use sc_client_api::{ExecutorProvider, RemoteBackend, BlockchainEvents};
 use sc_consensus_babe::{self, SlotProportion};
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, RpcHandlers, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker};
-use sp_api::ProvideRuntimeApi;
-use sp_core::crypto::Pair;
-use sp_runtime::{generic, traits::Block as BlockT, SaturatedConversion};
+use sp_runtime::{traits::Block as BlockT};
 use std::sync::Arc;
 
 use crate::cli::Cli;
-use async_trait::async_trait;
-use node_runtime::{self, opaque::Block, constants::time::SLOT_DURATION};
+use node_runtime::{self, opaque::Block};
 use fc_consensus::FrontierBlockImport;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::EthTask;
 use fc_rpc_core::types::FilterPool;
 use sc_service::{BasePath};
 use sp_core::U256;
-use sp_inherents::{InherentData, InherentIdentifier};
 use std::{
-	cell::RefCell,
 	collections::BTreeMap,
 	sync::Mutex,
 	time::Duration,
@@ -101,80 +94,6 @@ pub fn open_frontier_backend(config: &Configuration) -> Result<Arc<fc_db::Backen
 			},
 		},
 	)?))
-}
-
-/// Fetch the nonce of the given `account` from the chain state.
-///
-/// Note: Should only be used for tests.
-pub fn fetch_nonce(client: &FullClient, account: sp_core::sr25519::Pair) -> u32 {
-    let best_hash = client.chain_info().best_hash;
-    client
-        .runtime_api()
-        .account_nonce(&generic::BlockId::Hash(best_hash), account.public().into())
-        .expect("Fetching account nonce works; qed")
-}
-
-/// Create a transaction using the given `call`.
-///
-/// The transaction will be signed by `sender`. If `nonce` is `None` it will be fetched from the
-/// state of the best block.
-///
-/// Note: Should only be used for tests.
-pub fn create_extrinsic(
-    client: &FullClient,
-    sender: sp_core::sr25519::Pair,
-    function: impl Into<node_runtime::Call>,
-    nonce: Option<u32>,
-) -> node_runtime::UncheckedExtrinsic {
-    let function = function.into();
-    let genesis_hash = client
-        .block_hash(0)
-        .ok()
-        .flatten()
-        .expect("Genesis block exists; qed");
-    let best_hash = client.chain_info().best_hash;
-    let best_block = client.chain_info().best_number;
-    let nonce = nonce.unwrap_or_else(|| fetch_nonce(client, sender.clone()));
-
-    let period = node_runtime::BlockHashCount::get()
-        .checked_next_power_of_two()
-        .map(|c| c / 2)
-        .unwrap_or(2) as u64;
-    let tip = 0;
-    let extra: node_runtime::SignedExtra = (
-        frame_system::CheckSpecVersion::<node_runtime::Runtime>::new(),
-        frame_system::CheckTxVersion::<node_runtime::Runtime>::new(),
-        frame_system::CheckGenesis::<node_runtime::Runtime>::new(),
-        frame_system::CheckEra::<node_runtime::Runtime>::from(generic::Era::mortal(
-            period,
-            best_block.saturated_into(),
-        )),
-        frame_system::CheckNonce::<node_runtime::Runtime>::from(nonce),
-        frame_system::CheckWeight::<node_runtime::Runtime>::new(),
-        pallet_transaction_payment::ChargeTransactionPayment::<node_runtime::Runtime>::from(tip),
-    );
-
-    let raw_payload = node_runtime::SignedPayload::from_raw(
-        function.clone(),
-        extra.clone(),
-        (
-            node_runtime::VERSION.spec_version,
-            node_runtime::VERSION.transaction_version,
-            genesis_hash,
-            best_hash,
-            (),
-            (),
-            (),
-        ),
-    );
-    let signature = raw_payload.using_encoded(|e| sender.sign(e));
-
-    node_runtime::UncheckedExtrinsic::new_signed(
-        function.clone(),
-        sp_runtime::AccountId32::from(sender.public()).into(),
-        node_runtime::Signature::Sr25519(signature.clone()),
-        extra.clone(),
-    )
 }
 
 /// Creates a new partial node.

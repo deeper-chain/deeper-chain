@@ -22,7 +22,7 @@ use crate::mock::*;
 
 use frame_support::{
 	assert_ok,
-	traits::{GenesisBuild, LockIdentifier, LockableCurrency, WithdrawReasons},
+	traits::GenesisBuild,
 };
 use std::{collections::BTreeMap, str::FromStr};
 

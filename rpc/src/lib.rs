@@ -41,7 +41,7 @@ use pallet_ethereum::EthereumStorageSchema;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::{opaque::Block};
 use sc_client_api::{
-    backend::{AuxStore, Backend, StateBackend, StorageProvider},
+    backend::{AuxStore, StorageProvider},
     client::BlockchainEvents,
 };
 use sc_consensus_babe::{Config, Epoch};

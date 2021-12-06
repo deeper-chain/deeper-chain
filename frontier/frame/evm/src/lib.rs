@@ -75,14 +75,14 @@ use evm::Config as EvmConfig;
 use frame_support::{
 	dispatch::DispatchResultWithPostInfo,
 	traits::{
-		tokens::fungible::Inspect, Currency, ExistenceRequirement, FindAuthor, Get, Imbalance,
+		Currency, ExistenceRequirement, FindAuthor, Get, Imbalance,
 		OnUnbalanced, SignedImbalance, WithdrawReasons, IsType,
 	},
 	weights::{Pays, PostDispatchInfo, Weight},
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_core::{Hasher, H160, H256, U256, ecdsa};
+use sp_core::{H160, H256, U256, ecdsa};
 use sp_runtime::{
 	traits::{Saturating, UniqueSaturatedInto, Zero},
 	AccountId32, DispatchError,
