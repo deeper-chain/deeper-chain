@@ -166,7 +166,7 @@ fn blocks() -> ((Vec<u8>, Hash), (Vec<u8>, Hash)) {
 
     // session change => consensus authorities change => authorities change digest item appears
     let digest = Header::decode(&mut &block2.0[..]).unwrap().digest;
-    assert_eq!(digest.logs().len(), 1 /* Just babe slot */);
+    assert_eq!(digest.logs().len(), 2);
 
     (block1, block2)
 }
@@ -443,7 +443,7 @@ fn full_native_block_import_works() {
                 topics: vec![],
             },
         ];
-        assert_eq!(System::events(), events);
+        assert_eq!(System::events()[..4], events);
     });
 
     fees = t.execute_with(|| transfer_fee(&xt_transfer_balance(15)));
@@ -520,7 +520,7 @@ fn full_native_block_import_works() {
                 topics: vec![],
             },
         ];
-        assert_eq!(System::events(), events);
+        assert_eq!(System::events()[0..7], events);
     });
 }
 

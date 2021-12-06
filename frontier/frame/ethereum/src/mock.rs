@@ -21,7 +21,7 @@ use super::*;
 use crate::IntermediateStateRoot;
 use codec::{WrapperTypeDecode, WrapperTypeEncode};
 use ethereum::{TransactionAction, TransactionSignature};
-use frame_support::{parameter_types, traits::{FindAuthor, IsType}, ConsensusEngineId, PalletId};
+use frame_support::{parameter_types, traits::{GenesisBuild, FindAuthor, IsType}, ConsensusEngineId, PalletId};
 use pallet_evm::{AddressMapping, FeeCalculator};
 use rlp::*;
 use sha3::Digest;
@@ -31,6 +31,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, SignedExtension},
 	AccountId32,
 };
+use std::{collections::BTreeMap, str::FromStr};
 
 pub type SignedExtra = (frame_system::CheckSpecVersion<Test>,);
 
@@ -267,12 +268,41 @@ pub fn new_test_ext(accounts_len: usize) -> (Vec<AccountInfo>, sp_io::TestExtern
 		.collect::<Vec<_>>();
 
 	let balances: Vec<_> = (0..accounts_len)
-		.map(|i| (pairs[i].account_id.clone(), 10_000_000))
+		.map(|i| (pairs[i].account_id.clone(), 1_000_000_000_000_000))
 		.collect();
 
 	pallet_balances::GenesisConfig::<Test> { balances }
 		.assimilate_storage(&mut ext)
 		.unwrap();
+
+	let mut account_pairs = BTreeMap::new();
+	for i in 0..pairs.len() {
+		account_pairs.insert(
+			pairs[i].address.clone(),
+			pairs[i].account_id.clone(),
+		);
+	}
+
+	let mut accounts = BTreeMap::new();
+	for i in 0..pairs.len() {
+		accounts.insert(
+			pairs[i].address.clone(),
+			pallet_evm::GenesisAccount {
+				nonce: U256::default(),
+				balance: U256::from_str("0xffffffffffffffffffffffffffffffff").unwrap(),
+				storage: Default::default(),
+				code: vec![
+					0x00, // STOP
+				],
+			},
+		);
+	}
+
+	pallet_evm::GenesisConfig::<Test> {
+		account_pairs, accounts,
+	}
+	.assimilate_storage(&mut ext)
+	.expect("Pallet balances storage can be assimilated");
 
 	(pairs, ext.into())
 }

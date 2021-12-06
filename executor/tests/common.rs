@@ -172,14 +172,15 @@ pub fn construct_block(
         extrinsics_root,
         state_root: Default::default(),
         digest: Digest {
-            logs: vec![DigestItem::PreRuntime(
-                BABE_ENGINE_ID,
-                PreDigest::SecondaryPlain(SecondaryPlainPreDigest {
-                    slot: babe_slot,
-                    authority_index: 42,
-                })
-                .encode(),
-            )],
+            logs: vec![
+                DigestItem::PreRuntime(
+                    BABE_ENGINE_ID,
+                    PreDigest::SecondaryPlain(SecondaryPlainPreDigest {
+                        slot: babe_slot,
+                        authority_index: 1,
+                    }).encode(),
+                )
+            ],
         },
     };
 
