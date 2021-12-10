@@ -258,7 +258,7 @@ pub mod pallet {
         CreditDataUpdated(T::AccountId, CreditData, T::BlockNumber),
         CreditScoreIncreased(T::AccountId, u64, T::BlockNumber),
         CreditScoreSlashed(T::AccountId, u64, T::BlockNumber),
-        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
+        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), //status: 0,Normal; 1-6, Error
     }
 
     #[pallet::error]
@@ -784,7 +784,7 @@ pub mod pallet {
                         .saturating_add(score_delta);
                     if Self::_update_credit(&server_id, new_credit) {
                         LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
-                        Self::update_credit_history(&server_id, current_era);
+                        Self::update_credit_history(&server_id, current_era);                      
                         if era_used {
                             LastCreditUpdate::<T>::remove(server_id);
                         }
