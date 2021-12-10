@@ -1078,6 +1078,8 @@ impl pallet_credit::Config for Runtime {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
+    type SecsPerBlock = SecsPerBlock;
+    type UnixTime = Timestamp;
 }
 
 impl pallet_credit_accumulation::Config for Runtime {

@@ -123,7 +123,7 @@ pub trait CreditInterface<AccountId, Balance> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, Vec};
+    use frame_support::traits::{Currency, UnixTime, Vec};
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
         pallet_prelude::*,
@@ -158,6 +158,10 @@ pub mod pallet {
         type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+
+        type UnixTime: UnixTime;
+
+        type SecsPerBlock: Get<u32>;
     }
 
     pub type BalanceOf<T> =
@@ -209,6 +213,11 @@ pub mod pallet {
     pub type LastCreditUpdate<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, EraIndex, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn last_credit_update_timestamp)]
+    pub type LastCreditUpdateTimestamp<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -246,7 +255,7 @@ pub mod pallet {
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
         CreditDataAdded(T::AccountId, CreditData),
         CreditDataUpdated(T::AccountId, CreditData),
-        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),  //status: 0,Normal; 1-6, Error
+        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), //status: 0,Normal; 1-6, Error
     }
 
     #[pallet::error]
@@ -421,7 +430,7 @@ pub mod pallet {
         }
 
         fn block_to_era(block_number: T::BlockNumber) -> EraIndex {
-            TryInto::<u32>::try_into(block_number / T::BlocksPerEra::get())
+            TryInto::<EraIndex>::try_into(block_number / T::BlocksPerEra::get())
                 .ok()
                 .unwrap()
         }
@@ -471,6 +480,35 @@ pub mod pallet {
                 credit_setting.credit_level.clone(),
                 credit_setting,
             );
+        }
+
+        /// check the interval between two credit update as long enouth
+        /// return (u64,bool):
+        /// the first means the inteval of eras ;
+        /// the second means if use era for check (tobe deprecated)
+        fn check_update_credit_interval(
+            server_id: &T::AccountId,
+            current_era: EraIndex,
+            onboard_era: EraIndex,
+            now_as_secs: u64,
+        ) -> (u64, bool) {
+            let diffs;
+            let mut era_used = false;
+            if let Some(pre_update_timestamp) = Self::last_credit_update_timestamp(server_id) {
+                let era_block_count = TryInto::<u64>::try_into(T::BlocksPerEra::get())
+                    .ok()
+                    .unwrap();
+                let secs_per_block = T::SecsPerBlock::get() as u64;
+                diffs = now_as_secs.saturating_sub(pre_update_timestamp)
+                    / era_block_count.saturating_mul(secs_per_block);
+            } else if let Some(last_credit_update_era) = Self::last_credit_update(&server_id) {
+                diffs = current_era.saturating_sub(last_credit_update_era) as u64;
+                era_used = true;
+            } else {
+                // if this is the first update, we use onboard era as the last update era
+                diffs = current_era.saturating_sub(onboard_era) as u64;
+            }
+            (diffs, era_used)
         }
     }
 
@@ -664,6 +702,16 @@ pub mod pallet {
         /// update credit score based on micropayment tuple
         fn update_credit(micropayment: (T::AccountId, BalanceOf<T>)) {
             let (server_id, balance) = micropayment;
+            let onboard_era = Self::get_onboard_era(&server_id);
+            if onboard_era.is_none() {
+                // credit is not updated if the device is never online
+                log!(
+                    info,
+                    "update_credit account : {:?}, never online",
+                    server_id
+                );
+                return;
+            }
             let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
             let mut score_delta: u64 = balance_num
                 .checked_div(T::MicropaymentToCreditFactor::get())
@@ -676,23 +724,22 @@ pub mod pallet {
                 score_delta
             );
             if score_delta > 0 {
-                let onboard_era = Self::get_onboard_era(&server_id);
-                if onboard_era.is_none() {
-                    // credit is not updated if the device is never online
-                    return;
-                }
                 let current_era = Self::get_current_era();
-                // if this is the first update, we use onboard era as the last update era
-                let last_credit_update_era =
-                    Self::last_credit_update(&server_id).unwrap_or(onboard_era.unwrap());
-                let mut eras = (current_era - last_credit_update_era) as u64;
-                if eras < 2 && Self::last_credit_update(&server_id).is_none() {
+                let now_as_secs = T::UnixTime::now().as_secs();
+                let (mut time_eras, era_used) = Self::check_update_credit_interval(
+                    &server_id,
+                    current_era,
+                    onboard_era.unwrap(),
+                    now_as_secs,
+                );
+
+                if time_eras < 2 && Self::last_credit_update_timestamp(&server_id).is_none() {
                     // first update within 2 eras, we boost it to 2 eras so that credit can be updated
-                    eras = 2;
+                    time_eras = 2;
                 }
-                if eras >= 2 {
+                if time_eras >= 2 {
                     let cap: u64 = T::CreditCapTwoEras::get() as u64;
-                    let total_cap = cap * (eras / 2);
+                    let total_cap = cap * (time_eras / 2);
                     if score_delta > total_cap {
                         score_delta = total_cap;
                         log!(
@@ -707,8 +754,11 @@ pub mod pallet {
                         .unwrap_or(0)
                         .saturating_add(score_delta);
                     if Self::_update_credit(&server_id, new_credit) {
-                        LastCreditUpdate::<T>::insert(&server_id, current_era);
+                        LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                         Self::update_credit_history(&server_id, current_era);
+                        if era_used {
+                            LastCreditUpdate::<T>::remove(server_id);
+                        }
                     } else {
                         log!(
                             error,
@@ -726,20 +776,28 @@ pub mod pallet {
             let onboard_era = Self::get_onboard_era(&server_id);
             if onboard_era.is_none() {
                 // credit is not updated if the device is never online
+                log!(
+                    info,
+                    "update_credit_by_traffic account : {:?}, never online",
+                    server_id
+                );
                 return;
             }
             let current_era = Self::get_current_era();
-            // if this is the first update, we use onboard era as the last update era
-            let last_credit_update_era =
-                Self::last_credit_update(&server_id).unwrap_or(onboard_era.unwrap());
-            let eras = (current_era - last_credit_update_era) as u64;
-            if eras >= 2 {
+            let now_as_secs = T::UnixTime::now().as_secs();
+            let (time_eras, era_used) = Self::check_update_credit_interval(
+                &server_id,
+                current_era,
+                onboard_era.unwrap(),
+                now_as_secs,
+            );
+            if time_eras >= 2 {
                 let cap: u64 = T::CreditCapTwoEras::get() as u64;
                 let new_credit = Self::get_credit_score(&server_id)
                     .unwrap_or(0)
                     .saturating_add(cap);
                 if Self::_update_credit(&server_id, new_credit) {
-                    LastCreditUpdate::<T>::insert(&server_id, current_era);
+                    LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
                 } else {
                     log!(
@@ -748,6 +806,10 @@ pub mod pallet {
                         new_credit,
                         server_id.clone()
                     );
+                }
+                // clear old
+                if era_used {
+                    LastCreditUpdate::<T>::remove(server_id);
                 }
             }
         }
