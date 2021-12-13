@@ -218,6 +218,12 @@ pub mod pallet {
     pub type LastCreditUpdateTimestamp<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
 
+    /// record the reward remain eras info for account
+    #[pallet::storage]
+    #[pallet::getter(fn reward_countdown)]
+    pub type RewardCountdown<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, EraIndex, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -617,6 +623,15 @@ pub mod pallet {
             if credit_map.is_empty() {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 6));
                 return (None, weight);
+            }
+
+            let rewarded_eras = cmp::min(to, expiry_era);
+            // update reward remain eras.
+            let reward_remain_eras = expiry_era - rewarded_eras;
+            if reward_remain_eras > 0 {
+                RewardCountdown::<T>::insert(account_id, reward_remain_eras);
+            } else {
+                RewardCountdown::<T>::remove(account_id);
             }
 
             let mut referee_reward = BalanceOf::<T>::zero();
