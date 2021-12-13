@@ -21,9 +21,7 @@ use crate as staking;
 use crate::*;
 use frame_support::{
     assert_ok, parameter_types,
-    traits::{
-        Currency, FindAuthor, GenesisBuild, Get, OnFinalize, OnInitialize, OneSessionHandler,
-    },
+    traits::{Currency, FindAuthor, GenesisBuild, Get, Hooks, OneSessionHandler},
     weights::constants::RocksDbWeight,
     IterableStorageMap, StorageDoubleMap, StorageValue,
 };
@@ -690,7 +688,7 @@ impl ExtBuilder {
             ext.execute_with(|| {
                 System::set_block_number(1);
                 Session::on_initialize(1);
-                Staking::on_initialize(1);
+                <Staking as Hooks<u64>>::on_initialize(1);
                 Timestamp::set_timestamp(INIT_TIMESTAMP);
             });
         }
@@ -840,7 +838,7 @@ pub(crate) fn on_offence_in_era(
     slash_fraction: &[Perbill],
     era: EraIndex,
 ) {
-    let bonded_eras = crate::BondedEras::get();
+    let bonded_eras = crate::BondedEras::<Test>::get();
     for &(bonded_era, start_session) in bonded_eras.iter() {
         if bonded_era == era {
             let _ = Staking::on_offence(offenders, slash_fraction, start_session);
