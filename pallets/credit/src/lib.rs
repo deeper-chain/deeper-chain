@@ -124,7 +124,7 @@ pub trait CreditInterface<AccountId, Balance> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, UnixTime, Vec};
+    use frame_support::traits::{Currency, UnixTime};
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
         pallet_prelude::*,
@@ -256,7 +256,6 @@ pub mod pallet {
         CreditSettingUpdated(CreditSetting<BalanceOf<T>>, T::BlockNumber),
         CreditDataAdded(T::AccountId, CreditData, T::BlockNumber),
         CreditDataUpdated(T::AccountId, CreditData, T::BlockNumber),
-        CreditScoreIncreased(T::AccountId, u64, T::BlockNumber),
         CreditScoreSlashed(T::AccountId, u64, T::BlockNumber),
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), //status: 0,Normal; 1-6, Error
     }
@@ -535,9 +534,9 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Module<T> {
+    impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
         fn get_current_era() -> EraIndex {
-            Self::block_to_era(<frame_system::Module<T>>::block_number())
+            Self::block_to_era(<frame_system::Pallet<T>>::block_number())
         }
 
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
@@ -828,18 +827,12 @@ pub mod pallet {
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
-
-                    Self::deposit_event(Event::CreditScoreIncreased(
-                        server_id,
-                        new_credit,
-                        <frame_system::Pallet<T>>::block_number(),
-                    ));
                 } else {
                     log!(
                         error,
                         "failed to update credit {} for server_id: {:?}",
                         new_credit,
-                        server_id.clone()
+                        server_id
                     );
                 }
                 // clear old

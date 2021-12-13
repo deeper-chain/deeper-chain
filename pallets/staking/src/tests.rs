@@ -632,7 +632,7 @@ fn delegators_also_get_slashed() {
 
         let slash_amount = slash_percent * exposed_stake;
         let validator_share =
-            Perbill::from_rational_approximation(exposed_validator, exposed_stake) * slash_amount;
+            Perbill::from_rational(exposed_validator, exposed_stake) * slash_amount;
 
         // slash amount need to be positive for the test to make sense.
         assert!(validator_share > 0);
