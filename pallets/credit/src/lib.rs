@@ -313,7 +313,6 @@ pub mod pallet {
                 Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data));
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
-                RewardCountdown::<T>::insert(&account_id, credit_data.reward_eras);
                 Self::deposit_event(Event::CreditDataAdded(account_id, credit_data));
             }
             Ok(().into())
