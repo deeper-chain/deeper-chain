@@ -19,10 +19,10 @@
 //! bonding validators, nominators, and generating different types of solutions.
 
 use crate::*;
-use crate::{Config as StakingConfig, Module as Staking};
+use crate::{Config as StakingConfig, Pallet as Staking};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
-use pallet_credit::{Config as CreditConfig, CreditData, CreditLevel, Module as Credit};
+use pallet_credit::{Config as CreditConfig, CreditData, CreditLevel, Pallet as Credit};
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaChaRng,
@@ -35,9 +35,9 @@ const MAX_VALIDATORS: u32 = 1000;
 
 /// This function removes all validators and delegators from storage.
 pub fn clear_validators_and_delegators<T: Config>() {
-    Validators::<T>::remove_all();
-    CandidateValidators::<T>::remove_all();
-    Delegators::<T>::remove_all();
+    Validators::<T>::remove_all(None);
+    CandidateValidators::<T>::remove_all(None);
+    Delegators::<T>::remove_all(None);
 }
 
 /// Grab a funded user.
@@ -216,7 +216,7 @@ pub fn create_validators_with_delegators_for_era<T: Config + pallet_credit::Conf
         )?;
     }
 
-    ValidatorCount::put(validators);
+    ValidatorCount::<T>::put(validators);
 
     Ok(validator_choosen)
 }

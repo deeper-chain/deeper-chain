@@ -16,11 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::service::new_partial;
-use crate::{chain_spec, service, Cli, Subcommand};
-use node_executor::Executor;
+use crate::{chain_spec, service, service::new_partial, Cli, Subcommand};
+use node_executor::ExecutorDispatch;
 use node_runtime::{Block, RuntimeApi};
-use sc_cli::{ChainSpec, Result, Role, RuntimeVersion, SubstrateCli};
+use sc_cli::{ChainSpec, Result, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
 
 impl SubstrateCli for Cli {
@@ -80,23 +79,19 @@ pub fn run() -> Result<()> {
         None => {
             let runner = cli.create_runner(&cli.run)?;
             runner.run_node_until_exit(|config| async move {
-                match config.role {
-                    Role::Light => service::new_light(config),
-                    _ => service::new_full(config),
-                }
-                .map_err(sc_cli::Error::Service)
+                service::new_full(config).map_err(sc_cli::Error::Service)
             })
         }
         Some(Subcommand::Inspect(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
-            runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config))
+            runner.sync_run(|config| cmd.run::<Block, RuntimeApi, ExecutorDispatch>(config))
         }
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(cmd)?;
 
-                runner.sync_run(|config| cmd.run::<Block, Executor>(config))
+                runner.sync_run(|config| cmd.run::<Block, ExecutorDispatch>(config))
             } else {
                 Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."

@@ -19,10 +19,10 @@
 //! Genesis Configuration.
 
 use crate::keyring::*;
-use node_runtime::constants::currency::*;
 use node_runtime::{
-    wasm_binary_unwrap, AccountId, BalancesConfig, ContractsConfig, GenesisConfig, GrandpaConfig,
-    IndicesConfig, SessionConfig, SocietyConfig, StakerStatus, StakingConfig, SystemConfig,
+    constants::currency::*, wasm_binary_unwrap, AccountId, BabeConfig, BalancesConfig,
+    GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SocietyConfig, StakerStatus,
+    StakingConfig, SystemConfig, BABE_GENESIS_EPOCH_CONFIG,
 };
 use sp_core::ChangesTrieConfiguration;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
@@ -56,7 +56,7 @@ pub fn config_endowed(
     );
 
     GenesisConfig {
-        frame_system: Some(SystemConfig {
+        system: SystemConfig {
             changes_trie_config: if support_changes_trie {
                 Some(ChangesTrieConfiguration {
                     digest_interval: 2,
@@ -68,10 +68,10 @@ pub fn config_endowed(
             code: code
                 .map(|x| x.to_vec())
                 .unwrap_or_else(|| wasm_binary_unwrap().to_vec()),
-        }),
-        pallet_indices: Some(IndicesConfig { indices: vec![] }),
-        pallet_balances: Some(BalancesConfig { balances: endowed }),
-        pallet_session: Some(SessionConfig {
+        },
+        indices: IndicesConfig { indices: vec![] },
+        balances: BalancesConfig { balances: endowed },
+        session: SessionConfig {
             keys: vec![
                 (
                     dave(),
@@ -89,8 +89,8 @@ pub fn config_endowed(
                     to_session_keys(&Ed25519Keyring::Charlie, &Sr25519Keyring::Charlie),
                 ),
             ],
-        }),
-        pallet_staking: Some(StakingConfig {
+        },
+        staking: StakingConfig {
             stakers: vec![
                 (dave(), alice(), 111 * DOLLARS, StakerStatus::Validator),
                 (eve(), bob(), 100 * DOLLARS, StakerStatus::Validator),
@@ -101,30 +101,29 @@ pub fn config_endowed(
             slash_reward_fraction: Perbill::from_percent(10),
             invulnerables: vec![alice(), bob(), charlie()],
             ..Default::default()
-        }),
-        pallet_contracts: Some(ContractsConfig {
-            current_schedule: Default::default(),
-        }),
-        pallet_babe: Some(Default::default()),
-        pallet_grandpa: Some(GrandpaConfig {
+        },
+        babe: BabeConfig {
             authorities: vec![],
-        }),
-        pallet_im_online: Some(Default::default()),
-        pallet_authority_discovery: Some(Default::default()),
-        pallet_democracy: Some(Default::default()),
-        //pallet_collective_Instance1: Some(Default::default()),
-        pallet_collective_Instance2: Some(Default::default()),
-        pallet_membership_Instance1: Some(Default::default()),
-        pallet_elections_phragmen: Some(Default::default()),
-        pallet_sudo: Some(Default::default()),
-        pallet_treasury: Some(Default::default()),
-        pallet_society: Some(SocietyConfig {
+            epoch_config: Some(BABE_GENESIS_EPOCH_CONFIG),
+        },
+        grandpa: GrandpaConfig {
+            authorities: vec![],
+        },
+        im_online: Default::default(),
+        authority_discovery: Default::default(),
+        democracy: Default::default(),
+        technical_committee: Default::default(),
+        technical_membership: Default::default(),
+        elections: Default::default(),
+        sudo: Default::default(),
+        treasury: Default::default(),
+        society: SocietyConfig {
             members: vec![alice(), bob()],
             pot: 0,
             max_members: 999,
-        }),
-        pallet_vesting: Some(Default::default()),
-        pallet_deeper_node: Some(Default::default()),
-        pallet_credit: Some(Default::default()),
+        },
+        vesting: Default::default(),
+        deeper_node: Default::default(),
+        credit: Default::default(),
     }
 }

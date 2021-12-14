@@ -28,8 +28,10 @@ use std::{
     sync::Arc,
 };
 
-use crate::client::{Backend, Client};
-use crate::keyring::*;
+use crate::{
+    client::{Backend, Client},
+    keyring::*,
+};
 use codec::{Decode, Encode};
 use futures::executor;
 use node_primitives::Block;
@@ -43,12 +45,11 @@ use sc_client_api::{
     BlockBackend, ExecutionStrategy,
 };
 use sc_client_db::PruningMode;
-use sc_executor::{NativeExecutor, WasmExecutionMethod};
+use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy, ImportResult, ImportedAux};
+use sc_executor::{NativeElseWasmExecutor, WasmExecutionMethod};
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
-use sp_consensus::{
-    BlockImport, BlockImportParams, BlockOrigin, ForkChoiceStrategy, ImportResult, ImportedAux,
-};
+use sp_consensus::BlockOrigin;
 use sp_core::{blake2_256, ed25519, sr25519, traits::SpawnNamed, ExecutionContext, Pair, Public};
 use sp_inherents::InherentData;
 use sp_runtime::{
@@ -230,13 +231,13 @@ pub enum DatabaseType {
 }
 
 impl DatabaseType {
-    fn into_settings(self, path: PathBuf) -> sc_client_db::DatabaseSettingsSrc {
+    fn into_settings(self, path: PathBuf) -> sc_client_db::DatabaseSource {
         match self {
-            Self::RocksDb => sc_client_db::DatabaseSettingsSrc::RocksDb {
+            Self::RocksDb => sc_client_db::DatabaseSource::RocksDb {
                 path,
                 cache_size: 512,
             },
-            Self::ParityDb => sc_client_db::DatabaseSettingsSrc::ParityDb { path },
+            Self::ParityDb => sc_client_db::DatabaseSource::ParityDb { path },
         }
     }
 }
@@ -325,20 +326,20 @@ impl<'a> Iterator for BlockContentIterator<'a> {
                 )),
                 function: match self.content.block_type {
                     BlockType::RandomTransfersKeepAlive => {
-                        Call::Balances(BalancesCall::transfer_keep_alive(
-                            sp_runtime::MultiAddress::Id(receiver),
-                            node_runtime::ExistentialDeposit::get() + 1,
-                        ))
+                        Call::Balances(BalancesCall::transfer_keep_alive {
+                            dest: sp_runtime::MultiAddress::Id(receiver),
+                            value: node_runtime::ExistentialDeposit::get() + 1,
+                        })
                     }
                     BlockType::RandomTransfersReaping => {
-                        Call::Balances(BalancesCall::transfer(
-                            sp_runtime::MultiAddress::Id(receiver),
-                            // Transfer so that ending balance would be 1 less than existential deposit
-                            // so that we kill the sender account.
-                            100 * DOLLARS - (node_runtime::ExistentialDeposit::get() - 1),
-                        ))
+                        Call::Balances(BalancesCall::transfer {
+                            dest: sp_runtime::MultiAddress::Id(receiver),
+                            // Transfer so that ending balance would be 1 less than existential
+                            // deposit so that we kill the sender account.
+                            value: 100 * DOLLARS - (node_runtime::ExistentialDeposit::get() - 1),
+                        })
                     }
-                    BlockType::Noop => Call::System(SystemCall::remark(Vec::new())),
+                    BlockType::Noop => Call::System(SystemCall::remark { remark: Vec::new() }),
                 },
             },
             self.runtime_version.spec_version,
@@ -418,14 +419,16 @@ impl BenchDb {
         };
         let task_executor = TaskExecutor::new();
 
-        let (client, backend) = sc_service::new_client(
-            db_config,
-            NativeExecutor::new(WasmExecutionMethod::Compiled, None, 8),
+        let backend = sc_service::new_db_backend(db_config).expect("Should not fail");
+        let client = sc_service::new_client(
+            backend.clone(),
+            NativeElseWasmExecutor::new(WasmExecutionMethod::Compiled, None, 8),
             &keyring.generate_genesis(),
             None,
             None,
-            ExecutionExtensions::new(profile.into_execution_strategies(), None),
+            ExecutionExtensions::new(profile.into_execution_strategies(), None, None),
             Box::new(task_executor.clone()),
+            None,
             None,
             Default::default(),
         )
@@ -489,9 +492,7 @@ impl BenchDb {
             match block.push(opaque) {
                 Err(sp_blockchain::Error::ApplyExtrinsicFailed(
                     sp_blockchain::ApplyExtrinsicFailed::Validity(e),
-                )) if e.exhausted_resources() => {
-                    break;
-                }
+                )) if e.exhausted_resources() => break,
                 Err(err) => panic!("Error pushing transaction: {:?}", err),
                 Ok(_) => {}
             }
@@ -711,9 +712,10 @@ impl BenchContext {
         assert_eq!(self.client.chain_info().best_number, 0);
 
         assert_eq!(
-            self.client
-                .import_block(import_params, Default::default())
-                .expect("Failed to import block"),
+            futures::executor::block_on(
+                self.client.import_block(import_params, Default::default())
+            )
+            .expect("Failed to import block"),
             ImportResult::Imported(ImportedAux {
                 header_only: false,
                 clear_justification_requests: false,

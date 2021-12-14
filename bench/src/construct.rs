@@ -29,12 +29,13 @@ use std::{borrow::Cow, collections::HashMap, pin::Pin, sync::Arc};
 
 use node_primitives::Block;
 use node_testing::bench::{BenchDb, BlockType, DatabaseType, KeyTypes, Profile};
-use sp_consensus::{Environment, Proposer, RecordProof};
-use sp_runtime::{generic::BlockId, traits::NumberFor, OpaqueExtrinsic};
-use sp_transaction_pool::{
-    ImportNotificationStream, PoolFuture, PoolStatus, TransactionFor, TransactionSource,
-    TransactionStatusStreamFor, TxHash,
+use sc_transaction_pool_api::{
+    ImportNotificationStream, PoolFuture, PoolStatus, ReadyTransactions, TransactionFor,
+    TransactionSource, TransactionStatusStreamFor, TxHash,
 };
+use sp_consensus::{Environment, Proposer};
+use sp_inherents::InherentDataProvider;
+use sp_runtime::{generic::BlockId, traits::NumberFor, OpaqueExtrinsic};
 
 use crate::{
     common::SizeType,
@@ -132,11 +133,9 @@ impl core::Benchmark for ConstructionBenchmark {
             context.client.clone(),
             self.transactions.clone().into(),
             None,
+            None,
         );
-        let inherent_data_providers = sp_inherents::InherentDataProviders::new();
-        inherent_data_providers
-            .register_provider(sp_timestamp::InherentDataProvider)
-            .expect("Failed to register timestamp data provider");
+        let timestamp_provider = sp_timestamp::InherentDataProvider::from_system_time();
 
         let start = std::time::Instant::now();
 
@@ -153,12 +152,12 @@ impl core::Benchmark for ConstructionBenchmark {
 
         let _block = futures::executor::block_on(
             proposer.propose(
-                inherent_data_providers
+                timestamp_provider
                     .create_inherent_data()
                     .expect("Create inherent data failed"),
                 Default::default(),
                 std::time::Duration::from_secs(20),
-                RecordProof::Yes,
+                None,
             ),
         )
         .map(|r| r.block)
@@ -189,7 +188,7 @@ impl From<OpaqueExtrinsic> for PoolTransaction {
     }
 }
 
-impl sp_transaction_pool::InPoolTransaction for PoolTransaction {
+impl sc_transaction_pool_api::InPoolTransaction for PoolTransaction {
     type Transaction = OpaqueExtrinsic;
     type Hash = node_primitives::Hash;
 
@@ -224,12 +223,25 @@ impl sp_transaction_pool::InPoolTransaction for PoolTransaction {
 
 #[derive(Clone, Debug)]
 pub struct Transactions(Vec<Arc<PoolTransaction>>);
+pub struct TransactionsIterator(std::vec::IntoIter<Arc<PoolTransaction>>);
 
-impl sp_transaction_pool::TransactionPool for Transactions {
+impl Iterator for TransactionsIterator {
+    type Item = Arc<PoolTransaction>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+impl ReadyTransactions for TransactionsIterator {
+    fn report_invalid(&mut self, _tx: &Self::Item) {}
+}
+
+impl sc_transaction_pool_api::TransactionPool for Transactions {
     type Block = Block;
     type Hash = node_primitives::Hash;
     type InPoolTransaction = PoolTransaction;
-    type Error = sp_transaction_pool::error::Error;
+    type Error = sc_transaction_pool_api::error::Error;
 
     /// Returns a future that imports a bunch of unverified transactions to the pool.
     fn submit_at(
@@ -256,7 +268,7 @@ impl sp_transaction_pool::TransactionPool for Transactions {
         _at: &BlockId<Self::Block>,
         _source: TransactionSource,
         _xt: TransactionFor<Self>,
-    ) -> PoolFuture<Box<TransactionStatusStreamFor<Self>>, Self::Error> {
+    ) -> PoolFuture<Pin<Box<TransactionStatusStreamFor<Self>>>, Self::Error> {
         unimplemented!()
     }
 
@@ -265,16 +277,17 @@ impl sp_transaction_pool::TransactionPool for Transactions {
         _at: NumberFor<Self::Block>,
     ) -> Pin<
         Box<
-            dyn Future<Output = Box<dyn Iterator<Item = Arc<Self::InPoolTransaction>> + Send>>
-                + Send,
+            dyn Future<
+                    Output = Box<dyn ReadyTransactions<Item = Arc<Self::InPoolTransaction>> + Send>,
+                > + Send,
         >,
     > {
-        let iter: Box<dyn Iterator<Item = Arc<PoolTransaction>> + Send> =
-            Box::new(self.0.clone().into_iter());
+        let iter: Box<dyn ReadyTransactions<Item = Arc<PoolTransaction>> + Send> =
+            Box::new(TransactionsIterator(self.0.clone().into_iter()));
         Box::pin(futures::future::ready(iter))
     }
 
-    fn ready(&self) -> Box<dyn Iterator<Item = Arc<Self::InPoolTransaction>> + Send> {
+    fn ready(&self) -> Box<dyn ReadyTransactions<Item = Arc<Self::InPoolTransaction>> + Send> {
         unimplemented!()
     }
 

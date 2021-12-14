@@ -155,7 +155,7 @@ mod tests_local;
 pub mod weights;
 
 pub use self::imbalances::{NegativeImbalance, PositiveImbalance};
-use codec::{Codec, Decode, Encode};
+use codec::{Codec, Decode, Encode, MaxEncodedLen};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::{
@@ -165,12 +165,14 @@ use frame_support::{
         ExistenceRequirement::KeepAlive, Get, Imbalance, LockIdentifier, LockableCurrency,
         OnUnbalanced, ReservableCurrency, SignedImbalance, StoredMap, TryDrop, WithdrawReasons,
     },
+    WeakBoundedVec,
 };
 use frame_system as system;
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{
         AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize,
-        Saturating, StaticLookup, StoredMapError, Zero,
+        Saturating, StaticLookup, Zero,
     },
     DispatchError, DispatchResult, RuntimeDebug,
 };
@@ -184,7 +186,7 @@ pub trait MutableCurrency<AccountId>: Currency<AccountId> {
     fn mutate_account_balance<R>(
         who: &AccountId,
         f: impl FnOnce(&mut AccountData<Self::Balance>) -> R,
-    ) -> Result<R, StoredMapError>;
+    ) -> Result<R, DispatchError>;
 }
 
 impl<T: Config<I>, I: 'static> MutableCurrency<T::AccountId> for Pallet<T, I>
@@ -194,7 +196,7 @@ where
     fn mutate_account_balance<R>(
         who: &T::AccountId,
         f: impl FnOnce(&mut AccountData<T::Balance>) -> R,
-    ) -> Result<R, StoredMapError> {
+    ) -> Result<R, DispatchError> {
         Self::mutate_account(who, f)
     }
 }
@@ -215,7 +217,9 @@ pub mod pallet {
             + Default
             + Copy
             + MaybeSerializeDeserialize
-            + Debug;
+            + Debug
+            + MaxEncodedLen
+            + TypeInfo;
 
         /// Handler for the unbalanced reduction when removing a dust account.
         type DustRemoval: OnUnbalanced<NegativeImbalance<Self, I>>;
@@ -240,6 +244,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::generate_storage_info]
     pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
     #[pallet::hooks]
@@ -313,7 +318,7 @@ pub mod pallet {
 			T::WeightInfo::set_balance_creating() // Creates a new account.
 				.max(T::WeightInfo::set_balance_killing()) // Kills an existing account.
 		)]
-        pub(super) fn set_balance(
+        pub fn set_balance(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] new_free: T::Balance,
@@ -403,8 +408,8 @@ pub mod pallet {
     }
 
     #[pallet::event]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::Balance = "Balance")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    #[pallet::metadata(T::AccountId = "AccountId", T::Balance = "Balance")]
     pub enum Event<T: Config<I>, I: 'static = ()> {
         /// An account was created with some free balance. \[account, free_balance\]
         Endowed(T::AccountId, T::Balance),
@@ -467,8 +472,13 @@ pub mod pallet {
     /// NOTE: Should only be accessed when setting, changing and freeing a lock.
     #[pallet::storage]
     #[pallet::getter(fn locks)]
-    pub type Locks<T: Config<I>, I: 'static = ()> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, Vec<BalanceLock<T::Balance>>, ValueQuery>;
+    pub type Locks<T: Config<I>, I: 'static = ()> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        WeakBoundedVec<BalanceLock<T::Balance>, T::MaxLocks>,
+        ValueQuery,
+    >;
 
     /// Storage version of the pallet.
     ///
@@ -554,7 +564,7 @@ impl<T: Config<I>, I: 'static> GenesisConfig<T, I> {
 }
 
 /// Simplified reasons for withdrawing balance.
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub enum Reasons {
     /// Paying system transaction fees.
     Fee = 0,
@@ -588,7 +598,7 @@ impl BitOr for Reasons {
 
 /// A single lock on a balance. There can be many of these on an account and they "overlap", so the
 /// same balance is frozen by multiple locks.
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct BalanceLock<Balance> {
     /// An identifier for this lock. Only one lock may be in existence for each identifier.
     pub id: LockIdentifier,
@@ -599,7 +609,7 @@ pub struct BalanceLock<Balance> {
 }
 
 /// All balance information for an account.
-#[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 pub struct AccountData<Balance> {
     /// Non-reserved part of the balance. There may still be restrictions on this, but it is the
     /// total pool what may in principle be transferred, reserved and used for tipping.
@@ -645,7 +655,7 @@ impl<Balance: Saturating + Copy + Ord> AccountData<Balance> {
 // A value placed in storage that represents the current version of the Balances storage.
 // This value is used by the `on_runtime_upgrade` logic to determine whether we run
 // storage migration logic. This should match directly with the semantic versions of the Rust crate.
-#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 enum Releases {
     V1_0_0,
     V2_0_0,
@@ -718,8 +728,8 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     pub fn mutate_account<R>(
         who: &T::AccountId,
         f: impl FnOnce(&mut AccountData<T::Balance>) -> R,
-    ) -> Result<R, StoredMapError> {
-        Self::try_mutate_account(who, |a, _| -> Result<R, StoredMapError> { Ok(f(a)) })
+    ) -> Result<R, DispatchError> {
+        Self::try_mutate_account(who, |a, _| -> Result<R, DispatchError> { Ok(f(a)) })
     }
 
     /// Mutate an account to some new value, or delete it entirely with `None`. Will enforce
@@ -731,7 +741,7 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
     ///
     /// NOTE: LOW-LEVEL: This will not attempt to maintain total issuance. It is expected that
     /// the caller will do this.
-    fn try_mutate_account<R, E: From<StoredMapError>>(
+    fn try_mutate_account<R, E: From<DispatchError>>(
         who: &T::AccountId,
         f: impl FnOnce(&mut AccountData<T::Balance>, bool) -> Result<R, E>,
     ) -> Result<R, E> {
@@ -754,8 +764,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 
     /// Update the account entry for `who`, given the locks.
     fn update_locks(who: &T::AccountId, locks: &[BalanceLock<T::Balance>]) {
+        let bounded_locks = WeakBoundedVec::<_, T::MaxLocks>::force_from(
+            locks.to_vec(),
+            Some("Balances Update Locks"),
+        );
+
         if locks.len() as u32 > T::MaxLocks::get() {
-            frame_support::debug::warn!(
+            log::warn!(
                 "Warning: A user has more currency locks than expected. \
 				A runtime configuration adjustment may be needed."
             );
@@ -783,13 +798,13 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
                 system::Pallet::<T>::dec_consumers(who);
             }
         } else {
-            Locks::<T, I>::insert(who, locks);
+            Locks::<T, I>::insert(who, bounded_locks);
             if !existed {
                 if system::Pallet::<T>::inc_consumers(who).is_err() {
                     // No providers for the locks. This is impossible under normal circumstances
                     // since the funds that are under the lock will themselves be stored in the
                     // account and therefore will need a reference.
-                    frame_support::debug::warn!(
+                    log::warn!(
                         "Warning: Attempt to introduce lock consumer reference, yet no providers. \
 						This is unexpected but should be safe."
                     );
@@ -803,13 +818,14 @@ impl<T: Config<I>, I: 'static> Pallet<T, I> {
 // of the inner member.
 mod imbalances {
     use super::{result, Config, Imbalance, RuntimeDebug, Saturating, TryDrop, Zero};
+    use frame_support::traits::SameOrOther;
     use sp_std::mem;
 
     /// Opaque, move-only struct with private fields that serves as a token denoting that
     /// funds have been created without any equal and opposite accounting.
     #[must_use]
     #[derive(RuntimeDebug, PartialEq, Eq)]
-    pub struct PositiveImbalance<T: Config<I>, I: 'static>(T::Balance);
+    pub struct PositiveImbalance<T: Config<I>, I: 'static = ()>(T::Balance);
 
     impl<T: Config<I>, I: 'static> PositiveImbalance<T, I> {
         /// Create a new positive imbalance from a balance.
@@ -822,7 +838,7 @@ mod imbalances {
     /// funds have been destroyed without any equal and opposite accounting.
     #[must_use]
     #[derive(RuntimeDebug, PartialEq, Eq)]
-    pub struct NegativeImbalance<T: Config<I>, I: 'static>(T::Balance);
+    pub struct NegativeImbalance<T: Config<I>, I: 'static = ()>(T::Balance);
 
     impl<T: Config<I>, I: 'static> NegativeImbalance<T, I> {
         /// Create a new negative imbalance from a balance.
@@ -834,6 +850,12 @@ mod imbalances {
     impl<T: Config<I>, I: 'static> TryDrop for PositiveImbalance<T, I> {
         fn try_drop(self) -> result::Result<(), Self> {
             self.drop_zero()
+        }
+    }
+
+    impl<T: Config<I>, I: 'static> Default for PositiveImbalance<T, I> {
+        fn default() -> Self {
+            Self::zero()
         }
     }
 
@@ -867,14 +889,16 @@ mod imbalances {
             self.0 = self.0.saturating_add(other.0);
             mem::forget(other);
         }
-        fn offset(self, other: Self::Opposite) -> result::Result<Self, Self::Opposite> {
+        fn offset(self, other: Self::Opposite) -> SameOrOther<Self, Self::Opposite> {
             let (a, b) = (self.0, other.0);
             mem::forget((self, other));
 
-            if a >= b {
-                Ok(Self(a - b))
+            if a > b {
+                SameOrOther::Same(Self(a - b))
+            } else if b > a {
+                SameOrOther::Other(NegativeImbalance::new(b - a))
             } else {
-                Err(NegativeImbalance::new(b - a))
+                SameOrOther::None
             }
         }
         fn peek(&self) -> T::Balance {
@@ -885,6 +909,12 @@ mod imbalances {
     impl<T: Config<I>, I: 'static> TryDrop for NegativeImbalance<T, I> {
         fn try_drop(self) -> result::Result<(), Self> {
             self.drop_zero()
+        }
+    }
+
+    impl<T: Config<I>, I: 'static> Default for NegativeImbalance<T, I> {
+        fn default() -> Self {
+            Self::zero()
         }
     }
 
@@ -918,14 +948,16 @@ mod imbalances {
             self.0 = self.0.saturating_add(other.0);
             mem::forget(other);
         }
-        fn offset(self, other: Self::Opposite) -> result::Result<Self, Self::Opposite> {
+        fn offset(self, other: Self::Opposite) -> SameOrOther<Self, Self::Opposite> {
             let (a, b) = (self.0, other.0);
             mem::forget((self, other));
 
-            if a >= b {
-                Ok(Self(a - b))
+            if a > b {
+                SameOrOther::Same(Self(a - b))
+            } else if b > a {
+                SameOrOther::Other(PositiveImbalance::new(b - a))
             } else {
-                Err(PositiveImbalance::new(b - a))
+                SameOrOther::None
             }
         }
         fn peek(&self) -> T::Balance {
@@ -1112,7 +1144,7 @@ where
 
         for attempt in 0..2 {
             match Self::try_mutate_account(who,
-				|account, _is_new| -> Result<(Self::NegativeImbalance, Self::Balance), StoredMapError> {
+				|account, _is_new| -> Result<(Self::NegativeImbalance, Self::Balance), DispatchError> {
 					// Best value is the most amount we can slash following liveness rules.
 					let best_value = match attempt {
 						// First attempt we try to slash the full amount, and see if liveness issues happen.

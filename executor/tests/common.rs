@@ -18,8 +18,11 @@
 use codec::{Decode, Encode};
 use frame_support::Hashable;
 use frame_system::offchain::AppCrypto;
-use sc_executor::error::Result;
-use sc_executor::{NativeExecutor, WasmExecutionMethod};
+use sc_executor::{error::Result, NativeElseWasmExecutor, WasmExecutionMethod};
+use sp_consensus_babe::{
+    digests::{PreDigest, SecondaryPlainPreDigest},
+    Slot, BABE_ENGINE_ID,
+};
 use sp_core::{
     crypto::KeyTypeId,
     sr25519::Signature,
@@ -28,11 +31,11 @@ use sp_core::{
 };
 use sp_runtime::{
     traits::{BlakeTwo256, Header as HeaderT},
-    ApplyExtrinsicResult, MultiSignature, MultiSigner,
+    ApplyExtrinsicResult, Digest, DigestItem, MultiSignature, MultiSigner,
 };
 use sp_state_machine::TestExternalities as CoreTestExternalities;
 
-use node_executor::Executor;
+use node_executor::ExecutorDispatch;
 use node_primitives::{BlockNumber, Hash};
 use node_runtime::{
     constants::currency::*, Block, BuildStorage, CheckedExtrinsic, Header, Runtime,
@@ -64,12 +67,11 @@ impl AppCrypto<MultiSigner, MultiSignature> for TestAuthorityId {
 ///
 /// `compact` since it is after post-processing with wasm-gc which performs tree-shaking thus
 /// making the binary slimmer. There is a convention to use compact version of the runtime
-/// as canonical. This is why `native_executor_instance` also uses the compact version of the
-/// runtime.
+/// as canonical.
 pub fn compact_code_unwrap() -> &'static [u8] {
     node_runtime::WASM_BINARY.expect(
-        "Development wasm binary is not available. \
-									  Testing is only supported with the flag disabled.",
+        "Development wasm binary is not available. Testing is only supported with the flag \
+		 disabled.",
     )
 }
 
@@ -86,7 +88,10 @@ pub fn sign(xt: CheckedExtrinsic) -> UncheckedExtrinsic {
 }
 
 pub fn default_transfer_call() -> pallet_balances::Call<Runtime> {
-    pallet_balances::Call::transfer::<Runtime>(bob().into(), 69 * DOLLARS)
+    pallet_balances::Call::<Runtime>::transfer {
+        dest: bob().into(),
+        value: 69 * DOLLARS,
+    }
 }
 
 pub fn from_block_number(n: u32) -> Header {
@@ -99,13 +104,14 @@ pub fn from_block_number(n: u32) -> Header {
     )
 }
 
-pub fn executor() -> NativeExecutor<Executor> {
-    NativeExecutor::new(WasmExecutionMethod::Interpreted, None, 8)
+pub fn executor() -> NativeElseWasmExecutor<ExecutorDispatch> {
+    NativeElseWasmExecutor::new(WasmExecutionMethod::Interpreted, None, 8)
 }
 
 pub fn executor_call<
     R: Decode + Encode + PartialEq,
-    NC: FnOnce() -> std::result::Result<R, String> + std::panic::UnwindSafe,
+    NC: FnOnce() -> std::result::Result<R, Box<dyn std::error::Error + Send + Sync>>
+        + std::panic::UnwindSafe,
 >(
     t: &mut TestExternalities<BlakeTwo256>,
     method: &str,
@@ -147,6 +153,7 @@ pub fn construct_block(
     number: BlockNumber,
     parent_hash: Hash,
     extrinsics: Vec<CheckedExtrinsic>,
+    babe_slot: Slot,
 ) -> (Vec<u8>, Hash) {
     use sp_trie::{trie_types::Layout, TrieConfiguration};
 
@@ -164,7 +171,16 @@ pub fn construct_block(
         number,
         extrinsics_root,
         state_root: Default::default(),
-        digest: Default::default(),
+        digest: Digest {
+            logs: vec![DigestItem::PreRuntime(
+                BABE_ENGINE_ID,
+                PreDigest::SecondaryPlain(SecondaryPlainPreDigest {
+                    slot: babe_slot,
+                    authority_index: 42,
+                })
+                .encode(),
+            )],
+        },
     };
 
     // execute the block to get the real header.
