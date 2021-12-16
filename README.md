@@ -7,17 +7,12 @@ deeper chain node is built on top of Substrate v3.0.0 full node
 Get the required compiler version and wasm component before compiling.
 
 ```
-rustup install nightly-2021-03-11
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-03-11
+rustup install nightly-2021-10-21
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-10-21
+rustup toolchain install nightly-2021-10-21
 
 # fix environmental package bug if it happens
 cargo update -p environmental
-
-# thread_local 1.1.2 has a bug: "memory leak"
-cargo update -p thread_local
-
-# update libp2p-swarm from v0.27.1 to v0.27.2
-cargo update -p libp2p-swarm
 
 # compile
 cargo build --release

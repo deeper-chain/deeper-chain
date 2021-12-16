@@ -18,20 +18,17 @@
 //! Staking pallet benchmarking.
 
 use super::*;
-use crate::Module as Bridge;
+use crate::Pallet as Bridge;
 use codec::Encode;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use hex_literal::hex;
 pub use node_primitives::{AccountId, Signature};
 use sp_core::{sr25519, Hasher, H160};
 use sp_io::crypto::{sr25519_generate, sr25519_sign};
-use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_runtime::{MultiSignature, MultiSigner};
 use sp_std::{convert::TryFrom, vec::Vec};
 use types::Status;
-type AccountPublic = <Signature as Verify>::Signer;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
@@ -67,7 +64,7 @@ benchmarks! {
         let eth_address = H160::from(ETH_ADDRESS);
         let amount = T::Currency::minimum_balance() * 49u32.into();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
-        let transfer_hash = (&user, &eth_address, amount, <pallet_timestamp::Module<T>>::get())
+        let transfer_hash = (&user, &eth_address, amount, <pallet_timestamp::Pallet<T>>::get())
         .using_encoded(<T as frame_system::Config>::Hashing::hash);
         whitelist_account!(user);
     }: _(RawOrigin::Signed(user.clone()), eth_address, amount)

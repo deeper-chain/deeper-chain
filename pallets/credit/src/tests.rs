@@ -555,7 +555,7 @@ fn reward_remain_eras_count() {
     new_test_ext().execute_with(|| {
         // era 0
         assert_ok!(DeeperNode::im_online(Origin::signed(12)));
-//reward_countdown
+        //reward_countdown
         // era 1
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(Credit::user_credit_history(12), vec![]);

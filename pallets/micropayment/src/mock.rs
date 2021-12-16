@@ -37,12 +37,12 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
-        Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
 
@@ -54,7 +54,7 @@ parameter_types! {
 type AccountId = AccountId32;
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
@@ -76,6 +76,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 parameter_types! {
@@ -99,7 +100,7 @@ const MILLISECS_PER_BLOCK: Moment = 5000;
 const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 const CREDIT_ATTENUATION_STEP: u64 = 1;
-const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 
 parameter_types! {
     pub const CreditCapTwoEras: u8 = 5;
@@ -169,6 +170,7 @@ impl pallet_micropayment::Config for Test {
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
+    type NodeInterface = DeeperNode;
 }
 
 // Build genesis storage according to the mock runtime.

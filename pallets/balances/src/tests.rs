@@ -26,7 +26,7 @@ macro_rules! decl_tests {
 		use crate::*;
 		use sp_runtime::{FixedPointNumber, traits::{SignedExtension, BadOrigin}};
 		use frame_support::{
-			assert_noop, assert_storage_noop, assert_ok, assert_err, StorageValue,
+			assert_noop, assert_storage_noop, assert_ok, assert_err,
 			traits::{
 				LockableCurrency, LockIdentifier, WithdrawReasons,
 				Currency, ReservableCurrency, ExistenceRequirement::AllowDeath
@@ -39,7 +39,7 @@ macro_rules! decl_tests {
 		const ID_2: LockIdentifier = *b"2       ";
 
 		pub const CALL: &<$test as frame_system::Config>::Call =
-			&Call::Balances(pallet_balances::Call::transfer(0, 0));
+    &Call::Balances(pallet_balances::Call::transfer { dest: 0, value: 0 });
 
 		/// create a transaction info struct from weight. Handy to avoid building the whole struct.
 		pub fn info_from_weight(w: Weight) -> DispatchInfo {
@@ -55,7 +55,7 @@ macro_rules! decl_tests {
 		}
 
 		fn last_event() -> Event {
-			system::Module::<Test>::events().pop().expect("Event expected").event
+			system::Pallet::<Test>::events().pop().expect("Event expected").event
 		}
 
 		#[test]
@@ -152,7 +152,9 @@ macro_rules! decl_tests {
 				.monied(true)
 				.build()
 				.execute_with(|| {
-					pallet_transaction_payment::NextFeeMultiplier::put(Multiplier::saturating_from_integer(1));
+					pallet_transaction_payment::NextFeeMultiplier::<$test>::put(
+						Multiplier::saturating_from_integer(1)
+					);
 					Balances::set_lock(ID_1, &1, 10, WithdrawReasons::RESERVE);
 					assert_noop!(
 						<Balances as Currency<_>>::transfer(&1, &2, 1, AllowDeath),
@@ -469,7 +471,7 @@ macro_rules! decl_tests {
 				assert_ok!(Balances::repatriate_reserved(&1, &2, 41, Status::Free), 0);
 				assert_eq!(
 					last_event(),
-					Event::pallet_balances(crate::Event::ReserveRepatriated(1, 2, 41, Status::Free)),
+					Event::Balances(crate::Event::ReserveRepatriated(1, 2, 41, Status::Free)),
 				);
 				assert_eq!(Balances::reserved_balance(1), 69);
 				assert_eq!(Balances::free_balance(1), 0);
@@ -688,7 +690,7 @@ macro_rules! decl_tests {
 
 					assert_eq!(
 						last_event(),
-						Event::pallet_balances(crate::Event::Reserved(1, 10)),
+						Event::Balances(crate::Event::Reserved(1, 10)),
 					);
 
 					System::set_block_number(3);
@@ -696,7 +698,7 @@ macro_rules! decl_tests {
 
 					assert_eq!(
 						last_event(),
-						Event::pallet_balances(crate::Event::Unreserved(1, 5)),
+						Event::Balances(crate::Event::Unreserved(1, 5)),
 					);
 
 					System::set_block_number(4);
@@ -705,7 +707,7 @@ macro_rules! decl_tests {
 					// should only unreserve 5
 					assert_eq!(
 						last_event(),
-						Event::pallet_balances(crate::Event::Unreserved(1, 5)),
+						Event::Balances(crate::Event::Unreserved(1, 5)),
 					);
 				});
 		}
@@ -721,9 +723,9 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::frame_system(system::Event::NewAccount(1)),
-							Event::pallet_balances(crate::Event::Endowed(1, 100)),
-							Event::pallet_balances(crate::Event::BalanceSet(1, 100, 0)),
+							Event::System(system::Event::NewAccount(1)),
+							Event::Balances(crate::Event::Endowed(1, 100)),
+							Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
 						]
 					);
 
@@ -732,8 +734,8 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::pallet_balances(crate::Event::DustLost(1, 99)),
-							Event::frame_system(system::Event::KilledAccount(1))
+							Event::Balances(crate::Event::DustLost(1, 99)),
+							Event::System(system::Event::KilledAccount(1))
 						]
 					);
 				});
@@ -750,9 +752,9 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::frame_system(system::Event::NewAccount(1)),
-							Event::pallet_balances(crate::Event::Endowed(1, 100)),
-							Event::pallet_balances(crate::Event::BalanceSet(1, 100, 0)),
+							Event::System(system::Event::NewAccount(1)),
+							Event::Balances(crate::Event::Endowed(1, 100)),
+							Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
 						]
 					);
 
@@ -761,7 +763,7 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::frame_system(system::Event::KilledAccount(1))
+							Event::System(system::Event::KilledAccount(1))
 						]
 					);
 				});

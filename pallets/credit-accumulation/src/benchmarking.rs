@@ -16,14 +16,13 @@
 //! Micropayment pallet benchmarking.
 
 use super::*;
-use crate::Module as CreditAccumulation;
+use crate::Pallet as CreditAccumulation;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use hex_literal::hex;
 use pallet_micropayment::AccountCreator;
-use sp_std::vec;
 
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
@@ -73,8 +72,8 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_add_credit_by_traffic::<Test>());
-            assert_ok!(test_benchmark_set_atmos_pubkey::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_add_credit_by_traffic());
+            assert_ok!(Pallet::<Test>::test_benchmark_set_atmos_pubkey());
         });
     }
 }

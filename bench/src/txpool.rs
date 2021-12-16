@@ -26,8 +26,8 @@ use std::borrow::Cow;
 use node_testing::bench::{BenchDb, BlockType, DatabaseType, KeyTypes, Profile};
 
 use sc_transaction_pool::BasicPool;
+use sc_transaction_pool_api::{TransactionPool, TransactionSource};
 use sp_runtime::generic::BlockId;
-use sp_transaction_pool::{TransactionPool, TransactionSource};
 
 use crate::core::{self, Mode, Path};
 
