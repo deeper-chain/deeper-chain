@@ -32,6 +32,9 @@ use node_primitives::{Balance, BlockNumber, Moment};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
+pub const INIT_TIMESTAMP: u64 = 30_000;
+pub const BLOCK_TIME: u64 = 5000;
+
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
     pub enum Test where
@@ -43,6 +46,7 @@ frame_support::construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
 
@@ -120,6 +124,18 @@ parameter_types! {
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
+    pub const SecsPerBlock: u32 = 5u32;
+}
+
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 impl pallet_credit::Config for Test {
@@ -132,6 +148,8 @@ impl pallet_credit::Config for Test {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -479,10 +497,21 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     reward_eras: 270,
                 },
             ),
+            (
+                12,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 200,
+                    initial_credit_level: CreditLevel::Two,
+                    rank_in_initial_credit_level: 801u32,
+                    number_of_referees: 2,
+                    current_credit_level: CreditLevel::Two,
+                    reward_eras: 270,
+                },
+            ),
         ],
     };
     GenesisBuild::<Test>::assimilate_storage(&genesis_config, &mut storage).unwrap();
-
     storage.into()
 }
 
@@ -491,5 +520,6 @@ pub fn run_to_block(n: u64) {
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
+        Timestamp::set_timestamp(System::block_number() * BLOCK_TIME + INIT_TIMESTAMP);
     }
 }

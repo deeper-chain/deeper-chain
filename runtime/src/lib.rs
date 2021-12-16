@@ -123,7 +123,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 5,
+    spec_version: 6,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 3,
@@ -1112,6 +1112,8 @@ impl pallet_credit::Config for Runtime {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
+    type SecsPerBlock = SecsPerBlock;
+    type UnixTime = Timestamp;
 }
 
 impl pallet_credit_accumulation::Config for Runtime {
@@ -1469,6 +1471,51 @@ impl_runtime_apis! {
 
     #[cfg(feature = "runtime-benchmarks")]
     impl frame_benchmarking::Benchmark<Block> for Runtime {
+        fn benchmark_metadata(extra: bool) -> (
+            Vec<frame_benchmarking::BenchmarkList>,
+            Vec<frame_support::traits::StorageInfo>,
+        ) {
+            use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+            use frame_support::traits::StorageInfoTrait;
+            use frame_system_benchmarking::Pallet as SystemBench;
+
+            let mut list = Vec::<BenchmarkList>::new();
+
+            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_assets, Assets);
+            list_benchmark!(list, extra, pallet_babe, Babe);
+            list_benchmark!(list, extra, pallet_balances, Balances);
+            list_benchmark!(list, extra, pallet_bounties, Bounties);
+            //list_benchmark!(list, extra, pallet_collective, Council);
+            list_benchmark!(list, extra, pallet_contracts, Contracts);
+            list_benchmark!(list, extra, pallet_democracy, Democracy);
+            list_benchmark!(list, extra, pallet_elections_phragmen, Elections);
+            list_benchmark!(list, extra, pallet_grandpa, Grandpa);
+            list_benchmark!(list, extra, pallet_identity, Identity);
+            list_benchmark!(list, extra, pallet_im_online, ImOnline);
+            list_benchmark!(list, extra, pallet_indices, Indices);
+            list_benchmark!(list, extra, pallet_lottery, Lottery);
+            list_benchmark!(list, extra, pallet_mmr, Mmr);
+            list_benchmark!(list, extra, pallet_multisig, Multisig);
+            list_benchmark!(list, extra, pallet_proxy, Proxy);
+            list_benchmark!(list, extra, pallet_scheduler, Scheduler);
+            list_benchmark!(list, extra, pallet_staking, Staking);
+            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+            list_benchmark!(list, extra, pallet_tips, Tips);
+            list_benchmark!(list, extra, pallet_treasury, Treasury);
+            list_benchmark!(list, extra, pallet_utility, Utility);
+            list_benchmark!(list, extra, pallet_vesting, Vesting);
+            list_benchmark!(list, extra, pallet_credit, Credit);
+            list_benchmark!(list, extra, pallet_deeper_node, DeeperNode);
+            list_benchmark!(list, extra, pallet_micropayment, Micropayment);
+            list_benchmark!(list, extra, pallet_credit_accumulation, CreditAccumulation);
+
+            let storage_info = AllPalletsWithSystem::storage_info();
+
+            return (list, storage_info)
+        }
+
         fn dispatch_benchmark(
             config: frame_benchmarking::BenchmarkConfig
         ) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {

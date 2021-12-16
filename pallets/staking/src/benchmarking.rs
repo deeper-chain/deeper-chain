@@ -23,7 +23,8 @@ use testing_utils::*;
 
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_system::RawOrigin;
-use sp_runtime::{traits::One, Percent};
+use sp_runtime::traits::One;
+use sp_runtime::PerThing;
 
 const SEED: u32 = 0;
 const MAX_SPANS: u32 = 100;
@@ -208,7 +209,7 @@ benchmarks! {
     scale_validator_count {
         let n in 1 .. 100;
         let pre_v_number = ValidatorCount::<T>::get();
-        let factor = Percent::from_rational_approximation(n,100);
+        let factor = PerThing::from_rational(n,100);
     }: _(RawOrigin::Root, factor)
     verify {
         assert_eq!(ValidatorCount::<T>::get(), pre_v_number + factor * pre_v_number);
