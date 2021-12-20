@@ -406,7 +406,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::force_remove_lock())]
         pub fn force_remove_lock(
             origin: OriginFor<T>,
             id: LockIdentifier,
@@ -418,7 +418,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::force_unreserve())]
         pub fn force_unreserve(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
@@ -427,6 +427,24 @@ pub mod pallet {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             <Self as ReservableCurrency<_>>::unreserve(&who, value);
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::WeightInfo::force_lock())]
+        pub fn force_lock(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] value: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            const FORCE_LOCK_ID: [u8; 8] = *b"forcelck";
+            ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
+            <Self as LockableCurrency<_>>::set_lock(
+                FORCE_LOCK_ID,
+                &who,
+                value,
+                WithdrawReasons::all(),
+            );
             Ok(().into())
         }
     }
