@@ -30,6 +30,8 @@ use crate::Pallet as Balances;
 const SEED: u32 = 0;
 // existential deposit multiplier
 const ED_MULTIPLIER: u32 = 10;
+// lockid
+const FORCE_LOCK_ID: [u8; 8] = *b"forcelck";
 
 benchmarks! {
     // Benchmark `transfer` extrinsic with the worst possible conditions:
@@ -140,6 +142,44 @@ benchmarks! {
     verify {
         assert_eq!(Balances::<T>::free_balance(&source), Zero::zero());
         assert_eq!(Balances::<T>::free_balance(&recipient), transfer_amount);
+    }
+
+    force_lock {
+        let existential_deposit = T::ExistentialDeposit::get();
+        let source: T::AccountId = account("locked", 0, SEED);
+        let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
+        // Give some multiple of the existential deposit + creation fee + transfer fee
+        let balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
+        let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&source, balance);
+    }: force_lock(RawOrigin::Root, source_lookup, balance)
+    verify {
+        assert_eq!(Balances::<T>::usable_balance(&source), Zero::zero());
+    }
+
+    force_remove_lock {
+        let existential_deposit = T::ExistentialDeposit::get();
+        let source: T::AccountId = account("locked", 0, SEED);
+        let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
+        // Give some multiple of the existential deposit + creation fee + transfer fee
+        let balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
+        let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&source, balance);
+        let _ = <Balances<T> as LockableCurrency<_>>::set_lock(FORCE_LOCK_ID,&source, existential_deposit,WithdrawReasons::all());
+    }: force_remove_lock(RawOrigin::Root, FORCE_LOCK_ID,source_lookup)
+    verify {
+        assert_eq!(Balances::<T>::free_balance(&source), balance);
+    }
+
+    force_unreserve {
+        let existential_deposit = T::ExistentialDeposit::get();
+        let source: T::AccountId = account("reserved", 0, SEED);
+        let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
+        // Give some multiple of the existential deposit + creation fee + transfer fee
+        let balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
+        let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&source, balance);
+        let _ = <Balances<T> as ReservableCurrency<_>>::reserve(&source, existential_deposit);
+    }: force_unreserve(RawOrigin::Root, source_lookup, T::ExistentialDeposit::get())
+    verify {
+        assert_eq!(Balances::<T>::free_balance(&source), balance);
     }
 }
 
