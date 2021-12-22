@@ -146,12 +146,15 @@ benchmarks! {
 
     force_lock {
         let existential_deposit = T::ExistentialDeposit::get();
+        let unlocker: T::AccountId = account("unlocker", 1, SEED);
+        let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&unlocker, existential_deposit);
+        let  _ = Balances::<T>::set_lock_members(RawOrigin::Root.into(),vec!(unlocker.clone()));
         let source: T::AccountId = account("locked", 0, SEED);
         let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
         // Give some multiple of the existential deposit + creation fee + transfer fee
         let balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
         let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&source, balance);
-    }: force_lock(RawOrigin::Root, source_lookup, balance)
+    }: force_lock(RawOrigin::Signed(unlocker), source_lookup, balance)
     verify {
         assert_eq!(Balances::<T>::usable_balance(&source), Zero::zero());
     }
@@ -180,6 +183,19 @@ benchmarks! {
     }: force_unreserve(RawOrigin::Root, source_lookup, T::ExistentialDeposit::get())
     verify {
         assert_eq!(Balances::<T>::free_balance(&source), balance);
+    }
+
+    set_lock_members {
+        let existential_deposit = T::ExistentialDeposit::get();
+        let user_a: T::AccountId = account("a", 0, SEED);
+        let user_b: T::AccountId = account("b", 0, SEED);
+        // let a_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user_a.clone());
+        // let b_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user_b.clone());
+        let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&user_a, existential_deposit);
+        let _ = <Balances<T> as Currency<_>>::make_free_balance_be(&user_b, existential_deposit);
+    }: set_lock_members(RawOrigin::Root, vec!(user_a,user_b))
+    verify {
+        assert_eq!(Balances::<T>::lock_member_whitelist().len(), 2);
     }
 }
 
