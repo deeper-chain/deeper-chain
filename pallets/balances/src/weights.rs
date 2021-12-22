@@ -54,6 +54,7 @@ pub trait WeightInfo {
     fn force_lock() -> Weight;
     fn force_remove_lock() -> Weight;
     fn force_unreserve() -> Weight;
+    fn set_lock_members() -> Weight;
 }
 
 /// Weights for pallet_balances using the Substrate node and recommended hardware.
@@ -85,8 +86,8 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn force_lock() -> Weight {
-        (25_899_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+        (29_967_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn force_remove_lock() -> Weight {
@@ -98,6 +99,10 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
         (27_833_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+
+    fn set_lock_members() -> Weight {
+        (3_817_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
@@ -129,8 +134,8 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn force_lock() -> Weight {
-        (25_899_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads(2 as Weight))
+        (29_967_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn force_remove_lock() -> Weight {
@@ -142,5 +147,9 @@ impl WeightInfo for () {
         (27_833_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+
+    fn set_lock_members() -> Weight {
+        (3_817_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
