@@ -23,7 +23,8 @@ use testing_utils::*;
 
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_system::RawOrigin;
-use sp_runtime::{traits::One, PerThing};
+use sp_runtime::traits::One;
+use sp_runtime::PerThing;
 
 const SEED: u32 = 0;
 const MAX_SPANS: u32 = 100;
@@ -101,7 +102,7 @@ benchmarks! {
         add_slashing_spans::<T>(&stash, s);
         let amount = <T as Config>::Currency::minimum_balance() * 5u32.into(); // Half of total
         Staking::<T>::unbond(RawOrigin::Signed(controller.clone()).into(), amount)?;
-        CurrentEra::put(EraIndex::max_value());
+        CurrentEra::<T>::put(EraIndex::max_value());
         let ledger = Ledger::<T>::get(&controller).ok_or("ledger not created before")?;
         let original_total: BalanceOf<T> = ledger.total;
         whitelist_account!(controller);
@@ -120,7 +121,7 @@ benchmarks! {
         add_slashing_spans::<T>(&stash, s);
         let amount = <T as Config>::Currency::minimum_balance() * 10u32.into();
         Staking::<T>::unbond(RawOrigin::Signed(controller.clone()).into(), amount)?;
-        CurrentEra::put(EraIndex::max_value());
+        CurrentEra::<T>::put(EraIndex::max_value());
         let ledger = Ledger::<T>::get(&controller).ok_or("ledger not created before")?;
         let original_total: BalanceOf<T> = ledger.total;
         whitelist_account!(controller);
@@ -194,34 +195,34 @@ benchmarks! {
         let validator_count = MAX_VALIDATORS;
     }: _(RawOrigin::Root, validator_count)
     verify {
-        assert_eq!(ValidatorCount::get(), validator_count);
+        assert_eq!(ValidatorCount::<T>::get(), validator_count);
     }
 
     increase_validator_count {
         let n in 1 .. MAX_VALIDATORS;
-        let pre_v_number = ValidatorCount::get();
+        let pre_v_number = ValidatorCount::<T>::get();
     }: _(RawOrigin::Root, n)
     verify {
-        assert_eq!(ValidatorCount::get(), pre_v_number + n);
+        assert_eq!(ValidatorCount::<T>::get(), pre_v_number + n);
     }
 
     scale_validator_count {
         let n in 1 .. 100;
-        let pre_v_number = ValidatorCount::get();
+        let pre_v_number = ValidatorCount::<T>::get();
         let factor = PerThing::from_rational(n,100);
     }: _(RawOrigin::Root, factor)
     verify {
-        assert_eq!(ValidatorCount::get(), pre_v_number + factor * pre_v_number);
+        assert_eq!(ValidatorCount::<T>::get(), pre_v_number + factor * pre_v_number);
     }
 
     force_no_eras {}: _(RawOrigin::Root)
-    verify { assert_eq!(ForceEra::get(), Forcing::ForceNone); }
+    verify { assert_eq!(ForceEra::<T>::get(), Forcing::ForceNone); }
 
     force_new_era {}: _(RawOrigin::Root)
-    verify { assert_eq!(ForceEra::get(), Forcing::ForceNew); }
+    verify { assert_eq!(ForceEra::<T>::get(), Forcing::ForceNew); }
 
     force_new_era_always {}: _(RawOrigin::Root)
-    verify { assert_eq!(ForceEra::get(), Forcing::ForceAlways); }
+    verify { assert_eq!(ForceEra::<T>::get(), Forcing::ForceAlways); }
 
     // Worst case scenario, the list of invulnerables is very long.
     set_invulnerables {
@@ -302,18 +303,18 @@ benchmarks! {
 
     set_history_depth {
         let e in 1 .. 100;
-        HistoryDepth::put(e);
-        CurrentEra::put(e);
+        HistoryDepth::<T>::put(e);
+        CurrentEra::<T>::put(e);
         for i in 0 .. e {
             <ErasStakers<T>>::insert(i, T::AccountId::default(), Exposure::<T::AccountId, BalanceOf<T>>::default());
             <ErasValidatorPrefs<T>>::insert(i, T::AccountId::default(), ValidatorPrefs::default());
             <ErasRewardPoints<T>>::insert(i, EraRewardPoints::<T::AccountId>::default());
             <ErasTotalStake<T>>::insert(i, BalanceOf::<T>::one());
-            ErasStartSessionIndex::insert(i, i);
+            ErasStartSessionIndex::<T>::insert(i, i);
         }
     }: _(RawOrigin::Root, EraIndex::zero(), u32::max_value())
     verify {
-        assert_eq!(HistoryDepth::get(), 0);
+        assert_eq!(HistoryDepth::<T>::get(), 0);
     }
 
     reap_stash {

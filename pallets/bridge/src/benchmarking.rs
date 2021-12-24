@@ -64,7 +64,7 @@ benchmarks! {
         let eth_address = H160::from(ETH_ADDRESS);
         let amount = T::Currency::minimum_balance() * 49u32.into();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
-        let transfer_hash = (&user, &eth_address, amount, <pallet_timestamp::Module<T>>::get())
+        let transfer_hash = (&user, &eth_address, amount, <pallet_timestamp::Pallet<T>>::get())
         .using_encoded(<T as frame_system::Config>::Hashing::hash);
         whitelist_account!(user);
     }: _(RawOrigin::Signed(user.clone()), eth_address, amount)

@@ -19,10 +19,10 @@
 //! bonding validators, nominators, and generating different types of solutions.
 
 use crate::*;
-use crate::{Config as StakingConfig, Module as Staking};
+use crate::{Config as StakingConfig, Pallet as Staking};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
-use pallet_credit::{Config as CreditConfig, CreditData, CreditLevel, Module as Credit};
+use pallet_credit::{Config as CreditConfig, CreditData, CreditLevel, Pallet as Credit};
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaChaRng,
@@ -216,7 +216,7 @@ pub fn create_validators_with_delegators_for_era<T: Config + pallet_credit::Conf
         )?;
     }
 
-    ValidatorCount::put(validators);
+    ValidatorCount::<T>::put(validators);
 
     Ok(validator_choosen)
 }

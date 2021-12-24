@@ -405,6 +405,30 @@ pub mod pallet {
             <Self as Currency<_>>::transfer(&transactor, &dest, value, KeepAlive)?;
             Ok(().into())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn force_remove_lock(
+            origin: OriginFor<T>,
+            id: LockIdentifier,
+            who: <T::Lookup as StaticLookup>::Source,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
+            <Self as LockableCurrency<_>>::remove_lock(id, &who);
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn force_unreserve(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] value: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            let who = T::Lookup::lookup(who)?;
+            <Self as ReservableCurrency<_>>::unreserve(&who, value);
+            Ok(().into())
+        }
     }
 
     #[pallet::event]
