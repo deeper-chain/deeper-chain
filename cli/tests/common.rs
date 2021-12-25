@@ -51,7 +51,7 @@ pub fn wait_for(child: &mut Child, secs: usize) -> Option<ExitStatus> {
     None
 }
 
-/// Run the node for a while (30 seconds)
+/// Run the node for a while (60 seconds)
 pub fn run_dev_node_for_a_while(base_path: &Path) {
     let mut cmd = Command::new(cargo_bin("deeper-chain"));
 
@@ -63,7 +63,7 @@ pub fn run_dev_node_for_a_while(base_path: &Path) {
         .unwrap();
 
     // Let it produce some blocks.
-    thread::sleep(Duration::from_secs(30));
+    thread::sleep(Duration::from_secs(60));
     assert!(
         cmd.try_wait().unwrap().is_none(),
         "the process should still be running"
