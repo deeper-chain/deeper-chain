@@ -16,8 +16,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use sc_cli::{KeySubcommand, RunCmd, SignCmd, VanityCmd, VerifyCmd};
+use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 use structopt::StructOpt;
+
+#[allow(missing_docs)]
+#[derive(Debug, StructOpt)]
+pub struct RunCmd {
+    #[allow(missing_docs)]
+    #[structopt(flatten)]
+    pub base: sc_cli::RunCmd,
+
+    #[cfg(feature = "manual-seal")]
+    /// Choose sealing method.
+    #[structopt(long = "sealing")]
+    pub sealing: Sealing,
+
+    #[structopt(long = "enable-dev-signer")]
+    pub enable_dev_signer: bool,
+
+    /// Maximum number of logs in a query.
+    #[structopt(long, default_value = "10000")]
+    pub max_past_logs: u32,
+
+    /// The dynamic-fee pallet target gas price set by block author
+    #[structopt(long, default_value = "1")]
+    pub target_gas_price: u64,
+}
 
 /// An overarching CLI command definition.
 #[derive(Debug, StructOpt)]

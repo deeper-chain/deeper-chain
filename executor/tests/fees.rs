@@ -25,7 +25,8 @@ use frame_support::{
 use node_primitives::Balance;
 use node_runtime::{
     constants::{currency::*, time::SLOT_DURATION},
-    Balances, Call, CheckedExtrinsic, Multiplier, Runtime, TransactionByteFee, TransactionPayment,
+    Balances, Call, CheckedExtrinsic, CheckedSignature, Multiplier, Runtime, TransactionByteFee,
+    TransactionPayment,
 };
 use node_testing::keyring::*;
 use sp_core::NeverNativeValue;
@@ -55,11 +56,11 @@ fn fee_multiplier_increases_and_decreases_on_big_weight() {
         GENESIS_HASH.into(),
         vec![
             CheckedExtrinsic {
-                signed: None,
+                signed: CheckedSignature::Unsigned,
                 function: Call::Timestamp(pallet_timestamp::Call::set { now: time1 }),
             },
             CheckedExtrinsic {
-                signed: Some((charlie(), signed_extra(0, 0))),
+                signed: CheckedSignature::Signed(charlie(), signed_extra(0, 0)),
                 function: Call::System(frame_system::Call::fill_block {
                     ratio: Perbill::from_percent(60),
                 }),
@@ -76,11 +77,11 @@ fn fee_multiplier_increases_and_decreases_on_big_weight() {
         block1.1.clone(),
         vec![
             CheckedExtrinsic {
-                signed: None,
+                signed: CheckedSignature::Unsigned,
                 function: Call::Timestamp(pallet_timestamp::Call::set { now: time2 }),
             },
             CheckedExtrinsic {
-                signed: Some((charlie(), signed_extra(1, 0))),
+                signed: CheckedSignature::Signed(charlie(), signed_extra(1, 0)),
                 function: Call::System(frame_system::Call::remark { remark: vec![0; 1] }),
             },
         ],
@@ -176,7 +177,7 @@ fn transaction_fee_is_correct() {
 
     let tip = 1_000_000;
     let xt = sign(CheckedExtrinsic {
-        signed: Some((alice(), signed_extra(0, tip))),
+        signed: CheckedSignature::Signed(alice(), signed_extra(0, tip)),
         function: Call::Balances(default_transfer_call()),
     });
 

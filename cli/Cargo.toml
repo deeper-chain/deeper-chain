@@ -43,10 +43,11 @@ log = "0.4.8"
 rand = "0.7.2"
 structopt = { version = "0.3.8", optional = true }
 parking_lot = "0.11.1"
+async-trait = "0.1"
 
 # primitives
 sp-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-sp-consensus-babe = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sp-consensus-babe = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 grandpa-primitives = { package = "sp-finality-grandpa", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
@@ -60,6 +61,10 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch 
 sp-transaction-storage-proof = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+
+# frontier primitives
+fp-consensus = { path = "../frontier/primitives/consensus"}
+fp-rpc = { path = "../frontier/primitives/rpc"}
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -83,6 +88,13 @@ sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polka
 sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
+# frontier client dependencies
+fc-consensus = { path = "../frontier/client/consensus" }
+fc-rpc = { path = "../frontier/client/rpc" }
+fc-rpc-core = { path = "../frontier/client/rpc-core" }
+fc-db = { path = "../frontier/client/db" }
+fc-mapping-sync = { path = "../frontier/client/mapping-sync" }
+
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -101,11 +113,19 @@ pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = ".
 pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets/credit"}
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
 
+# frontier frame dependencies
+pallet-evm = { path = "../frontier/frame/evm"}
+pallet-ethereum = { path = "../frontier/frame/ethereum"}
+pallet-dynamic-fee = { path = "../frontier/frame/dynamic-fee"}
+pallet-base-fee = { path = "../frontier/frame/base-fee"}
+
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }
 node-rpc = { version = "2.0.0", path = "../rpc" }
 node-primitives = { version = "2.0.0", path = "../primitives" }
 node-executor = { version = "2.0.0", path = "../executor" }
+
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # CLI-specific dependencies
 sc-cli = { optional = true, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

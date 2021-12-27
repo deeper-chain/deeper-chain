@@ -125,5 +125,9 @@ pub fn config_endowed(
         vesting: Default::default(),
         deeper_node: Default::default(),
         credit: Default::default(),
+        evm: Default::default(),
+        ethereum: Default::default(),
+        dynamic_fee: Default::default(),
+        base_fee: Default::default(),
     }
 }

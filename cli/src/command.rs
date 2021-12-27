@@ -16,7 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use crate::{chain_spec, service, service::new_partial, Cli, Subcommand};
+use crate::{
+    chain_spec, service,
+    service::{frontier_database_dir, new_partial},
+    Cli, Subcommand,
+};
 use node_executor::ExecutorDispatch;
 use node_runtime::{Block, RuntimeApi};
 use sc_cli::{ChainSpec, Result, Role, RuntimeVersion, SubstrateCli};
@@ -77,11 +81,11 @@ pub fn run() -> Result<()> {
 
     match &cli.subcommand {
         None => {
-            let runner = cli.create_runner(&cli.run)?;
+            let runner = cli.create_runner(&cli.run.base)?;
             runner.run_node_until_exit(|config| async move {
                 match config.role {
                     Role::Light => service::new_light(config),
-                    _ => service::new_full(config),
+                    _ => service::new_full(config, &cli),
                 }
                 .map_err(sc_cli::Error::Service)
             })
@@ -118,7 +122,7 @@ pub fn run() -> Result<()> {
                     task_manager,
                     import_queue,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial(&config, &cli)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
@@ -129,7 +133,7 @@ pub fn run() -> Result<()> {
                     client,
                     task_manager,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial(&config, &cli)?;
                 Ok((cmd.run(client, config.database), task_manager))
             })
         }
@@ -140,7 +144,7 @@ pub fn run() -> Result<()> {
                     client,
                     task_manager,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial(&config, &cli)?;
                 Ok((cmd.run(client, config.chain_spec), task_manager))
             })
         }
@@ -152,13 +156,21 @@ pub fn run() -> Result<()> {
                     task_manager,
                     import_queue,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial(&config, &cli)?;
                 Ok((cmd.run(client, import_queue), task_manager))
             })
         }
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.sync_run(|config| cmd.run(config.database))
+            runner.sync_run(|config| {
+                // Remove Frontier offchain db
+                let frontier_database_config = sc_service::DatabaseSource::RocksDb {
+                    path: frontier_database_dir(&config),
+                    cache_size: 0,
+                };
+                cmd.run(frontier_database_config)?;
+                cmd.run(config.database)
+            })
         }
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -168,7 +180,7 @@ pub fn run() -> Result<()> {
                     task_manager,
                     backend,
                     ..
-                } = new_partial(&config)?;
+                } = new_partial(&config, &cli)?;
                 Ok((cmd.run(client, backend), task_manager))
             })
         }

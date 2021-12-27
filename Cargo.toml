@@ -9,6 +9,9 @@ members = [
 	"rpc-client",
 	"runtime",
 	"testing",
+	"frontier/frame/*",
+	"frontier/primitives/*",
+	"frontier/client/*",
 ]
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
