@@ -1829,7 +1829,7 @@ impl_runtime_apis! {
             // To get around that, we separated the Session benchmarks into its own crate, which is why
             // we need these two lines below.
             use frame_system_benchmarking::Pallet as SystemBench;
-            use pallet_evm::Module as PalletEvmBench;
+            use pallet_evm::Pallet as PalletEvmBench;
             impl frame_system_benchmarking::Config for Runtime {}
 
             let whitelist: Vec<TrackedStorageKey> = vec![
