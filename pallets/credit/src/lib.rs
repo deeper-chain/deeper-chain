@@ -263,7 +263,9 @@ pub mod pallet {
         CreditDataAdded(T::AccountId, CreditData, T::BlockNumber),
         CreditDataUpdated(T::AccountId, CreditData, T::BlockNumber),
         CreditScoreSlashed(T::AccountId, u64, T::BlockNumber),
-        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), //status: 0,Normal; 1-6, Error
+        CreditDataAddedByTraffic(T::AccountId, u64, T::BlockNumber),
+        //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
+        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), 
     }
 
     #[pallet::error]
@@ -371,14 +373,20 @@ pub mod pallet {
             }
         }
 
-        fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
-            let mut user_credit_history = Self::user_credit_history(&account_id);
+        pub fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
+            let user_credit_data = Self::user_credit(&account_id).unwrap();
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
+
+            if Self::user_credit_history(&account_id).is_empty() {
+                weight = weight
+                    .saturating_add(Self::init_credit_history(&account_id, user_credit_data.clone()));
+            }
+            let mut user_credit_history = Self::user_credit_history(&account_id);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
             if !user_credit_history.is_empty() {
                 // update credit history only if it's not empty
                 let last_index = user_credit_history.len() - 1;
-                // user credit data cannot be none unless there is a bug
-                let user_credit_data = Self::user_credit(&account_id).unwrap();
                 if user_credit_history[last_index].0 == current_era {
                     user_credit_history[last_index] = (current_era, user_credit_data.clone());
                 } else {
@@ -713,7 +721,6 @@ pub mod pallet {
                 poc_reward =
                     poc_reward.saturating_add(daily_poc_reward.saturating_mul(num_of_eras.into()));
             }
-            Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 0));
             (Some((referee_reward, poc_reward)), weight)
         }
 
@@ -834,6 +841,7 @@ pub mod pallet {
                 now_as_secs,
             );
             if time_eras >= 2 {
+                let current_block_numbers = <frame_system::Pallet<T>>::block_number();
                 let cap: u64 = T::CreditCapTwoEras::get() as u64;
                 let new_credit = Self::get_credit_score(&server_id)
                     .unwrap_or(0)
@@ -841,6 +849,7 @@ pub mod pallet {
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
+                    Self::deposit_event(Event::CreditDataAddedByTraffic(server_id.clone(), new_credit, current_block_numbers));
                 } else {
                     log!(
                         error,
