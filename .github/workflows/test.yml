@@ -37,7 +37,7 @@ jobs:
         run: rustc --version
 
       - name: test
-        run: cargo test --workspace --exclude node-executor --exclude node-cli
+        run: cargo test --workspace --exclude node-cli
 
       - name: install grcov
         run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -

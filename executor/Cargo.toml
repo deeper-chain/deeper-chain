@@ -55,3 +55,7 @@ wasmi-errno = [
 	"sc-executor/wasmi-errno",
 ]
 stress-test = []
+
+[[bench]]
+name = "bench"
+harness = false
