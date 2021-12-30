@@ -567,7 +567,7 @@ fn update_credit_history_when_era_is_the_same() {
         );
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
         //default era=0
-        Credit::update_credit_history(&1,0);
+        Credit::update_credit_history(&1, 0);
 
         let credit_historys = vec![(
             0,
@@ -602,10 +602,10 @@ fn update_credit_history_when_era_is_non_zero() {
                 reward_eras: 270,
             },
         );
-        // run_to_block, era=1 
+        // run_to_block, era=1
         run_to_block(BLOCKS_PER_ERA);
         assert_ok!(DeeperNode::im_online(Origin::signed(1)));
-        Credit::update_credit_history(&1,10);
+        Credit::update_credit_history(&1, 10);
 
         let credit_historys = vec![
             (

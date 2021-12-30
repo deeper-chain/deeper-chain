@@ -265,7 +265,7 @@ pub mod pallet {
         CreditScoreSlashed(T::AccountId, u64, T::BlockNumber),
         CreditDataAddedByTraffic(T::AccountId, u64, T::BlockNumber),
         //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
-        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), 
+        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
     }
 
     #[pallet::error]
@@ -378,8 +378,10 @@ pub mod pallet {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
 
             if Self::user_credit_history(&account_id).is_empty() {
-                weight = weight
-                    .saturating_add(Self::init_credit_history(&account_id, user_credit_data.clone()));
+                weight = weight.saturating_add(Self::init_credit_history(
+                    &account_id,
+                    user_credit_data.clone(),
+                ));
             }
             let mut user_credit_history = Self::user_credit_history(&account_id);
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
@@ -849,7 +851,11 @@ pub mod pallet {
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
-                    Self::deposit_event(Event::CreditDataAddedByTraffic(server_id.clone(), new_credit, current_block_numbers));
+                    Self::deposit_event(Event::CreditDataAddedByTraffic(
+                        server_id.clone(),
+                        new_credit,
+                        current_block_numbers,
+                    ));
                 } else {
                     log!(
                         error,
