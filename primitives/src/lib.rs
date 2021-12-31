@@ -65,9 +65,7 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
-/// App-specific crypto used for reporting equivocation/misbehavior in BABE and
-/// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
-/// account.
+/*
 pub mod report {
     use super::{Signature, Verify};
     use frame_system::offchain::AppCrypto;
@@ -94,4 +92,4 @@ pub mod report {
         type GenericSignature = sp_core::sr25519::Signature;
         type GenericPublic = sp_core::sr25519::Public;
     }
-}
+}*/
