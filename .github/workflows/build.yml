@@ -10,12 +10,12 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: [self-hosted, linux, deeper-chain-runner]
+    runs-on: [ubuntu-latest]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@master
 
-      - name: Install Rust toolchain ${{ matrix.rust }}
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           components: rustfmt, clippy
