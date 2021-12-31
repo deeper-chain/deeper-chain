@@ -36,6 +36,8 @@ use frame_support::{
 
 use super::*;
 use crate::{self as pallet_tips, Event as TipEvent};
+use pallet_credit::{CreditData, CreditLevel};
+use frame_system::RawOrigin;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -246,6 +248,10 @@ fn tip_hash() -> H256 {
 	BlakeTwo256::hash_of(&(BlakeTwo256::hash(b"awesome.dot"), 3u128))
 }
 
+fn tip_hash_error() -> H256 {
+	BlakeTwo256::hash_of(&(BlakeTwo256::hash(b"awesome.dot.ksm"), 3u128))
+}
+
 #[test]
 fn tip_new_cannot_be_used_twice() {
 	new_test_ext().execute_with(|| {
@@ -255,6 +261,125 @@ fn tip_new_cannot_be_used_twice() {
 			Tips::tip_new(Origin::signed(11), b"awesome.dot".to_vec(), 3, 10),
 			Error::<Test>::AlreadyKnown
 		);
+	});
+}
+
+#[test]
+fn credit_tip_new_and_credit_tip() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+
+		let credit_data_before = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+		assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data_before.clone()
+        ));
+		assert_eq!(Credit::user_credit(3), Some(credit_data_before));
+
+		Balances::make_free_balance_be(&Treasury::account_id(), 101);
+		// Invalid Tippers will not commit tips
+		assert_noop!(Tips::credit_tip_new(Origin::signed(9), b"awesome.dot".to_vec(), 3, 10), BadOrigin);
+
+		assert_ok!(Tips::credit_tip_new(Origin::signed(10), b"awesome.dot".to_vec(), 3, 10));
+		assert_noop!(
+			Tips::credit_tip_new(Origin::signed(11), b"awesome.dot".to_vec(), 3, 10),
+			Error::<Test>::AlreadyKnown
+		);
+
+		let h = tip_hash();
+		let e = tip_hash_error();
+		assert_ok!(Tips::credit_tip(Origin::signed(10), h.clone(), 10));
+		assert_ok!(Tips::credit_tip(Origin::signed(11), h.clone(), 10));
+		// UnknownTip
+		assert_noop!(
+			Tips::credit_tip(Origin::signed(12), e.clone(), 10),
+			Error::<Test>::UnknownTip
+		);
+		assert_ok!(Tips::credit_tip(Origin::signed(12), h.clone(), 10));
+		assert_noop!(Tips::tip(Origin::signed(9), h.clone(), 10), BadOrigin);
+		System::set_block_number(2);
+		// UnknownTip
+		assert_noop!(
+			Tips::close_credit_tip(Origin::signed(100), e.clone()),
+			Error::<Test>::UnknownTip
+		);
+
+		assert_ok!(Tips::close_credit_tip(Origin::signed(100), h.into()));
+
+		let credit_data_after = CreditData {
+            campaign_id: 0,
+            credit: 110,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+
+		assert_eq!(Credit::user_credit(3), Some(credit_data_after));
+	});	
+}
+
+#[test]
+fn credit_tip_new_and_check_get_level() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+
+		let credit_data_before = CreditData {
+            campaign_id: 0,
+            credit: 195,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+		assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            3,
+            credit_data_before.clone()
+        ));
+		assert_eq!(Credit::user_credit(3), Some(credit_data_before));
+
+		assert_ok!(Tips::credit_tip_new(Origin::signed(10), b"awesome.dot".to_vec(), 3, 10));
+		let h = tip_hash();
+		assert_ok!(Tips::credit_tip(Origin::signed(10), h.clone(), 10));
+		assert_ok!(Tips::credit_tip(Origin::signed(11), h.clone(), 10));
+		assert_ok!(Tips::credit_tip(Origin::signed(12), h.clone(), 10));
+		// Premature
+		assert_noop!(
+			Tips::close_credit_tip(Origin::signed(100), h.clone()),
+			Error::<Test>::Premature
+		);
+		System::set_block_number(2);
+		assert_ok!(Tips::close_credit_tip(Origin::signed(100), h.into()));
+
+		// UnknownTip
+		assert_noop!(
+			Tips::close_credit_tip(Origin::signed(100), h.clone()),
+			Error::<Test>::UnknownTip
+		);
+
+		let credit_data_after = CreditData {
+            campaign_id: 0,
+            credit: 205,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Two,
+            reward_eras: 0,
+        };
+
+		assert_eq!(Credit::user_credit(3), Some(credit_data_after));
 	});
 }
 
