@@ -1,6 +1,9 @@
 # deeper chain node
 
-deeper chain node is built on top of Substrate v3.0.0 full node
+![Build](https://github.com/deeper-chain/deeper-chain/actions/workflows/build.yml/badge.svg)
+[![Codecov](https://codecov.io/gh/deeper-chain/deeper-chain/branch/master/graph/badge.svg)](https://codecov.io/gh/deeper-chain/deeper-chain)
+
+deeper chain node is built on top of Substrate v4.0.0 full node
 
 ## Local Development
 
