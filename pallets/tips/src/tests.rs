@@ -50,6 +50,9 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
 		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>},
+		Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 	}
 );
 
@@ -89,8 +92,6 @@ parameter_types! {
 }
 impl pallet_balances::Config for Test {
 	type MaxLocks = ();
-	type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
 	type Balance = u64;
 	type Event = Event;
 	type DustRemoval = ();
@@ -150,12 +151,59 @@ impl pallet_treasury::Config for Test {
 	type MaxApprovals = MaxApprovals;
 }
 parameter_types! {
+    pub const CreditCapTwoEras: u8 = 5;
+    pub const CreditAttenuationStep: u64 = 1;
+    pub const MinCreditToDelegate: u64 = 100;
+    pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
+    pub const BlocksPerEra: u64 =  17280;
+	pub const SecsPerBlock: u32 = 5u32;
+}
+impl pallet_credit::Config for Test {
+    type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
+    type Currency = Balances;
+    type CreditCapTwoEras = CreditCapTwoEras;
+    type CreditAttenuationStep = CreditAttenuationStep;
+    type MinCreditToDelegate = MinCreditToDelegate;
+    type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
+    type NodeInterface = DeeperNode;
+    type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+}
+parameter_types! {
+    pub const MinimumPeriod: u64 = 5;
+}
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+parameter_types! {
+    pub const MinLockAmt: u32 = 100;
+    pub const MaxDurationEras: u8 = 7;
+    pub const MaxIpLength: usize = 256;
+}
+impl pallet_deeper_node::Config for Test {
+    type Event = Event;
+    type Currency = Balances;
+    type MinLockAmt = MinLockAmt;
+    type MaxDurationEras = MaxDurationEras;
+    type BlocksPerEra = BlocksPerEra;
+    type MaxIpLength = MaxIpLength;
+    type WeightInfo = ();
+}
+parameter_types! {
 	pub const TipCountdown: u64 = 1;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
 	pub const TipReportDepositBase: u64 = 1;
+	pub const MaximumCreditReward: u64 = 15;
 }
 impl Config for Test {
 	type MaximumReasonLength = MaximumReasonLength;
+	type MaximumCreditReward = MaximumCreditReward;
+	type CreditInterface = Credit;
 	type Tippers = TenToFourteen;
 	type TipCountdown = TipCountdown;
 	type TipFindersFee = TipFindersFee;
@@ -452,6 +500,7 @@ fn test_last_reward_migration() {
 				closes: Some(13),
 				tips: vec![(40, 50), (60, 70)],
 				finders_fee: true,
+				credits: vec![],
 			})
 		);
 
@@ -466,6 +515,7 @@ fn test_last_reward_migration() {
 				closes: Some(13),
 				tips: vec![(40, 50), (60, 70)],
 				finders_fee: false,
+				credits: vec![],
 			})
 		);
 	});
@@ -484,6 +534,7 @@ fn test_migration_v4() {
 		closes: Some(13),
 		tips: vec![(40, 50), (60, 70)],
 		finders_fee: true,
+		credits: vec![],
 	};
 
 	let data = vec![

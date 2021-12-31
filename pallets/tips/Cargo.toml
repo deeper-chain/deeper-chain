@@ -27,6 +27,11 @@ pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-credit = { version = "3.0.0", default-features = false, path = "../credit" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
 
+pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
+pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
+pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node"}
+
 [dev-dependencies]
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-balances = { version = "3.0.0", path = "../balances" }
@@ -46,6 +51,11 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-treasury/std",
+	"pallet-timestamp/std",
+	"node-primitives/std",
+	"pallet-balances/std",
+	"pallet-credit/std",
+	"pallet-deeper-node/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
