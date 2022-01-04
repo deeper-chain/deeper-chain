@@ -963,5 +963,20 @@ macro_rules! decl_tests {
 					assert_storage_noop!(assert_eq!(Balances::slash(&1337, 42).1, 42));
 				});
 		}
+
+		#[test]
+		fn set_lock_members_works() {
+			<$ext_builder>::default()
+				.existential_deposit(100)
+				.build()
+				.execute_with(|| {
+					assert_ok!(Balances::set_balance(Origin::root(), 1, 1_000, 0));
+					assert_ok!(Balances::set_lock_members(Origin::root(),vec!(2)));
+					assert_ok!(Balances::force_lock(Some(2).into(),1,500));
+					assert_eq!(Balances::usable_balance(&1),500);
+					assert_ok!(Balances::force_remove_lock(Origin::root(),*b"forcelck",1));
+					assert_eq!(Balances::usable_balance(&1),1000);
+				});
+		}
 	}
 }
