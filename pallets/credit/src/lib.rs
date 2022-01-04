@@ -257,13 +257,15 @@ pub mod pallet {
     //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        CreditUpdateSuccess(T::AccountId, u64, T::BlockNumber),
-        CreditUpdateFailed(T::AccountId, u64, T::BlockNumber),
-        CreditSettingUpdated(CreditSetting<BalanceOf<T>>, T::BlockNumber),
-        CreditDataAdded(T::AccountId, CreditData, T::BlockNumber),
-        CreditDataUpdated(T::AccountId, CreditData, T::BlockNumber),
-        CreditScoreSlashed(T::AccountId, u64, T::BlockNumber),
-        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8), //status: 0,Normal; 1-6, Error
+        CreditUpdateSuccess(T::AccountId, u64),
+        CreditUpdateFailed(T::AccountId, u64),
+        CreditSettingUpdated(CreditSetting<BalanceOf<T>>),
+        CreditDataAdded(T::AccountId, CreditData),
+        CreditDataUpdated(T::AccountId, CreditData),
+        CreditScoreSlashed(T::AccountId, u64),
+        CreditDataAddedByTraffic(T::AccountId, u64),
+        //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
+        GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
     }
 
     #[pallet::error]
@@ -290,10 +292,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
             Self::_update_credit_setting(credit_setting.clone());
-            Self::deposit_event(Event::CreditSettingUpdated(
-                credit_setting,
-                <frame_system::Pallet<T>>::block_number(),
-            ));
+            Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
             Ok(().into())
         }
 
@@ -307,7 +306,6 @@ pub mod pallet {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
 
-            let current_block_numbers = <frame_system::Pallet<T>>::block_number();
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
                     Some(data) => *data = credit_data.clone(),
@@ -316,18 +314,10 @@ pub mod pallet {
                 if !Self::user_credit_history(&account_id).is_empty() {
                     Self::update_credit_history(&account_id, Self::get_current_era());
                 }
-                Self::deposit_event(Event::CreditDataUpdated(
-                    account_id,
-                    credit_data,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data));
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
-                Self::deposit_event(Event::CreditDataAdded(
-                    account_id,
-                    credit_data,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditDataAdded(account_id, credit_data));
             }
             Ok(().into())
         }
@@ -346,7 +336,6 @@ pub mod pallet {
 
         /// inner: update credit score
         fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
-            let current_block_numbers = <frame_system::Pallet<T>>::block_number();
             if UserCredit::<T>::contains_key(account_id) {
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
@@ -355,30 +344,30 @@ pub mod pallet {
                     }
                     _ => (),
                 });
-                Self::deposit_event(Event::CreditUpdateSuccess(
-                    (*account_id).clone(),
-                    score,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditUpdateSuccess((*account_id).clone(), score));
                 true
             } else {
-                Self::deposit_event(Event::CreditUpdateFailed(
-                    (*account_id).clone(),
-                    score,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditUpdateFailed((*account_id).clone(), score));
                 false
             }
         }
 
-        fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
-            let mut user_credit_history = Self::user_credit_history(&account_id);
+        pub fn update_credit_history(account_id: &T::AccountId, current_era: EraIndex) -> Weight {
+            let user_credit_data = Self::user_credit(&account_id).unwrap();
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
+
+            if Self::user_credit_history(&account_id).is_empty() {
+                weight = weight.saturating_add(Self::init_credit_history(
+                    &account_id,
+                    user_credit_data.clone(),
+                ));
+            }
+            let mut user_credit_history = Self::user_credit_history(&account_id);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
             if !user_credit_history.is_empty() {
                 // update credit history only if it's not empty
                 let last_index = user_credit_history.len() - 1;
-                // user credit data cannot be none unless there is a bug
-                let user_credit_data = Self::user_credit(&account_id).unwrap();
                 if user_credit_history[last_index].0 == current_era {
                     user_credit_history[last_index] = (current_era, user_credit_data.clone());
                 } else {
@@ -574,7 +563,6 @@ pub mod pallet {
                         Self::deposit_event(Event::CreditScoreSlashed(
                             (*account_id).clone(),
                             (*credit_data).clone().credit,
-                            <frame_system::Pallet<T>>::block_number(),
                         ));
                     }
                     _ => (),
@@ -713,7 +701,6 @@ pub mod pallet {
                 poc_reward =
                     poc_reward.saturating_add(daily_poc_reward.saturating_mul(num_of_eras.into()));
             }
-            Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 0));
             (Some((referee_reward, poc_reward)), weight)
         }
 
@@ -841,6 +828,10 @@ pub mod pallet {
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
+                    Self::deposit_event(Event::CreditDataAddedByTraffic(
+                        server_id.clone(),
+                        new_credit,
+                    ));
                 } else {
                     log!(
                         error,
