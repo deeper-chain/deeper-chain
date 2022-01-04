@@ -65,6 +65,30 @@ fn setup_tip<T: Config>(
     Ok((caller, reason, beneficiary, value))
 }
 
+// Create the pre-requisite information needed to call `credit_tip_new`.
+fn setup_credit_tip<T: Config>(
+    r: u32,
+    t: u32,
+) -> Result<(T::AccountId, Vec<u8>, T::AccountId, u64), &'static str> {
+    let tippers_count = T::Tippers::count();
+
+    for i in 0..t {
+        let member = account("member", i, SEED);
+        T::Tippers::add(&member);
+        ensure!(T::Tippers::contains(&member), "failed to add tipper");
+    }
+
+    ensure!(
+        T::Tippers::count() == tippers_count + t as usize,
+        "problem creating tippers"
+    );
+    let caller = account("member", t - 1, SEED);
+    let reason = vec![0; r as usize];
+    let beneficiary = account("beneficiary", t, SEED);
+    let value = 10;
+    Ok((caller, reason, beneficiary, value))
+}
+
 // Create `t` new tips for the tip proposal with `hash`.
 // This function automatically makes the tip able to close.
 fn create_tips<T: Config>(t: u32, hash: T::Hash, value: BalanceOf<T>) -> Result<(), &'static str> {
@@ -72,6 +96,22 @@ fn create_tips<T: Config>(t: u32, hash: T::Hash, value: BalanceOf<T>) -> Result<
         let caller = account("member", i, SEED);
         ensure!(T::Tippers::contains(&caller), "caller is not a tipper");
         TipsMod::<T>::tip(RawOrigin::Signed(caller).into(), hash, value)?;
+    }
+    Tips::<T>::mutate(hash, |maybe_tip| {
+        if let Some(open_tip) = maybe_tip {
+            open_tip.closes = Some(T::BlockNumber::zero());
+        }
+    });
+    Ok(())
+}
+
+// Create `t` new tips for the tip proposal with `hash`.
+// This function automatically makes the tip able to close.
+fn create_credit_tips<T: Config>(t: u32, hash: T::Hash, value: u64) -> Result<(), &'static str> {
+    for i in 0..t {
+        let caller = account("member", i, SEED);
+        ensure!(T::Tippers::contains(&caller), "caller is not a tipper");
+        TipsMod::<T>::credit_tip(RawOrigin::Signed(caller).into(), hash, value)?;
     }
     Tips::<T>::mutate(hash, |maybe_tip| {
         if let Some(open_tip) = maybe_tip {
@@ -124,6 +164,16 @@ benchmarks! {
         frame_benchmarking::benchmarking::add_to_whitelist(caller_key.into());
     }: _(RawOrigin::Signed(caller), reason, beneficiary, value)
 
+    credit_tip_new {
+        let r in 0 .. MAX_BYTES;
+        let t in 1 .. MAX_TIPPERS;
+
+        let (caller, reason, beneficiary, value) = setup_credit_tip::<T>(r, t)?;
+        // Whitelist caller account from further DB operations.
+        let caller_key = frame_system::Account::<T>::hashed_key_for(&caller);
+        frame_benchmarking::benchmarking::add_to_whitelist(caller_key.into());
+    }: _(RawOrigin::Signed(caller), reason, beneficiary, value)
+
     tip {
         let t in 1 .. MAX_TIPPERS;
         let (member, reason, beneficiary, value) = setup_tip::<T>(0, t)?;
@@ -138,6 +188,26 @@ benchmarks! {
         let hash = T::Hashing::hash_of(&(&reason_hash, &beneficiary));
         ensure!(Tips::<T>::contains_key(hash), "tip does not exist");
         create_tips::<T>(t - 1, hash.clone(), value)?;
+        let caller = account("member", t - 1, SEED);
+        // Whitelist caller account from further DB operations.
+        let caller_key = frame_system::Account::<T>::hashed_key_for(&caller);
+        frame_benchmarking::benchmarking::add_to_whitelist(caller_key.into());
+    }: _(RawOrigin::Signed(caller), hash, value)
+
+    credit_tip {
+        let t in 1 .. MAX_TIPPERS;
+        let (member, reason, beneficiary, value) = setup_credit_tip::<T>(0, t)?;
+        let value = 10;
+        TipsMod::<T>::credit_tip_new(
+            RawOrigin::Signed(member).into(),
+            reason.clone(),
+            beneficiary.clone(),
+            value
+        )?;
+        let reason_hash = T::Hashing::hash(&reason[..]);
+        let hash = T::Hashing::hash_of(&(&reason_hash, &beneficiary));
+        ensure!(Tips::<T>::contains_key(hash), "tip does not exist");
+        create_credit_tips::<T>(t - 1, hash.clone(), value)?;
         let caller = account("member", t - 1, SEED);
         // Whitelist caller account from further DB operations.
         let caller_key = frame_system::Account::<T>::hashed_key_for(&caller);
@@ -166,6 +236,32 @@ benchmarks! {
         ensure!(Tips::<T>::contains_key(hash), "tip does not exist");
 
         create_tips::<T>(t, hash.clone(), value)?;
+
+        let caller = account("caller", t, SEED);
+        // Whitelist caller account from further DB operations.
+        let caller_key = frame_system::Account::<T>::hashed_key_for(&caller);
+        frame_benchmarking::benchmarking::add_to_whitelist(caller_key.into());
+    }: _(RawOrigin::Signed(caller), hash)
+
+    close_credit_tip {
+        let t in 1 .. MAX_TIPPERS;
+
+        // Set up a new tip proposal
+        let (member, reason, beneficiary, value) = setup_credit_tip::<T>(0, t)?;
+        let value = 10;
+        TipsMod::<T>::credit_tip_new(
+            RawOrigin::Signed(member).into(),
+            reason.clone(),
+            beneficiary.clone(),
+            value
+        )?;
+
+        // Create a bunch of tips
+        let reason_hash = T::Hashing::hash(&reason[..]);
+        let hash = T::Hashing::hash_of(&(&reason_hash, &beneficiary));
+        ensure!(Tips::<T>::contains_key(hash), "tip does not exist");
+
+        create_credit_tips::<T>(t, hash.clone(), value)?;
 
         let caller = account("caller", t, SEED);
         // Whitelist caller account from further DB operations.
