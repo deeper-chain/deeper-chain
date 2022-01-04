@@ -18,14 +18,15 @@
 use codec::{Decode, Encode};
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use frame_support::Hashable;
-use node_executor::Executor;
+use node_executor::ExecutorDispatch;
 use node_primitives::{BlockNumber, Hash};
 use node_runtime::constants::currency::*;
 use node_runtime::{
-    Block, BuildStorage, Call, CheckedExtrinsic, GenesisConfig, Header, UncheckedExtrinsic,
+    Block, BuildStorage, Call, CheckedExtrinsic, CheckedSignature, GenesisConfig, Header,
+    UncheckedExtrinsic,
 };
 use node_testing::keyring::*;
-use sc_executor::{Externalities, NativeExecutor, RuntimeInfo, WasmExecutionMethod};
+use sc_executor::{Externalities, NativeElseWasmExecutor, RuntimeVersionOf, WasmExecutionMethod};
 use sp_core::storage::well_known_keys;
 use sp_core::traits::{CodeExecutor, RuntimeCode};
 use sp_core::{NativeOrEncoded, NeverNativeValue};
@@ -76,7 +77,7 @@ fn new_test_ext(genesis_config: &GenesisConfig) -> TestExternalities<BlakeTwo256
 }
 
 fn construct_block<E: Externalities>(
-    executor: &NativeExecutor<Executor>,
+    executor: &NativeElseWasmExecutor<ExecutorDispatch>,
     ext: &mut E,
     number: BlockNumber,
     parent_hash: Hash,
@@ -156,16 +157,21 @@ fn construct_block<E: Externalities>(
 
 fn test_blocks(
     genesis_config: &GenesisConfig,
-    executor: &NativeExecutor<Executor>,
+    executor: &NativeElseWasmExecutor<ExecutorDispatch>,
 ) -> Vec<(Vec<u8>, Hash)> {
     let mut test_ext = new_test_ext(genesis_config);
     let mut block1_extrinsics = vec![CheckedExtrinsic {
-        signed: None,
-        function: Call::Timestamp(pallet_timestamp::Call::set(42 * 1000)),
+        signed: CheckedSignature::Unsigned,
+        function: Call::Timestamp(pallet_timestamp::Call::set {
+            now: Default::default(),
+        }),
     }];
     block1_extrinsics.extend((0..20).map(|i| CheckedExtrinsic {
-        signed: Some((alice(), signed_extra(i, 0))),
-        function: Call::Balances(pallet_balances::Call::transfer(bob().into(), 1 * DOLLARS)),
+        signed: CheckedSignature::Signed(alice(), signed_extra(i, 0)),
+        function: Call::Balances(pallet_balances::Call::transfer {
+            dest: bob().into(),
+            value: DOLLARS,
+        }),
     }));
     let block1 = construct_block(
         executor,
@@ -179,57 +185,145 @@ fn test_blocks(
 }
 
 fn bench_execute_block(c: &mut Criterion) {
-    c.bench_function_over_inputs(
-        "execute blocks",
-        |b, strategy| {
-            let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
-            let (use_native, wasm_method) = match strategy {
-                ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
-                ExecutionMethod::Wasm(wasm_method) => (false, *wasm_method),
-            };
+    let mut group = c.benchmark_group("execute blocks");
+    group.bench_function("native", |b| {
+        let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
+        let strategy = ExecutionMethod::Native;
+        let (use_native, wasm_method) = match strategy {
+            ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
+            ExecutionMethod::Wasm(wasm_method) => (false, wasm_method),
+        };
 
-            let executor = NativeExecutor::new(wasm_method, None, 8);
-            let runtime_code = RuntimeCode {
-                code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
-                hash: vec![1, 2, 3],
-                heap_pages: None,
-            };
+        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8);
+        let runtime_code = RuntimeCode {
+            code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
+            hash: vec![1, 2, 3],
+            heap_pages: None,
+        };
 
-            // Get the runtime version to initialize the runtimes cache.
-            {
-                let mut test_ext = new_test_ext(&genesis_config);
-                executor
-                    .runtime_version(&mut test_ext.ext(), &runtime_code)
-                    .unwrap();
-            }
+        // Get the runtime version to initialize the runtimes cache.
+        {
+            let mut test_ext = new_test_ext(&genesis_config);
+            executor
+                .runtime_version(&mut test_ext.ext(), &runtime_code)
+                .unwrap();
+        }
 
-            let blocks = test_blocks(&genesis_config, &executor);
+        let blocks = test_blocks(&genesis_config, &executor);
 
-            b.iter_batched_ref(
-                || new_test_ext(&genesis_config),
-                |test_ext| {
-                    for block in blocks.iter() {
-                        executor
-                            .call::<NeverNativeValue, fn() -> _>(
-                                &mut test_ext.ext(),
-                                &runtime_code,
-                                "Core_execute_block",
-                                &block.0,
-                                use_native,
-                                None,
-                            )
-                            .0
-                            .unwrap();
-                    }
-                },
-                BatchSize::LargeInput,
-            );
-        },
-        vec![
-            ExecutionMethod::Native,
-            ExecutionMethod::Wasm(WasmExecutionMethod::Interpreted),
-            #[cfg(feature = "wasmtime")]
-            ExecutionMethod::Wasm(WasmExecutionMethod::Compiled),
-        ],
-    );
+        b.iter_batched_ref(
+            || new_test_ext(&genesis_config),
+            |test_ext| {
+                for block in blocks.iter() {
+                    executor
+                        .call::<NeverNativeValue, fn() -> _>(
+                            &mut test_ext.ext(),
+                            &runtime_code,
+                            "Core_execute_block",
+                            &block.0,
+                            use_native,
+                            None,
+                        )
+                        .0
+                        .unwrap();
+                }
+            },
+            BatchSize::LargeInput,
+        );
+    });
+
+    group.bench_function("Wasm(Interpreted)", |b| {
+        let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
+        let strategy = ExecutionMethod::Wasm(WasmExecutionMethod::Interpreted);
+        let (use_native, wasm_method) = match strategy {
+            ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
+            ExecutionMethod::Wasm(wasm_method) => (false, wasm_method),
+        };
+
+        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8);
+        let runtime_code = RuntimeCode {
+            code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
+            hash: vec![1, 2, 3],
+            heap_pages: None,
+        };
+
+        // Get the runtime version to initialize the runtimes cache.
+        {
+            let mut test_ext = new_test_ext(&genesis_config);
+            executor
+                .runtime_version(&mut test_ext.ext(), &runtime_code)
+                .unwrap();
+        }
+
+        let blocks = test_blocks(&genesis_config, &executor);
+
+        b.iter_batched_ref(
+            || new_test_ext(&genesis_config),
+            |test_ext| {
+                for block in blocks.iter() {
+                    executor
+                        .call::<NeverNativeValue, fn() -> _>(
+                            &mut test_ext.ext(),
+                            &runtime_code,
+                            "Core_execute_block",
+                            &block.0,
+                            use_native,
+                            None,
+                        )
+                        .0
+                        .unwrap();
+                }
+            },
+            BatchSize::LargeInput,
+        );
+    });
+
+    #[cfg(feature = "wasmtime")]
+    group.bench_function("Wasm(Compiled)", |b| {
+        let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
+        let strategy = ExecutionMethod::Wasm(WasmExecutionMethod::Compiled);
+        let (use_native, wasm_method) = match strategy {
+            ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
+            ExecutionMethod::Wasm(wasm_method) => (false, wasm_method),
+        };
+
+        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8);
+        let runtime_code = RuntimeCode {
+            code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
+            hash: vec![1, 2, 3],
+            heap_pages: None,
+        };
+
+        // Get the runtime version to initialize the runtimes cache.
+        {
+            let mut test_ext = new_test_ext(&genesis_config);
+            executor
+                .runtime_version(&mut test_ext.ext(), &runtime_code)
+                .unwrap();
+        }
+
+        let blocks = test_blocks(&genesis_config, &executor);
+
+        b.iter_batched_ref(
+            || new_test_ext(&genesis_config),
+            |test_ext| {
+                for block in blocks.iter() {
+                    executor
+                        .call::<NeverNativeValue, fn() -> _>(
+                            &mut test_ext.ext(),
+                            &runtime_code,
+                            "Core_execute_block",
+                            &block.0,
+                            use_native,
+                            None,
+                        )
+                        .0
+                        .unwrap();
+                }
+            },
+            BatchSize::LargeInput,
+        );
+    });
+
+    group.finish();
 }
