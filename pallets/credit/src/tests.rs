@@ -563,6 +563,94 @@ fn slash_offline_devices_credit() {
 }
 
 #[test]
+fn update_credit_history_when_era_is_the_same() {
+    new_test_ext().execute_with(|| {
+        UserCredit::<Test>::insert(
+            1,
+            CreditData {
+                campaign_id: 0,
+                credit: 100,
+                initial_credit_level: CreditLevel::One,
+                rank_in_initial_credit_level: 1u32,
+                number_of_referees: 1,
+                current_credit_level: CreditLevel::One,
+                reward_eras: 270,
+            },
+        );
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        //default era=0
+        Credit::update_credit_history(&1, 0);
+
+        let credit_historys = vec![(
+            0,
+            CreditData {
+                campaign_id: 0,
+                credit: 100,
+                initial_credit_level: CreditLevel::One,
+                rank_in_initial_credit_level: 1u32,
+                number_of_referees: 1,
+                current_credit_level: CreditLevel::One,
+                reward_eras: 270,
+            },
+        )];
+
+        assert_eq!(Credit::user_credit_history(1), credit_historys);
+    });
+}
+
+#[test]
+fn update_credit_history_when_era_is_non_zero() {
+    new_test_ext().execute_with(|| {
+        //default era = 0
+        UserCredit::<Test>::insert(
+            1,
+            CreditData {
+                campaign_id: 0,
+                credit: 100,
+                initial_credit_level: CreditLevel::One,
+                rank_in_initial_credit_level: 1u32,
+                number_of_referees: 1,
+                current_credit_level: CreditLevel::One,
+                reward_eras: 270,
+            },
+        );
+        // run_to_block, era=1
+        run_to_block(BLOCKS_PER_ERA);
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        Credit::update_credit_history(&1, 10);
+
+        let credit_historys = vec![
+            (
+                1,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1u32,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 270,
+                },
+            ),
+            (
+                10,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 100,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1u32,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 270,
+                },
+            ),
+        ];
+
+        assert_eq!(Credit::user_credit_history(1), credit_historys);
+    });
+}
+
+#[test]
 fn reward_remain_eras_count() {
     new_test_ext().execute_with(|| {
         // era 0
