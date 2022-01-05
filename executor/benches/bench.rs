@@ -22,8 +22,7 @@ use node_executor::ExecutorDispatch;
 use node_primitives::{BlockNumber, Hash};
 use node_runtime::constants::currency::*;
 use node_runtime::{
-    Block, BuildStorage, Call, CheckedExtrinsic, CheckedSignature, GenesisConfig, Header,
-    UncheckedExtrinsic,
+    Block, BuildStorage, Call, CheckedExtrinsic, GenesisConfig, Header, UncheckedExtrinsic,
 };
 use node_testing::keyring::*;
 use sc_executor::{Externalities, NativeElseWasmExecutor, RuntimeVersionOf, WasmExecutionMethod};
@@ -161,13 +160,13 @@ fn test_blocks(
 ) -> Vec<(Vec<u8>, Hash)> {
     let mut test_ext = new_test_ext(genesis_config);
     let mut block1_extrinsics = vec![CheckedExtrinsic {
-        signed: CheckedSignature::Unsigned,
+        signed: None,
         function: Call::Timestamp(pallet_timestamp::Call::set {
             now: Default::default(),
         }),
     }];
     block1_extrinsics.extend((0..20).map(|i| CheckedExtrinsic {
-        signed: CheckedSignature::Signed(alice(), signed_extra(i, 0)),
+        signed: Some((alice(), signed_extra(i, 0))),
         function: Call::Balances(pallet_balances::Call::transfer {
             dest: bob().into(),
             value: DOLLARS,
