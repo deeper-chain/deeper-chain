@@ -294,10 +294,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?; // requires sudo
             Self::_update_credit_setting(credit_setting.clone());
-            Self::deposit_event(Event::CreditSettingUpdated(
-                credit_setting,
-                <frame_system::Pallet<T>>::block_number(),
-            ));
+            Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
             Ok(().into())
         }
 
@@ -311,7 +308,6 @@ pub mod pallet {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
 
-            let current_block_numbers = <frame_system::Pallet<T>>::block_number();
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
                     Some(data) => *data = credit_data.clone(),
@@ -320,18 +316,10 @@ pub mod pallet {
                 if !Self::user_credit_history(&account_id).is_empty() {
                     Self::update_credit_history(&account_id, Self::get_current_era());
                 }
-                Self::deposit_event(Event::CreditDataUpdated(
-                    account_id,
-                    credit_data,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditDataUpdated(account_id, credit_data));
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
-                Self::deposit_event(Event::CreditDataAdded(
-                    account_id,
-                    credit_data,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditDataAdded(account_id, credit_data));
             }
             Ok(().into())
         }
@@ -350,7 +338,6 @@ pub mod pallet {
 
         /// inner: update credit score
         fn _update_credit(account_id: &T::AccountId, score: u64) -> bool {
-            let current_block_numbers = <frame_system::Pallet<T>>::block_number();
             if UserCredit::<T>::contains_key(account_id) {
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
@@ -359,18 +346,10 @@ pub mod pallet {
                     }
                     _ => (),
                 });
-                Self::deposit_event(Event::CreditUpdateSuccess(
-                    (*account_id).clone(),
-                    score,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditUpdateSuccess((*account_id).clone(), score));
                 true
             } else {
-                Self::deposit_event(Event::CreditUpdateFailed(
-                    (*account_id).clone(),
-                    score,
-                    current_block_numbers,
-                ));
+                Self::deposit_event(Event::CreditUpdateFailed((*account_id).clone(), score));
                 false
             }
         }
