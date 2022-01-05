@@ -56,8 +56,6 @@
 
 mod benchmarking;
 mod tests;
-
-pub mod migrations;
 pub mod weights;
 
 use sp_runtime::{
