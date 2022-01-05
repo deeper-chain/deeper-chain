@@ -206,6 +206,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
+    use system::ensure_signed;
 
     #[pallet::config]
     pub trait Config<I: 'static = ()>: frame_system::Config {
@@ -406,7 +407,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::force_remove_lock())]
         pub fn force_remove_lock(
             origin: OriginFor<T>,
             id: LockIdentifier,
@@ -418,7 +419,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::force_unreserve())]
         pub fn force_unreserve(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
@@ -427,6 +428,46 @@ pub mod pallet {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
             <Self as ReservableCurrency<_>>::unreserve(&who, value);
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::WeightInfo::set_lock_members())]
+        pub fn set_lock_members(
+            origin: OriginFor<T>,
+            whitelist: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            let whitelist = WeakBoundedVec::<_, T::MaxLocks>::force_from(
+                whitelist,
+                Some("Balances Update lock function whitelist"),
+            );
+
+            if whitelist.len() as u32 > T::MaxLocks::get() {
+                log::warn!("Whitelist too large.");
+            }
+            <LockMemberWhiteList<T, I>>::put(whitelist);
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::WeightInfo::force_lock())]
+        pub fn force_lock(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] value: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            const FORCE_LOCK_ID: [u8; 8] = *b"forcelck";
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                <LockMemberWhiteList<T, I>>::get().contains(&sender),
+                Error::<T, I>::NotLockMember
+            );
+            let who = T::Lookup::lookup(who)?;
+            <Self as LockableCurrency<_>>::set_lock(
+                FORCE_LOCK_ID,
+                &who,
+                value,
+                WithdrawReasons::all(),
+            );
             Ok(().into())
         }
     }
@@ -478,6 +519,8 @@ pub mod pallet {
         ExistingVestingSchedule,
         /// Beneficiary account must pre-exist
         DeadAccount,
+        /// not lock authority member
+        NotLockMember,
     }
 
     /// The total units issued in the system.
@@ -503,6 +546,12 @@ pub mod pallet {
         WeakBoundedVec<BalanceLock<T::Balance>, T::MaxLocks>,
         ValueQuery,
     >;
+
+    /// Whitelist for user force functions
+    #[pallet::storage]
+    #[pallet::getter(fn lock_member_whitelist)]
+    pub(super) type LockMemberWhiteList<T: Config<I>, I: 'static = ()> =
+        StorageValue<_, WeakBoundedVec<T::AccountId, T::MaxLocks>, ValueQuery>;
 
     /// Storage version of the pallet.
     ///
