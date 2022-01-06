@@ -1,0 +1,37 @@
+name: bench
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  bench:
+    name: benchmark
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
+
+      - name: cache dependencies
+        uses: Swatinem/rust-cache@v1
+
+      - name: compile and run benchmark
+        run: cargo bench -p node-executor -- --output-format bencher | tee output.txt
+
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Deeper Chain Benchmark
+          tool: 'cargo'
+          output-file-path: output.txt
+          github-token: ${{ secrets.DEEPER_CHAIN_TOKEN }}
+          auto-push: true
