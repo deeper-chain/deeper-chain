@@ -11,8 +11,14 @@ jobs:
     name: Build
     runs-on: [ubuntu-latest]
     steps:
-      - name: Checkout Repository
+      - name: Checkout Chain Repository
         uses: actions/checkout@master
+
+      - name: Checkout Integration Tests Repository
+        uses: actions/checkout@master
+        with:
+          repository: deeper-chain/integration-tests
+          path: './integration-tests'
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -26,3 +32,17 @@ jobs:
       
       - name: Compile
         run: cargo build
+
+      - name: Install node env
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: start dev chain
+        run: nohup ./target/debug/deeper-chain --dev > /tmp/chain-dev.log &
+
+      - name: run integration tests
+        working-directory: ./integration-tests
+        run: |
+          npm install
+          npm run test
