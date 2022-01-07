@@ -18,7 +18,7 @@
 
 use crate::{chain_spec, service, service::new_partial, Cli, Subcommand};
 use node_executor::ExecutorDispatch;
-use node_runtime::{Block, RuntimeApi};
+use node_runtime::Block;
 use sc_cli::{ChainSpec, Result, Role, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;
 
@@ -85,11 +85,6 @@ pub fn run() -> Result<()> {
                 }
                 .map_err(sc_cli::Error::Service)
             })
-        }
-        Some(Subcommand::Inspect(cmd)) => {
-            let runner = cli.create_runner(cmd)?;
-
-            runner.sync_run(|config| cmd.run::<Block, RuntimeApi, ExecutorDispatch>(config))
         }
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
