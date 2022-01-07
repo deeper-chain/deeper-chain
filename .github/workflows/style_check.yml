@@ -14,7 +14,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@master
 
-      - name: Install Rust toolchain ${{ matrix.rust }}
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           components: rustfmt, clippy
@@ -26,3 +26,6 @@ jobs:
       
       - name: Cargo Fmt Check
         run: cargo fmt --all -- --check
+
+      - name: Cargo Clippy check
+        run: SKIP_WASM_BUILD=1 env -u RUSTFLAGS cargo clippy --all-targets
