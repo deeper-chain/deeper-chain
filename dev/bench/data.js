@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1641553868475,
+  "lastUpdate": 1641557880682,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -323,6 +323,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 85420390,
             "range": "± 17808832",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "luuugo@163.com",
+            "name": "OrangeLoveGitHub",
+            "username": "OrangeLoveGitHub"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eecbdec253566e84f9284678f49410e6a0eaaa14",
+          "message": "Delete useless jenkinsfile (#166)",
+          "timestamp": "2022-01-07T19:31:32+08:00",
+          "tree_id": "54822e4da6d1fe46a2bc0592930f54b45b5bb9b4",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/eecbdec253566e84f9284678f49410e6a0eaaa14"
+        },
+        "date": 1641557880197,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 4791178,
+            "range": "± 1084700",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 84389085,
+            "range": "± 15045306",
             "unit": "ns/iter"
           }
         ]
