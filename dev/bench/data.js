@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1641550264778,
+  "lastUpdate": 1641553868475,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -291,6 +291,38 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 79374277,
             "range": "± 12210745",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "deeper-chain",
+            "username": "deeper-chain"
+          },
+          "committer": {
+            "name": "deeper-chain",
+            "username": "deeper-chain"
+          },
+          "id": "06b723e33ed43e458917e7852e7ac2f0fc92cc15",
+          "message": "Delete useless jenkinsfile",
+          "timestamp": "2022-01-06T09:33:11Z",
+          "url": "https://github.com/deeper-chain/deeper-chain/pull/166/commits/06b723e33ed43e458917e7852e7ac2f0fc92cc15"
+        },
+        "date": 1641553868112,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 4949349,
+            "range": "± 956900",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 85420390,
+            "range": "± 17808832",
             "unit": "ns/iter"
           }
         ]
