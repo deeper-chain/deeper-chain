@@ -100,6 +100,11 @@ pallet-dynamic-fee = { default-features = false, path = "../frontier/frame/dynam
 pallet-evm-precompile-simple = { default-features = false, path = "../frontier/frame/evm/precompile/simple" }
 pallet-evm-precompile-sha3fips = { default-features = false, path = "../frontier/frame/evm/precompile/sha3fips" }
 pallet-evm-precompile-modexp = { default-features = false, path = "../frontier/frame/evm/precompile/modexp" }
+pallet-evm-precompile-blake2 = { default-features = false, path = "../frontier/frame/evm/precompile/blake2" }
+pallet-evm-precompile-bn128 = { default-features = false, path = "../frontier/frame/evm/precompile/bn128" }
+pallet-evm-precompile-dispatch = { default-features = false, path = "../frontier/frame/evm/precompile/dispatch" }
+pallet-evm-precompile-curve25519 = { default-features = false, path = "../frontier/frame/evm/precompile/curve25519" }
+pallet-evm-precompile-ed25519 = { default-features = false, path = "../frontier/frame/evm/precompile/ed25519" }
 pallet-base-fee = { default-features = false, path = "../frontier/frame/base-fee" }
 
 [build-dependencies]
