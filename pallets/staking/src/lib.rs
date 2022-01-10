@@ -2430,7 +2430,6 @@ impl<T: Config> pallet::Pallet<T> {
                     Self::candidate_validators(v)
                         .delegators
                         .into_iter()
-                        .map(|d| d)
                         .collect()
                 } else {
                     Vec::new()
@@ -2778,8 +2777,7 @@ where
             match eras
                 .iter()
                 .rev()
-                .filter(|&&(_, ref sesh)| sesh <= &slash_session)
-                .next()
+                .find(|&&(_, ref sesh)| sesh <= &slash_session)
             {
                 Some(&(ref slash_era, _)) => *slash_era,
                 // before bonding period. defensive - should be filtered out.

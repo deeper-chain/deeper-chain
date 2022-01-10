@@ -209,10 +209,7 @@ pub mod pallet {
             country: CountryRegion,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(
-                <RegionMapInit<T>>::get() == true,
-                Error::<T>::InvalidRegionMap
-            );
+            ensure!(<RegionMapInit<T>>::get(), Error::<T>::InvalidRegionMap);
             ensure!(
                 <RegionMap<T>>::contains_key(&country),
                 Error::<T>::InvalidCode
@@ -355,20 +352,18 @@ pub mod pallet {
 
             // country registration
             let mut country_server_list = <ServersByCountry<T>>::get(&node.country);
-            if Self::country_list_insert(
+            if !Self::country_list_insert(
                 &mut country_server_list,
                 &sender,
                 &node.country,
                 &duration,
-            ) == false
-            {
+            ) {
                 Err(Error::<T>::DoubleCountryRegistration)?
             }
 
             // level 3 region registration
             let mut level3_server_list = <ServersByRegion<T>>::get(&first_region);
-            if Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration)
-                == false
+            if !Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration)
             {
                 let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
                 Err(Error::<T>::DoubleLevel3Registration)?
@@ -376,9 +371,7 @@ pub mod pallet {
 
             // level 2 region registration
             let mut level2_server_list = <ServersByRegion<T>>::get(&sec_region);
-            if Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration)
-                == false
-            {
+            if !Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration) {
                 let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
                 let _ = Self::region_list_remove(&mut level3_server_list, &sender, &first_region);
                 Err(Error::<T>::DoubleLevel2Registration)?
