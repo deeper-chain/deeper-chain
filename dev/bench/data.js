@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1641557880682,
+  "lastUpdate": 1641788897472,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -359,6 +359,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 84389085,
             "range": "± 15045306",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e66674d4a9cc3b989ebbaa51b3e1e24d35ee4143",
+          "message": "add clippy check (#165)",
+          "timestamp": "2022-01-10T11:35:52+08:00",
+          "tree_id": "fb7d513319d73c1a72276bf92ae7975c58001d28",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/e66674d4a9cc3b989ebbaa51b3e1e24d35ee4143"
+        },
+        "date": 1641788897111,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5245462,
+            "range": "± 1109499",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 89240552,
+            "range": "± 14436213",
             "unit": "ns/iter"
           }
         ]
