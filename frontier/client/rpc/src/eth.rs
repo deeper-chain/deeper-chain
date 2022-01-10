@@ -405,9 +405,8 @@ fn filter_block_logs<'a>(
     let block_hash = H256::from_slice(Keccak256::digest(&rlp::encode(&block.header)).as_slice());
     for status in transaction_statuses.iter() {
         let logs = status.logs.clone();
-        let mut transaction_log_index: u32 = 0;
         let transaction_hash = status.transaction_hash;
-        for ethereum_log in logs {
+        for (transaction_log_index, ethereum_log) in logs.into_iter().enumerate() {
             let mut log = Log {
                 address: ethereum_log.address.clone(),
                 topics: ethereum_log.topics.clone(),
@@ -443,7 +442,6 @@ fn filter_block_logs<'a>(
                 log.transaction_log_index = Some(U256::from(transaction_log_index));
                 ret.push(log);
             }
-            transaction_log_index += 1;
             block_log_index += 1;
         }
     }
@@ -476,9 +474,10 @@ fn fee_details(
             if let Some(max_priority) = max_priority {
                 let max_fee = max_fee.unwrap_or_default();
                 if max_priority > max_fee {
-                    return Err(internal_err(format!(
+                    return Err(internal_err(
                         "Invalid input: `max_priority_fee_per_gas` greater than `max_fee_per_gas`"
-                    )));
+                            .to_string(),
+                    ));
                 }
             }
             Ok(FeeDetails {
@@ -885,9 +884,9 @@ where
                 if let Ok(Some(block)) = block {
                     block.header.gas_limit
                 } else {
-                    return Box::pin(future::err(internal_err(format!(
-                        "block unavailable, cannot query gas limit"
-                    ))));
+                    return Box::pin(future::err(internal_err(
+                        "block unavailable, cannot query gas limit".to_string(),
+                    )));
                 }
             }
         };
@@ -1038,9 +1037,9 @@ where
                 if let Some(block) = block {
                     block.header.gas_limit
                 } else {
-                    return Err(internal_err(format!(
-                        "block unavailable, cannot query gas limit"
-                    )));
+                    return Err(internal_err(
+                        "block unavailable, cannot query gas limit".to_string(),
+                    ));
                 }
             }
         };
@@ -1051,9 +1050,9 @@ where
         {
             api_version
         } else {
-            return Err(internal_err(format!(
-                "failed to retrieve Runtime Api version"
-            )));
+            return Err(internal_err(
+                "failed to retrieve Runtime Api version".to_string(),
+            ));
         };
         match to {
             Some(to) => {
@@ -1096,9 +1095,9 @@ where
                     error_on_execution_failure(&info.exit_reason, &info.value)?;
                     Ok(Bytes(info.value))
                 } else {
-                    return Err(internal_err(format!(
-                        "failed to retrieve Runtime Api version"
-                    )));
+                    return Err(internal_err(
+                        "failed to retrieve Runtime Api version".to_string(),
+                    ));
                 }
             }
             None => {
@@ -1139,9 +1138,9 @@ where
                     error_on_execution_failure(&info.exit_reason, &[])?;
                     Ok(Bytes(info.value[..].to_vec()))
                 } else {
-                    return Err(internal_err(format!(
-                        "failed to retrieve Runtime Api version"
-                    )));
+                    return Err(internal_err(
+                        "failed to retrieve Runtime Api version".to_string(),
+                    ));
                 }
             }
         }
@@ -1351,9 +1350,9 @@ where
         {
             api_version
         } else {
-            return Err(internal_err(format!(
-                "failed to retrieve Runtime Api version"
-            )));
+            return Err(internal_err(
+                "failed to retrieve Runtime Api version".to_string(),
+            ));
         };
 
         // Verify that the transaction succeed with highest capacity
@@ -2295,40 +2294,35 @@ where
                             }
                         })
                         .collect();
-                    for change in storage {
-                        if let Some(data) = change {
-                            // Decode the wrapped blob which's type is known.
-                            let new_schema: EthereumStorageSchema =
-                                Decode::decode(&mut &data.0[..]).unwrap();
-                            // Cache new entry and overwrite the old database value.
-                            if let Ok(Some(old_cache)) =
-                                frontier_backend_client::load_cached_schema::<B>(backend.as_ref())
-                            {
-                                let mut new_cache: Vec<(EthereumStorageSchema, H256)> = old_cache;
-                                match &new_cache[..] {
-                                    [.., (schema, _)] if *schema == new_schema => {
-                                        warn!(
+                    for data in storage.into_iter().flatten() {
+                        // Decode the wrapped blob which's type is known.
+                        let new_schema: EthereumStorageSchema =
+                            Decode::decode(&mut &data.0[..]).unwrap();
+                        // Cache new entry and overwrite the old database value.
+                        if let Ok(Some(old_cache)) =
+                            frontier_backend_client::load_cached_schema::<B>(backend.as_ref())
+                        {
+                            let mut new_cache: Vec<(EthereumStorageSchema, H256)> = old_cache;
+                            match &new_cache[..] {
+                                [.., (schema, _)] if *schema == new_schema => {
+                                    warn!(
 											"Schema version already in Frontier database, ignoring: {:?}",
 											new_schema
 										);
-                                    }
-                                    _ => {
-                                        new_cache.push((new_schema, hash));
-                                        let _ = frontier_backend_client::write_cached_schema::<B>(
-                                            backend.as_ref(),
-                                            new_cache,
-                                        )
-                                        .map_err(|err| {
-                                            warn!(
-                                                "Error schema cache insert for genesis: {:?}",
-                                                err
-                                            );
-                                        });
-                                    }
                                 }
-                            } else {
-                                warn!("Error schema cache is corrupted");
+                                _ => {
+                                    new_cache.push((new_schema, hash));
+                                    let _ = frontier_backend_client::write_cached_schema::<B>(
+                                        backend.as_ref(),
+                                        new_cache,
+                                    )
+                                    .map_err(|err| {
+                                        warn!("Error schema cache insert for genesis: {:?}", err);
+                                    });
+                                }
                             }
+                        } else {
+                            warn!("Error schema cache is corrupted");
                         }
                     }
                 }

@@ -160,13 +160,12 @@ impl SubscriptionResult {
         let mut logs: Vec<Log> = vec![];
         let mut log_index: u32 = 0;
         for (receipt_index, receipt) in receipts.into_iter().enumerate() {
-            let mut transaction_log_index: u32 = 0;
             let transaction_hash: Option<H256> = if receipt.logs.len() > 0 {
                 Some(block.transactions[receipt_index as usize].hash())
             } else {
                 None
             };
-            for log in receipt.logs {
+            for (transaction_log_index, log) in receipt.logs.into_iter().enumerate() {
                 if self.add_log(block_hash.unwrap(), &log, &block, params) {
                     logs.push(Log {
                         address: log.address,
@@ -182,7 +181,6 @@ impl SubscriptionResult {
                     });
                 }
                 log_index += 1;
-                transaction_log_index += 1;
             }
         }
         logs
