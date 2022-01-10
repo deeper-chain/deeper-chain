@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1641788897472,
+  "lastUpdate": 1641796544015,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -395,6 +395,38 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 89240552,
             "range": "± 14436213",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "deeper-chain",
+            "username": "deeper-chain"
+          },
+          "committer": {
+            "name": "deeper-chain",
+            "username": "deeper-chain"
+          },
+          "id": "84bb261ddac45d5633d751623c54fa7531dce388",
+          "message": "Evm for master",
+          "timestamp": "2022-01-10T03:35:56Z",
+          "url": "https://github.com/deeper-chain/deeper-chain/pull/168/commits/84bb261ddac45d5633d751623c54fa7531dce388"
+        },
+        "date": 1641796543584,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5721772,
+            "range": "± 1110017",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 94887414,
+            "range": "± 15908520",
             "unit": "ns/iter"
           }
         ]
