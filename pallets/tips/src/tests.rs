@@ -413,6 +413,9 @@ fn credit_tip_new_and_check_get_level() {
 fn report_awesome_and_tip_works() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
+        assert_ok!(Balances::set_balance(RawOrigin::Root.into(), 5, 100, 0));
+        TipPaymentAddress::<Test>::put(5);
+
         assert_ok!(Tips::report_awesome(
             Origin::signed(0),
             b"awesome.dot".to_vec(),
@@ -444,6 +447,8 @@ fn report_awesome_and_tip_works() {
 fn report_awesome_from_beneficiary_and_tip_works() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
+        assert_ok!(Balances::set_balance(RawOrigin::Root.into(), 5, 100, 0));
+        TipPaymentAddress::<Test>::put(5);
         assert_ok!(Tips::report_awesome(
             Origin::signed(0),
             b"awesome.dot".to_vec(),
