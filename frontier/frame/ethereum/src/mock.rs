@@ -134,7 +134,7 @@ impl FindAuthor<H160> for FindAuthorTruncated {
 
 parameter_types! {
     pub const TransactionByteFee: u64 = 1;
-    pub const ChainId: u64 = 42;
+    pub const ChainId: u64 = 518;
     pub const EVMModuleId: PalletId = PalletId(*b"py/evmpa");
     pub const BlockGasLimit: U256 = U256::MAX;
 }
