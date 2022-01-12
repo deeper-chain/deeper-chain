@@ -23,9 +23,8 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          components: rustfmt, clippy
+          profile: minimal
           target: wasm32-unknown-unknown
-          override: true
 
       - name: cache dependencies
         uses: Swatinem/rust-cache@v1
