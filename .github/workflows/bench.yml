@@ -1,7 +1,6 @@
 name: bench
 
 on:
-  pull_request:
   push:
     branches:
       - master
@@ -9,7 +8,7 @@ on:
 jobs:
   bench:
     name: benchmark
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, linux, deeper-chain-runner]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@master
