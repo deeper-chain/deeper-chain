@@ -39,6 +39,10 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch 
 sp-version = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false}
 sp-io ={ default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"  }
 
+# frontier primitives
+fp-rpc = { default-features = false, path = "../frontier/primitives/rpc" }
+fp-self-contained = { default-features = false, path = "../frontier/primitives/self-contained" }
+
 # frame dependencies
 frame-executive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false, optional = true }
@@ -87,6 +91,16 @@ pallet-credit = { version = "3.0.0", default-features = false, path = "../pallet
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
 pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
+
+# frontier frame dependencies
+libsecp256k1 = { version = "0.6", default-features = false, optional = true }
+pallet-ethereum = { default-features = false, path = "../frontier/frame/ethereum" }
+pallet-evm = { default-features = false, path = "../frontier/frame/evm" }
+pallet-dynamic-fee = { default-features = false, path = "../frontier/frame/dynamic-fee" }
+pallet-evm-precompile-simple = { default-features = false, path = "../frontier/frame/evm/precompile/simple" }
+pallet-evm-precompile-sha3fips = { default-features = false, path = "../frontier/frame/evm/precompile/sha3fips" }
+pallet-evm-precompile-modexp = { default-features = false, path = "../frontier/frame/evm/precompile/modexp" }
+pallet-base-fee = { default-features = false, path = "../frontier/frame/base-fee" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
@@ -162,10 +176,19 @@ std = [
 	"pallet-credit/std",
 	"pallet-eth-sub-bridge/std",
 	"pallet-deeper-node/std",
-	"pallet-credit-accumulation/std"
+	"pallet-credit-accumulation/std",
+	"fp-rpc/std",
+	"fp-self-contained/std",
+	"pallet-ethereum/std",
+	"pallet-evm/std",
+	"pallet-dynamic-fee/std",
+	"pallet-evm-precompile-simple/std",
+	"pallet-evm-precompile-sha3fips/std",
+	"pallet-base-fee/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
+	"libsecp256k1/hmac",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
@@ -200,4 +223,6 @@ runtime-benchmarks = [
 	"pallet-credit-accumulation/runtime-benchmarks",
 	"frame-system-benchmarking",
 	"hex-literal",
+	"pallet-ethereum/runtime-benchmarks",
+	"pallet-evm/runtime-benchmarks",
 ]

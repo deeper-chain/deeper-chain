@@ -176,7 +176,7 @@ pub fn construct_block(
                 BABE_ENGINE_ID,
                 PreDigest::SecondaryPlain(SecondaryPlainPreDigest {
                     slot: babe_slot,
-                    authority_index: 42,
+                    authority_index: 1,
                 })
                 .encode(),
             )],

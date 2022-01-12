@@ -24,9 +24,9 @@ use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CreditConfig,
-    DeeperNodeConfig, DemocracyConfig, ElectionsConfig, GrandpaConfig, ImOnlineConfig,
-    IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig,
-    SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+    DeeperNodeConfig, DemocracyConfig, EVMConfig, ElectionsConfig, EthereumConfig, GrandpaConfig,
+    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
+    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -37,11 +37,15 @@ use serde::{Deserialize, Serialize};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
 use sp_core::{crypto::UncheckedInto, sr25519, Pair, Public};
+use sp_core::{H160, U256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     Perbill, Percent,
 };
-use std::collections::BTreeSet;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    str::FromStr,
+};
 
 pub use node_primitives::{AccountId, Balance, BlockNumber, Signature};
 pub use node_runtime::GenesisConfig;
@@ -426,6 +430,67 @@ pub fn testnet_genesis(
             credit_settings,
             user_credit_data,
         },
+        evm: EVMConfig {
+            account_pairs: {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    // H160 address of Alice dev account
+                    // Derived from SS58 (42 prefix) address
+                    // SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+                    // hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+                    // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+                    H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
+                        .expect("internal H160 is valid; qed"),
+                    hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d").into(),
+                );
+                map.insert(
+                    // H160 address of Bob dev account
+                    // Derived from SS58 (42 prefix) address
+                    // SS58: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+                    // hex: 0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48
+                    // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+                    H160::from_str("8eaf04151687736326c9fea17e25fc5287613693")
+                        .expect("internal H160 is valid; qed"),
+                    hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into(),
+                );
+                map
+            },
+            accounts: {
+                let mut map = BTreeMap::new();
+                map.insert(
+                    // H160 address of Alice dev account
+                    // Derived from SS58 (42 prefix) address
+                    // SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+                    // hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+                    // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+                    H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
+                        .expect("internal H160 is valid; qed"),
+                    pallet_evm::GenesisAccount {
+                        balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
+                            .expect("internal U256 is valid; qed"),
+                        code: Default::default(),
+                        nonce: Default::default(),
+                        storage: Default::default(),
+                    },
+                );
+                map.insert(
+                    // H160 address of Bob dev account
+                    H160::from_str("8eaf04151687736326c9fea17e25fc5287613693")
+                        .expect("internal H160 is valid; qed"),
+                    pallet_evm::GenesisAccount {
+                        balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
+                            .expect("internal U256 is valid; qed"),
+                        code: Default::default(),
+                        nonce: Default::default(),
+                        storage: Default::default(),
+                    },
+                );
+                map
+            },
+        },
+        ethereum: EthereumConfig {},
+        dynamic_fee: Default::default(),
+        base_fee: Default::default(),
     }
 }
 
@@ -28920,8 +28985,10 @@ pub fn local_testnet_config() -> ChainSpec {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::cli::Cli;
     use crate::service::new_light_base;
     use crate::service::{new_full_base, NewFullBase};
+    use sc_cli::SubstrateCli;
     use sc_service_test;
     use sp_runtime::BuildStorage;
 
@@ -28980,13 +29047,14 @@ pub(crate) mod tests {
         sc_service_test::connectivity(
             integration_test_config_with_two_authorities(),
             |config| {
+                let cli = Cli::from_args();
                 let NewFullBase {
                     task_manager,
                     client,
                     network,
                     transaction_pool,
                     ..
-                } = new_full_base(config, |_, _| ())?;
+                } = new_full_base(config, |_, _| (), &cli)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     task_manager,
                     client,

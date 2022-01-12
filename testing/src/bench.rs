@@ -36,8 +36,8 @@ use codec::{Decode, Encode};
 use futures::executor;
 use node_primitives::Block;
 use node_runtime::{
-    constants::currency::DOLLARS, AccountId, BalancesCall, Call, CheckedExtrinsic, MinimumPeriod,
-    Signature, SystemCall, UncheckedExtrinsic,
+    constants::currency::DOLLARS, AccountId, BalancesCall, Call, CheckedExtrinsic,
+    CheckedSignature, MinimumPeriod, Signature, SystemCall, UncheckedExtrinsic,
 };
 use sc_block_builder::BlockBuilderProvider;
 use sc_client_api::{
@@ -320,10 +320,10 @@ impl<'a> Iterator for BlockContentIterator<'a> {
 
         let signed = self.keyring.sign(
             CheckedExtrinsic {
-                signed: Some((
+                signed: CheckedSignature::Signed(
                     sender,
                     signed_extra(0, node_runtime::ExistentialDeposit::get() + 1),
-                )),
+                ),
                 function: match self.content.block_type {
                     BlockType::RandomTransfersKeepAlive => {
                         Call::Balances(BalancesCall::transfer_keep_alive {
@@ -592,7 +592,7 @@ impl BenchKeyring {
         genesis_hash: [u8; 32],
     ) -> UncheckedExtrinsic {
         match xt.signed {
-            Some((signed, extra)) => {
+            CheckedSignature::Signed(signed, extra) => {
                 let payload = (
                     xt.function,
                     extra.clone(),
@@ -614,15 +614,15 @@ impl BenchKeyring {
                         }
                     })
                     .into();
-                UncheckedExtrinsic {
-                    signature: Some((sp_runtime::MultiAddress::Id(signed), signature, extra)),
-                    function: payload.0,
-                }
+                UncheckedExtrinsic::new_signed(
+                    payload.0,
+                    sp_runtime::MultiAddress::Id(signed),
+                    signature,
+                    extra,
+                )
             }
-            None => UncheckedExtrinsic {
-                signature: None,
-                function: xt.function,
-            },
+            CheckedSignature::Unsigned => UncheckedExtrinsic::new_unsigned(xt.function),
+            CheckedSignature::SelfContained(_) => UncheckedExtrinsic::new_unsigned(xt.function),
         }
     }
 

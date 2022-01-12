@@ -148,7 +148,7 @@ fn should_submit_signed_twice_from_the_same_account() {
         // now check that the transaction nonces are not equal
         let s = state.read();
         fn nonce(tx: UncheckedExtrinsic) -> frame_system::CheckNonce<Runtime> {
-            let extra = tx.signature.unwrap().2;
+            let extra = tx.0.signature.unwrap().2;
             extra.4
         }
         let nonce1 = nonce(UncheckedExtrinsic::decode(&mut &*s.transactions[0]).unwrap());
@@ -207,7 +207,7 @@ fn should_submit_signed_twice_from_all_accounts() {
 		// now check that the transaction nonces are not equal
 		let s = state.read();
 		fn nonce(tx: UncheckedExtrinsic) -> frame_system::CheckNonce<Runtime> {
-			let extra = tx.signature.unwrap().2;
+			let extra = tx.0.signature.unwrap().2;
 			extra.4
 		}
 		let nonce1 = nonce(UncheckedExtrinsic::decode(&mut &*s.transactions[0]).unwrap());
@@ -265,7 +265,7 @@ fn submitted_transaction_should_be_valid() {
         let source = TransactionSource::External;
         let extrinsic = UncheckedExtrinsic::decode(&mut &*tx0).unwrap();
         // add balance to the account
-        let author = extrinsic.signature.clone().unwrap().0;
+        let author = extrinsic.0.signature.clone().unwrap().0;
         let address = Indices::lookup(author).unwrap();
         let data = pallet_balances::AccountData {
             free: 50_000_000_000_000_000,
