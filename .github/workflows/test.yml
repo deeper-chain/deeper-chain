@@ -24,10 +24,9 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
-          components: rustfmt, clippy, llvm-tools-preview
+          profile: minimal
+          components: llvm-tools-preview
           target: wasm32-unknown-unknown
-          override: true
 
       - name: cache dependencies
         uses: Swatinem/rust-cache@v1
