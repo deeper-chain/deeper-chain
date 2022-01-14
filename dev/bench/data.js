@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1642084825129,
+  "lastUpdate": 1642157335753,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -559,6 +559,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 88395218,
             "range": "± 9091152",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "84bcabc436a538358e1cee005e014998321506cd",
+          "message": "use some known accounts as validator (#171)\n\n* use some known accounts as validator\r\n\r\nthis will make build local test net easier\r\n\r\n* rustfmt.toml shouldn't lock rustfmt's version",
+          "timestamp": "2022-01-14T18:00:32+08:00",
+          "tree_id": "d547f94d453d5226f75005c4197adbe0ceb2419a",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/84bcabc436a538358e1cee005e014998321506cd"
+        },
+        "date": 1642157335428,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 4991986,
+            "range": "± 664925",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 83511932,
+            "range": "± 8310062",
             "unit": "ns/iter"
           }
         ]
