@@ -18,10 +18,8 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
           components: rustfmt, clippy
           target: wasm32-unknown-unknown
-          override: true
 
       - name: cache dependencies
         uses: Swatinem/rust-cache@v1
