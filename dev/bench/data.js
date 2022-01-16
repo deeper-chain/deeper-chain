@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1642309487888,
+  "lastUpdate": 1642336798157,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -631,6 +631,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 85480293,
             "range": "± 9009421",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e64286d330ea22f89388f9626e5f9a64a1f59b31",
+          "message": "Remove the eth rpc interface that triggered the panic (#173)",
+          "timestamp": "2022-01-16T19:48:12+08:00",
+          "tree_id": "16fbfb4077a817a87407e5b8faeaebaeeae9d35e",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/e64286d330ea22f89388f9626e5f9a64a1f59b31"
+        },
+        "date": 1642336797765,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5308293,
+            "range": "± 707858",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 84799224,
+            "range": "± 7966820",
             "unit": "ns/iter"
           }
         ]
