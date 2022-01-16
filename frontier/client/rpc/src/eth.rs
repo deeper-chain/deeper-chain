@@ -1581,53 +1581,6 @@ where
         }
     }
 
-    fn transaction_by_block_number_and_index(
-        &self,
-        number: BlockNumber,
-        index: Index,
-    ) -> Result<Option<Transaction>> {
-        let id = match frontier_backend_client::native_block_id::<B, C>(
-            self.client.as_ref(),
-            self.backend.as_ref(),
-            Some(number),
-        )? {
-            Some(id) => id,
-            None => return Ok(None),
-        };
-        let substrate_hash = self
-            .client
-            .expect_block_hash_from_id(&id)
-            .map_err(|_| internal_err(format!("Expect block number from id: {}", id)))?;
-
-        let index = index.value();
-        let schema =
-            frontier_backend_client::onchain_storage_schema::<B, C, BE>(self.client.as_ref(), id);
-        let handler = self
-            .overrides
-            .schemas
-            .get(&schema)
-            .unwrap_or(&self.overrides.fallback);
-
-        let block = self.block_data_cache.current_block(handler, substrate_hash);
-        let statuses = self
-            .block_data_cache
-            .current_transaction_statuses(handler, substrate_hash);
-
-        let base_fee = handler.base_fee(&id);
-        let is_eip1559 = handler.is_eip1559(&id);
-
-        match (block, statuses) {
-            (Some(block), Some(statuses)) => Ok(Some(transaction_build(
-                block.transactions[index].clone(),
-                Some(block),
-                Some(statuses[index].clone()),
-                is_eip1559,
-                base_fee,
-            ))),
-            _ => Ok(None),
-        }
-    }
-
     fn transaction_receipt(&self, hash: H256) -> Result<Option<Receipt>> {
         let (hash, index) = match frontier_backend_client::load_transactions::<B, C>(
             self.client.as_ref(),
