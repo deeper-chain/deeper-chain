@@ -210,9 +210,9 @@ fn reducible_balance() {
         // Reserve some funds.
         let to_lock = 1000;
         Balances::set_lock(lock_id, &account_id, to_lock, WithdrawReasons::RESERVE);
-        // Reducible is, as currently configured in `account_basic`, (balance - lock + existential).
+        // Reducible is, as currently configured in `account_basic`, (balance - lock - existential).
         let reducible_balance = EVM::account_basic(&evm_addr).balance;
-        assert_eq!(reducible_balance, (genesis_balance - to_lock + existential));
+        assert_eq!(reducible_balance, (genesis_balance - to_lock - existential));
     });
 }
 */
@@ -325,5 +325,31 @@ fn refunds_and_priority_should_work() {
 
         let after_tip = EVM::account_basic(&author).balance;
         assert_eq!(after_tip, (before_tip + tip));
+    });
+}
+
+#[test]
+fn handle_sufficient_reference() {
+    new_test_ext().execute_with(|| {
+        let addr = H160::from_str("1230000000000000000000000000000000000001").unwrap();
+        let addr_2 = H160::from_str("1234000000000000000000000000000000000001").unwrap();
+        let substrate_addr = <Test as Config>::AddressMapping::into_account_id(addr);
+        let substrate_addr_2 = <Test as Config>::AddressMapping::into_account_id(addr_2);
+
+        // Sufficients should increase when creating EVM accounts.
+        let _ = <crate::AccountCodes<Test>>::insert(addr, &vec![0]);
+        let account = frame_system::Account::<Test>::get(substrate_addr);
+        // Using storage is not correct as it leads to a sufficient reference mismatch.
+        assert_eq!(account.sufficients, 0);
+
+        // Using the create / remove account functions is the correct way to handle it.
+        EVM::create_account(addr_2, vec![1, 2, 3]);
+        let account_2 = frame_system::Account::<Test>::get(substrate_addr_2);
+        // We increased the sufficient reference by 1.
+        assert_eq!(account_2.sufficients, 1);
+        EVM::remove_account(&addr_2);
+        let account_2 = frame_system::Account::<Test>::get(substrate_addr_2);
+        // We decreased the sufficient reference by 1 on removing the account.
+        assert_eq!(account_2.sufficients, 0);
     });
 }

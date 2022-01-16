@@ -20,7 +20,10 @@ use fp_rpc::TransactionStatus;
 use sc_client_api::backend::{AuxStore, Backend, StateBackend, StorageProvider};
 use sp_api::BlockId;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use sp_runtime::traits::{BlakeTwo256, Block as BlockT};
+use sp_runtime::{
+    traits::{BlakeTwo256, Block as BlockT},
+    Permill,
+};
 use sp_storage::StorageKey;
 use std::{marker::PhantomData, sync::Arc};
 
@@ -50,14 +53,6 @@ where
     B: BlockT<Hash = H256> + Send + Sync + 'static,
     C: Send + Sync + 'static,
 {
-    // My attempt using result
-    // fn query_storage<T: Decode>(&self, id: &BlockId<B>, key: &StorageKey) -> Result<T> {
-    // 	let raw_data = self.client.storage(id, key)?
-    // 		.ok_or("Storage provider returned Ok(None)")?;
-    //
-    // 	Decode::decode(&mut &raw_data.0[..]).map_err(|_| "Could not decode data".into())
-    // }
-
     fn query_storage<T: Decode>(&self, id: &BlockId<B>, key: &StorageKey) -> Option<T> {
         if let Ok(Some(data)) = self.client.storage(id, key) {
             if let Ok(result) = Decode::decode(&mut &data.0[..]) {
@@ -108,11 +103,24 @@ where
     }
 
     /// Return the current receipt.
-    fn current_receipts(&self, block: &BlockId<Block>) -> Option<Vec<ethereum::Receipt>> {
-        self.query_storage::<Vec<ethereum::Receipt>>(
+    fn current_receipts(&self, block: &BlockId<Block>) -> Option<Vec<ethereum::ReceiptV3>> {
+        self.query_storage::<Vec<ethereum::ReceiptV0>>(
             block,
             &StorageKey(storage_prefix_build(b"Ethereum", b"CurrentReceipts")),
         )
+        .map(|receipts| {
+            receipts
+                .into_iter()
+                .map(|r| {
+                    ethereum::ReceiptV3::Legacy(ethereum::EIP658ReceiptData {
+                        status_code: r.state_root.to_low_u64_be() as u8,
+                        used_gas: r.used_gas,
+                        logs_bloom: r.logs_bloom,
+                        logs: r.logs,
+                    })
+                })
+                .collect()
+        })
     }
 
     /// Return the current transaction status.
@@ -131,6 +139,11 @@ where
 
     /// Prior to eip-1559 there is no base fee.
     fn base_fee(&self, _block: &BlockId<Block>) -> Option<U256> {
+        None
+    }
+
+    /// Prior to eip-1559 there is no base fee.
+    fn elasticity(&self, _block: &BlockId<Block>) -> Option<Permill> {
         None
     }
 

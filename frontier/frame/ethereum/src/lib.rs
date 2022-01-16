@@ -34,7 +34,7 @@ use frame_support::{
     traits::{EnsureOrigin, Get},
     weights::{Pays, PostDispatchInfo, Weight},
 };
-use frame_system::pallet_prelude::OriginFor;
+use frame_system::{pallet_prelude::OriginFor, WeightInfo};
 use pallet_evm::{BlockHashMapping, FeeCalculator, GasWeightMapping, Runner};
 use sha3::{Digest, Keccak256};
 use sp_runtime::{
@@ -48,8 +48,8 @@ use sp_runtime::{
 use sp_std::{marker::PhantomData, prelude::*};
 
 pub use ethereum::{
-    BlockV2 as Block, LegacyTransactionMessage, Log, Receipt, TransactionAction,
-    TransactionV2 as Transaction,
+    AccessListItem, BlockV2 as Block, LegacyTransactionMessage, Log, ReceiptV3 as Receipt,
+    TransactionAction, TransactionV2 as Transaction,
 };
 pub use fp_rpc::TransactionStatus;
 
@@ -209,6 +209,7 @@ pub mod pallet {
 
         fn on_initialize(_: T::BlockNumber) -> Weight {
             Pending::<T>::kill();
+            let mut weight = T::SystemWeightInfo::kill_storage(1);
 
             // If the digest contain an existing ethereum block(encoded as PreLog), If contains,
             // execute the imported block firstly and disable transact dispatch function.
@@ -223,20 +224,25 @@ pub mod pallet {
                     Self::validate_transaction_in_block(source, &transaction).expect(
                         "pre-block transaction verification failed; the block cannot be built",
                     );
-                    Self::apply_validated_transaction(source, transaction);
+                    let r = Self::apply_validated_transaction(source, transaction);
+                    weight = weight.saturating_add(r.actual_weight.unwrap_or(0 as Weight));
                 }
             }
-
-            0
+            // Account for `on_finalize` weight:
+            //    - read: frame_system::Pallet::<T>::digest()
+            //    - read: frame_system::Pallet::<T>::block_number()
+            //    - write: <Pallet<T>>::store_block()
+            //    - write: <BlockHash<T>>::remove()
+            weight.saturating_add(T::DbWeight::get().reads_writes(2, 2))
         }
 
         fn on_runtime_upgrade() -> Weight {
             frame_support::storage::unhashed::put::<EthereumStorageSchema>(
                 &PALLET_ETHEREUM_SCHEMA,
-                &EthereumStorageSchema::V2,
+                &EthereumStorageSchema::V3,
             );
 
-            0
+            T::DbWeight::get().write
         }
     }
 
@@ -282,7 +288,7 @@ pub mod pallet {
     /// Current building block's transactions and receipts.
     #[pallet::storage]
     pub(super) type Pending<T: Config> =
-        StorageValue<_, Vec<(Transaction, TransactionStatus, ethereum::Receipt)>, ValueQuery>;
+        StorageValue<_, Vec<(Transaction, TransactionStatus, Receipt)>, ValueQuery>;
 
     /// The current Ethereum block.
     #[pallet::storage]
@@ -290,7 +296,7 @@ pub mod pallet {
 
     /// The current Ethereum receipts.
     #[pallet::storage]
-    pub(super) type CurrentReceipts<T: Config> = StorageValue<_, Vec<ethereum::Receipt>>;
+    pub(super) type CurrentReceipts<T: Config> = StorageValue<_, Vec<Receipt>>;
 
     /// The current transaction statuses.
     #[pallet::storage]
@@ -310,7 +316,7 @@ pub mod pallet {
             <Pallet<T>>::store_block(false, U256::zero());
             frame_support::storage::unhashed::put::<EthereumStorageSchema>(
                 &PALLET_ETHEREUM_SCHEMA,
-                &EthereumStorageSchema::V2,
+                &EthereumStorageSchema::V3,
             );
         }
     }
@@ -406,11 +412,18 @@ impl<T: Config> Pallet<T> {
         let mut statuses = Vec::new();
         let mut receipts = Vec::new();
         let mut logs_bloom = Bloom::default();
+        let mut cumulative_gas_used = U256::zero();
         for (transaction, status, receipt) in Pending::<T>::get() {
             transactions.push(transaction);
             statuses.push(status);
             receipts.push(receipt.clone());
-            Self::logs_bloom(receipt.logs.clone(), &mut logs_bloom);
+            let (logs, used_gas) = match receipt {
+                Receipt::Legacy(d) | Receipt::EIP2930(d) | Receipt::EIP1559(d) => {
+                    (d.logs.clone(), d.used_gas)
+                }
+            };
+            cumulative_gas_used = used_gas;
+            Self::logs_bloom(logs, &mut logs_bloom);
         }
 
         let ommers = Vec::<ethereum::Header>::new();
@@ -425,10 +438,7 @@ impl<T: Config> Pallet<T> {
             difficulty: U256::zero(),
             number: block_number,
             gas_limit: T::BlockGasLimit::get(),
-            gas_used: receipts
-                .clone()
-                .into_iter()
-                .fold(U256::zero(), |acc, r| acc + r.used_gas),
+            gas_used: cumulative_gas_used,
             timestamp: UniqueSaturatedInto::<u64>::unique_saturated_into(
                 pallet_timestamp::Pallet::<T>::get(),
             ),
@@ -581,8 +591,9 @@ impl<T: Config> Pallet<T> {
     }
 
     fn apply_validated_transaction(source: H160, transaction: Transaction) -> PostDispatchInfo {
+        let pending = Pending::<T>::get();
         let transaction_hash = transaction.hash();
-        let transaction_index = Pending::<T>::get().len() as u32;
+        let transaction_index = pending.len() as u32;
 
         let (to, _, info) = Self::execute(source, &transaction, None)
             .expect("transaction is already validated; error indicates that the block is invalid");
@@ -626,16 +637,42 @@ impl<T: Config> Pallet<T> {
             ),
         };
 
-        let receipt = ethereum::Receipt {
-            state_root: match reason {
-                ExitReason::Succeed(_) => H256::from_low_u64_be(1),
-                ExitReason::Error(_) => H256::from_low_u64_le(0),
-                ExitReason::Revert(_) => H256::from_low_u64_le(0),
-                ExitReason::Fatal(_) => H256::from_low_u64_le(0),
-            },
-            used_gas,
-            logs_bloom: status.clone().logs_bloom,
-            logs: status.clone().logs,
+        let receipt = {
+            let status_code: u8 = match reason {
+                ExitReason::Succeed(_) => 1,
+                _ => 0,
+            };
+            let logs_bloom = status.clone().logs_bloom;
+            let logs = status.clone().logs;
+            let cumulative_gas_used = if let Some((_, _, receipt)) = pending.last() {
+                match receipt {
+                    Receipt::Legacy(d) | Receipt::EIP2930(d) | Receipt::EIP1559(d) => {
+                        d.used_gas.saturating_add(used_gas)
+                    }
+                }
+            } else {
+                used_gas
+            };
+            match &transaction {
+                Transaction::Legacy(_) => Receipt::Legacy(ethereum::EIP658ReceiptData {
+                    status_code,
+                    used_gas: cumulative_gas_used,
+                    logs_bloom,
+                    logs,
+                }),
+                Transaction::EIP2930(_) => Receipt::EIP2930(ethereum::EIP2930ReceiptData {
+                    status_code,
+                    used_gas: cumulative_gas_used,
+                    logs_bloom,
+                    logs,
+                }),
+                Transaction::EIP1559(_) => Receipt::EIP1559(ethereum::EIP2930ReceiptData {
+                    status_code,
+                    used_gas: cumulative_gas_used,
+                    logs_bloom,
+                    logs,
+                }),
+            }
         };
 
         Pending::<T>::append((transaction, status, receipt));
@@ -671,7 +708,7 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Get receipts by number.
-    pub fn current_receipts() -> Option<Vec<ethereum::Receipt>> {
+    pub fn current_receipts() -> Option<Vec<Receipt>> {
         CurrentReceipts::<T>::get()
     }
 
@@ -828,6 +865,7 @@ pub enum EthereumStorageSchema {
     Undefined,
     V1,
     V2,
+    V3,
 }
 
 impl Default for EthereumStorageSchema {

@@ -34,7 +34,7 @@ async function test() {
     let is_mining = await isMining();
 
     let chain_id = await getChainId();
-    if (chain_id != 43) {
+    if (chain_id != 518) {
         console.error("chain id is wrong: " + chain_id);
     }
 

@@ -48,7 +48,7 @@
 //! the exact same transaction / receipt format. However, given one Ethereum transaction and one Substrate account's
 //! private key, one should be able to convert any Ethereum transaction into a transaction compatible with this pallet.
 //!
-//! The gas configurations are configurable. Right now, a pre-defined Istanbul hard fork configuration option is provided.
+//! The gas configurations are configurable. Right now, a pre-defined London hard fork configuration option is provided.
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -142,7 +142,7 @@ pub mod pallet {
 
         /// EVM config used in the module.
         fn config() -> &'static EvmConfig {
-            &ISTANBUL_CONFIG
+            &LONDON_CONFIG
         }
     }
 
@@ -434,7 +434,7 @@ pub mod pallet {
                     account.balance.low_u128().unique_saturated_into(),
                 );
 
-                <AccountCodes<T>>::insert(address, &account.code);
+                Pallet::<T>::create_account(*address, account.code.clone());
 
                 for (index, value) in &account.storage {
                     <AccountStorages<T>>::insert(address, index, value);
@@ -559,7 +559,7 @@ impl GasWeightMapping for () {
     }
 }
 
-static ISTANBUL_CONFIG: EvmConfig = EvmConfig::istanbul();
+static LONDON_CONFIG: EvmConfig = EvmConfig::london();
 
 #[cfg(feature = "std")]
 #[derive(Clone, Eq, PartialEq, Encode, Decode, Debug, Serialize, Deserialize)]
@@ -643,7 +643,7 @@ impl<T: Config> Pallet<T> {
     pub fn remove_account(address: &H160) {
         if <AccountCodes<T>>::contains_key(address) {
             let account_id = T::AddressMapping::into_account_id(*address);
-            let _ = frame_system::Pallet::<T>::dec_consumers(&account_id);
+            let _ = frame_system::Pallet::<T>::dec_sufficients(&account_id);
         }
 
         <AccountCodes<T>>::remove(address);
@@ -658,7 +658,7 @@ impl<T: Config> Pallet<T> {
 
         if !<AccountCodes<T>>::contains_key(&address) {
             let account_id = T::AddressMapping::into_account_id(address);
-            let _ = frame_system::Pallet::<T>::inc_consumers(&account_id);
+            let _ = frame_system::Pallet::<T>::inc_sufficients(&account_id);
         }
 
         <AccountCodes<T>>::insert(address, code);

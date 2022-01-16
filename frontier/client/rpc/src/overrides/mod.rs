@@ -20,16 +20,18 @@ use ethereum_types::{H160, H256, U256};
 use fp_rpc::{EthereumRuntimeRPCApi, TransactionStatus};
 use sp_api::{ApiExt, BlockId, ProvideRuntimeApi};
 use sp_io::hashing::{blake2_128, twox_128};
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::{traits::Block as BlockT, Permill};
 use std::{marker::PhantomData, sync::Arc};
 
 mod schema_v1_override;
 mod schema_v2_override;
+mod schema_v3_override;
 
 pub use fc_rpc_core::{EthApiServer, NetApiServer};
 use pallet_ethereum::EthereumStorageSchema;
 pub use schema_v1_override::SchemaV1Override;
 pub use schema_v2_override::SchemaV2Override;
+pub use schema_v3_override::SchemaV3Override;
 
 pub struct OverrideHandle<Block: BlockT> {
     pub schemas: BTreeMap<EthereumStorageSchema, Box<dyn StorageOverride<Block> + Send + Sync>>,
@@ -49,7 +51,7 @@ pub trait StorageOverride<Block: BlockT> {
     /// Return the current block.
     fn current_block(&self, block: &BlockId<Block>) -> Option<EthereumBlock>;
     /// Return the current receipt.
-    fn current_receipts(&self, block: &BlockId<Block>) -> Option<Vec<ethereum::Receipt>>;
+    fn current_receipts(&self, block: &BlockId<Block>) -> Option<Vec<ethereum::ReceiptV3>>;
     /// Return the current transaction status.
     fn current_transaction_statuses(
         &self,
@@ -57,6 +59,8 @@ pub trait StorageOverride<Block: BlockT> {
     ) -> Option<Vec<TransactionStatus>>;
     /// Return the base fee at the given height.
     fn base_fee(&self, block: &BlockId<Block>) -> Option<U256>;
+    /// Return the base fee at the given height.
+    fn elasticity(&self, block: &BlockId<Block>) -> Option<Permill>;
     /// Return `true` if the request BlockId is post-eip1559.
     fn is_eip1559(&self, block: &BlockId<Block>) -> bool;
 }
@@ -141,8 +145,39 @@ where
     }
 
     /// Return the current receipt.
-    fn current_receipts(&self, block: &BlockId<Block>) -> Option<Vec<ethereum::Receipt>> {
-        self.client.runtime_api().current_receipts(&block).ok()?
+    fn current_receipts(&self, block: &BlockId<Block>) -> Option<Vec<ethereum::ReceiptV3>> {
+        let api = self.client.runtime_api();
+
+        let api_version = if let Ok(Some(api_version)) =
+            api.api_version::<dyn EthereumRuntimeRPCApi<Block>>(&block)
+        {
+            api_version
+        } else {
+            return None;
+        };
+        if api_version < 4 {
+            #[allow(deprecated)]
+            let old_receipts = api.current_receipts_before_version_4(&block).ok()?;
+            if let Some(receipts) = old_receipts {
+                Some(
+                    receipts
+                        .into_iter()
+                        .map(|r| {
+                            ethereum::ReceiptV3::Legacy(ethereum::EIP658ReceiptData {
+                                status_code: r.state_root.to_low_u64_be() as u8,
+                                used_gas: r.used_gas,
+                                logs_bloom: r.logs_bloom,
+                                logs: r.logs,
+                            })
+                        })
+                        .collect(),
+                )
+            } else {
+                None
+            }
+        } else {
+            self.client.runtime_api().current_receipts(&block).ok()?
+        }
     }
 
     /// Return the current transaction status.
@@ -160,6 +195,15 @@ where
     fn base_fee(&self, block: &BlockId<Block>) -> Option<U256> {
         if self.is_eip1559(block) {
             self.client.runtime_api().gas_price(&block).ok()
+        } else {
+            None
+        }
+    }
+
+    /// Return the elasticity multiplier at the give post-eip1559 height.
+    fn elasticity(&self, block: &BlockId<Block>) -> Option<Permill> {
+        if self.is_eip1559(block) {
+            self.client.runtime_api().elasticity(&block).ok()?
         } else {
             None
         }
