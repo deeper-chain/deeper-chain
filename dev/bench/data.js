@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1642157335753,
+  "lastUpdate": 1642309487888,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -595,6 +595,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 83511932,
             "range": "± 8310062",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bdd762673b88e0b423574d0cb43f229938af06ef",
+          "message": "Added evm pallet, need to update transaction_version (#172)",
+          "timestamp": "2022-01-16T11:38:11+08:00",
+          "tree_id": "b58a435ecfd77c5774c4e50421aa75feda18fc33",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/bdd762673b88e0b423574d0cb43f229938af06ef"
+        },
+        "date": 1642309487560,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5002922,
+            "range": "± 589315",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 85480293,
+            "range": "± 9009421",
             "unit": "ns/iter"
           }
         ]
