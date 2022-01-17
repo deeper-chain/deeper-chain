@@ -63,8 +63,8 @@ sp-authorship = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # frontier primitives
-fp-consensus = { git = "https://github.com/deeper-chain/frontier.git" }
-fp-rpc = { git = "https://github.com/deeper-chain/frontier.git" }
+fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -89,11 +89,11 @@ sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", branch 
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # frontier client dependencies
-fc-consensus = { git = "https://github.com/deeper-chain/frontier.git" }
-fc-rpc = { git = "https://github.com/deeper-chain/frontier.git" }
-fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git" }
-fc-db = { git = "https://github.com/deeper-chain/frontier.git" }
-fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git" }
+fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+fc-db = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
 
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -101,7 +101,7 @@ pallet-timestamp = { default-features = false, git = "https://github.com/parityt
 pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-pallet-balances = { version = "3.0.0", path = "../pallets/balances" }
+pallet-balances = { version = "3.0.0", git = "https://github.com/deeper-chain/deeper-chain.git" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
 frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
 pallet-im-online = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -114,10 +114,10 @@ pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
 
 # frontier frame dependencies
-pallet-evm = { git = "https://github.com/deeper-chain/frontier.git" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git" }
-pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git" }
-pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git" }
+pallet-evm = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
+pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git", rev = "b4bace58d5605ef7bfb78904ab61f6bdba18fa46" }
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }

@@ -690,9 +690,9 @@ checksum = "c1db59621ec70f09c5e9b597b220c7a2b43611f4710dc03ceb8748637775692c"
 
 [[package]]
 name = "camino"
-version = "1.0.5"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52d74260d9bf6944e2208aa46841b4b8f0d7ffc0849a06837b2f510337f86b2b"
+checksum = "6f3132262930b0522068049f5870a856ab8affc80c70d08b6ecb785771a6fc23"
 dependencies = [
  "serde",
 ]
@@ -1638,7 +1638,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "async-trait",
  "derive_more",
@@ -1664,7 +1664,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-storage",
  "kvdb",
@@ -1680,7 +1680,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fc-consensus",
  "fc-db",
@@ -1698,7 +1698,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1745,7 +1745,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1853,7 +1853,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -1867,7 +1867,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "evm",
  "parity-scale-codec",
@@ -1879,7 +1879,7 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1896,7 +1896,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ethereum",
  "frame-support",
@@ -1913,7 +1913,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 
 [[package]]
 name = "frame-benchmarking"
@@ -4154,7 +4154,7 @@ dependencies = [
  "node-rpc",
  "node-runtime",
  "pallet-authority-discovery",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-base-fee",
  "pallet-contracts",
  "pallet-credit",
@@ -4239,7 +4239,7 @@ dependencies = [
  "node-primitives",
  "node-runtime",
  "node-testing",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-contracts",
  "pallet-grandpa",
  "pallet-im-online",
@@ -4370,7 +4370,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-authorship",
  "pallet-babe",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-base-fee",
  "pallet-bounties",
  "pallet-collective",
@@ -4455,7 +4455,7 @@ dependencies = [
  "node-executor",
  "node-primitives",
  "node-runtime",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-contracts",
  "pallet-deeper-node",
  "pallet-eth-sub-bridge",
@@ -4788,7 +4788,7 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "3.0.0"
-source = "git+https://github.com/deeper-chain/deeper-chain.git#bdd762673b88e0b423574d0cb43f229938af06ef"
+source = "git+https://github.com/deeper-chain/deeper-chain.git#e64286d330ea22f89388f9626e5f9a64a1f59b31"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4819,7 +4819,7 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4959,7 +4959,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-deeper-node",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -4982,7 +4982,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5004,7 +5004,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5033,7 +5033,7 @@ dependencies = [
 [[package]]
 name = "pallet-dynamic-fee"
 version = "4.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -5075,7 +5075,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -5089,7 +5089,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -5118,7 +5118,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "evm",
  "evm-gasometer",
@@ -5147,7 +5147,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5157,7 +5157,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5168,7 +5168,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-curve25519"
 version = "1.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "curve25519-dalek 4.0.0-pre.1",
  "fp-evm",
@@ -5181,7 +5181,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5194,7 +5194,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-ed25519"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "ed25519-dalek",
  "fp-evm",
@@ -5205,7 +5205,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-evm",
  "num",
@@ -5216,7 +5216,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5227,7 +5227,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
+source = "git+https://github.com/deeper-chain/frontier.git?rev=b4bace58d5605ef7bfb78904ab61f6bdba18fa46#b4bace58d5605ef7bfb78904ab61f6bdba18fa46"
 dependencies = [
  "fp-evm",
  "ripemd160",
@@ -5353,7 +5353,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",
@@ -5554,7 +5554,7 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-authorship",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -7819,9 +7819,9 @@ dependencies = [
 
 [[package]]
 name = "security-framework"
-version = "2.4.2"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "525bc1abfda2e1998d152c45cf13e696f76d0a4972310b22fac1658b05df7c87"
+checksum = "d09d3c15d814eda1d6a836f2f2b56a6abc1446c8a34351cb3180d3db92ffe4ce"
 dependencies = [
  "bitflags",
  "core-foundation",
@@ -7832,9 +7832,9 @@ dependencies = [
 
 [[package]]
 name = "security-framework-sys"
-version = "2.4.2"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9dd14d83160b528b7bfd66439110573efcfbe281b17fc2ca9f39f550d619c7e"
+checksum = "e90dd10c41c6bfc633da6e0c659bd25d31e0791e5974ac42970267d59eba87f7"
 dependencies = [
  "core-foundation-sys",
  "libc",

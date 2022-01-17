@@ -318,7 +318,7 @@ pub fn new_full_base(
     let enable_dev_signer = cli.run.enable_dev_signer;
     let subscription_task_executor =
         sc_rpc::SubscriptionTaskExecutor::new(task_manager.spawn_handle());
-    let overrides = crate::rpc::overrides_handle(client.clone());
+    let overrides = node_rpc::overrides_handle(client.clone());
     let fee_history_limit = cli.run.fee_history_limit;
 
     let block_data_cache = Arc::new(fc_rpc::EthBlockDataCache::new(

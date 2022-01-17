@@ -40,7 +40,7 @@ use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::opaque::Block;
 use pallet_ethereum::EthereumStorageSchema;
 use sc_client_api::{
-    backend::{AuxStore, StorageProvider},
+    backend::{AuxStore, Backend, StateBackend, StorageProvider},
     client::BlockchainEvents,
 };
 use sc_consensus_babe::{Config, Epoch};
@@ -61,6 +61,7 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 use sp_keystore::SyncCryptoStorePtr;
+use sp_runtime::traits::BlakeTwo256;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -141,6 +142,7 @@ pub struct FullDeps<C, P, SC, B, A: ChainApi> {
     pub block_data_cache: Arc<EthBlockDataCache<Block>>,
 }
 
+/// override handle
 pub fn overrides_handle<C, BE>(client: Arc<C>) -> Arc<OverrideHandle<Block>>
 where
     C: ProvideRuntimeApi<Block> + StorageProvider<Block, BE> + AuxStore,
