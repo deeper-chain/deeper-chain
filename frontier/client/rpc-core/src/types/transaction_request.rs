@@ -94,11 +94,7 @@ impl Into<Option<TransactionMessage>> for TransactionRequest {
                     None => ethereum::TransactionAction::Create,
                 },
                 chain_id: 0,
-                access_list: self
-                    .access_list
-                    .unwrap()
-                    .into_iter()
-                    .collect(),
+                access_list: self.access_list.unwrap().into_iter().collect(),
             })),
             // EIP1559
             (None, Some(_), _) | (None, None, None) => {
@@ -117,11 +113,7 @@ impl Into<Option<TransactionMessage>> for TransactionRequest {
                         None => ethereum::TransactionAction::Create,
                     },
                     chain_id: 0,
-                    access_list: self
-                        .access_list
-                        .unwrap_or(Vec::new())
-                        .into_iter()
-                        .collect(),
+                    access_list: self.access_list.unwrap_or(Vec::new()).into_iter().collect(),
                 }))
             }
             _ => None,
