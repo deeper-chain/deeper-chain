@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1642336798157,
+  "lastUpdate": 1642428530143,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -667,6 +667,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 84799224,
             "range": "± 7966820",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "11b83442d315e8ef733f856b41750b22230d8172",
+          "message": "remove unused report mod in primitives (#176)",
+          "timestamp": "2022-01-17T21:10:59+08:00",
+          "tree_id": "795cdb2768d42df53963ee5451ef09449bd58d30",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/11b83442d315e8ef733f856b41750b22230d8172"
+        },
+        "date": 1642428529745,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5738707,
+            "range": "± 641177",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 92380219,
+            "range": "± 11527370",
             "unit": "ns/iter"
           }
         ]
