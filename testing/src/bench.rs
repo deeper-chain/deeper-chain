@@ -95,7 +95,6 @@ pub fn drop_system_cache() {
             target: "bench-logistics",
             "Clearing system cache on windows is not supported. Benchmark might totally be wrong.",
         );
-        return;
     }
 
     std::process::Command::new("sync")
