@@ -344,7 +344,7 @@ fn handle_sufficient_reference() {
 
         // Using the create / remove account functions is the correct way to handle it.
         EVM::create_account(addr_2, vec![1, 2, 3]);
-        let account_2 = frame_system::Account::<Test>::get(substrate_addr_2);
+        let account_2 = frame_system::Account::<Test>::get(substrate_addr_2.clone());
         // We increased the sufficient reference by 1.
         assert_eq!(account_2.sufficients, 1);
         EVM::remove_account(&addr_2);
