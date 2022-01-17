@@ -98,7 +98,6 @@ impl Into<Option<TransactionMessage>> for TransactionRequest {
                     .access_list
                     .unwrap()
                     .into_iter()
-                    .map(|item| item)
                     .collect(),
             })),
             // EIP1559
@@ -122,7 +121,6 @@ impl Into<Option<TransactionMessage>> for TransactionRequest {
                         .access_list
                         .unwrap_or(Vec::new())
                         .into_iter()
-                        .map(|item| item)
                         .collect(),
                 }))
             }
