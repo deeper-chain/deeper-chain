@@ -226,11 +226,20 @@ pub mod pallet {
                     Self::apply_validated_transaction(source, transaction);
                 }
             }
-
             0
         }
 
         fn on_runtime_upgrade() -> Weight {
+            if frame_support::storage::unhashed::get::<EthereumStorageSchema>(
+                &PALLET_ETHEREUM_SCHEMA,
+            ) < Some(EthereumStorageSchema::V2)
+            {
+                <Pallet<T>>::store_block(false, U256::zero());
+                HeightOffset::<T>::put(UniqueSaturatedInto::<u64>::unique_saturated_into(
+                    frame_system::Pallet::<T>::block_number(),
+                ));
+            }
+
             frame_support::storage::unhashed::put::<EthereumStorageSchema>(
                 &PALLET_ETHEREUM_SCHEMA,
                 &EthereumStorageSchema::V2,
@@ -299,6 +308,11 @@ pub mod pallet {
     // Mapping for block number and hashes.
     #[pallet::storage]
     pub(super) type BlockHash<T: Config> = StorageMap<_, Twox64Concat, U256, H256, ValueQuery>;
+
+    // Offset of deeper blocker number and eth number.
+    #[pallet::storage]
+    #[pallet::getter(fn height_offset)]
+    pub type HeightOffset<T: Config> = StorageValue<_, u64, ValueQuery>;
 
     #[pallet::genesis_config]
     #[derive(Default)]
