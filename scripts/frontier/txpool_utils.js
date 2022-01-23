@@ -5,14 +5,14 @@ const web3 = new Web3("http://localhost:9933");
 web3.eth.extend({
     property: 'txpool',
     methods: [{
-	name: 'content',
-	call: 'txpool_content'
+        name: 'content',
+        call: 'txpool_content'
     },{
-	name: 'inspect',
-	call: 'txpool_inspect'
+        name: 'inspect',
+        call: 'txpool_inspect'
     },{
-	name: 'status',
-	call: 'txpool_status'
+        name: 'status',
+        call: 'txpool_status'
     }]
 });
 
