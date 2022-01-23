@@ -199,6 +199,7 @@ where
     C::Api: BabeApi<Block>,
     C::Api: BlockBuilder<Block>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+    C::Api: fp_rpc::TxPoolRuntimeRPCApi<Block>,
     P: TransactionPool<Block = Block> + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
@@ -207,8 +208,8 @@ where
 {
     use fc_rpc::{
         EthApi, EthApiServer, EthDevSigner, EthFilterApi, EthFilterApiServer, EthPubSubApi,
-        EthPubSubApiServer, EthSigner, HexEncodedIdProvider, NetApi, NetApiServer, Web3Api,
-        Web3ApiServer,
+        EthPubSubApiServer, EthSigner, HexEncodedIdProvider, NetApi, NetApiServer, TxPoolApi,
+        TxPoolApiServer, Web3Api, Web3ApiServer,
     };
     use pallet_contracts_rpc::{Contracts, ContractsApi};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -299,7 +300,7 @@ where
     io.extend_with(EthApiServer::to_delegate(EthApi::new(
         client.clone(),
         pool.clone(),
-        graph,
+        graph.clone(),
         node_runtime::TransactionConverter,
         network.clone(),
         signers,
@@ -341,6 +342,11 @@ where
             Arc::new(subscription_task_executor),
         ),
         overrides,
+    )));
+
+    io.extend_with(TxPoolApiServer::to_delegate(TxPoolApi::new(
+        client.clone(),
+        graph,
     )));
 
     Ok(io)

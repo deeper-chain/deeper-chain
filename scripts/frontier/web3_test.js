@@ -112,9 +112,12 @@ async function test() {
 
     let work = await getWork();
 
-    /*
-    let log = await getLogs(tx);
-    */
+    let filter1 = {
+        fromBlock: 0,
+        address: contract_addr,
+    };
+
+    let log1 = await getLogs(filter1);
 }
 
 test().then(() => {
@@ -392,13 +395,14 @@ async function transferToken(from, to, data) {
 async function submitHashrate() {
 }
 
-/*
 async function getLogs(filter) {
     const log = await web3.eth.getPastLogs(filter);
-    console.log("log: " + log);
+    let str = JSON.stringify(log);
+    console.log("log: " + str);
     return log;
 }
 
+/*
 eth_newFilter
 eth_newBlockFilter
 eth_newPendingTransactionFilter

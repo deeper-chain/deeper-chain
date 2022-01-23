@@ -75,7 +75,7 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 
-use fp_rpc::TransactionStatus;
+use fp_rpc::{TransactionStatus, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
 use pallet_evm::{Account as EVMAccount, PairedAddressMapping, Runner};
@@ -1598,6 +1598,31 @@ impl_runtime_apis! {
             Contracts::get_storage(address, key)
         }
     }
+
+    impl fp_rpc::TxPoolRuntimeRPCApi<Block> for Runtime {
+        fn extrinsic_filter(
+            xts_ready: Vec<<Block as BlockT>::Extrinsic>,
+            xts_future: Vec<<Block as BlockT>::Extrinsic>,
+        ) -> TxPoolResponse {
+            TxPoolResponse {
+                ready: xts_ready
+                    .into_iter()
+                    .filter_map(|xt| match xt.0.function {
+                        Call::Ethereum(transact { transaction }) => Some(transaction),
+                        _ => None,
+                    })
+                    .collect(),
+                future: xts_future
+                    .into_iter()
+                    .filter_map(|xt| match xt.0.function {
+                        Call::Ethereum(transact { transaction }) => Some(transaction),
+                        _ => None,
+                    })
+                    .collect(),
+            }
+        }
+    }
+
 
     impl fp_rpc::EthereumRuntimeRPCApi<Block> for Runtime {
         fn chain_id() -> u64 {
