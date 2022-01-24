@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1642428530143,
+  "lastUpdate": 1643016971087,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -703,6 +703,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 92380219,
             "range": "± 11527370",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "47657529+kzjin@users.noreply.github.com",
+            "name": "kzjin",
+            "username": "kzjin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "19611239eb4a2da9fb3758ae2058ebd6b6b1b210",
+          "message": "Evm dev dep (#175)\n\n* delete frontier folder\r\n\r\n* upgrade evm to parity/frontier 224f251d29dbe16128859b7eee2742e3164f41e2 and remove froniter/\r\n\r\n* fix compile erro and add frontier test scripts\r\n\r\n* remove unused variable\r\n\r\n* update web3_test.js\r\n\r\n* txpool rpc support\r\n\r\n* scripts for log rpc test\r\n\r\nCo-authored-by: Zhuang Jin <zjin@deeper.network>",
+          "timestamp": "2022-01-24T16:36:36+08:00",
+          "tree_id": "120d763624617f4aaaacc44123544468a40efd17",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/19611239eb4a2da9fb3758ae2058ebd6b6b1b210"
+        },
+        "date": 1643016970747,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5583168,
+            "range": "± 833634",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 94431687,
+            "range": "± 13461287",
             "unit": "ns/iter"
           }
         ]
