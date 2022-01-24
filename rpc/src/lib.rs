@@ -32,15 +32,15 @@
 
 use fc_rpc::{
     EthBlockDataCache, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
-    SchemaV2Override, StorageOverride,
+    SchemaV2Override, SchemaV3Override, StorageOverride,
 };
-use fc_rpc_core::types::FilterPool;
+use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
 use jsonrpc_pubsub::manager::SubscriptionManager;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::opaque::Block;
 use pallet_ethereum::EthereumStorageSchema;
 use sc_client_api::{
-    backend::{AuxStore, StorageProvider},
+    backend::{AuxStore, Backend, StateBackend, StorageProvider},
     client::BlockchainEvents,
 };
 use sc_consensus_babe::{Config, Epoch};
@@ -61,10 +61,12 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
 use sp_keystore::SyncCryptoStorePtr;
+use sp_runtime::traits::BlakeTwo256;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Light client extra dependencies.
+#[allow(dead_code)]
 pub struct LightDeps<C, F, P> {
     /// The client instance to use.
     pub client: Arc<C>,
@@ -130,6 +132,47 @@ pub struct FullDeps<C, P, SC, B, A: ChainApi> {
     pub backend: Arc<fc_db::Backend<Block>>,
     /// Maximum number of logs in a query.
     pub max_past_logs: u32,
+    /// Maximum fee history cache size.
+    pub fee_history_limit: u64,
+    /// Fee history cache.
+    pub fee_history_cache: FeeHistoryCache,
+    /// Ethereum data access overrides.
+    pub overrides: Arc<OverrideHandle<Block>>,
+    /// Cache for Ethereum block data.
+    pub block_data_cache: Arc<EthBlockDataCache<Block>>,
+}
+
+/// override handle
+pub fn overrides_handle<C, BE>(client: Arc<C>) -> Arc<OverrideHandle<Block>>
+where
+    C: ProvideRuntimeApi<Block> + StorageProvider<Block, BE> + AuxStore,
+    C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
+    C: Send + Sync + 'static,
+    C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+    BE: Backend<Block> + 'static,
+    BE::State: StateBackend<BlakeTwo256>,
+{
+    let mut overrides_map = BTreeMap::new();
+    overrides_map.insert(
+        EthereumStorageSchema::V1,
+        Box::new(SchemaV1Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
+    overrides_map.insert(
+        EthereumStorageSchema::V2,
+        Box::new(SchemaV2Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
+    overrides_map.insert(
+        EthereumStorageSchema::V3,
+        Box::new(SchemaV3Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
+
+    Arc::new(OverrideHandle {
+        schemas: overrides_map,
+        fallback: Box::new(RuntimeApiStorageOverride::new(client.clone())),
+    })
 }
 
 /// A IO handler that uses all Full RPC extensions.
@@ -156,6 +199,7 @@ where
     C::Api: BabeApi<Block>,
     C::Api: BlockBuilder<Block>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+    C::Api: fp_rpc::TxPoolRuntimeRPCApi<Block>,
     P: TransactionPool<Block = Block> + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
@@ -164,8 +208,8 @@ where
 {
     use fc_rpc::{
         EthApi, EthApiServer, EthDevSigner, EthFilterApi, EthFilterApiServer, EthPubSubApi,
-        EthPubSubApiServer, EthSigner, HexEncodedIdProvider, NetApi, NetApiServer, Web3Api,
-        Web3ApiServer,
+        EthPubSubApiServer, EthSigner, HexEncodedIdProvider, NetApi, NetApiServer, TxPoolApi,
+        TxPoolApiServer, Web3Api, Web3ApiServer,
     };
     use pallet_contracts_rpc::{Contracts, ContractsApi};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -187,6 +231,10 @@ where
         filter_pool,
         backend,
         max_past_logs,
+        fee_history_limit,
+        fee_history_cache,
+        overrides,
+        block_data_cache,
     } = deps;
 
     let BabeDeps {
@@ -248,29 +296,11 @@ where
     if enable_dev_signer {
         signers.push(Box::new(EthDevSigner::new()) as Box<dyn EthSigner>);
     }
-    let mut overrides_map = BTreeMap::new();
-    overrides_map.insert(
-        EthereumStorageSchema::V1,
-        Box::new(SchemaV1Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
-    overrides_map.insert(
-        EthereumStorageSchema::V2,
-        Box::new(SchemaV2Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
-
-    let overrides = Arc::new(OverrideHandle {
-        schemas: overrides_map,
-        fallback: Box::new(RuntimeApiStorageOverride::new(client.clone())),
-    });
-
-    let block_data_cache = Arc::new(EthBlockDataCache::new(50, 50));
 
     io.extend_with(EthApiServer::to_delegate(EthApi::new(
         client.clone(),
         pool.clone(),
-        graph,
+        graph.clone(),
         node_runtime::TransactionConverter,
         network.clone(),
         signers,
@@ -279,6 +309,8 @@ where
         is_authority,
         max_past_logs,
         block_data_cache.clone(),
+        fee_history_limit,
+        fee_history_cache,
     )));
 
     if let Some(filter_pool) = filter_pool {
@@ -287,7 +319,6 @@ where
             backend,
             filter_pool.clone(),
             500 as usize, // max stored filters
-            overrides.clone(),
             max_past_logs,
             block_data_cache.clone(),
         )));
@@ -313,10 +344,16 @@ where
         overrides,
     )));
 
+    io.extend_with(TxPoolApiServer::to_delegate(TxPoolApi::new(
+        client.clone(),
+        graph,
+    )));
+
     Ok(io)
 }
 
 /// Instantiate all Light RPC extensions.
+#[allow(dead_code)]
 pub fn create_light<C, P, M, F>(deps: LightDeps<C, F, P>) -> jsonrpc_core::IoHandler<M>
 where
     C: sp_blockchain::HeaderBackend<Block>,

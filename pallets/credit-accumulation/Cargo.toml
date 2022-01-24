@@ -19,11 +19,11 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
-pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives" }
+pallet-balances = { version = "3.0.0", default-features = false, git = "https://github.com/deeper-chain/deeper-chain.git" }
 pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
-pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node"}
-pallet-micropayment = { version = "3.0.0", default-features = false, path = "../micropayment"}
+pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
+pallet-micropayment = { version = "3.0.0", default-features = false, path = "../micropayment" }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

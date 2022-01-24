@@ -26,17 +26,16 @@ pub struct RunCmd {
     #[structopt(flatten)]
     pub base: sc_cli::RunCmd,
 
-    #[cfg(feature = "manual-seal")]
-    /// Choose sealing method.
-    #[structopt(long = "sealing")]
-    pub sealing: Sealing,
-
     #[structopt(long = "enable-dev-signer")]
     pub enable_dev_signer: bool,
 
     /// Maximum number of logs in a query.
     #[structopt(long, default_value = "10000")]
     pub max_past_logs: u32,
+
+    /// Maximum fee history cache size.
+    #[structopt(long, default_value = "2048")]
+    pub fee_history_limit: u64,
 
     /// The dynamic-fee pallet target gas price set by block author
     #[structopt(long, default_value = "1")]

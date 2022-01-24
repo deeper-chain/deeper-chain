@@ -22,8 +22,8 @@ sp-io = { default-features = false, git = "https://github.com/paritytech/substra
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
-pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
-node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
+pallet-balances = { version = "3.0.0", default-features = false, git = "https://github.com/deeper-chain/deeper-chain.git" }
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives" }
 hex-literal = "0.3.1"
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", optional = true }
