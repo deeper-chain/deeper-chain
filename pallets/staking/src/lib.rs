@@ -1701,7 +1701,7 @@ pub mod pallet {
                 );
             }
 
-            let current_era = CurrentEra::<T>::get().unwrap_or(0);
+            let current_era = T::CreditInterface::get_current_era();
             if <Delegators<T>>::contains_key(&delegator) {
                 let old_delegator_data = Self::delegators(&delegator);
                 if !old_delegator_data.delegating {
@@ -1739,6 +1739,8 @@ pub mod pallet {
                 <Delegators<T>>::insert(&delegator, delegator_data);
                 ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
                 DelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
+                //  delegator must has enough credit score,so this init must success
+                T::CreditInterface::init_delegator_history(&delegator, current_era);
             };
 
             for validator in &validator_set {
@@ -2269,61 +2271,62 @@ impl<T: Config> pallet::Pallet<T> {
         if earliest_unrewarded_era == current_era {
             return (BalanceOf::<T>::zero(), Weight::zero());
         }
+
         let delegator = &delegator_data.delegator;
         let mut payout = BalanceOf::<T>::zero();
         let mut weight = T::DbWeight::get().reads_writes(1, 0); // for im_ever_online
-        if T::NodeInterface::im_ever_online(delegator) {
-            let (rewards, get_reward_weight) =
-                T::CreditInterface::get_reward(delegator, earliest_unrewarded_era, current_era - 1);
-            weight = weight.saturating_add(get_reward_weight);
-            if let Some((referee_reward, poc_reward)) = rewards {
-                // update RewardData
-                if Reward::<T>::contains_key(delegator) {
-                    // 1 read
-                    Reward::<T>::mutate(delegator, |data| match data {
-                        // 1 write
-                        Some(reward_data) => {
-                            reward_data.received_referee_reward += referee_reward;
-                            reward_data.referee_reward = referee_reward;
-                            reward_data.received_pocr_reward += poc_reward;
-                            reward_data.poc_reward = poc_reward;
-                        }
-                        _ => (),
-                    });
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
-                } else {
-                    let (total_referee_reward, get_top_referee_reward_weight) =
-                        T::CreditInterface::get_top_referee_reward(delegator);
-                    weight = weight.saturating_add(get_top_referee_reward_weight);
-                    let reward_data = RewardData::<BalanceOf<T>> {
-                        total_referee_reward,
-                        received_referee_reward: referee_reward,
-                        referee_reward: referee_reward,
-                        received_pocr_reward: poc_reward,
-                        poc_reward: poc_reward,
-                    };
-                    Reward::<T>::insert(delegator, reward_data); // 1 write
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                }
-                let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
-                let imbalance = T::Currency::deposit_creating(delegator, reward); // 1 write
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                Self::deposit_event(Event::<T>::DelegatorReward(
-                    (*delegator).clone(),
-                    imbalance.peek(),
-                ));
-                payout = reward;
-            }
-            if delegator_data.delegating {
-                Delegators::<T>::mutate(delegator, |data| {
-                    data.unrewarded_since = Some(current_era);
+
+        let (rewards, get_reward_weight) =
+            T::CreditInterface::get_reward(delegator, earliest_unrewarded_era, current_era - 1);
+        weight = weight.saturating_add(get_reward_weight);
+        if let Some((referee_reward, poc_reward)) = rewards {
+            // update RewardData
+            if Reward::<T>::contains_key(delegator) {
+                // 1 read
+                Reward::<T>::mutate(delegator, |data| match data {
+                    // 1 write
+                    Some(reward_data) => {
+                        reward_data.received_referee_reward += referee_reward;
+                        reward_data.referee_reward = referee_reward;
+                        reward_data.received_pocr_reward += poc_reward;
+                        reward_data.poc_reward = poc_reward;
+                    }
+                    _ => (),
                 });
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             } else {
-                Delegators::<T>::remove(delegator);
-                DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+                let (total_referee_reward, get_top_referee_reward_weight) =
+                    T::CreditInterface::get_top_referee_reward(delegator);
+                weight = weight.saturating_add(get_top_referee_reward_weight);
+                let reward_data = RewardData::<BalanceOf<T>> {
+                    total_referee_reward,
+                    received_referee_reward: referee_reward,
+                    referee_reward: referee_reward,
+                    received_pocr_reward: poc_reward,
+                    poc_reward: poc_reward,
+                };
+                Reward::<T>::insert(delegator, reward_data); // 1 write
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             }
+            let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
+            let imbalance = T::Currency::deposit_creating(delegator, reward); // 1 write
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+            Self::deposit_event(Event::<T>::DelegatorReward(
+                (*delegator).clone(),
+                imbalance.peek(),
+            ));
+            payout = reward;
         }
+        if delegator_data.delegating {
+            Delegators::<T>::mutate(delegator, |data| {
+                data.unrewarded_since = Some(current_era);
+            });
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+        } else {
+            Delegators::<T>::remove(delegator);
+            DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+        }
+
         (payout, weight)
     }
 
