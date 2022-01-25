@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1643016971087,
+  "lastUpdate": 1643103207793,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -739,6 +739,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 94431687,
             "range": "± 13461287",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "47657529+kzjin@users.noreply.github.com",
+            "name": "kzjin",
+            "username": "kzjin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba3008d9576f4826704afdfa7c4e299b2f5b3727",
+          "message": "update precompiles (#179)\n\nCo-authored-by: Zhuang Jin <zjin@deeper.network>",
+          "timestamp": "2022-01-25T16:07:47+08:00",
+          "tree_id": "bd86e34c9bb87feb593312b78065a4a24dde5d13",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/ba3008d9576f4826704afdfa7c4e299b2f5b3727"
+        },
+        "date": 1643103207044,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5620013,
+            "range": "± 824607",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 93097549,
+            "range": "± 14154074",
             "unit": "ns/iter"
           }
         ]
