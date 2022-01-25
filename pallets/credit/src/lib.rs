@@ -132,7 +132,6 @@ pub mod pallet {
         weights::Weight,
     };
     use frame_system::pallet_prelude::*;
-    use node_primitives::BlockNumber;
     use pallet_deeper_node::NodeInterface;
     use sp_runtime::{
         traits::{Saturating, Zero},
