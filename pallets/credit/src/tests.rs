@@ -168,7 +168,7 @@ fn add_or_update_credit_data_check_credit_history_and_reward() {
         // era 1
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(Credit::user_credit_history(3), vec![]);
-        Credit::init_delegator_history(&3, 0);
+        assert!(Credit::init_delegator_history(&3, 0));
         assert_eq!(
             Credit::get_reward(&3, 0, 0).0,
             Some((0, 21369858941948251800))
@@ -348,12 +348,12 @@ fn update_credit_by_traffic() {
 fn get_reward_work() {
     new_test_ext().execute_with(|| {
         assert_eq!(Credit::get_reward(&3, 0, 0).0, None);
-        Credit::init_delegator_history(&3, 0);
-        Credit::init_delegator_history(&7, 0);
-        Credit::init_delegator_history(&8, 0);
-        Credit::init_delegator_history(&9, 0);
-        Credit::init_delegator_history(&10, 0);
-        Credit::init_delegator_history(&11, 0);
+        assert!(Credit::init_delegator_history(&3, 0));
+        assert!(Credit::init_delegator_history(&7, 0));
+        assert!(Credit::init_delegator_history(&8, 0));
+        assert!(Credit::init_delegator_history(&9, 0));
+        assert!(Credit::init_delegator_history(&10, 0));
+        assert!(Credit::init_delegator_history(&11, 0));
         run_to_block(BLOCKS_PER_ERA); // era 1
         assert_eq!(
             Credit::get_reward(&3, 0, 0).0,
@@ -410,7 +410,7 @@ fn get_reward_with_update_credit_no_bonus() {
         Timestamp::set_timestamp(INIT_TIMESTAMP);
         assert_ok!(DeeperNode::im_online(Origin::signed(6)));
         assert_eq!(Credit::user_credit(&6).unwrap().credit, 100);
-        Credit::init_delegator_history(&6, 0);
+        assert!(Credit::init_delegator_history(&6, 0));
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
             Credit::get_reward(&6, 0, 0).0,
@@ -451,7 +451,7 @@ fn get_reward_with_update_credit_with_bonus() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::im_online(Origin::signed(7)));
         assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
-        Credit::init_delegator_history(&7, 0);
+        assert!(Credit::init_delegator_history(&7, 0));
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
             Credit::get_reward(&7, 0, 0).0,
@@ -491,7 +491,7 @@ fn get_reward_with_update_credit_with_bonus() {
 fn get_reward_with_slash_credit_with_bonus() {
     new_test_ext().execute_with(|| {
         assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
-        Credit::init_delegator_history(&7, 0);
+        assert!(Credit::init_delegator_history(&7, 0));
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(
             Credit::get_reward(&7, 0, 0).0,
@@ -567,7 +567,7 @@ fn update_credit_history_when_era_is_the_same() {
                 reward_eras: 270,
             },
         );
-        Credit::init_delegator_history(&1, 0);
+        assert!(Credit::init_delegator_history(&1, 0));
         //default era=0
 
         let credit_historys = vec![(
@@ -605,7 +605,7 @@ fn update_credit_history_when_era_is_non_zero() {
         );
         // run_to_block, era=1
         run_to_block(BLOCKS_PER_ERA);
-        Credit::init_delegator_history(&1, 1);
+        assert!(Credit::init_delegator_history(&1, 1));
         Credit::update_credit_history(&1, 10);
 
         let credit_historys = vec![
@@ -654,7 +654,7 @@ fn reward_remain_eras_count() {
         };
         assert_ok!(DeeperNode::im_online(Origin::signed(12)));
         UserCredit::<Test>::insert(12, credit_data.clone());
-        Credit::init_delegator_history(&12, 0);
+        assert!(Credit::init_delegator_history(&12, 0));
         //reward_countdown
         // era 1
         run_to_block(BLOCKS_PER_ERA);
