@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1643103207793,
+  "lastUpdate": 1643333462088,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -775,6 +775,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 93097549,
             "range": "± 14154074",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "anhuitianyu@163.com",
+            "name": "yubo",
+            "username": "jerry-yu"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5d7556adcb96a71078483870e346fa7541e1ea30",
+          "message": "fix delegator's first credit history writen (#178)\n\n* fix delegator's first credit history writen\r\n\r\n* fix unit test\r\n\r\n* modify for github review",
+          "timestamp": "2022-01-28T09:16:46+08:00",
+          "tree_id": "50e8e087dc99b70a0d0fcdfbd7cde05922979fab",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/5d7556adcb96a71078483870e346fa7541e1ea30"
+        },
+        "date": 1643333461607,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5704919,
+            "range": "± 821314",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 92982982,
+            "range": "± 15001664",
             "unit": "ns/iter"
           }
         ]
