@@ -119,6 +119,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
+    fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
 }
 
 #[frame_support::pallet]
@@ -356,12 +357,6 @@ pub mod pallet {
             let user_credit_data = Self::user_credit(&account_id).unwrap();
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
 
-            if Self::user_credit_history(&account_id).is_empty() {
-                weight = weight.saturating_add(Self::init_credit_history(
-                    &account_id,
-                    user_credit_data.clone(),
-                ));
-            }
             let mut user_credit_history = Self::user_credit_history(&account_id);
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
 
@@ -379,22 +374,18 @@ pub mod pallet {
             weight
         }
 
-        fn init_credit_history(account_id: &T::AccountId, credit_data: CreditData) -> Weight {
-            let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            match T::NodeInterface::get_onboard_time(account_id) {
-                Some(block) => {
-                    let onboard_era = Self::block_to_era(block);
-                    UserCreditHistory::<T>::insert(account_id, vec![(onboard_era, credit_data)]);
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                }
-                None => (),
-            }
-            weight
+        fn init_credit_history(
+            account_id: &T::AccountId,
+            credit_data: CreditData,
+            era: u32,
+        ) -> Weight {
+            UserCreditHistory::<T>::insert(account_id, vec![(era, credit_data)]);
+            T::DbWeight::get().reads_writes(0, 1)
         }
 
         fn get_onboard_era(account_id: &T::AccountId) -> Option<EraIndex> {
             match T::NodeInterface::get_onboard_time(account_id) {
-                Some(block) => Some(Self::block_to_era(block)),
+                Some(block_number) => Some(Self::block_to_era(block_number)),
                 None => None,
             }
         }
@@ -597,7 +588,8 @@ pub mod pallet {
             to: EraIndex,
         ) -> (Option<(BalanceOf<T>, BalanceOf<T>)>, Weight) {
             // silently ignore invalid inputs
-            if from > to || to >= Self::get_current_era() {
+            let cur_era = Self::get_current_era();
+            if from > to || to >= cur_era {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 1));
                 return (None, Weight::zero());
             }
@@ -617,8 +609,11 @@ pub mod pallet {
 
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
             if Self::user_credit_history(account_id).is_empty() {
-                weight = weight
-                    .saturating_add(Self::init_credit_history(account_id, credit_data.clone()));
+                weight = weight.saturating_add(Self::init_credit_history(
+                    account_id,
+                    credit_data.clone(),
+                    cur_era,
+                ));
             }
             weight = weight.saturating_add(Self::slash_offline_device_credit(account_id));
             let credit_history = Self::user_credit_history(account_id);
@@ -628,8 +623,8 @@ pub mod pallet {
                 return (None, weight);
             }
 
-            let onboard_era = credit_history[0].0;
-            let expiry_era = onboard_era + credit_data.reward_eras - 1;
+            let delegate_era = credit_history[0].0;
+            let expiry_era = delegate_era + credit_data.reward_eras - 1;
             if from > expiry_era {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 5));
                 return (None, weight);
@@ -845,6 +840,20 @@ pub mod pallet {
                     LastCreditUpdate::<T>::remove(server_id);
                 }
             }
+        }
+
+        fn init_delegator_history(account_id: &T::AccountId, era: u32) -> bool {
+            let credit_data = Self::user_credit(account_id); // 1 db read
+            if credit_data.is_none() {
+                log!(
+                    error,
+                    "failed to init_delegator_history for  {:?}",
+                    account_id
+                );
+                return false;
+            }
+            Self::init_credit_history(account_id, credit_data.unwrap(), era);
+            true
         }
     }
 }
