@@ -31,3 +31,7 @@ any finders fee, in case of a public (and bonded) original report.
 - `tip` - Declare or redeclare an amount to tip for a particular reason.
 - `close_tip` - Close and pay out a tip.
 - `slash_tip` - Remove and slash an already-open tip.
+- `credit_tip_new` - reports an item worthy of a credit score and declares the value of the credit score to be given.
+- `credit_tip` - Vote for an item and countdown to payment if more than half of the people complete the vote.
+- `close_credit_tip` - closes the item and gives credit score.
+- `set_tip_owner_address` - Set the tip pool source for tip payment statistics.
