@@ -5613,12 +5613,16 @@ dependencies = [
 [[package]]
 name = "pallet-tips"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
+ "node-primitives",
+ "pallet-balances 3.0.0",
+ "pallet-credit",
+ "pallet-deeper-node",
+ "pallet-timestamp",
  "pallet-treasury",
  "parity-scale-codec",
  "scale-info",
@@ -5627,6 +5631,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "sp-storage",
 ]
 
 [[package]]
