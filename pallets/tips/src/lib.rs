@@ -68,7 +68,7 @@ use codec::{Decode, Encode};
 use frame_support::{
     traits::{
         ContainsLengthBound, Currency, EnsureOrigin, ExistenceRequirement::KeepAlive, Get,
-        OnUnbalanced, ReservableCurrency, SortedMembers, StorageVersion,
+        OnUnbalanced, ReservableCurrency, SortedMembers,
     },
     Parameter,
 };
@@ -115,12 +115,8 @@ pub mod pallet {
     use frame_support::pallet_prelude::*;
     use frame_system::pallet_prelude::*;
 
-    /// The current storage version.
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
-
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
-    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
