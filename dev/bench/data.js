@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1643333462088,
+  "lastUpdate": 1643527031989,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -811,6 +811,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 92982982,
             "range": "± 15001664",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4aef15bd2effe15cb74b23734a59b97cae43d46d",
+          "message": "deeper add-tips pallet (#180)\n\n* deeper add-tips pallet\r\n\r\n* New Dispatchable Functions description in Readme.md\r\n\r\n* delete storage version\r\n\r\n* add CreditDataAddedByTip event\r\n\r\n* Updating credits via tips pallet is not recorded in LastCreditUpdateTimestamp\r\n\r\n* fmt credit pallet",
+          "timestamp": "2022-01-30T14:02:46+08:00",
+          "tree_id": "a9fe7a1ed2103dab2db5b13ccdfebfd7093b78a1",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/4aef15bd2effe15cb74b23734a59b97cae43d46d"
+        },
+        "date": 1643527031626,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5880795,
+            "range": "± 1009878",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 96488880,
+            "range": "± 14681691",
             "unit": "ns/iter"
           }
         ]
