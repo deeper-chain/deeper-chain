@@ -267,6 +267,7 @@ pub mod pallet {
         CreditDataUpdated(T::AccountId, CreditData),
         CreditScoreSlashed(T::AccountId, u64),
         CreditDataAddedByTraffic(T::AccountId, u64),
+        CreditDataAddedByTip(T::AccountId, u64),
         //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
     }
@@ -864,6 +865,10 @@ pub mod pallet {
             if Self::_update_credit(&who, new_credit) {
                 LastCreditUpdateTimestamp::<T>::insert(&who, now_as_secs);
                 Self::update_credit_history(&who, current_era);
+                Self::deposit_event(Event::CreditDataAddedByTip(
+                    who.clone(),
+                    new_credit,
+                ));
             } else {
                 log!(
                     error,
