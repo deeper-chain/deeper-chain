@@ -771,14 +771,20 @@ impl pallet_bounties::Config for Runtime {
     type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
 }
 
+parameter_types! {
+    pub const MaximumCreditReward: u64 = 15;
+}
+
 impl pallet_tips::Config for Runtime {
     type Event = Event;
     type DataDepositPerByte = DataDepositPerByte;
     type MaximumReasonLength = MaximumReasonLength;
+    type MaximumCreditReward = MaximumCreditReward;
     type Tippers = Elections;
     type TipCountdown = TipCountdown;
     type TipFindersFee = TipFindersFee;
     type TipReportDepositBase = TipReportDepositBase;
+    type CreditInterface = Credit;
     type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 

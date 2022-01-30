@@ -39,6 +39,7 @@ macro_rules! log {
 	};
 }
 
+use codec::alloc::vec;
 use codec::{Decode, Encode};
 use sp_runtime::Percent;
 #[cfg(feature = "std")]
@@ -119,6 +120,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
+    fn update_credit_by_tip(who: AccountId, add_credit: u64);
     fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
 }
 
@@ -265,6 +267,7 @@ pub mod pallet {
         CreditDataUpdated(T::AccountId, CreditData),
         CreditScoreSlashed(T::AccountId, u64),
         CreditDataAddedByTraffic(T::AccountId, u64),
+        CreditDataAddedByTip(T::AccountId, u64),
         //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
     }
@@ -839,6 +842,36 @@ pub mod pallet {
                 if era_used {
                     LastCreditUpdate::<T>::remove(server_id);
                 }
+            }
+        }
+
+        fn update_credit_by_tip(who: T::AccountId, add_credit: u64) {
+            let onboard_era = Self::get_onboard_era(&who);
+            if onboard_era.is_none() {
+                // credit is not updated if the device is never online
+                log!(
+                    info,
+                    "update_credit_by_tip account : {:?}, never online",
+                    who
+                );
+                return;
+            }
+            let current_era = Self::get_current_era();
+            let now_as_secs = T::UnixTime::now().as_secs();
+            let new_credit = Self::get_credit_score(&who)
+                .unwrap_or(0)
+                .saturating_add(add_credit);
+
+            if Self::_update_credit(&who, new_credit) {
+                Self::update_credit_history(&who, current_era);
+                Self::deposit_event(Event::CreditDataAddedByTip(who.clone(), new_credit));
+            } else {
+                log!(
+                    error,
+                    "failed to update credit {} for who: {:?}",
+                    new_credit,
+                    who
+                );
             }
         }
 
