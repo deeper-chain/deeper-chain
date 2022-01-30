@@ -864,10 +864,7 @@ pub mod pallet {
 
             if Self::_update_credit(&who, new_credit) {
                 Self::update_credit_history(&who, current_era);
-                Self::deposit_event(Event::CreditDataAddedByTip(
-                    who.clone(),
-                    new_credit,
-                ));
+                Self::deposit_event(Event::CreditDataAddedByTip(who.clone(), new_credit));
             } else {
                 log!(
                     error,
