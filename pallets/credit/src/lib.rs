@@ -863,7 +863,6 @@ pub mod pallet {
                 .saturating_add(add_credit);
 
             if Self::_update_credit(&who, new_credit) {
-                LastCreditUpdateTimestamp::<T>::insert(&who, now_as_secs);
                 Self::update_credit_history(&who, current_era);
                 Self::deposit_event(Event::CreditDataAddedByTip(
                     who.clone(),
