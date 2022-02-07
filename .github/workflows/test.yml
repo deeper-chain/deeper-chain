@@ -38,7 +38,7 @@ jobs:
         run: cargo test --workspace --exclude node-cli
 
       - name: install grcov
-        run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+        run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-v0.8.6-x86_64-unknown-linux-musl.tar.gz | tar zxvf -
 
       - name: generate coverage report
         run: ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
