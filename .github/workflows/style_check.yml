@@ -21,9 +21,6 @@ jobs:
           components: rustfmt, clippy
           target: wasm32-unknown-unknown
 
-      - name: cache dependencies
-        uses: Swatinem/rust-cache@v1
-      
       - name: Cargo Fmt Check
         run: cargo fmt --all -- --check
 
