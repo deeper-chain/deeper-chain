@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1643527031989,
+  "lastUpdate": 1644232043510,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -847,6 +847,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 96488880,
             "range": "± 14681691",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7d8462034c48f5edb46cc341de37fb5f74e6d535",
+          "message": "fix bad grcov download link (#183)",
+          "timestamp": "2022-02-07T18:34:30+08:00",
+          "tree_id": "fa616acbdf2bc33e2fa240772f2ea6c4f57e6324",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/7d8462034c48f5edb46cc341de37fb5f74e6d535"
+        },
+        "date": 1644232043155,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 6048897,
+            "range": "± 1173273",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 102336225,
+            "range": "± 18721777",
             "unit": "ns/iter"
           }
         ]
