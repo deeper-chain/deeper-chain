@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1644232043510,
+  "lastUpdate": 1644286668761,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -883,6 +883,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 102336225,
             "range": "± 18721777",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6368968402c8190f744c323c93de8ccf4703c272",
+          "message": "remove cache in CI (#184)\n\ncache is not necessary and waste a lot of machine time, so remove it",
+          "timestamp": "2022-02-08T09:36:53+08:00",
+          "tree_id": "50a6c8c34f2b29ce2809a5cba4ed8d543522a188",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/6368968402c8190f744c323c93de8ccf4703c272"
+        },
+        "date": 1644286668423,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5714637,
+            "range": "± 1190164",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 100221731,
+            "range": "± 15751505",
             "unit": "ns/iter"
           }
         ]
