@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1644292867730,
+  "lastUpdate": 1644296319759,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -955,6 +955,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 97121200,
             "range": "± 14349439",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "anhuitianyu@163.com",
+            "name": "yubo",
+            "username": "jerry-yu"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e4724df96b8b2a233cf0834afc3505ca69749959",
+          "message": "modify treasury burnning rate (#182)\n\n* modify treasury burnning rate\r\n\r\n* fix bad grcov download link\r\n\r\nCo-authored-by: AmadeusGB <1069830494@qq.com>",
+          "timestamp": "2022-02-08T10:45:17+08:00",
+          "tree_id": "d5d3eb50cd4ee560c4c20f5a741efe007c491718",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/e4724df96b8b2a233cf0834afc3505ca69749959"
+        },
+        "date": 1644296319269,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 6110122,
+            "range": "± 1169063",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 95853436,
+            "range": "± 16590828",
             "unit": "ns/iter"
           }
         ]
