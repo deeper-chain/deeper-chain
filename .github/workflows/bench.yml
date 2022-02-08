@@ -19,9 +19,6 @@ jobs:
           profile: minimal
           target: wasm32-unknown-unknown
 
-      - name: cache dependencies
-        uses: Swatinem/rust-cache@v1
-
       - name: compile and run benchmark
         run: cargo bench -p node-executor -- --output-format bencher | tee output.txt
 

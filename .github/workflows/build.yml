@@ -26,9 +26,6 @@ jobs:
           profile: minimal
           target: wasm32-unknown-unknown
 
-      - name: cache dependencies
-        uses: Swatinem/rust-cache@v1
-      
       - name: Compile
         run: cargo build
 

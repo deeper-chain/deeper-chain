@@ -28,9 +28,6 @@ jobs:
           components: llvm-tools-preview
           target: wasm32-unknown-unknown
 
-      - name: cache dependencies
-        uses: Swatinem/rust-cache@v1
-
       - name: show rustc version
         run: rustc --version
 
