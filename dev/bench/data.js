@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1644286668761,
+  "lastUpdate": 1644292867730,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -919,6 +919,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 100221731,
             "range": "± 15751505",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f22efc7667b53915615705f9833f9a731ccc8642",
+          "message": "remove RewardCountdown (#181)\n\n* remove RewardCountdown\r\n\r\n* fix test error\r\n\r\n* fix bad grcov download link\r\n\r\n* clear warning",
+          "timestamp": "2022-02-08T10:44:14+08:00",
+          "tree_id": "8167e08c264c0e702d379250e94e6e1010432b6d",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/f22efc7667b53915615705f9833f9a731ccc8642"
+        },
+        "date": 1644292867223,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 6239990,
+            "range": "± 1298706",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 97121200,
+            "range": "± 14349439",
             "unit": "ns/iter"
           }
         ]
