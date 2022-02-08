@@ -843,7 +843,6 @@ pub mod pallet {
                 return;
             }
             let current_era = Self::get_current_era();
-            let now_as_secs = T::UnixTime::now().as_secs();
             let new_credit = Self::get_credit_score(&who)
                 .unwrap_or(0)
                 .saturating_add(add_credit);
