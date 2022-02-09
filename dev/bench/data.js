@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1644296319759,
+  "lastUpdate": 1644422383146,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -991,6 +991,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 95853436,
             "range": "± 16590828",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "47657529+kzjin@users.noreply.github.com",
+            "name": "kzjin",
+            "username": "kzjin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7323c2660d1b143114d13a4bb50dde05f396a6b",
+          "message": "deposit evm base fee to treasury (#185)\n\nCo-authored-by: Zhuang Jin <zjin@deeper.network>",
+          "timestamp": "2022-02-09T23:23:03+08:00",
+          "tree_id": "e041ffcd436891e4421e9f3833070a37aad256c9",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/d7323c2660d1b143114d13a4bb50dde05f396a6b"
+        },
+        "date": 1644422382663,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 6367735,
+            "range": "± 1164173",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 101864360,
+            "range": "± 14891335",
             "unit": "ns/iter"
           }
         ]
