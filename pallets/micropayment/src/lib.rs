@@ -50,8 +50,9 @@ pub mod pallet {
     use crate::weights::WeightInfo;
     use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
-    use frame_support::traits::{Currency, Get};
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+    use frame_support::traits::{Get};
+    use frame_support::traits::tokens::currency::Currency;
+    use frame_support::{dispatch::{DispatchResultWithPostInfo, DispatchError}, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use log::error;
     use pallet_balances::MutableCurrency;
@@ -60,7 +61,6 @@ pub mod pallet {
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{Saturating, Zero};
-    use sp_runtime::DispatchError;
     use sp_std::prelude::Vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
@@ -93,7 +93,7 @@ pub mod pallet {
     >;
 
     // struct to store micro-payment channel
-    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, scale_info::TypeInfo)]
+    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, Clone, scale_info::TypeInfo)]
     pub struct Chan<AccountId, BlockNumber, Balance> {
         pub client: AccountId,
         pub server: AccountId,
@@ -105,6 +105,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     // get channel info
@@ -117,7 +118,7 @@ pub mod pallet {
         Blake2_128Concat,
         T::AccountId,
         ChannelOf<T>,
-        ValueQuery,
+        OptionQuery,
     >;
 
     // nonce indicates the next available value;
@@ -248,31 +249,11 @@ pub mod pallet {
 
             if Channel::<T>::contains_key(&account_id, &signer) {
                 // signer is server
-                let chan = Channel::<T>::get(&account_id, &signer);
-                TotalMicropaymentChannelBalance::<T>::mutate_exists(&account_id, |b| {
-                    let total_balance = b.take().unwrap_or_default();
-                    *b = if total_balance > chan.balance {
-                        Some(total_balance - chan.balance)
-                    } else {
-                        None
-                    };
-                });
-                // return the remaining balance in the channel to the client
-                Self::deposit_into_account(&account_id, chan.balance)?;
-                Self::_close_channel(&account_id, &signer);
-                let end_block = <frame_system::Pallet<T>>::block_number();
-                Self::deposit_event(Event::ChannelClosed(account_id, signer, end_block));
-                return Ok(().into());
-            } else if Channel::<T>::contains_key(&signer, &account_id) {
-                // signer is client
-                let chan = Channel::<T>::get(&signer, &account_id);
 
-                let current_block = <frame_system::Pallet<T>>::block_number();
-                if chan.expiration < current_block
-                    || T::NodeInterface::get_eras_offline(&chan.server) >= 1
-                {
-                    TotalMicropaymentChannelBalance::<T>::mutate_exists(&signer, |b| {
+                if let Some(chan) = Channel::<T>::get(&account_id, &signer) {
+                    TotalMicropaymentChannelBalance::<T>::mutate_exists(&account_id, |b| {
                         let total_balance = b.take().unwrap_or_default();
+                        
                         *b = if total_balance > chan.balance {
                             Some(total_balance - chan.balance)
                         } else {
@@ -280,14 +261,39 @@ pub mod pallet {
                         };
                     });
                     // return the remaining balance in the channel to the client
-                    Self::deposit_into_account(&signer, chan.balance)?;
-                    Self::_close_channel(&signer, &account_id);
-                    let end_block = current_block;
-                    Self::deposit_event(Event::ChannelClosed(signer, account_id, end_block));
-                    return Ok(().into());
-                } else {
-                    Err(Error::<T>::UnexpiredChannelCannotBeClosedBySender)?
+                    Self::deposit_into_account(&account_id, chan.balance)?;
+                    Self::_close_channel(&account_id, &signer);
+                    let end_block = <frame_system::Pallet<T>>::block_number();
+                    Self::deposit_event(Event::ChannelClosed(account_id, signer, end_block));
                 }
+                return Ok(().into());
+            } else if Channel::<T>::contains_key(&signer, &account_id) {
+                
+                // signer is client
+                if let Some(chan) = Channel::<T>::get(&signer, &account_id) {
+                    let current_block = <frame_system::Pallet<T>>::block_number();
+                    if chan.expiration < current_block
+                        || T::NodeInterface::get_eras_offline(&chan.server) >= 1
+                    {
+                        TotalMicropaymentChannelBalance::<T>::mutate_exists(&signer, |b| {
+                            let total_balance = b.take().unwrap_or_default();
+                            *b = if total_balance > chan.balance {
+                                Some(total_balance - chan.balance)
+                            } else {
+                                None
+                            };
+                        });
+                        // return the remaining balance in the channel to the client
+                        Self::deposit_into_account(&signer, chan.balance)?;
+                        Self::_close_channel(&signer, &account_id);
+                        let end_block = current_block;
+                        Self::deposit_event(Event::ChannelClosed(signer, account_id, end_block));
+                        return Ok(().into());
+                    } else {
+                        Err(Error::<T>::UnexpiredChannelCannotBeClosedBySender)?
+                    }
+                }
+                return Ok(().into());
             } else {
                 Err(Error::<T>::ChannelNotExist)?
             }
@@ -336,7 +342,10 @@ pub mod pallet {
                 Err(Error::<T>::NotEnoughBalance)?
             }
             Channel::<T>::mutate(&client, &server, |c| {
-                (*c).balance += amount;
+                if let Some(c_update) = c {
+                    c_update.balance += amount;
+                    *c = Some(c_update.clone())
+                }
             });
             TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
                 let total_balance = b.take().unwrap_or_default();
@@ -363,74 +372,76 @@ pub mod pallet {
             );
 
             // close channel if it expires
-            let mut chan = Channel::<T>::get(&client, &server);
-            let current_block = <frame_system::Pallet<T>>::block_number();
-            if chan.expiration < current_block {
+            //let mut chan = Channel::<T>::get(&client, &server);
+            if let Some(chan) = Channel::<T>::get(&client, &server) {
+                let current_block = <frame_system::Pallet<T>>::block_number();
+                if chan.expiration < current_block {
+                    TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
+                        let total_balance = b.take().unwrap_or_default();
+                        *b = if total_balance > chan.balance {
+                            Some(total_balance - chan.balance)
+                        } else {
+                            None
+                        };
+                    });
+                    // return the remaining balance in the channel to the client
+                    Self::deposit_into_account(&client, chan.balance)?;
+                    Self::_close_channel(&client, &server);
+                    let end_block = current_block;
+                    Self::deposit_event(Event::ChannelClosed(client, server, end_block));
+                    return Ok(().into());
+                }
+
+                if SessionId::<T>::contains_key((&client, &server))
+                    && session_id != Self::session_id((&client, &server)).unwrap_or(0) + 1
+                {
+                    Err(Error::<T>::SessionError)?
+                }
+                Self::verify_signature(&client, &server, chan.nonce, session_id, amount, &signature)?;
+                SessionId::<T>::insert((&client, &server), session_id); // mark session_id as used
+
+                // if there is not enough balance in the channel
+                if chan.balance < amount {
+                    TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
+                        let total_balance = b.take().unwrap_or_default();
+                        *b = if total_balance > chan.balance {
+                            Some(total_balance - chan.balance)
+                        } else {
+                            None
+                        };
+                    });
+                    // deposit all the balance in the channel to the server's account
+                    Self::deposit_into_account(&server, chan.balance)?;
+                    // update server's credit TODO: reuse in future
+                    //T::CreditInterface::update_credit((server.clone(), chan.balance));
+                    // no balance in channel now, just close it
+                    Self::_close_channel(&client, &server);
+                    let end_block = <frame_system::Pallet<T>>::block_number();
+                    Self::deposit_event(Event::ChannelClosed(
+                        client.clone(),
+                        server.clone(),
+                        end_block,
+                    ));
+                    error!("Channel not enough balance");
+                    Err(Error::<T>::NotEnoughBalance)?
+                }
+
+                chan.balance -= amount;
+                Channel::<T>::insert(&client, &server, chan);
                 TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
                     let total_balance = b.take().unwrap_or_default();
-                    *b = if total_balance > chan.balance {
-                        Some(total_balance - chan.balance)
+                    *b = if total_balance > amount {
+                        Some(total_balance - amount)
                     } else {
                         None
                     };
                 });
-                // return the remaining balance in the channel to the client
-                Self::deposit_into_account(&client, chan.balance)?;
-                Self::_close_channel(&client, &server);
-                let end_block = current_block;
-                Self::deposit_event(Event::ChannelClosed(client, server, end_block));
-                return Ok(().into());
-            }
-
-            if SessionId::<T>::contains_key((&client, &server))
-                && session_id != Self::session_id((&client, &server)).unwrap_or(0) + 1
-            {
-                Err(Error::<T>::SessionError)?
-            }
-            Self::verify_signature(&client, &server, chan.nonce, session_id, amount, &signature)?;
-            SessionId::<T>::insert((&client, &server), session_id); // mark session_id as used
-
-            // if there is not enough balance in the channel
-            if chan.balance < amount {
-                TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
-                    let total_balance = b.take().unwrap_or_default();
-                    *b = if total_balance > chan.balance {
-                        Some(total_balance - chan.balance)
-                    } else {
-                        None
-                    };
-                });
-                // deposit all the balance in the channel to the server's account
-                Self::deposit_into_account(&server, chan.balance)?;
+                // deposit the claimed amount to the server's account
+                Self::deposit_into_account(&server, amount)?;
                 // update server's credit TODO: reuse in future
-                //T::CreditInterface::update_credit((server.clone(), chan.balance));
-                // no balance in channel now, just close it
-                Self::_close_channel(&client, &server);
-                let end_block = <frame_system::Pallet<T>>::block_number();
-                Self::deposit_event(Event::ChannelClosed(
-                    client.clone(),
-                    server.clone(),
-                    end_block,
-                ));
-                error!("Channel not enough balance");
-                Err(Error::<T>::NotEnoughBalance)?
+                //T::CreditInterface::update_credit((server.clone(), amount));
+                Self::deposit_event(Event::ClaimPayment(client, server, amount));
             }
-
-            chan.balance -= amount;
-            Channel::<T>::insert(&client, &server, chan);
-            TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
-                let total_balance = b.take().unwrap_or_default();
-                *b = if total_balance > amount {
-                    Some(total_balance - amount)
-                } else {
-                    None
-                };
-            });
-            // deposit the claimed amount to the server's account
-            Self::deposit_into_account(&server, amount)?;
-            // update server's credit TODO: reuse in future
-            //T::CreditInterface::update_credit((server.clone(), amount));
-            Self::deposit_event(Event::ClaimPayment(client, server, amount));
             Ok(().into())
         }
     }
@@ -499,6 +510,7 @@ pub mod pallet {
                     return Zero::zero();
                 } else {
                     balance.free -= amount;
+                    //balance.free = balance.free.saturating_sub(amount);
                 }
                 return amount;
             });
@@ -515,7 +527,9 @@ pub mod pallet {
         ) -> Result<(), DispatchError> {
             T::Currency::mutate_account_balance(account, |balance| {
                 balance.free += amount;
-            })
+                //balance.free = balance.free.saturating_add(amount);
+            });
+            Ok(())
         }
     }
 }

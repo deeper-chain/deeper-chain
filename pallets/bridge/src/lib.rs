@@ -52,6 +52,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::type_value]
@@ -66,7 +67,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn bridge_messages)]
     pub type BridgeMessages<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::Hash, BridgeMessage<T::AccountId, T::Hash>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::Hash, BridgeMessage<T::AccountId, T::Hash>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn limit_messages)]
@@ -101,7 +102,7 @@ pub mod pallet {
         Blake2_128Concat,
         T::Hash,
         TransferMessage<T::AccountId, T::Hash, BalanceOf<T>>,
-        ValueQuery,
+        OptionQuery,
     >;
 
     #[pallet::storage]
@@ -153,7 +154,7 @@ pub mod pallet {
         Blake2_128Concat,
         T::Hash,
         ValidatorMessage<T::AccountId, T::Hash>,
-        ValueQuery,
+        OptionQuery,
     >;
 
     #[pallet::storage]
@@ -467,13 +468,17 @@ pub mod pallet {
 
             let id = <TransferId<T>>::get(message_id);
 
-            let is_approved = <TransferMessages<T>>::get(message_id).status == Status::Approved
-                || <TransferMessages<T>>::get(message_id).status == Status::Confirmed;
-            ensure!(is_approved, "This transfer must be approved first.");
+            if <TransferMessages<T>>::contains_key(message_id) {
+                if let Some(msg) = <TransferMessages<T>>::get(message_id) {
+                    let is_approved = msg.status == Status::Approved
+                        || msg.status == Status::Confirmed;
+                    ensure!(is_approved, "This transfer must be approved first.");
 
-            Self::update_status(message_id, Status::Confirmed, Kind::Transfer)?;
-            Self::reopen_for_burn_confirmation(message_id)?;
-            Self::_sign(validator, id)?;
+                    Self::update_status(message_id, Status::Confirmed, Kind::Transfer)?;
+                    Self::reopen_for_burn_confirmation(message_id)?;
+                    Self::_sign(validator, id)?;
+                }
+            }
             Ok(().into())
         }
 
@@ -486,8 +491,11 @@ pub mod pallet {
             let validator = ensure_signed(origin)?;
             Self::check_validator(validator.clone())?;
 
-            let has_burned = <TransferMessages<T>>::contains_key(message_id)
-                && <TransferMessages<T>>::get(message_id).status == Status::Confirmed;
+            let mut has_burned = <TransferMessages<T>>::contains_key(message_id);
+            if let Some(msg) = <TransferMessages<T>>::get(message_id) {
+                has_burned = has_burned && msg.status == Status::Confirmed;
+            }
+            
             ensure!(
                 !has_burned,
                 "Failed to cancel. This transfer is already executed."
@@ -515,27 +523,32 @@ pub mod pallet {
             transfer.votes += 1;
 
             if Self::votes_are_enough(transfer.votes) {
-                match message.status {
-                    Status::Confirmed | Status::Canceled => (), // if burn is confirmed or canceled
-                    _ => match transfer.kind {
-                        Kind::Transfer => message.status = Status::Approved,
-                        Kind::Limits => limit_message.status = Status::Approved,
-                        Kind::Validator => validator_message.status = Status::Approved,
-                        Kind::Bridge => bridge_message.status = Status::Approved,
-                    },
+
+                if let (Some(mut message), Some(mut validator_message), Some(mut bridge_message)) = (message, validator_message, bridge_message) {
+                    match message.status {
+                        Status::Confirmed | Status::Canceled => (), // if burn is confirmed or canceled
+                        _ => match transfer.kind {
+                            Kind::Transfer => message.status = Status::Approved,
+                            Kind::Limits => limit_message.status = Status::Approved,
+                            Kind::Validator => validator_message.status = Status::Approved,
+                            Kind::Bridge => bridge_message.status = Status::Approved,
+                        },
+                    }
+                    match transfer.kind {
+                        Kind::Transfer => Self::execute_transfer(message)?,
+                        Kind::Limits => Self::_update_limits(limit_message)?,
+                        Kind::Validator => Self::manage_validator_list(validator_message)?,
+                        Kind::Bridge => Self::manage_bridge(bridge_message)?,
+                    }
+                    transfer.open = false;
                 }
-                match transfer.kind {
-                    Kind::Transfer => Self::execute_transfer(message)?,
-                    Kind::Limits => Self::_update_limits(limit_message)?,
-                    Kind::Validator => Self::manage_validator_list(validator_message)?,
-                    Kind::Bridge => Self::manage_bridge(bridge_message)?,
-                }
-                transfer.open = false;
             } else {
-                match message.status {
-                    Status::Confirmed | Status::Canceled => (),
-                    _ => Self::set_pending(transfer_id, transfer.kind.clone())?,
-                };
+                if let Some(message) = message {
+                    match message.status {
+                        Status::Confirmed | Status::Canceled => (),
+                        _ => Self::set_pending(transfer_id, transfer.kind.clone())?,
+                    };
+                }
             }
 
             <ValidatorVotes<T>>::mutate((transfer_id, validator), |a| *a = true);
@@ -708,14 +721,15 @@ pub mod pallet {
         }
 
         fn execute_burn(message_id: T::Hash) -> Result<(), &'static str> {
-            let message = <TransferMessages<T>>::get(message_id);
-            let from = message.substrate_address.clone();
-            let to = message.eth_address;
-            let (_, res_bal) = T::Currency::slash_reserved(&from, message.amount); // burn
-            ensure!(res_bal == (BalanceOf::<T>::zero()), "slash_reserved failed");
-            <DailyLimits<T>>::mutate(from.clone(), |a| *a -= message.amount);
+            if let Some(message) = <TransferMessages<T>>::get(message_id) {
+                let from = message.substrate_address.clone();
+                let to = message.eth_address;
+                let (_, res_bal) = T::Currency::slash_reserved(&from, message.amount); // burn
+                ensure!(res_bal == (BalanceOf::<T>::zero()), "slash_reserved failed");
+                <DailyLimits<T>>::mutate(from.clone(), |a| *a -= message.amount);
 
-            Self::deposit_event(Event::BurnedMessage(message_id, from, to, message.amount));
+                Self::deposit_event(Event::BurnedMessage(message_id, from, to, message.amount));
+            }
             Ok(())
         }
 
@@ -785,11 +799,12 @@ pub mod pallet {
             let message_id = <MessageId<T>>::get(transfer_id);
             match kind {
                 Kind::Transfer => {
-                    let message = <TransferMessages<T>>::get(message_id);
-                    match message.action {
-                        Status::Withdraw => Self::add_pending_burn(message)?,
-                        Status::Deposit => Self::add_pending_mint(message)?,
-                        _ => (),
+                    if let Some(message) = <TransferMessages<T>>::get(message_id) {
+                        match message.action {
+                            Status::Withdraw => Self::add_pending_burn(message)?,
+                            Status::Deposit => Self::add_pending_mint(message)?,
+                            _ => (),
+                        }
                     }
                 }
                 _ => (),
@@ -800,19 +815,22 @@ pub mod pallet {
         fn update_status(id: T::Hash, status: Status, kind: Kind) -> Result<(), &'static str> {
             match kind {
                 Kind::Transfer => {
-                    let mut message = <TransferMessages<T>>::get(id);
-                    message.status = status;
-                    <TransferMessages<T>>::insert(id, message);
+                    if let Some(mut message) = <TransferMessages<T>>::get(id) {
+                        message.status = status;
+                        <TransferMessages<T>>::insert(id, message);
+                    }
                 }
                 Kind::Validator => {
-                    let mut message = <ValidatorHistory<T>>::get(id);
-                    message.status = status;
-                    <ValidatorHistory<T>>::insert(id, message);
+                    if let Some(mut message) = <ValidatorHistory<T>>::get(id) {
+                        message.status = status;
+                        <ValidatorHistory<T>>::insert(id, message);
+                    }
                 }
                 Kind::Bridge => {
-                    let mut message = <BridgeMessages<T>>::get(id);
-                    message.status = status;
-                    <BridgeMessages<T>>::insert(id, message);
+                    if let Some(mut message) = <BridgeMessages<T>>::get(id) {
+                        message.status = status;
+                        <BridgeMessages<T>>::insert(id, message);
+                    }
                 }
                 Kind::Limits => {
                     let mut message = <LimitMessages<T>>::get(id);
@@ -825,19 +843,20 @@ pub mod pallet {
 
         // needed because @message_id will be the same as initial
         fn reopen_for_burn_confirmation(message_id: T::Hash) -> Result<(), &'static str> {
-            let message = <TransferMessages<T>>::get(message_id);
-            let transfer_id = <TransferId<T>>::get(message_id);
-            let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
-            let is_eth_response =
-                message.status == Status::Confirmed || message.status == Status::Canceled;
-            if !transfer.open && is_eth_response {
-                transfer.votes = 0;
-                transfer.open = true;
-                <BridgeTransfers<T>>::insert(transfer_id, transfer);
-                let validators = <ValidatorAccounts<T>>::get();
-                validators
-                    .iter()
-                    .for_each(|a| <ValidatorVotes<T>>::insert((transfer_id, a.clone()), false));
+            if let Some(message) = <TransferMessages<T>>::get(message_id) {
+                let transfer_id = <TransferId<T>>::get(message_id);
+                let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
+                let is_eth_response =
+                    message.status == Status::Confirmed || message.status == Status::Canceled;
+                if !transfer.open && is_eth_response {
+                    transfer.votes = 0;
+                    transfer.open = true;
+                    <BridgeTransfers<T>>::insert(transfer_id, transfer);
+                    let validators = <ValidatorAccounts<T>>::get();
+                    validators
+                        .iter()
+                        .for_each(|a| <ValidatorVotes<T>>::insert((transfer_id, a.clone()), false));
+                }
             }
             Ok(())
         }

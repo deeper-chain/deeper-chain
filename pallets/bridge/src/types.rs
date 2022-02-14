@@ -132,24 +132,6 @@ pub struct ValidatorMessage<AccountId, Hash> {
     pub status: Status,
 }
 
-impl<A, H, B> Default for TransferMessage<A, H, B>
-where
-    A: Default,
-    H: Default,
-    B: Default,
-{
-    fn default() -> Self {
-        TransferMessage {
-            message_id: H::default(),
-            eth_address: H160::default(),
-            substrate_address: A::default(),
-            amount: B::default(),
-            status: Status::Withdraw,
-            action: Status::Withdraw,
-        }
-    }
-}
-
 impl<H, B> Default for LimitMessage<H, B>
 where
     H: Default,
@@ -160,37 +142,6 @@ where
             id: H::default(),
             limits: Limits::default(),
             status: Status::UpdateLimits,
-        }
-    }
-}
-
-impl<A, H> Default for BridgeMessage<A, H>
-where
-    A: Default,
-    H: Default,
-{
-    fn default() -> Self {
-        BridgeMessage {
-            message_id: H::default(),
-            account: A::default(),
-            action: Status::Revoked,
-            status: Status::Revoked,
-        }
-    }
-}
-
-impl<A, H> Default for ValidatorMessage<A, H>
-where
-    A: Default,
-    H: Default,
-{
-    fn default() -> Self {
-        ValidatorMessage {
-            message_id: H::default(),
-            quorum: u64::default(),
-            accounts: Vec::default(),
-            action: Status::Revoked,
-            status: Status::Revoked,
         }
     }
 }
