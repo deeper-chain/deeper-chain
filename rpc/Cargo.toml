@@ -41,9 +41,9 @@ sc-transaction-pool = { git = "https://github.com/paritytech/substrate", branch 
 sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 jsonrpc-pubsub = "18.0.0"
-fc-db = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
+fc-db = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }

@@ -63,8 +63,8 @@ sp-authorship = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # frontier primitives
-fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
+fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -89,11 +89,11 @@ sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", branch 
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # frontier client dependencies
-fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fc-db = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
+fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fc-db = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
 
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -114,10 +114,10 @@ pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
 
 # frontier frame dependencies
-pallet-evm = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
+pallet-evm = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }

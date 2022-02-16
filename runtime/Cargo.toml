@@ -40,8 +40,8 @@ sp-version = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-io ={ default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"  }
 
 # frontier primitives
-fp-rpc = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-fp-self-contained = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
+fp-rpc = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+fp-self-contained = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
 
 # frame dependencies
 frame-executive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -94,18 +94,18 @@ pallet-credit-accumulation = { version = "3.0.0", default-features = false, path
 
 # frontier frame dependencies
 libsecp256k1 = { version = "0.6", default-features = false, optional = true }
-pallet-ethereum = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-dynamic-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-simple = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-sha3fips = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-modexp = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-blake2 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-bn128 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-dispatch = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-curve25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-evm-precompile-ed25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
-pallet-base-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "1152de634e30f2dce9d285479155a162257a07a1" }
+pallet-ethereum = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-dynamic-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-simple = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-sha3fips = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-modexp = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-blake2 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-bn128 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-dispatch = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-curve25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-evm-precompile-ed25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
+pallet-base-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", rev = "8b1134332d8777f3bee68f3f95ec82e40e736e78" }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
