@@ -373,7 +373,7 @@ pub mod pallet {
 
             // close channel if it expires
             //let mut chan = Channel::<T>::get(&client, &server);
-            if let Some(chan) = Channel::<T>::get(&client, &server) {
+            if let Some(mut chan) = Channel::<T>::get(&client, &server) {
                 let current_block = <frame_system::Pallet<T>>::block_number();
                 if chan.expiration < current_block {
                     TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
@@ -510,7 +510,6 @@ pub mod pallet {
                     return Zero::zero();
                 } else {
                     balance.free -= amount;
-                    //balance.free = balance.free.saturating_sub(amount);
                 }
                 return amount;
             });
@@ -527,7 +526,6 @@ pub mod pallet {
         ) -> Result<(), DispatchError> {
             T::Currency::mutate_account_balance(account, |balance| {
                 balance.free += amount;
-                //balance.free = balance.free.saturating_add(amount);
             });
             Ok(())
         }

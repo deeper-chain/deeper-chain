@@ -63,7 +63,7 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 use sp_staking::{
-    offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence},
+    offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence, DisableStrategy},
     SessionIndex,
 };
 use sp_std::{
@@ -687,7 +687,7 @@ pub mod pallet {
         Twox64Concat,
         T::AccountId,
         Exposure<T::AccountId, BalanceOf<T>>,
-        ValueQuery,
+        OptionQuery,
     >;
 
     /// Similar to `ErasStakers`, this holds the preferences of validators.
@@ -713,7 +713,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn eras_reward_points)]
     pub type ErasRewardPoints<T: Config> =
-        StorageMap<_, Twox64Concat, EraIndex, EraRewardPoints<T::AccountId>, ValueQuery>;
+        StorageMap<_, Twox64Concat, EraIndex, EraRewardPoints<T::AccountId>, OptionQuery>;
 
     /// The total amount staked for the last `HISTORY_DEPTH` eras.
     /// If total hasn't been set or has been removed then 0 stake is returned.
@@ -810,13 +810,13 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn candidate_validators)]
     pub(crate) type CandidateValidators<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, ValidatorData<T::AccountId>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, ValidatorData<T::AccountId>, OptionQuery>;
 
     /// delegator -> DelegatorData
     #[pallet::storage]
     #[pallet::getter(fn delegators)]
     pub(crate) type Delegators<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, DelegatorData<T::AccountId>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, DelegatorData<T::AccountId>, OptionQuery>;
 
     /// active delegator count
     #[pallet::storage]
@@ -1705,29 +1705,35 @@ pub mod pallet {
             let current_era = T::CreditInterface::get_current_era();
             if <Delegators<T>>::contains_key(&delegator) {
                 let old_delegator_data = Self::delegators(&delegator);
-                if !old_delegator_data.delegating {
-                    // the delegator was not delegating
-                    // the delegator delegates again
-                    ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
-                }
-                let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
-                    Some(unrewarded_era) => unrewarded_era,
-                    None => current_era,
-                };
-                let delegator_data = DelegatorData {
-                    delegator: delegator.clone(),
-                    delegated_validators: validators.clone(),
-                    unrewarded_since: Some(earliest_unrewarded_era),
-                    delegating: true,
-                };
-                <Delegators<T>>::insert(&delegator, delegator_data);
+                if let Some(old_delegator_data) = old_delegator_data {
+                    if !old_delegator_data.delegating {
+                        // the delegator was not delegating
+                        // the delegator delegates again
+                        ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
+                    }
+                    let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
+                        Some(unrewarded_era) => unrewarded_era,
+                        None => current_era,
+                    };
+                    let delegator_data = DelegatorData {
+                        delegator: delegator.clone(),
+                        delegated_validators: validators.clone(),
+                        unrewarded_since: Some(earliest_unrewarded_era),
+                        delegating: true,
+                    };
+                    <Delegators<T>>::insert(&delegator, delegator_data);
 
-                for validator in &old_delegator_data.delegated_validators {
-                    <CandidateValidators<T>>::mutate(validator, |v| {
-                        v.delegators.remove(&delegator)
-                    });
-                    if Self::candidate_validators(validator).delegators.is_empty() {
-                        <CandidateValidators<T>>::remove(validator);
+                    for validator in &old_delegator_data.delegated_validators {
+                        <CandidateValidators<T>>::mutate(validator, |v| {
+                            if let Some(v) = v {
+                                v.delegators.remove(&delegator);
+                            }
+                        });
+                        if let Some(candidate) = Self::candidate_validators(validator) {
+                            if candidate.delegators.is_empty() {
+                                <CandidateValidators<T>>::remove(validator);
+                            }
+                        }
                     }
                 }
             } else {
@@ -1747,7 +1753,9 @@ pub mod pallet {
             for validator in &validator_set {
                 if <CandidateValidators<T>>::contains_key(validator) {
                     <CandidateValidators<T>>::mutate(validator, |v| {
-                        v.delegators.insert(delegator.clone())
+                        if let Some(v_update) = v {
+                            v_update.delegators.insert(delegator.clone());
+                        }
                     });
                 } else {
                     let mut delegators = BTreeSet::new();
@@ -2158,35 +2166,36 @@ impl<T: Config> pallet::Pallet<T> {
         }
         let era_payout = cmp::min(Self::era_validator_reward(), remainder_mining_reward);
         let mut total_payout = Zero::zero();
-        let era_reward_points = <ErasRewardPoints<T>>::get(&era);
-        let total_reward_points = era_reward_points.total;
-        for validator in Self::eras_validators(era) {
-            let validator_reward_points = era_reward_points
-                .individual
-                .get(&validator)
-                .map(|points| *points)
-                .unwrap_or_else(|| Zero::zero());
-            if !validator_reward_points.is_zero() {
-                let validator_total_reward_part =
-                    Perbill::from_rational(validator_reward_points, total_reward_points);
-                // This is how much validator is entitled to.
-                let validator_total_payout = validator_total_reward_part * era_payout;
-                total_payout += validator_total_payout;
-                if let Some(imbalance) =
-                    Self::make_validator_payout(&validator, validator_total_payout)
-                {
-                    Self::deposit_event(Event::<T>::ValidatorReward(
-                        validator.clone(),
-                        imbalance.peek(),
-                    ));
+        if let Some(era_reward_points) = <ErasRewardPoints<T>>::get(&era) {
+            let total_reward_points = era_reward_points.total;
+            for validator in Self::eras_validators(era) {
+                let validator_reward_points = era_reward_points
+                    .individual
+                    .get(&validator)
+                    .map(|points| *points)
+                    .unwrap_or_else(|| Zero::zero());
+                if !validator_reward_points.is_zero() {
+                    let validator_total_reward_part =
+                        Perbill::from_rational(validator_reward_points, total_reward_points);
+                    // This is how much validator is entitled to.
+                    let validator_total_payout = validator_total_reward_part * era_payout;
+                    total_payout += validator_total_payout;
+                    if let Some(imbalance) =
+                        Self::make_validator_payout(&validator, validator_total_payout)
+                    {
+                        Self::deposit_event(Event::<T>::ValidatorReward(
+                            validator.clone(),
+                            imbalance.peek(),
+                        ));
+                    }
                 }
             }
+            RemainderMiningReward::<T>::put(
+                TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(total_payout))
+                    .ok()
+                    .unwrap(),
+            );
         }
-        RemainderMiningReward::<T>::put(
-            TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(total_payout))
-                .ok()
-                .unwrap(),
-        );
     }
 
     /// Validators can set reward destination or payee, so we need to handle that.
@@ -2320,7 +2329,9 @@ impl<T: Config> pallet::Pallet<T> {
         }
         if delegator_data.delegating {
             Delegators::<T>::mutate(delegator, |data| {
-                data.unrewarded_since = Some(current_era);
+                if let Some(update_data) = data {
+                    update_data.unrewarded_since = Some(current_era);
+                }
             });
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
         } else {
@@ -2387,12 +2398,20 @@ impl<T: Config> pallet::Pallet<T> {
         let mut validators: Vec<(T::AccountId, u32, EraIndex)> = Validators::<T>::iter()
             .filter(|(validator, _)| Self::trusted_validator(&validator))
             .map(|(validator, _)| {
-                let candidate_validator = Self::candidate_validators(&validator);
+                // if let Some(candidate_validator) = Self::candidate_validators(&validator) {
+                //     (
+                //         validator.clone(),
+                //         candidate_validator.delegators.len() as u32,
+                //         candidate_validator.elected_era,
+                //     )
+                // }
+                let candidate_validator = Self::candidate_validators(&validator).unwrap();
                 (
                     validator.clone(),
                     candidate_validator.delegators.len() as u32,
                     candidate_validator.elected_era,
                 )
+                
             })
             .collect();
         if validators.len() < Self::minimum_validator_count().max(1) as usize {
@@ -2411,7 +2430,9 @@ impl<T: Config> pallet::Pallet<T> {
                 validators.iter().map(|(v, _, _)| (*v).clone()).collect();
             for elected_validator in &elected_validators {
                 <CandidateValidators<T>>::mutate(&elected_validator, |validator_data| {
-                    validator_data.elected_era = current_era + 1; // makes sure it's not 0
+                    if let Some(update_validator_data) = validator_data {
+                        update_validator_data.elected_era = current_era + 1; // makes sure it's not 0
+                    }
                 });
             }
             log!(
@@ -2431,7 +2452,9 @@ impl<T: Config> pallet::Pallet<T> {
                     .unwrap_or_default();
                 // expose delegators only if not all validators elected.
                 let others = if truncated {
-                    Self::candidate_validators(v)
+                    let candidate = Self::candidate_validators(v).unwrap();
+
+                    candidate
                         .delegators
                         .into_iter()
                         .collect()
@@ -2525,9 +2548,11 @@ impl<T: Config> pallet::Pallet<T> {
     pub fn reward_by_ids(validators_points: impl IntoIterator<Item = (T::AccountId, u32)>) {
         if let Some(active_era) = Self::active_era() {
             <ErasRewardPoints<T>>::mutate(active_era.index, |era_rewards| {
-                for (validator, points) in validators_points.into_iter() {
-                    *era_rewards.individual.entry(validator).or_default() += points;
-                    era_rewards.total += points;
+                if let Some(update_era_rewards) = era_rewards {
+                    for (validator, points) in validators_points.into_iter() {
+                        *update_era_rewards.individual.entry(validator).or_default() += points;
+                        update_era_rewards.total += points;
+                    }
                 }
             });
         }
@@ -2562,33 +2587,43 @@ impl<T: Config> pallet::Pallet<T> {
 
     fn _undelegate(delegator: &T::AccountId) {
         let delegator_data = Self::delegators(delegator);
-        if delegator_data.delegating {
-            for validator in delegator_data.delegated_validators {
-                <CandidateValidators<T>>::mutate(&validator, |validator_data| {
-                    validator_data.delegators.remove(delegator);
-                });
-                match Self::candidate_validators(&validator).delegators.len() {
-                    0 => <CandidateValidators<T>>::remove(&validator),
-                    _ => (),
-                }
-            }
-
-            match delegator_data.unrewarded_since {
-                Some(earliest_unrewarded_era) => {
-                    if earliest_unrewarded_era == CurrentEra::<T>::get().unwrap_or(0) {
-                        <Delegators<T>>::remove(delegator);
-                        DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
-                    } else {
-                        <Delegators<T>>::mutate(delegator, |data| data.delegating = false);
+        if let Some(delegator_data) = delegator_data {
+            if delegator_data.delegating {
+                for validator in delegator_data.delegated_validators {
+                    <CandidateValidators<T>>::mutate(&validator, |validator_data| {
+                        if let Some(validator_data) = validator_data {
+                            validator_data.delegators.remove(delegator);
+                        }
+                    });
+                    if let Some(validator_data) = Self::candidate_validators(&validator) {
+                        match validator_data.delegators.len() {
+                            0 => <CandidateValidators<T>>::remove(&validator),
+                            _ => (),
+                        }
                     }
                 }
-                None => {
-                    // remove the delegator
-                    <Delegators<T>>::remove(delegator);
-                    DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+
+                match delegator_data.unrewarded_since {
+                    Some(earliest_unrewarded_era) => {
+                        if earliest_unrewarded_era == CurrentEra::<T>::get().unwrap_or(0) {
+                            <Delegators<T>>::remove(delegator);
+                            DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+                        } else {
+                            <Delegators<T>>::mutate(delegator, |data| {
+                                if let Some(data) = data {
+                                    data.delegating = false
+                                }
+                            });
+                        }
+                    }
+                    None => {
+                        // remove the delegator
+                        <Delegators<T>>::remove(delegator);
+                        DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+                    }
                 }
+                ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
             }
-            ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
         }
     }
 
@@ -2655,7 +2690,7 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
             validators
                 .into_iter()
                 .map(|v| {
-                    let exposure = Self::eras_stakers(current_era, &v);
+                    let exposure = Self::eras_stakers(current_era, &v).unwrap();
                     (v, exposure)
                 })
                 .collect()
@@ -2681,10 +2716,12 @@ where
         Self::reward_by_ids(vec![(author, 20)])
     }
     fn note_uncle(author: T::AccountId, _age: T::BlockNumber) {
-        Self::reward_by_ids(vec![
-            (<pallet_authorship::Pallet<T>>::author(), 2),
-            (author, 1),
-        ])
+        if let Some(block_author) = <pallet_authorship::Pallet<T>>::author() {
+            Self::reward_by_ids(vec![
+                (block_author, 2),
+                (author, 1),
+            ])
+        }
     }
 }
 
@@ -2707,7 +2744,7 @@ impl<T: Config> Convert<T::AccountId, Option<Exposure<T::AccountId, BalanceOf<T>
 {
     fn convert(validator: T::AccountId) -> Option<Exposure<T::AccountId, BalanceOf<T>>> {
         if let Some(active_era) = <Pallet<T>>::active_era() {
-            Some(<Pallet<T>>::eras_stakers(active_era.index, &validator))
+            Some(<Pallet<T>>::eras_stakers(active_era.index, &validator).unwrap())
         } else {
             None
         }
@@ -2738,6 +2775,7 @@ where
         >],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
+        _disable_strategy: DisableStrategy,
     ) -> Weight {
         if !Self::era_election_status().is_closed() {
             return 0;

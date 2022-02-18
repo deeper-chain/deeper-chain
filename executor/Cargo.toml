@@ -30,7 +30,7 @@ criterion = "0.3.0"
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 node-testing = { version = "2.0.0", path = "../testing" }
-pallet-balances = { version = "3.0.0", git = "https://github.com/deeper-chain/deeper-chain.git" }
+pallet-balances = { version = "3.0.0", default-features = false, path = "../pallets/balances"}
 pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-im-online = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
