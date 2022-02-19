@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1644584545980,
+  "lastUpdate": 1645247447576,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1099,6 +1099,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 94400412,
             "range": "± 18636520",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "47657529+kzjin@users.noreply.github.com",
+            "name": "kzjin",
+            "username": "kzjin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3decbe79767be3889f03947b9444e29f6c17208a",
+          "message": "fix fee_history crash (#192)\n\n* fix fee_history crash\r\n\r\n* Update test.yml\r\n\r\nCo-authored-by: Zhuang Jin <zjin@deeper.network>",
+          "timestamp": "2022-02-18T20:40:56-08:00",
+          "tree_id": "7b446761c47be0f5cdbafd679f7d1ac4709221da",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/3decbe79767be3889f03947b9444e29f6c17208a"
+        },
+        "date": 1645247447246,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5130427,
+            "range": "± 875047",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 86140700,
+            "range": "± 14191553",
             "unit": "ns/iter"
           }
         ]
