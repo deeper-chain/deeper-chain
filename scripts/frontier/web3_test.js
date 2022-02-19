@@ -89,7 +89,7 @@ async function test() {
     let my_token_balance = await balanceOf(my_address, contract_addr);
 
     let tx_cnt = 1000;
-    let tx = getTxAbi(alice_addr, tx_cnt, alice_addr);
+    let tx = getTxAbi(alice_addr, tx_cnt, contract_addr);
     let gas = await estimateGas(my_address, contract_addr, tx);
 
     await transferToken(my_address, contract_addr, tx);
@@ -100,6 +100,11 @@ async function test() {
     if (alice_token_balance_1 - alice_token_balance != tx_cnt) {
         console.error("token transfer failed!!!");
     }
+
+    await getFeeHistory(100, "latest", [25, 50, 75, 100]);
+    await getFeeHistory(100, "earliest", [25, 50, 75, 100]);
+    await getFeeHistory(100, "pending", [25, 50, 75, 100]);
+    await getFeeHistory(100, 10000, [25, 50, 75, 100]);
 
     let submit_ret = await submitWork(
         "0x0000000000000001",
@@ -321,6 +326,19 @@ async function estimateGas(from, to, data) {
     });
     console.log("estimate gas: " + gas);
     return gas;
+}
+
+async function getFeeHistory(blockCount, newestBlock, rewardPercentiles) {
+    try {
+        let result = await web3.eth.getFeeHistory(
+            blockCount,
+            newestBlock,
+            rewardPercentiles,
+        );
+        console.log("get fee history: " + JSON.stringify(result));
+    } catch (e) {
+        console.error(e);
+    };
 }
 
 async function submitWork(nonce, powHash, digest) {
