@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1645247447576,
+  "lastUpdate": 1645458829785,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1135,6 +1135,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 86140700,
             "range": "± 14191553",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "anhuitianyu@163.com",
+            "name": "yubo",
+            "username": "jerry-yu"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ddbd64b8d56bea8b96d6536c0b75099f5f564ff",
+          "message": "add burn dpr to add credit (#193)\n\nadd unit test and test ok\r\n\r\nuse new frontier\r\n\r\nuse new frontier;add benchmarking\r\n\r\nfix other pallet's unit test as credit add some variables",
+          "timestamp": "2022-02-21T23:21:42+08:00",
+          "tree_id": "516f0ef01370ee932ee15bc0cad34ddd836adbbb",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/5ddbd64b8d56bea8b96d6536c0b75099f5f564ff"
+        },
+        "date": 1645458829256,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5635779,
+            "range": "± 994723",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 92449184,
+            "range": "± 12103532",
             "unit": "ns/iter"
           }
         ]
