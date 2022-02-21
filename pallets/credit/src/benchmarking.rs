@@ -19,11 +19,24 @@
 
 use super::*;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use sp_runtime::Percent;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
+
+pub fn create_funded_user<T: Config>(
+    string: &'static str,
+    n: u32,
+    balance_factor: u32,
+) -> T::AccountId {
+    let user = account(string, n, SEED);
+    let balance = T::Currency::minimum_balance() * balance_factor.into();
+    T::Currency::make_free_balance_be(&user, balance);
+    T::Currency::issue(balance);
+    user
+}
 
 benchmarks! {
     update_credit_setting {
@@ -57,6 +70,25 @@ benchmarks! {
     }: _(RawOrigin::Root, user.clone(), credit_data)
     verify {
         assert!(UserCredit::<T>::contains_key(user));
+    }
+
+    burn_for_add_credit {
+        let mut credit_data = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+        let user = create_funded_user::<T>("user",USER_SEED, 1000);
+        UserCredit::<T>::insert(&user,credit_data.clone());
+        credit_data.credit = 101;
+        UserCreditHistory::<T>::insert(&user,vec![(1,credit_data)]);
+    }: _(RawOrigin::Signed(user.clone()), 1)
+    verify {
+        assert_eq!(UserCredit::<T>::get(&user).unwrap().credit,101);
     }
 }
 
