@@ -1819,6 +1819,11 @@ pub mod pallet {
             }
             let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
             let imbalance = T::Currency::deposit_creating(&delegator, reward);
+            RemainderMiningReward::<T>::put(
+                TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(reward))
+                    .ok()
+                    .unwrap(),
+            );
             Self::deposit_event(Event::CompensationDelegatorReward(
                 delegator.clone(),
                 imbalance.peek(),
