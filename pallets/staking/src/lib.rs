@@ -159,7 +159,7 @@ impl<AccountId> Default for RewardDestination<AccountId> {
     }
 }
 
-#[derive(Encode, Decode, Default, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Default, RuntimeDebug, TypeInfo, Clone, PartialEq)]
 pub struct RewardData<Balance: HasCompact> {
     pub total_referee_reward: Balance,
     pub received_referee_reward: Balance,
