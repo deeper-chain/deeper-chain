@@ -29,12 +29,12 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
-pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
+pallet-balances = { version = "3.0.0", default-features = false, git = "https://github.com/deeper-chain/deeper-balances"}
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node"}
 
 [dev-dependencies]
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-pallet-balances = { version = "3.0.0", path = "../balances" }
+pallet-balances = { version = "3.0.0", git = "https://github.com/deeper-chain/deeper-balances"}
 
 [features]
 default = ["std"]

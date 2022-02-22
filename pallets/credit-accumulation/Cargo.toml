@@ -20,7 +20,7 @@ frame-support = {default-features = false, git = "https://github.com/paritytech/
 frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives" }
-pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
+pallet-balances = { version = "3.0.0", default-features = false, git = "https://github.com/deeper-chain/deeper-balances"}
 pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../micropayment" }

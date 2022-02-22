@@ -4282,7 +4282,7 @@ dependencies = [
  "node-rpc",
  "node-runtime",
  "pallet-authority-discovery",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-base-fee",
  "pallet-contracts",
  "pallet-credit",
@@ -4367,7 +4367,7 @@ dependencies = [
  "node-primitives",
  "node-runtime",
  "node-testing",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-contracts",
  "pallet-grandpa",
  "pallet-im-online",
@@ -4498,7 +4498,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-authorship",
  "pallet-babe",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-base-fee",
  "pallet-bounties",
  "pallet-collective",
@@ -4583,7 +4583,7 @@ dependencies = [
  "node-executor",
  "node-primitives",
  "node-runtime",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-contracts",
  "pallet-deeper-node",
  "pallet-eth-sub-bridge",
@@ -4912,17 +4912,15 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "3.0.0"
+source = "git+https://github.com/deeper-chain/deeper-chain.git?branch=feature/polkadot0.9.16_dev#8954285d9d92a8885d604cafe28826d32caa0118"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
- "pallet-transaction-payment",
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -4930,7 +4928,7 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "3.0.0"
-source = "git+https://github.com/deeper-chain/deeper-chain.git?branch=feature/polkadot0.9.16_dev#8954285d9d92a8885d604cafe28826d32caa0118"
+source = "git+https://github.com/deeper-chain/deeper-balances#5e8bfeb790026faeb09e9aa6c7e95fbabf271108"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5102,7 +5100,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-deeper-node",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5125,7 +5123,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5147,7 +5145,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5218,7 +5216,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -5496,7 +5494,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",
@@ -5697,7 +5695,7 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-authorship",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5761,7 +5759,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",

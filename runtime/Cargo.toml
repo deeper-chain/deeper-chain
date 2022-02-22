@@ -54,7 +54,7 @@ pallet-assets = { git = "https://github.com/paritytech/substrate", branch = "pol
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-babe = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-pallet-balances = { version = "3.0.0", default-features = false, path = "../pallets/balances"}
+pallet-balances = { version = "3.0.0", default-features = false, git = "https://github.com/deeper-chain/deeper-balances"}
 pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
