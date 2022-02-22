@@ -16,6 +16,7 @@
 use crate as pallet_credit_accumulation;
 use crate::testing_utils::*;
 use frame_support::parameter_types;
+use frame_support::traits::{ConstU32};
 use frame_system as system;
 use node_primitives::{Balance, Moment};
 use pallet_micropayment::AccountCreator;
@@ -75,6 +76,7 @@ impl system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {

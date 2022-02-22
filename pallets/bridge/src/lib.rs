@@ -517,6 +517,7 @@ pub mod pallet {
             let mut limit_message = <LimitMessages<T>>::get(transfer.message_id);
             let mut validator_message = <ValidatorHistory<T>>::get(transfer.message_id);
             let mut bridge_message = <BridgeMessages<T>>::get(transfer.message_id);
+
             let voted = <ValidatorVotes<T>>::get((transfer_id, validator.clone()));
             ensure!(!voted, "This validator has already voted.");
             ensure!(transfer.open, "This transfer is not open");

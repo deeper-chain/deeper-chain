@@ -37,7 +37,7 @@ pub type CountryRegion = Vec<u8>;
 pub type DurationEras = u8;
 
 // struct to store the registered Device Information
-#[derive(Decode, Encode, Clone, Default, TypeInfo)]
+#[derive(Decode, Encode, Default, TypeInfo)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
     ipv4: IpV4, // IP will not be exposed in future version
@@ -235,9 +235,6 @@ pub mod pallet {
                         }
                         node_update.ipv4 = ip.clone();
                         node_update.expire = <frame_system::Pallet<T>>::block_number();
-
-                        *node = Some(node_update.clone())
-
                     }
                 });
             }
@@ -296,7 +293,6 @@ pub mod pallet {
             <DeviceInfo<T>>::mutate(&sender, |node| {
                 if let Some(node_update) = node {
                     node_update.expire = <frame_system::Pallet<T>>::block_number() + blocks;
-                    *node = Some(node_update.clone());
                 }
             });
             Ok(().into())

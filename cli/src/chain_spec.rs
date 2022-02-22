@@ -277,7 +277,8 @@ pub fn staging_testnet_config() -> ChainSpec {
                 .expect("Staging telemetry url is valid; qed"),
         ),
         None,
-        Some(chain_spec_properties()),
+        None,
+        None,
         Default::default(),
     )
 }
@@ -358,7 +359,6 @@ pub fn testnet_genesis(
     GenesisConfig {
         system: SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
-            changes_trie_config: Default::default(),
         },
         balances: BalancesConfig { balances },
         indices: IndicesConfig { indices: vec![] },
@@ -403,7 +403,7 @@ pub fn testnet_genesis(
                 .collect(),
             phantom: Default::default(),
         },
-        sudo: SudoConfig { key: root_key },
+        sudo: SudoConfig { key: Some(root_key) },
         babe: BabeConfig {
             authorities: vec![],
             epoch_config: Some(node_runtime::BABE_GENESIS_EPOCH_CONFIG),
@@ -28834,6 +28834,7 @@ pub fn development_config() -> ChainSpec {
         vec![],
         None,
         None,
+        None,
         Some(chain_spec_properties()),
         Default::default(),
     )
@@ -28927,6 +28928,7 @@ pub fn local_testnet_config() -> ChainSpec {
         ChainType::Local,
         local_testnet_genesis,
         vec![],
+        None,
         None,
         None,
         Some(chain_spec_properties()),

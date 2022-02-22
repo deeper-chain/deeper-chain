@@ -24,7 +24,6 @@ use node_runtime::{
     GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SocietyConfig, StakerStatus,
     StakingConfig, SystemConfig, BABE_GENESIS_EPOCH_CONFIG,
 };
-use sp_core::ChangesTrieConfiguration;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
 use sp_runtime::Perbill;
 
@@ -57,14 +56,6 @@ pub fn config_endowed(
 
     GenesisConfig {
         system: SystemConfig {
-            changes_trie_config: if support_changes_trie {
-                Some(ChangesTrieConfiguration {
-                    digest_interval: 2,
-                    digest_levels: 2,
-                })
-            } else {
-                None
-            },
             code: code
                 .map(|x| x.to_vec())
                 .unwrap_or_else(|| wasm_binary_unwrap().to_vec()),

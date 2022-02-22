@@ -20,6 +20,7 @@ use frame_support::{
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
+use frame_support::traits::{ConstU32};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
@@ -79,6 +80,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {

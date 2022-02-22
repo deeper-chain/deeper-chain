@@ -47,7 +47,7 @@ fn eth2sub_mint_works() {
             USER2,
             amount
         ));
-        let mut message = Bridge::messages(message_id);
+        let mut message = Bridge::messages(message_id).unwrap();
         assert_eq!(message.status, Status::Pending);
 
         assert_ok!(Bridge::multi_signed_mint(
@@ -57,7 +57,7 @@ fn eth2sub_mint_works() {
             USER2,
             amount
         ));
-        message = Bridge::messages(message_id);
+        message = Bridge::messages(message_id).unwrap();
         assert_eq!(message.status, Status::Confirmed);
 
         let transfer = Bridge::transfers(0);
@@ -109,7 +109,7 @@ fn sub2eth_burn_works() {
         //RelayMessage(message_id) event emitted
 
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        let get_message = || Bridge::messages(sub_message_id);
+        let get_message = || Bridge::messages(sub_message_id).unwrap();
 
         let mut message = get_message();
         assert_eq!(message.status, Status::Withdraw);
@@ -156,7 +156,7 @@ fn sub2eth_burn_skipped_approval_should_fail() {
         //RelayMessage(message_id) event emitted
 
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        let message = Bridge::messages(sub_message_id);
+        let message = Bridge::messages(sub_message_id).unwrap();
         assert_eq!(message.status, Status::Withdraw);
 
         assert_eq!(Balances::reserved_balance(USER2), 0);
@@ -185,12 +185,12 @@ fn sub2eth_burn_cancel_works() {
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
         assert_ok!(Bridge::approve_transfer(Origin::signed(V1), sub_message_id));
         assert_ok!(Bridge::approve_transfer(Origin::signed(V2), sub_message_id));
-        let mut message = Bridge::messages(sub_message_id);
+        let mut message = Bridge::messages(sub_message_id).unwrap();
         // funds are locked and waiting for confirmation
         assert_eq!(message.status, Status::Approved);
         assert_ok!(Bridge::cancel_transfer(Origin::signed(V2), sub_message_id));
         assert_ok!(Bridge::cancel_transfer(Origin::signed(V3), sub_message_id));
-        message = Bridge::messages(sub_message_id);
+        message = Bridge::messages(sub_message_id).unwrap();
         assert_eq!(message.status, Status::Canceled);
     })
 }
@@ -212,7 +212,7 @@ fn burn_cancel_should_fail() {
         ));
 
         let sub_message_id = Bridge::message_id_by_transfer_id(0);
-        let get_message = || Bridge::messages(sub_message_id);
+        let get_message = || Bridge::messages(sub_message_id).unwrap();
 
         let mut message = get_message();
         assert_eq!(message.status, Status::Withdraw);
@@ -263,7 +263,7 @@ fn update_validator_list_should_work() {
             vec![V1, V2, V3, V4]
         ));
         let id = Bridge::message_id_by_transfer_id(0);
-        let mut message = Bridge::validator_history(id);
+        let mut message = Bridge::validator_history(id).unwrap();
         assert_eq!(message.status, Status::Pending);
 
         assert_ok!(Bridge::update_validator_list(
@@ -272,7 +272,7 @@ fn update_validator_list_should_work() {
             QUORUM,
             vec![V1, V2, V3, V4]
         ));
-        message = Bridge::validator_history(id);
+        message = Bridge::validator_history(id).unwrap();
         assert_eq!(message.status, Status::Confirmed);
         assert_eq!(Bridge::validators_count(), 4);
     })
@@ -286,12 +286,12 @@ fn pause_the_bridge_should_work() {
         assert_eq!(Bridge::bridge_transfers_count(), 1);
         assert_eq!(Bridge::bridge_is_operational(), true);
         let id = Bridge::message_id_by_transfer_id(0);
-        let mut message = Bridge::bridge_messages(id);
+        let mut message = Bridge::bridge_messages(id).unwrap();
         assert_eq!(message.status, Status::Pending);
 
         assert_ok!(Bridge::pause_bridge(Origin::signed(V1)));
         assert_eq!(Bridge::bridge_is_operational(), false);
-        message = Bridge::bridge_messages(id);
+        message = Bridge::bridge_messages(id).unwrap();
         assert_eq!(message.status, Status::Confirmed);
     })
 }
@@ -382,7 +382,7 @@ fn instant_withdraw_should_fail() {
         ));
         //RelayMessage(message_id) event emitted
         let sub_message_id = Bridge::message_id_by_transfer_id(1);
-        let get_message = || Bridge::messages(sub_message_id);
+        let get_message = || Bridge::messages(sub_message_id).unwrap();
         let mut message = get_message();
         assert_eq!(message.status, Status::Withdraw);
         //approval

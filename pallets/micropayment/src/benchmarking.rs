@@ -45,7 +45,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(client.clone()), server.clone(), amount, 3600)
     verify {
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client,
                 server: server,
@@ -64,7 +64,7 @@ benchmarks! {
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),
@@ -86,7 +86,7 @@ benchmarks! {
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),
@@ -109,7 +109,7 @@ benchmarks! {
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),
@@ -124,7 +124,7 @@ benchmarks! {
     }: _(RawOrigin::Signed(client.clone()), server.clone(), add_amount)
     verify {
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),
@@ -143,7 +143,7 @@ benchmarks! {
 
         Micropayment::<T>::open_channel(RawOrigin::Signed(client.clone()).into(), server.clone(), amount, 3600)?;
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),
@@ -168,7 +168,7 @@ benchmarks! {
     verify {
         let balance_of_chain = T::Currency::minimum_balance() * 20u32.into();
         assert_eq!(
-            Micropayment::<T>::channel(&client, &server),
+            Micropayment::<T>::channel(&client, &server).unwrap(),
             ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),

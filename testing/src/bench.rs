@@ -258,11 +258,11 @@ impl TaskExecutor {
 }
 
 impl SpawnNamed for TaskExecutor {
-    fn spawn(&self, _: &'static str, future: futures::future::BoxFuture<'static, ()>) {
+    fn spawn(&self, _: &'static str, _: Option<&'static str>, future: futures::future::BoxFuture<'static, ()>) {
         self.pool.spawn_ok(future);
     }
 
-    fn spawn_blocking(&self, _: &'static str, future: futures::future::BoxFuture<'static, ()>) {
+    fn spawn_blocking(&self, _: &'static str, _: Option<&'static str>, future: futures::future::BoxFuture<'static, ()>) {
         self.pool.spawn_ok(future);
     }
 }
@@ -421,7 +421,7 @@ impl BenchDb {
         let backend = sc_service::new_db_backend(db_config).expect("Should not fail");
         let client = sc_service::new_client(
             backend.clone(),
-            NativeElseWasmExecutor::new(WasmExecutionMethod::Compiled, None, 8),
+            NativeElseWasmExecutor::new(WasmExecutionMethod::Compiled, None, 8, 2),
             &keyring.generate_genesis(),
             None,
             None,

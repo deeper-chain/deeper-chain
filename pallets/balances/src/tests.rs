@@ -723,7 +723,7 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::System(system::Event::NewAccount(1)),
+							Event::System(system::Event::NewAccount { account: 1 }),
 							Event::Balances(crate::Event::Endowed(1, 100)),
 							Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
 						]
@@ -735,7 +735,7 @@ macro_rules! decl_tests {
 						events(),
 						[
 							Event::Balances(crate::Event::DustLost(1, 99)),
-							Event::System(system::Event::KilledAccount(1))
+							Event::System(system::Event::KilledAccount { account: 1 })
 						]
 					);
 				});
@@ -752,7 +752,7 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::System(system::Event::NewAccount(1)),
+							Event::System(system::Event::NewAccount { account: 1 }),
 							Event::Balances(crate::Event::Endowed(1, 100)),
 							Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
 						]
@@ -763,7 +763,7 @@ macro_rules! decl_tests {
 					assert_eq!(
 						events(),
 						[
-							Event::System(system::Event::KilledAccount(1))
+							Event::System(system::Event::KilledAccount { account: 1 })
 						]
 					);
 				});

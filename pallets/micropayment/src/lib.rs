@@ -93,7 +93,7 @@ pub mod pallet {
     >;
 
     // struct to store micro-payment channel
-    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, Clone, scale_info::TypeInfo)]
+    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, scale_info::TypeInfo)]
     pub struct Chan<AccountId, BlockNumber, Balance> {
         pub client: AccountId,
         pub server: AccountId,
@@ -344,7 +344,6 @@ pub mod pallet {
             Channel::<T>::mutate(&client, &server, |c| {
                 if let Some(c_update) = c {
                     c_update.balance += amount;
-                    *c = Some(c_update.clone())
                 }
             });
             TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
