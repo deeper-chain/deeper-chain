@@ -63,8 +63,8 @@ sp-authorship = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 
 # frontier primitives
-fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
+fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
@@ -89,11 +89,11 @@ sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", branch 
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 
 # frontier client dependencies
-fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-fc-db = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
+fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+fc-db = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
 
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
@@ -114,10 +114,10 @@ pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
 
 # frontier frame dependencies
-pallet-evm = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
-pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/polkadot0.9.16_dev" }
+pallet-evm = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
+pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "use_seperate_balances" }
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }

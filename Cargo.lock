@@ -1667,7 +1667,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "async-trait",
  "derive_more",
@@ -1693,7 +1693,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-storage",
  "kvdb",
@@ -1709,7 +1709,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fc-consensus",
  "fc-db",
@@ -1727,7 +1727,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1775,7 +1775,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -1897,7 +1897,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "evm",
  "parity-scale-codec",
@@ -1909,7 +1909,7 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1926,7 +1926,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ethereum",
  "frame-support",
@@ -1943,7 +1943,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 
 [[package]]
 name = "frame-benchmarking"
@@ -4282,7 +4282,7 @@ dependencies = [
  "node-rpc",
  "node-runtime",
  "pallet-authority-discovery",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-base-fee",
  "pallet-contracts",
  "pallet-credit",
@@ -4367,7 +4367,7 @@ dependencies = [
  "node-primitives",
  "node-runtime",
  "node-testing",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-grandpa",
  "pallet-im-online",
@@ -4498,7 +4498,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-authorship",
  "pallet-babe",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-base-fee",
  "pallet-bounties",
  "pallet-collective",
@@ -4583,7 +4583,7 @@ dependencies = [
  "node-executor",
  "node-primitives",
  "node-runtime",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-contracts",
  "pallet-deeper-node",
  "pallet-eth-sub-bridge",
@@ -4912,22 +4912,6 @@ dependencies = [
 [[package]]
 name = "pallet-balances"
 version = "3.0.0"
-source = "git+https://github.com/deeper-chain/deeper-chain.git?branch=feature/polkadot0.9.16_dev#8954285d9d92a8885d604cafe28826d32caa0118"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-balances"
-version = "3.0.0"
 source = "git+https://github.com/deeper-chain/deeper-balances#5e8bfeb790026faeb09e9aa6c7e95fbabf271108"
 dependencies = [
  "frame-benchmarking",
@@ -4959,7 +4943,7 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5100,7 +5084,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-deeper-node",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5123,7 +5107,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5145,7 +5129,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5174,7 +5158,7 @@ dependencies = [
 [[package]]
 name = "pallet-dynamic-fee"
 version = "4.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -5216,7 +5200,7 @@ dependencies = [
  "frame-system",
  "hex-literal",
  "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
@@ -5230,7 +5214,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -5242,7 +5226,7 @@ dependencies = [
  "fp-storage",
  "frame-support",
  "frame-system",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git?branch=feature/polkadot0.9.16_dev)",
+ "pallet-balances 3.0.0",
  "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5259,7 +5243,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "evm",
  "evm-gasometer",
@@ -5271,7 +5255,7 @@ dependencies = [
  "hex",
  "libsecp256k1 0.6.0",
  "log",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git?branch=feature/polkadot0.9.16_dev)",
+ "pallet-balances 3.0.0",
  "pallet-timestamp",
  "parity-scale-codec",
  "primitive-types",
@@ -5288,7 +5272,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5298,7 +5282,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5309,7 +5293,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-curve25519"
 version = "1.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "curve25519-dalek 4.0.0-pre.1",
  "fp-evm",
@@ -5322,7 +5306,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5335,7 +5319,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-ed25519"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "ed25519-dalek",
  "fp-evm",
@@ -5346,7 +5330,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-evm",
  "num",
@@ -5357,7 +5341,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5368,7 +5352,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.16_dev#d06aaf784a03283b4137b4cf9b04870070afc457"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=use_seperate_balances#c296a0043df83e45590dfb32dc355aab5b40a0a7"
 dependencies = [
  "fp-evm",
  "ripemd160",
@@ -5494,7 +5478,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",
@@ -5695,7 +5679,7 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-authorship",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5759,7 +5743,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-balances)",
+ "pallet-balances 3.0.0",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",
