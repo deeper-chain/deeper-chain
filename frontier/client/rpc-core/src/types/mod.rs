@@ -32,28 +32,49 @@ mod sync;
 mod transaction;
 mod transaction_request;
 mod work;
+mod content;
+mod inspect;
 
 pub mod pubsub;
 
+use ethereum::TransactionV2 as EthereumTransaction;
+use ethereum_types::{H160, H256, U256};
+use serde::Serialize;
+use std::collections::HashMap;
+
+pub type TransactionMap<T> = HashMap<H160, HashMap<U256, T>>;
+
+#[derive(Debug, Serialize)]
+pub struct TxPoolResult<T: Serialize> {
+	pub pending: T,
+	pub queued: T,
+}
+
+pub trait Get {
+	fn get(hash: H256, from_address: H160, txn: &EthereumTransaction) -> Self;
+}
+
 pub use self::{
-    account_info::{AccountInfo, EthAccount, ExtAccountInfo, RecoveredAccount, StorageProof},
-    block::{Block, BlockTransactions, Header, Rich, RichBlock, RichHeader},
-    block_number::BlockNumber,
-    bytes::Bytes,
-    call_request::CallRequest,
-    fee::{FeeHistory, FeeHistoryCache, FeeHistoryCacheItem},
-    filter::{
-        Filter, FilterAddress, FilterChanges, FilterPool, FilterPoolItem, FilterType,
-        FilteredParams, Topic, VariadicValue,
-    },
-    index::Index,
-    log::Log,
-    receipt::Receipt,
-    sync::{
-        ChainStatus, EthProtocolInfo, PeerCount, PeerInfo, PeerNetworkInfo, PeerProtocolsInfo,
-        Peers, PipProtocolInfo, SyncInfo, SyncStatus, TransactionStats,
-    },
-    transaction::{LocalTransactionStatus, RichRawTransaction, Transaction},
-    transaction_request::{TransactionMessage, TransactionRequest},
-    work::Work,
+	account_info::{AccountInfo, EthAccount, ExtAccountInfo, RecoveredAccount, StorageProof},
+	block::{Block, BlockTransactions, Header, Rich, RichBlock, RichHeader},
+	block_number::BlockNumber,
+	bytes::Bytes,
+	call_request::CallRequest,
+	fee::{FeeHistory, FeeHistoryCache, FeeHistoryCacheItem},
+	filter::{
+		Filter, FilterAddress, FilterChanges, FilterPool, FilterPoolItem, FilterType,
+		FilteredParams, Topic, VariadicValue,
+	},
+	index::Index,
+	log::Log,
+	receipt::Receipt,
+	sync::{
+		ChainStatus, EthProtocolInfo, PeerCount, PeerInfo, PeerNetworkInfo, PeerProtocolsInfo,
+		Peers, PipProtocolInfo, SyncInfo, SyncStatus, TransactionStats,
+	},
+	transaction::{LocalTransactionStatus, RichRawTransaction, Transaction},
+	transaction_request::{TransactionMessage, TransactionRequest},
+	work::Work,
+	content::TransactionContent,
+	inspect::Summary,
 };
