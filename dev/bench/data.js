@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1645458829785,
+  "lastUpdate": 1645496545063,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1171,6 +1171,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 92449184,
             "range": "± 12103532",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7354c4dc589d38f02a1c438217270ec407953dc3",
+          "message": "add reward compensation method for differential compensation (#194)\n\n* add reward compensation method for differential compensation\r\n\r\n* add difference_compensation testcase\r\n\r\n* remainder_mining_reward minus issued rewards",
+          "timestamp": "2022-02-22T09:51:07+08:00",
+          "tree_id": "71ebdd3b056d7916fdd08bd5aa2de16fff8c8804",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/7354c4dc589d38f02a1c438217270ec407953dc3"
+        },
+        "date": 1645496544694,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5540505,
+            "range": "± 764678",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 92404999,
+            "range": "± 13930207",
             "unit": "ns/iter"
           }
         ]
