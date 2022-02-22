@@ -1802,10 +1802,10 @@ impl_runtime_apis! {
             use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
+            use pallet_evm::Pallet as PalletEvmBench;
 
             let mut list = Vec::<BenchmarkList>::new();
 
-            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             list_benchmark!(list, extra, pallet_assets, Assets);
             list_benchmark!(list, extra, pallet_babe, Babe);
             list_benchmark!(list, extra, pallet_balances, Balances);
@@ -1834,6 +1834,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_deeper_node, DeeperNode);
             list_benchmark!(list, extra, pallet_micropayment, Micropayment);
             list_benchmark!(list, extra, pallet_credit_accumulation, CreditAccumulation);
+            list_benchmark!(list, extra, pallet_evm, PalletEvmBench::<Runtime>);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
