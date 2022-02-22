@@ -284,6 +284,10 @@ pub mod pallet {
         CreditAddTooMuch,
         /// balance of burned account not enough
         BalanceNotEnough,
+        /// credit history or input era is wrong
+        BadEraOrHistory,
+        /// account not found
+        AccountNotFound,
     }
 
     #[pallet::hooks]
@@ -304,6 +308,35 @@ pub mod pallet {
             Self::_update_credit_setting(credit_setting.clone());
             Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
             Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::force_modify_credit_history())]
+        pub fn force_modify_credit_history(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            expected_era: EraIndex,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?; // requires sudo
+            if UserCreditHistory::<T>::contains_key(&account_id) {
+                let is_success = UserCreditHistory::<T>::mutate(&account_id, |history| {
+                    if !history.is_empty() {
+                        if (history.len() == 1 && history[0].0 < expected_era)
+                            || (history.len() > 1
+                                && history[0].0 < expected_era
+                                && history[1].0 > expected_era)
+                        {
+                            history[0].0 = expected_era;
+                            return true;
+                        }
+                    }
+                    false
+                });
+                if is_success {
+                    return Ok(().into());
+                }
+                return Err(Error::<T>::BadEraOrHistory)?;
+            }
+            Err(Error::<T>::AccountNotFound)?
         }
 
         /// update credit data
