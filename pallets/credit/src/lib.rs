@@ -319,7 +319,7 @@ pub mod pallet {
             ensure_root(origin)?; // requires sudo
             if UserCreditHistory::<T>::contains_key(&account_id) {
                 let is_success = UserCreditHistory::<T>::mutate(&account_id, |history| {
-                    if !history.is_empty() {
+                    if history.len() > 0 {
                         if (history.len() == 1 && history[0].0 < expected_era)
                             || (history.len() > 1
                                 && history[0].0 < expected_era
