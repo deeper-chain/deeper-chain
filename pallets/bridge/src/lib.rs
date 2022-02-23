@@ -26,7 +26,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use sp_core::H160;
-    use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero};
+    use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero, TrailingZeroInput};
     use sp_std::prelude::Vec;
     use types::{
         BridgeMessage, BridgeTransfer, IntoArray, Kind, LimitMessage, Limits, MemberId, ProposalId,
@@ -513,10 +513,31 @@ pub mod pallet {
         fn _sign(validator: T::AccountId, transfer_id: ProposalId) -> Result<(), &'static str> {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
 
-            let mut message = <TransferMessages<T>>::get(transfer.message_id);
+            let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
+			.expect("infinite input; qed");
+
+            let mut message = <TransferMessages<T>>::get(transfer.message_id).unwrap_or(TransferMessage {
+                message_id: transfer.message_id,
+                eth_address: H160::default(),
+                substrate_address: zero_account.clone(),
+                amount: BalanceOf::<T>::default(),
+                status: Status::Withdraw,
+                action: Status::Withdraw,
+            });
             let mut limit_message = <LimitMessages<T>>::get(transfer.message_id);
-            let mut validator_message = <ValidatorHistory<T>>::get(transfer.message_id);
-            let mut bridge_message = <BridgeMessages<T>>::get(transfer.message_id);
+            let mut validator_message = <ValidatorHistory<T>>::get(transfer.message_id).unwrap_or(ValidatorMessage {
+                message_id: transfer.message_id,
+                quorum: u64::default(),
+                accounts: Vec::default(),
+                action: Status::Revoked,
+                status: Status::Revoked,
+            });
+            let mut bridge_message = <BridgeMessages<T>>::get(transfer.message_id).unwrap_or(BridgeMessage {
+                message_id: transfer.message_id,
+                account: zero_account,
+                action: Status::Revoked,
+                status: Status::Revoked,
+            });
 
             let voted = <ValidatorVotes<T>>::get((transfer_id, validator.clone()));
             ensure!(!voted, "This validator has already voted.");
@@ -524,32 +545,27 @@ pub mod pallet {
             transfer.votes += 1;
 
             if Self::votes_are_enough(transfer.votes) {
-
-                if let (Some(mut message), Some(mut validator_message), Some(mut bridge_message)) = (message, validator_message, bridge_message) {
-                    match message.status {
-                        Status::Confirmed | Status::Canceled => (), // if burn is confirmed or canceled
-                        _ => match transfer.kind {
-                            Kind::Transfer => message.status = Status::Approved,
-                            Kind::Limits => limit_message.status = Status::Approved,
-                            Kind::Validator => validator_message.status = Status::Approved,
-                            Kind::Bridge => bridge_message.status = Status::Approved,
-                        },
-                    }
-                    match transfer.kind {
-                        Kind::Transfer => Self::execute_transfer(message)?,
-                        Kind::Limits => Self::_update_limits(limit_message)?,
-                        Kind::Validator => Self::manage_validator_list(validator_message)?,
-                        Kind::Bridge => Self::manage_bridge(bridge_message)?,
-                    }
-                    transfer.open = false;
+                match message.status {
+                    Status::Confirmed | Status::Canceled => (), // if burn is confirmed or canceled
+                    _ => match transfer.kind {
+                        Kind::Transfer => message.status = Status::Approved,
+                        Kind::Limits => limit_message.status = Status::Approved,
+                        Kind::Validator => validator_message.status = Status::Approved,
+                        Kind::Bridge => bridge_message.status = Status::Approved,
+                    },
                 }
+                match transfer.kind {
+                    Kind::Transfer => Self::execute_transfer(message)?,
+                    Kind::Limits => Self::_update_limits(limit_message)?,
+                    Kind::Validator => Self::manage_validator_list(validator_message)?,
+                    Kind::Bridge => Self::manage_bridge(bridge_message)?,
+                }
+                transfer.open = false;
             } else {
-                if let Some(message) = message {
-                    match message.status {
-                        Status::Confirmed | Status::Canceled => (),
-                        _ => Self::set_pending(transfer_id, transfer.kind.clone())?,
-                    };
-                }
+                match message.status {
+                    Status::Confirmed | Status::Canceled => (),
+                    _ => Self::set_pending(transfer_id, transfer.kind.clone())?,
+                };
             }
 
             <ValidatorVotes<T>>::mutate((transfer_id, validator), |a| *a = true);
