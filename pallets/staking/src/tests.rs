@@ -1622,7 +1622,7 @@ fn reward_from_authorship_event_handler_works() {
     ExtBuilder::default().build_and_execute(|| {
         use pallet_authorship::EventHandler;
 
-        assert_eq!(<pallet_authorship::Pallet<Test>>::author(), 11);
+        assert_eq!(<pallet_authorship::Pallet<Test>>::author(), Some(11));
 
         <Pallet<Test>>::note_author(11);
         <Pallet<Test>>::note_uncle(21, 1);
@@ -1856,6 +1856,7 @@ fn slash_in_old_span_does_not_deselect() {
             }],
             &[Perbill::from_percent(0)],
             1,
+            DisableStrategy::WhenSlashed,
         );
 
         // not forcing for zero-slash and previous span.
@@ -1874,6 +1875,7 @@ fn slash_in_old_span_does_not_deselect() {
             // NOTE: A 100% slash here would clean up the account, causing de-registration.
             &[Perbill::from_percent(95)],
             1,
+            DisableStrategy::WhenSlashed,
         );
 
         // or non-zero.
@@ -2325,6 +2327,7 @@ fn remove_deferred() {
                 }],
                 &[Perbill::from_percent(15)],
                 1,
+                DisableStrategy::WhenSlashed,
             );
 
             // fails if empty
@@ -2782,7 +2785,7 @@ fn delegate() {
             assert_eq!(Staking::active_delegator_count(), 1);
             // check delegated info
             let delegator_data = Staking::delegators(1001);
-            assert_eq!(delegator_data.delegated_validators, vec![11]);
+            assert_eq!(delegator_data.unwrap().delegated_validators, vec![11]);
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 1);
             assert!(Staking::candidate_validators(11).delegators.contains(&1001));
 
@@ -2797,7 +2800,7 @@ fn delegate() {
             assert_eq!(Staking::active_delegator_count(), 2);
             // check delegator data
             let delegator_data = Staking::delegators(1002);
-            assert_eq!(delegator_data.delegated_validators, vec![11, 21, 31, 41]);
+            assert_eq!(delegator_data.unwrap().delegated_validators, vec![11, 21, 31, 41]);
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 2);
             assert!(Staking::candidate_validators(11).delegators.contains(&1002));
             assert_eq!(Staking::candidate_validators(21).delegators.len(), 1);
@@ -2828,7 +2831,7 @@ fn delegate() {
             // 1001, 1002 and 1003 are all delegators now
             assert_eq!(Staking::delegator_count(), 3);
             assert_eq!(Staking::active_delegator_count(), 3);
-            assert_eq!(Staking::delegators(1003).delegated_validators, vec![11]);
+            assert_eq!(Staking::delegators(1003).unwrap().delegated_validators, vec![11]);
             assert!(Staking::candidate_validators(11).delegators.contains(&1003));
             assert!(!Staking::candidate_validators(21).delegators.contains(&1003));
             assert!(!Staking::candidate_validators(31).delegators.contains(&1003));
@@ -2874,7 +2877,7 @@ fn undelegate() {
             assert_ok!(Staking::undelegate(Origin::signed(1001)));
             // reward not paid yet, hence not deleted yet
             assert!(Delegators::<Test>::contains_key(&1001));
-            let delegator_data = Staking::delegators(&1001);
+            let delegator_data = Staking::delegators(&1001).unwrap();
             assert_eq!(delegator_data.unrewarded_since.unwrap(), 0);
             assert!(!delegator_data.delegating);
             assert_eq!(Staking::delegator_count(), 1);

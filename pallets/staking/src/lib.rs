@@ -371,6 +371,19 @@ pub struct UnappliedSlash<AccountId, Balance: HasCompact> {
     payout: Balance,
 }
 
+impl<AccountId, Balance: HasCompact + Zero> UnappliedSlash<AccountId, Balance> {
+	/// Initializes the default object using the given `validator`.
+	pub fn default_from(validator: AccountId) -> Self {
+		Self {
+			validator,
+			own: Zero::zero(),
+			others: vec![],
+			reporters: vec![],
+			payout: Zero::zero(),
+		}
+	}
+}
+
 /// Indicate how an election round was computed.
 #[derive(PartialEq, Eq, Clone, Copy, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum ElectionCompute {
@@ -742,7 +755,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn eras_reward_points)]
     pub type ErasRewardPoints<T: Config> =
-        StorageMap<_, Twox64Concat, EraIndex, EraRewardPoints<T::AccountId>, OptionQuery>;
+        StorageMap<_, Twox64Concat, EraIndex, EraRewardPoints<T::AccountId>, ValueQuery>;
 
     /// The total amount staked for the last `HISTORY_DEPTH` eras.
     /// If total hasn't been set or has been removed then 0 stake is returned.
@@ -2190,36 +2203,36 @@ impl<T: Config> pallet::Pallet<T> {
         }
         let era_payout = cmp::min(Self::era_validator_reward(), remainder_mining_reward);
         let mut total_payout = Zero::zero();
-        if let Some(era_reward_points) = <ErasRewardPoints<T>>::get(&era) {
-            let total_reward_points = era_reward_points.total;
-            for validator in Self::eras_validators(era) {
-                let validator_reward_points = era_reward_points
-                    .individual
-                    .get(&validator)
-                    .map(|points| *points)
-                    .unwrap_or_else(|| Zero::zero());
-                if !validator_reward_points.is_zero() {
-                    let validator_total_reward_part =
-                        Perbill::from_rational(validator_reward_points, total_reward_points);
-                    // This is how much validator is entitled to.
-                    let validator_total_payout = validator_total_reward_part * era_payout;
-                    total_payout += validator_total_payout;
-                    if let Some(imbalance) =
-                        Self::make_validator_payout(&validator, validator_total_payout)
-                    {
-                        Self::deposit_event(Event::<T>::ValidatorReward(
-                            validator.clone(),
-                            imbalance.peek(),
-                        ));
-                    }
+        let era_reward_points = <ErasRewardPoints<T>>::get(&era);
+        let total_reward_points = era_reward_points.total;
+        for validator in Self::eras_validators(era) {
+            let validator_reward_points = era_reward_points
+                .individual
+                .get(&validator)
+                .map(|points| *points)
+                .unwrap_or_else(|| Zero::zero());
+            if !validator_reward_points.is_zero() {
+                let validator_total_reward_part =
+                    Perbill::from_rational(validator_reward_points, total_reward_points);
+                // This is how much validator is entitled to.
+                let validator_total_payout = validator_total_reward_part * era_payout;
+                total_payout += validator_total_payout;
+                if let Some(imbalance) =
+                    Self::make_validator_payout(&validator, validator_total_payout)
+                {
+                    Self::deposit_event(Event::<T>::ValidatorReward(
+                        validator.clone(),
+                        imbalance.peek(),
+                    ));
                 }
             }
-            RemainderMiningReward::<T>::put(
-                TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(total_payout))
-                    .ok()
-                    .unwrap(),
-            );
         }
+        RemainderMiningReward::<T>::put(
+            TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(total_payout))
+                .ok()
+                .unwrap(),
+        );
+
     }
 
     /// Validators can set reward destination or payee, so we need to handle that.
@@ -2570,11 +2583,10 @@ impl<T: Config> pallet::Pallet<T> {
     pub fn reward_by_ids(validators_points: impl IntoIterator<Item = (T::AccountId, u32)>) {
         if let Some(active_era) = Self::active_era() {
             <ErasRewardPoints<T>>::mutate(active_era.index, |era_rewards| {
-                if let Some(update_era_rewards) = era_rewards {
-                    for (validator, points) in validators_points.into_iter() {
-                        *update_era_rewards.individual.entry(validator).or_default() += points;
-                        update_era_rewards.total += points;
-                    }
+                let update_era_rewards = era_rewards;
+                for (validator, points) in validators_points.into_iter() {
+                    *update_era_rewards.individual.entry(validator).or_default() += points;
+                    update_era_rewards.total += points;
                 }
             });
         }

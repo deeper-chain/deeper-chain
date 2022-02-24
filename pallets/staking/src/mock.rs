@@ -107,6 +107,7 @@ frame_support::construct_runtime!(
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
         Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
+        Historical: pallet_session::historical::{Pallet, Storage},
     }
 );
 
