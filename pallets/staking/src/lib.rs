@@ -56,7 +56,7 @@ use pallet_session::historical;
 use sp_runtime::{
     traits::{
         AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable, SaturatedConversion, Saturating,
-        StaticLookup, Zero,
+        StaticLookup, Zero
     },
     Perbill, Percent, RuntimeDebug,
 };
@@ -122,12 +122,18 @@ pub struct ActiveEraInfo {
 /// Reward points of an era. Used to split era total payout between validators.
 ///
 /// This points will be used to reward validators.
-#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct EraRewardPoints<AccountId: Ord> {
     /// Total number of points. Equals the sum of reward points for each validator.
     total: RewardPoint,
     /// The reward points earned by a given validator.
     individual: BTreeMap<AccountId, RewardPoint>,
+}
+
+impl<AccountId: Ord> Default for EraRewardPoints<AccountId> {
+	fn default() -> Self {
+		EraRewardPoints { total: Default::default(), individual: BTreeMap::new() }
+	}
 }
 
 /// Indicates the initial status of the staker.
@@ -330,7 +336,7 @@ where
 
 /// A snapshot of the stake backing a single validator in the system.
 #[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo,
+    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, RuntimeDebug, TypeInfo,
 )]
 pub struct Exposure<AccountId, Balance: HasCompact> {
     /// The total balance backing this validator.
@@ -341,6 +347,12 @@ pub struct Exposure<AccountId, Balance: HasCompact> {
     pub own: Balance,
     /// The delegators that are exposed.
     pub others: Vec<AccountId>,
+}
+
+impl<AccountId, Balance: Default + HasCompact> Default for Exposure<AccountId, Balance> {
+	fn default() -> Self {
+		Self { total: Default::default(), own: Default::default(), others: vec![] }
+	}
 }
 
 /// A pending slash record. The value of the slash has been computed but not applied yet,
@@ -458,7 +470,7 @@ where
     }
 }
 
-#[derive(Decode, Encode, Default, Debug, TypeInfo)]
+#[derive(Decode, Encode, TypeInfo)]
 pub struct DelegatorData<AccountId> {
     // delegator itself
     pub delegator: AccountId,
@@ -470,10 +482,27 @@ pub struct DelegatorData<AccountId> {
     pub delegating: bool,
 }
 
-#[derive(Decode, Encode, Default, TypeInfo)]
+impl<AccountId: Ord> DelegatorData<AccountId> {
+	pub fn default_from(delegator: AccountId) -> Self {
+		Self { 
+            delegator: delegator,
+            delegated_validators: Default::default(), 
+            unrewarded_since: Default::default(), 
+            delegating: Default::default(), 
+        }
+	}
+}
+
+#[derive(Decode, Encode, TypeInfo)]
 pub struct ValidatorData<AccountId: Ord> {
     pub delegators: BTreeSet<AccountId>,
     pub elected_era: EraIndex,
+}
+
+impl<AccountId: Ord> Default for ValidatorData<AccountId> {
+	fn default() -> Self {
+		ValidatorData { delegators: BTreeSet::new(), elected_era: Default::default() }
+	}
 }
 
 /// Mode of era-forcing.
@@ -687,7 +716,7 @@ pub mod pallet {
         Twox64Concat,
         T::AccountId,
         Exposure<T::AccountId, BalanceOf<T>>,
-        OptionQuery,
+        ValueQuery,
     >;
 
     /// Similar to `ErasStakers`, this holds the preferences of validators.
@@ -810,7 +839,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn candidate_validators)]
     pub(crate) type CandidateValidators<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, ValidatorData<T::AccountId>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, ValidatorData<T::AccountId>, ValueQuery>;
 
     /// delegator -> DelegatorData
     #[pallet::storage]
@@ -1725,14 +1754,11 @@ pub mod pallet {
 
                     for validator in &old_delegator_data.delegated_validators {
                         <CandidateValidators<T>>::mutate(validator, |v| {
-                            if let Some(v) = v {
-                                v.delegators.remove(&delegator);
-                            }
+                            v.delegators.remove(&delegator);
                         });
-                        if let Some(candidate) = Self::candidate_validators(validator) {
-                            if candidate.delegators.is_empty() {
-                                <CandidateValidators<T>>::remove(validator);
-                            }
+                        let candidate = Self::candidate_validators(validator);
+                        if candidate.delegators.is_empty() {
+                            <CandidateValidators<T>>::remove(validator);
                         }
                     }
                 }
@@ -1753,9 +1779,7 @@ pub mod pallet {
             for validator in &validator_set {
                 if <CandidateValidators<T>>::contains_key(validator) {
                     <CandidateValidators<T>>::mutate(validator, |v| {
-                        if let Some(v_update) = v {
-                            v_update.delegators.insert(delegator.clone());
-                        }
+                        v.delegators.insert(delegator.clone());
                     });
                 } else {
                     let mut delegators = BTreeSet::new();
@@ -2329,8 +2353,8 @@ impl<T: Config> pallet::Pallet<T> {
         }
         if delegator_data.delegating {
             Delegators::<T>::mutate(delegator, |data| {
-                if let Some(update_data) = data {
-                    update_data.unrewarded_since = Some(current_era);
+                if let Some(data) = data {
+                    data.unrewarded_since = Some(current_era);
                 }
             });
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
@@ -2405,7 +2429,7 @@ impl<T: Config> pallet::Pallet<T> {
                 //         candidate_validator.elected_era,
                 //     )
                 // }
-                let candidate_validator = Self::candidate_validators(&validator).unwrap();
+                let candidate_validator = Self::candidate_validators(&validator);
                 (
                     validator.clone(),
                     candidate_validator.delegators.len() as u32,
@@ -2430,9 +2454,7 @@ impl<T: Config> pallet::Pallet<T> {
                 validators.iter().map(|(v, _, _)| (*v).clone()).collect();
             for elected_validator in &elected_validators {
                 <CandidateValidators<T>>::mutate(&elected_validator, |validator_data| {
-                    if let Some(update_validator_data) = validator_data {
-                        update_validator_data.elected_era = current_era + 1; // makes sure it's not 0
-                    }
+                    validator_data.elected_era = current_era + 1; // makes sure it's not 0
                 });
             }
             log!(
@@ -2452,7 +2474,7 @@ impl<T: Config> pallet::Pallet<T> {
                     .unwrap_or_default();
                 // expose delegators only if not all validators elected.
                 let others = if truncated {
-                    let candidate = Self::candidate_validators(v).unwrap();
+                    let candidate = Self::candidate_validators(v);
 
                     candidate
                         .delegators
@@ -2591,15 +2613,12 @@ impl<T: Config> pallet::Pallet<T> {
             if delegator_data.delegating {
                 for validator in delegator_data.delegated_validators {
                     <CandidateValidators<T>>::mutate(&validator, |validator_data| {
-                        if let Some(validator_data) = validator_data {
-                            validator_data.delegators.remove(delegator);
-                        }
+                        validator_data.delegators.remove(delegator);
                     });
-                    if let Some(validator_data) = Self::candidate_validators(&validator) {
-                        match validator_data.delegators.len() {
-                            0 => <CandidateValidators<T>>::remove(&validator),
-                            _ => (),
-                        }
+                    let validator_data = Self::candidate_validators(&validator);
+                    match validator_data.delegators.len() {
+                        0 => <CandidateValidators<T>>::remove(&validator),
+                        _ => (),
                     }
                 }
 
@@ -2690,7 +2709,7 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
             validators
                 .into_iter()
                 .map(|v| {
-                    let exposure = Self::eras_stakers(current_era, &v).unwrap();
+                    let exposure = Self::eras_stakers(current_era, &v);
                     (v, exposure)
                 })
                 .collect()
@@ -2744,7 +2763,7 @@ impl<T: Config> Convert<T::AccountId, Option<Exposure<T::AccountId, BalanceOf<T>
 {
     fn convert(validator: T::AccountId) -> Option<Exposure<T::AccountId, BalanceOf<T>>> {
         if let Some(active_era) = <Pallet<T>>::active_era() {
-            Some(<Pallet<T>>::eras_stakers(active_era.index, &validator).unwrap())
+            Some(<Pallet<T>>::eras_stakers(active_era.index, &validator))
         } else {
             None
         }
