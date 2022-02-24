@@ -797,42 +797,12 @@ fn force_modify_credit_history() {
             ]
         );
 
-        // no change
-        UserCreditHistory::<Test>::insert(
-            2,
-            vec![
-                (
-                    6,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 110,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    10,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 109,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-            ],
-        );
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 2, 4).is_err());
+        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 6).is_err()); // do not modify
         assert_eq!(
-            Credit::user_credit_history(2),
+            Credit::user_credit_history(1),
             vec![
                 (
-                    6,
+                    8,
                     CreditData {
                         campaign_id: 0,
                         credit: 110,
@@ -857,35 +827,22 @@ fn force_modify_credit_history() {
                 ),
             ]
         );
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 2, 10).is_err());
+
+        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 12).is_ok());
         assert_eq!(
-            Credit::user_credit_history(2),
-            vec![
-                (
-                    6,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 110,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    10,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 109,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-            ]
+            Credit::user_credit_history(1),
+            vec![(
+                12,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 109,
+                    initial_credit_level: CreditLevel::One,
+                    rank_in_initial_credit_level: 1u32,
+                    number_of_referees: 1,
+                    current_credit_level: CreditLevel::One,
+                    reward_eras: 270,
+                },
+            )]
         );
     });
 }
