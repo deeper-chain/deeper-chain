@@ -272,6 +272,8 @@ pub mod pallet {
         CreditDataAddedByTip(T::AccountId, u64),
         //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
+        CreditHistoryUpdateSuccess(T::AccountId, EraIndex),
+        CreditHistoryUpdateFailed(T::AccountId, EraIndex),
     }
 
     #[pallet::error]
@@ -284,6 +286,10 @@ pub mod pallet {
         CreditAddTooMuch,
         /// balance of burned account not enough
         BalanceNotEnough,
+        /// credit history or input era is wrong
+        BadEraOrHistory,
+        /// account not found
+        AccountNotFound,
     }
 
     #[pallet::hooks]
@@ -304,6 +310,47 @@ pub mod pallet {
             Self::_update_credit_setting(credit_setting.clone());
             Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
             Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::force_modify_credit_history())]
+        pub fn force_modify_credit_history(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            expected_era: EraIndex,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?; // requires sudo
+            if UserCreditHistory::<T>::contains_key(&account_id) {
+                let is_success = UserCreditHistory::<T>::mutate(&account_id, |history| {
+                    if history.len() > 0 {
+                        for i in 0..history.len() {
+                            if (i + 1 < history.len()
+                                && expected_era >= history[i].0
+                                && expected_era < history[i + 1].0)
+                                || (i + 1 == history.len() && expected_era >= history[i].0)
+                            {
+                                // the first i records were creted before delegate, should be removed
+                                for _j in 0..i {
+                                    history.remove(0);
+                                }
+                                history[0].0 = expected_era;
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                });
+                if is_success {
+                    Self::deposit_event(Event::CreditHistoryUpdateSuccess(
+                        account_id,
+                        expected_era,
+                    ));
+                    return Ok(().into());
+                }
+                Self::deposit_event(Event::CreditHistoryUpdateFailed(account_id, expected_era));
+                return Err(Error::<T>::BadEraOrHistory)?;
+            }
+            Self::deposit_event(Event::CreditHistoryUpdateFailed(account_id, expected_era));
+            Err(Error::<T>::AccountNotFound)?
         }
 
         /// update credit data
