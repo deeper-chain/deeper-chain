@@ -324,9 +324,9 @@ pub mod pallet {
                     if history.len() > 0 {
                         for i in 0..history.len() {
                             if (i + 1 < history.len()
-                                && expected_era > history[i].0
+                                && expected_era >= history[i].0
                                 && expected_era < history[i + 1].0)
-                                || (i + 1 == history.len() && expected_era > history[i].0)
+                                || (i + 1 == history.len() && expected_era >= history[i].0)
                             {
                                 // the first i records were creted before delegate, should be removed
                                 for _j in 0..i {
