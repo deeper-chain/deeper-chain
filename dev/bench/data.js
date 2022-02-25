@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1645500638483,
+  "lastUpdate": 1645783605508,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1243,6 +1243,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 91376947,
             "range": "± 15249668",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "89e261f085ee51c2cb18a22e3132e1ab21c50aec",
+          "message": "Add a rescue method when credit history was messing up (#197)\n\n* Add a method to modify the top few credit history records\r\n\r\n* use len() > 0 instead is_empty\r\n\r\n* handle `expected_era > history[1].0` situation\r\n\r\n* add some edge test case",
+          "timestamp": "2022-02-25T17:33:53+08:00",
+          "tree_id": "011600c065a556211134e6f0c109937695a56fec",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/89e261f085ee51c2cb18a22e3132e1ab21c50aec"
+        },
+        "date": 1645783605118,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 6024651,
+            "range": "± 1050212",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 97994012,
+            "range": "± 14365091",
             "unit": "ns/iter"
           }
         ]
