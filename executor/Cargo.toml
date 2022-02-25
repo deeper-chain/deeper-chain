@@ -21,6 +21,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 trie-root = "0.16.0"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
@@ -44,6 +45,7 @@ sp-consensus-babe = { git = "https://github.com/paritytech/substrate", branch = 
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-externalities = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 substrate-test-client = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 wat = "1.0"
 futures = "0.3.9"
 

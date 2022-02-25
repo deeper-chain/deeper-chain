@@ -28940,7 +28940,6 @@ pub fn local_testnet_config() -> ChainSpec {
 pub(crate) mod tests {
     use super::*;
     use crate::cli::Cli;
-    use crate::service::new_light_base;
     use crate::service::{new_full_base, NewFullBase};
     use sc_cli::SubstrateCli;
     use sc_service_test;
@@ -28974,6 +28973,7 @@ pub(crate) mod tests {
             None,
             None,
             None,
+            None,
             Default::default(),
         )
     }
@@ -28986,6 +28986,7 @@ pub(crate) mod tests {
             ChainType::Development,
             local_testnet_genesis,
             vec![],
+            None,
             None,
             None,
             None,
@@ -29011,15 +29012,6 @@ pub(crate) mod tests {
                 } = new_full_base(config, |_, _| (), &cli)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-            |config| {
-                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    keep_alive,
                     client,
                     network,
                     transaction_pool,

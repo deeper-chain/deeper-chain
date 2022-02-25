@@ -39,6 +39,8 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 substrate-test-client = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }

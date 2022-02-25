@@ -619,7 +619,7 @@ pub fn new_full(config: Configuration, cli: &Cli) -> Result<TaskManager, Service
 #[cfg(test)]
 mod tests {
     use crate::cli::Cli;
-    use crate::service::{new_full_base, new_light_base, NewFullBase};
+    use crate::service::{new_full_base, NewFullBase};
     use codec::Encode;
     use node_primitives::{Block, DigestItem, Signature};
     use node_runtime::{
@@ -628,7 +628,6 @@ mod tests {
     };
     use sc_client_api::BlockBackend;
     use sc_cli::SubstrateCli;
-    use sc_client_api::BlockBackend;
     use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy};
     use sc_consensus_babe::{BabeIntermediate, CompatibleDigestItem, INTERMEDIATE_KEY};
     use sc_consensus_epochs::descendent_query;
@@ -704,15 +703,6 @@ mod tests {
                 );
                 Ok((node, setup_handles.unwrap()))
             },
-            |config| {
-                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    keep_alive,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
             |service, &mut (ref mut block_import, ref babe_link)| {
                 let parent_id = BlockId::number(service.client().chain_info().best_number);
                 let parent_header = service.client().header(&parent_id).unwrap().unwrap();
@@ -734,7 +724,7 @@ mod tests {
                     None,
                 );
 
-                let mut digest = Digest::<H256>::default();
+                let mut digest = Digest::default();
 
                 // even though there's only one authority some slots might be empty,
                 // so we must keep trying the next slots until we can claim one.
@@ -905,15 +895,6 @@ mod tests {
                 } = new_full_base(config, |_, _| (), &cli)?;
                 Ok(sc_service_test::TestNetComponents::new(
                     task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-            |config| {
-                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    keep_alive,
                     client,
                     network,
                     transaction_pool,
