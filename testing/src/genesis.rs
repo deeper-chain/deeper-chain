@@ -129,6 +129,6 @@ pub fn config_endowed(
         ethereum: Default::default(),
         dynamic_fee: Default::default(),
         base_fee: Default::default(),
-	council: Default::default(),
+        council: Default::default(),
     }
 }

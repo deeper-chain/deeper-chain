@@ -530,7 +530,7 @@ pub fn testnet_genesis(
         ethereum: EthereumConfig {},
         dynamic_fee: Default::default(),
         base_fee: Default::default(),
-	council: Default::default(),
+        council: Default::default(),
     }
 }
 
