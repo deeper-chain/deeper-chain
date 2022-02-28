@@ -80,7 +80,7 @@ pub use pallet_micropayment;
 use fp_rpc::{TransactionStatus, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
-use pallet_evm::{Account as EVMAccount, PairedAddressMapping, Runner};
+use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, PairedAddressMapping, Runner};
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -157,7 +157,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 8,
+    spec_version: 9,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 4,
@@ -1214,6 +1214,14 @@ impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
     }
 }
 
+pub struct EvmDealWithFees;
+impl OnUnbalanced<NegativeImbalance> for EvmDealWithFees {
+    fn on_unbalanced(fees: NegativeImbalance) {
+        // 100% to treasury
+        Treasury::on_unbalanced(fees);
+    }
+}
+
 parameter_types! {
     pub const ChainId: u64 = 518;
     pub BlockGasLimit: U256 = U256::from(u32::max_value());
@@ -1232,7 +1240,7 @@ impl pallet_evm::Config for Runtime {
     type PrecompilesValue = PrecompilesValue;
     type ChainId = ChainId;
     type BlockGasLimit = BlockGasLimit;
-    type OnChargeTransaction = ();
+    type OnChargeTransaction = EVMCurrencyAdapter<Balances, EvmDealWithFees>;
     type FindAuthor = FindAuthorTruncated<Babe>;
 }
 
