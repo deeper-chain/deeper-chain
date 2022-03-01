@@ -138,7 +138,7 @@ impl<AccountId: Ord> Default for EraRewardPoints<AccountId> {
 
 /// Indicates the initial status of the staker.
 #[derive(RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Clone))]
 pub enum StakerStatus {
     /// Chilling.
     Idle,

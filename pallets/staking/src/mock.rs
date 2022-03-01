@@ -648,7 +648,7 @@ impl ExtBuilder {
         }
 
         staking::GenesisConfig::<Test> {
-            stakers: stakers,
+            stakers: stakers.clone(),
             delegations: delegations,
             validator_count: self.validator_count,
             era_validator_reward: TOTAL_MINING_REWARD / 100_000,
@@ -661,18 +661,18 @@ impl ExtBuilder {
         .unwrap();
 
         pallet_session::GenesisConfig::<Test> {
-            keys: validators
-                .iter()
-                .map(|x| {
-                    (
-                        *x,
-                        *x,
-                        SessionKeys {
-                            other: UintAuthorityId(*x as u64),
-                        },
-                    )
-                })
-                .collect(),
+            keys: if self.has_stakers {
+				// set the keys for the first session.
+				stakers
+					.into_iter()
+					.map(|(id, ..)| (id, id, SessionKeys { other: id.into() }))
+					.collect()
+			} else {
+				// set some dummy validators in genesis.
+				(0..self.validator_count as u64)
+					.map(|id| (id, id, SessionKeys { other: id.into() }))
+					.collect()
+			},
         }
         .assimilate_storage(&mut storage)
         .unwrap();
