@@ -275,6 +275,9 @@ fn claim_payment() {
             Origin::signed(bob()),
             alice(), session_id, claim_amount, signature.into()
         ));
+
+        assert_eq!(527, Balances::free_balance(bob()));
+        assert_eq!(3, Treasury::pot());
     });
 }
 

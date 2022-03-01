@@ -1088,6 +1088,7 @@ impl pallet_assets::Config for Runtime {
 parameter_types! {
     pub const SecsPerBlock: u32 = MILLISECS_PER_BLOCK as u32 / 1000;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
+    pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
 
 pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
@@ -1114,6 +1115,8 @@ impl pallet_micropayment::Config for Runtime {
     type AccountCreator = DefaultAccountCreator;
     type WeightInfo = pallet_micropayment::weights::SubstrateWeight<Runtime>;
     type NodeInterface = DeeperNode;
+    type MicropaymentBurn = MicropaymentBurn;
+    type Slash = Treasury;
 }
 
 parameter_types! {
