@@ -520,11 +520,15 @@ pub mod pallet {
         }
 
         /// Deposit the amount to the account free balance
-        /// some fee should be paid at first
+        /// some additional fee should be charged
         fn deposit_into_account(
             account: &T::AccountId,
             amount: BalanceOf<T>,
         ) -> Result<(), DispatchError> {
+            T::Currency::mutate_account_balance(account, |balance| {
+                balance.free += amount;
+            })?;
+
             let fee = T::MicropaymentBurn::get() * amount;
             let burned = T::Currency::withdraw(
                 account,
@@ -533,9 +537,7 @@ pub mod pallet {
                 ExistenceRequirement::KeepAlive,
             )?;
             T::Slash::on_unbalanced(burned);
-            T::Currency::mutate_account_balance(account, |balance| {
-                balance.free += amount;
-            })
+            Ok(())
         }
     }
 }
