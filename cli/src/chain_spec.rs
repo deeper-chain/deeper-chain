@@ -403,7 +403,9 @@ pub fn testnet_genesis(
                 .collect(),
             phantom: Default::default(),
         },
-        sudo: SudoConfig { key: Some(root_key) },
+        sudo: SudoConfig {
+            key: Some(root_key),
+        },
         babe: BabeConfig {
             authorities: vec![],
             epoch_config: Some(node_runtime::BABE_GENESIS_EPOCH_CONFIG),
@@ -28999,25 +29001,22 @@ pub(crate) mod tests {
     fn test_connectivity() {
         sp_tracing::try_init_simple();
 
-        sc_service_test::connectivity(
-            integration_test_config_with_two_authorities(),
-            |config| {
-                let cli = Cli::from_args();
-                let NewFullBase {
-                    task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                    ..
-                } = new_full_base(config, |_, _| (), &cli)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-        );
+        sc_service_test::connectivity(integration_test_config_with_two_authorities(), |config| {
+            let cli = Cli::from_args();
+            let NewFullBase {
+                task_manager,
+                client,
+                network,
+                transaction_pool,
+                ..
+            } = new_full_base(config, |_, _| (), &cli)?;
+            Ok(sc_service_test::TestNetComponents::new(
+                task_manager,
+                client,
+                network,
+                transaction_pool,
+            ))
+        });
     }
 
     #[test]

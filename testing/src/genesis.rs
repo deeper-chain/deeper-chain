@@ -29,39 +29,53 @@ use sp_runtime::Perbill;
 
 /// Create genesis runtime configuration for tests.
 pub fn config(code: Option<&[u8]>) -> GenesisConfig {
-	config_endowed(code, Default::default())
+    config_endowed(code, Default::default())
 }
 
 /// Create genesis runtime configuration for tests with some extra
 /// endowed accounts.
 pub fn config_endowed(code: Option<&[u8]>, extra_endowed: Vec<AccountId>) -> GenesisConfig {
-	let mut endowed = vec![
-		(alice(), 111 * DOLLARS),
-		(bob(), 100 * DOLLARS),
-		(charlie(), 100_000_000 * DOLLARS),
-		(dave(), 111 * DOLLARS),
-		(eve(), 101 * DOLLARS),
-		(ferdie(), 100 * DOLLARS),
-	];
+    let mut endowed = vec![
+        (alice(), 111 * DOLLARS),
+        (bob(), 100 * DOLLARS),
+        (charlie(), 100_000_000 * DOLLARS),
+        (dave(), 111 * DOLLARS),
+        (eve(), 101 * DOLLARS),
+        (ferdie(), 100 * DOLLARS),
+    ];
 
-	endowed.extend(extra_endowed.into_iter().map(|endowed| (endowed, 100 * DOLLARS)));
+    endowed.extend(
+        extra_endowed
+            .into_iter()
+            .map(|endowed| (endowed, 100 * DOLLARS)),
+    );
 
     GenesisConfig {
         system: SystemConfig {
-			code: code.map(|x| x.to_vec()).unwrap_or_else(|| wasm_binary_unwrap().to_vec()),
+            code: code
+                .map(|x| x.to_vec())
+                .unwrap_or_else(|| wasm_binary_unwrap().to_vec()),
         },
         indices: IndicesConfig { indices: vec![] },
         balances: BalancesConfig { balances: endowed },
         session: SessionConfig {
             keys: vec![
-				(alice(), dave(), to_session_keys(&Ed25519Keyring::Alice, &Sr25519Keyring::Alice)),
-				(bob(), eve(), to_session_keys(&Ed25519Keyring::Bob, &Sr25519Keyring::Bob)),
-				(
-					charlie(),
-					ferdie(),
-					to_session_keys(&Ed25519Keyring::Charlie, &Sr25519Keyring::Charlie),
-				),
-			],
+                (
+                    alice(),
+                    dave(),
+                    to_session_keys(&Ed25519Keyring::Alice, &Sr25519Keyring::Alice),
+                ),
+                (
+                    bob(),
+                    eve(),
+                    to_session_keys(&Ed25519Keyring::Bob, &Sr25519Keyring::Bob),
+                ),
+                (
+                    charlie(),
+                    ferdie(),
+                    to_session_keys(&Ed25519Keyring::Charlie, &Sr25519Keyring::Charlie),
+                ),
+            ],
         },
         staking: StakingConfig {
             stakers: vec![

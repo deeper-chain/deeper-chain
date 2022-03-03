@@ -29,11 +29,11 @@ use sp_runtime::{
 };
 use sp_storage::Storage;
 
+use frame_support::traits::ConstU32;
 use frame_support::{
     assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types,
     storage::StoragePrefixedMap, traits::SortedMembers, weights::Weight, PalletId,
 };
-use frame_support::traits::{ConstU32};
 
 use super::*;
 use crate::{self as pallet_tips, Event as TipEvent};

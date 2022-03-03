@@ -16,7 +16,7 @@
 use crate as pallet_credit_accumulation;
 use crate::testing_utils::*;
 use frame_support::parameter_types;
-use frame_support::traits::{ConstU32};
+use frame_support::traits::ConstU32;
 use frame_system as system;
 use node_primitives::{Balance, Moment};
 use pallet_micropayment::AccountCreator;

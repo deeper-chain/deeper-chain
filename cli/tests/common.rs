@@ -21,16 +21,16 @@
 use assert_cmd::cargo::cargo_bin;
 use nix::sys::signal::{kill, Signal::SIGINT};
 use nix::unistd::Pid;
+use node_primitives::Block;
+use remote_externalities::rpc_api;
 use std::{convert::TryInto, process::Command};
 use std::{
-    path::Path,
     ops::{Deref, DerefMut},
+    path::Path,
     process::{Child, ExitStatus},
     thread,
     time::Duration,
 };
-use node_primitives::Block;
-use remote_externalities::rpc_api;
 use tokio::time::timeout;
 static LOCALHOST_WS: &str = "ws://127.0.0.1:9944/";
 
@@ -83,46 +83,50 @@ pub fn run_dev_node_for_a_while(base_path: &Path) {
 
 /// Wait for at least n blocks to be finalized within a specified time.
 pub async fn wait_n_finalized_blocks(
-	n: usize,
-	timeout_secs: u64,
+    n: usize,
+    timeout_secs: u64,
 ) -> Result<(), tokio::time::error::Elapsed> {
-	timeout(Duration::from_secs(timeout_secs), wait_n_finalized_blocks_from(n, LOCALHOST_WS)).await
+    timeout(
+        Duration::from_secs(timeout_secs),
+        wait_n_finalized_blocks_from(n, LOCALHOST_WS),
+    )
+    .await
 }
 
 /// Wait for at least n blocks to be finalized from a specified node
 pub async fn wait_n_finalized_blocks_from(n: usize, url: &str) {
-	let mut built_blocks = std::collections::HashSet::new();
-	let mut interval = tokio::time::interval(Duration::from_secs(2));
+    let mut built_blocks = std::collections::HashSet::new();
+    let mut interval = tokio::time::interval(Duration::from_secs(2));
 
-	loop {
-		if let Ok(block) = rpc_api::get_finalized_head::<Block, _>(url.to_string()).await {
-			built_blocks.insert(block);
-			if built_blocks.len() > n {
-				break
-			}
-		};
-		interval.tick().await;
-	}
+    loop {
+        if let Ok(block) = rpc_api::get_finalized_head::<Block, _>(url.to_string()).await {
+            built_blocks.insert(block);
+            if built_blocks.len() > n {
+                break;
+            }
+        };
+        interval.tick().await;
+    }
 }
 
 pub struct KillChildOnDrop(pub Child);
 
 impl Drop for KillChildOnDrop {
-	fn drop(&mut self) {
-		let _ = self.0.kill();
-	}
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+    }
 }
 
 impl Deref for KillChildOnDrop {
-	type Target = Child;
+    type Target = Child;
 
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl DerefMut for KillChildOnDrop {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
-	}
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }

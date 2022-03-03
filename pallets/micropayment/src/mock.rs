@@ -15,11 +15,11 @@
 
 use crate as pallet_micropayment;
 use crate::testing_utils::*;
+use frame_support::traits::ConstU32;
 use frame_support::{
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
-use frame_support::traits::{ConstU32};
 use frame_system as system;
 use node_primitives::{Balance, Moment};
 use sp_core::{crypto::AccountId32, sr25519, H256};

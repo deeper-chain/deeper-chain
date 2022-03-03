@@ -21,7 +21,7 @@
 use codec::Encode;
 use node_primitives::{AccountId, Balance, Index};
 use node_runtime::{
-	CheckedExtrinsic, CheckedSignature, SessionKeys, SignedExtra, UncheckedExtrinsic,
+    CheckedExtrinsic, CheckedSignature, SessionKeys, SignedExtra, UncheckedExtrinsic,
 };
 use sp_keyring::{AccountKeyring, Ed25519Keyring, Sr25519Keyring};
 use sp_runtime::generic::Era;
@@ -71,15 +71,15 @@ pub fn to_session_keys(
 
 /// Returns transaction extra.
 pub fn signed_extra(nonce: Index, extra_fee: Balance) -> SignedExtra {
-	(
-		frame_system::CheckSpecVersion::new(),
-		frame_system::CheckTxVersion::new(),
-		frame_system::CheckGenesis::new(),
-		frame_system::CheckEra::from(Era::mortal(256, 0)),
-		frame_system::CheckNonce::from(nonce),
-		frame_system::CheckWeight::new(),
-		pallet_transaction_payment::ChargeTransactionPayment::from(extra_fee),
-	)
+    (
+        frame_system::CheckSpecVersion::new(),
+        frame_system::CheckTxVersion::new(),
+        frame_system::CheckGenesis::new(),
+        frame_system::CheckEra::from(Era::mortal(256, 0)),
+        frame_system::CheckNonce::from(nonce),
+        frame_system::CheckWeight::new(),
+        pallet_transaction_payment::ChargeTransactionPayment::from(extra_fee),
+    )
 }
 
 /// Sign given `CheckedExtrinsic`.
@@ -89,34 +89,34 @@ pub fn sign(
     tx_version: u32,
     genesis_hash: [u8; 32],
 ) -> UncheckedExtrinsic {
-	match xt.signed {
-		CheckedSignature::Signed(signed, extra) => {
-				let payload = (
-						xt.function,
-						extra.clone(),
-						spec_version,
-						tx_version,
-						genesis_hash,
-						genesis_hash,
-				);
-				let key = AccountKeyring::from_account_id(&signed).unwrap();
-				let signature = payload
-						.using_encoded(|b| {
-								if b.len() > 256 {
-										key.sign(&sp_io::hashing::blake2_256(b))
-								} else {
-										key.sign(b)
-								}
-						})
-						.into();
-				UncheckedExtrinsic::new_signed(
-						payload.0,
-						sp_runtime::MultiAddress::Id(signed),
-						signature,
-						extra,
-				)
-		}
-		CheckedSignature::Unsigned => UncheckedExtrinsic::new_unsigned(xt.function),
-		CheckedSignature::SelfContained(_) => UncheckedExtrinsic::new_unsigned(xt.function),
-	}
+    match xt.signed {
+        CheckedSignature::Signed(signed, extra) => {
+            let payload = (
+                xt.function,
+                extra.clone(),
+                spec_version,
+                tx_version,
+                genesis_hash,
+                genesis_hash,
+            );
+            let key = AccountKeyring::from_account_id(&signed).unwrap();
+            let signature = payload
+                .using_encoded(|b| {
+                    if b.len() > 256 {
+                        key.sign(&sp_io::hashing::blake2_256(b))
+                    } else {
+                        key.sign(b)
+                    }
+                })
+                .into();
+            UncheckedExtrinsic::new_signed(
+                payload.0,
+                sp_runtime::MultiAddress::Id(signed),
+                signature,
+                extra,
+            )
+        }
+        CheckedSignature::Unsigned => UncheckedExtrinsic::new_unsigned(xt.function),
+        CheckedSignature::SelfContained(_) => UncheckedExtrinsic::new_unsigned(xt.function),
+    }
 }

@@ -326,7 +326,6 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         // try to remove an account from country and region server lists if exists
         fn try_remove_server(sender: &T::AccountId) -> DispatchResult {
-            
             if <DeviceInfo<T>>::contains_key(&sender) {
                 let mut node = <DeviceInfo<T>>::get(&sender).unwrap_or(Node {
                     account_id: sender.clone(),
@@ -359,14 +358,12 @@ pub mod pallet {
 
         // try to add an account to a country's server list; no double add
         fn try_add_server(sender: &T::AccountId, duration: T::BlockNumber) -> DispatchResult {
-            let mut node = <DeviceInfo<T>>::get(&sender).unwrap_or(
-                Node {
-                    account_id: sender.clone(),
-                    ipv4: Default::default(),
-                    country: Default::default(),
-                    expire: Default::default(),
-                }
-            );
+            let mut node = <DeviceInfo<T>>::get(&sender).unwrap_or(Node {
+                account_id: sender.clone(),
+                ipv4: Default::default(),
+                country: Default::default(),
+                expire: Default::default(),
+            });
 
             let first_region = <RegionMap<T>>::get(&node.country);
             let sec_region = <RegionMap<T>>::get(&first_region);

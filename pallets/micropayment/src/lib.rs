@@ -50,9 +50,12 @@ pub mod pallet {
     use crate::weights::WeightInfo;
     use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
-    use frame_support::traits::{Get};
     use frame_support::traits::tokens::currency::Currency;
-    use frame_support::{dispatch::{DispatchResultWithPostInfo, DispatchError}, pallet_prelude::*};
+    use frame_support::traits::Get;
+    use frame_support::{
+        dispatch::{DispatchError, DispatchResultWithPostInfo},
+        pallet_prelude::*,
+    };
     use frame_system::pallet_prelude::*;
     use log::error;
     use pallet_balances::MutableCurrency;
@@ -253,7 +256,7 @@ pub mod pallet {
                 if let Some(chan) = Channel::<T>::get(&account_id, &signer) {
                     TotalMicropaymentChannelBalance::<T>::mutate_exists(&account_id, |b| {
                         let total_balance = b.take().unwrap_or_default();
-                        
+
                         *b = if total_balance > chan.balance {
                             Some(total_balance - chan.balance)
                         } else {
@@ -268,7 +271,6 @@ pub mod pallet {
                 }
                 return Ok(().into());
             } else if Channel::<T>::contains_key(&signer, &account_id) {
-                
                 // signer is client
                 if let Some(chan) = Channel::<T>::get(&signer, &account_id) {
                     let current_block = <frame_system::Pallet<T>>::block_number();
@@ -396,7 +398,9 @@ pub mod pallet {
                 {
                     Err(Error::<T>::SessionError)?
                 }
-                Self::verify_signature(&client, &server, chan.nonce, session_id, amount, &signature)?;
+                Self::verify_signature(
+                    &client, &server, chan.nonce, session_id, amount, &signature,
+                )?;
                 SessionId::<T>::insert((&client, &server), session_id); // mark session_id as used
 
                 // if there is not enough balance in the channel

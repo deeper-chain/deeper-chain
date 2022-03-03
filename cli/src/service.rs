@@ -23,7 +23,7 @@
 use futures::prelude::*;
 use node_runtime::RuntimeApi;
 use sc_cli::SubstrateCli;
-use sc_client_api::{BlockchainEvents, ExecutorProvider, BlockBackend};
+use sc_client_api::{BlockBackend, BlockchainEvents, ExecutorProvider};
 use sc_consensus_babe::{self, SlotProportion};
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::{Event, NetworkService};
@@ -146,7 +146,9 @@ pub fn new_partial(
     let client = Arc::new(client);
 
     let telemetry = telemetry.map(|(worker, telemetry)| {
-        task_manager.spawn_handle().spawn("telemetry", None, worker.run());
+        task_manager
+            .spawn_handle()
+            .spawn("telemetry", None, worker.run());
         telemetry
     });
 
@@ -274,15 +276,21 @@ pub fn new_full_base(
     } = new_partial(&config, cli)?;
 
     let auth_disc_publish_non_global_ips = config.network.allow_non_globals_in_dht;
-	let grandpa_protocol_name = grandpa::protocol_standard_name(
-		&client.block_hash(0).ok().flatten().expect("Genesis block exists; qed"),
-		&config.chain_spec,
-	);
+    let grandpa_protocol_name = grandpa::protocol_standard_name(
+        &client
+            .block_hash(0)
+            .ok()
+            .flatten()
+            .expect("Genesis block exists; qed"),
+        &config.chain_spec,
+    );
 
     config
         .network
         .extra_sets
-        .push(grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone()));
+        .push(grandpa::grandpa_peers_set_config(
+            grandpa_protocol_name.clone(),
+        ));
     let warp_sync = Arc::new(grandpa::warp_proof::NetworkProvider::new(
         backend.clone(),
         import_setup.1.shared_authority_set().clone(),
@@ -520,9 +528,11 @@ pub fn new_full_base(
         };
 
         let babe = sc_consensus_babe::start_babe(babe_config)?;
-        task_manager
-            .spawn_essential_handle()
-            .spawn_blocking("babe-proposer", Some("block-authoring"), babe);
+        task_manager.spawn_essential_handle().spawn_blocking(
+            "babe-proposer",
+            Some("block-authoring"),
+            babe,
+        );
     }
 
     // Spawn authority discovery module.
@@ -597,9 +607,11 @@ pub fn new_full_base(
 
         // the GRANDPA voter task is considered infallible, i.e.
         // if it fails we take down the service with it.
-        task_manager
-            .spawn_essential_handle()
-            .spawn_blocking("grandpa-voter", None, grandpa::run_grandpa_voter(grandpa_config)?);
+        task_manager.spawn_essential_handle().spawn_blocking(
+            "grandpa-voter",
+            None,
+            grandpa::run_grandpa_voter(grandpa_config)?,
+        );
     }
 
     network_starter.start_network();
@@ -626,8 +638,8 @@ mod tests {
         constants::{currency::CENTS, time::SLOT_DURATION},
         Address, BalancesCall, Call, GenericUncheckedExtrinsic,
     };
-    use sc_client_api::BlockBackend;
     use sc_cli::SubstrateCli;
+    use sc_client_api::BlockBackend;
     use sc_consensus::{BlockImport, BlockImportParams, ForkChoiceStrategy};
     use sc_consensus_babe::{BabeIntermediate, CompatibleDigestItem, INTERMEDIATE_KEY};
     use sc_consensus_epochs::descendent_query;

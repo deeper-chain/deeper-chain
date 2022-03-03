@@ -19,15 +19,15 @@
 #![cfg(unix)]
 use assert_cmd::cargo::cargo_bin;
 use nix::{
-	sys::signal::{
-		kill,
-		Signal::{self, SIGINT, SIGTERM},
-	},
-	unistd::Pid,
+    sys::signal::{
+        kill,
+        Signal::{self, SIGINT, SIGTERM},
+    },
+    unistd::Pid,
 };
 use std::{
-	convert::TryInto,
-	process::{Child, Command},
+    convert::TryInto,
+    process::{Child, Command},
 };
 use tempfile::tempdir;
 
@@ -35,27 +35,30 @@ pub mod common;
 
 #[tokio::test]
 async fn running_the_node_works_and_can_be_interrupted() {
-	async fn run_command_and_kill(signal: Signal) {
-		let base_path = tempdir().expect("could not create a temp dir");
-		let mut cmd = common::KillChildOnDrop(
-			Command::new(cargo_bin("deeper-chain"))
-				.args(&["--dev", "-d"])
-				.arg(base_path.path())
-				.spawn()
-				.unwrap(),
-		);
+    async fn run_command_and_kill(signal: Signal) {
+        let base_path = tempdir().expect("could not create a temp dir");
+        let mut cmd = common::KillChildOnDrop(
+            Command::new(cargo_bin("deeper-chain"))
+                .args(&["--dev", "-d"])
+                .arg(base_path.path())
+                .spawn()
+                .unwrap(),
+        );
 
-		common::wait_n_finalized_blocks(3, 30).await.unwrap();
-		assert!(cmd.try_wait().unwrap().is_none(), "the process should still be running");
-		kill(Pid::from_raw(cmd.id().try_into().unwrap()), signal).unwrap();
-		assert_eq!(
-			common::wait_for(&mut cmd, 30).map(|x| x.success()),
-			Some(true),
-			"the process must exit gracefully after signal {}",
-			signal,
-		);
-	}
+        common::wait_n_finalized_blocks(3, 30).await.unwrap();
+        assert!(
+            cmd.try_wait().unwrap().is_none(),
+            "the process should still be running"
+        );
+        kill(Pid::from_raw(cmd.id().try_into().unwrap()), signal).unwrap();
+        assert_eq!(
+            common::wait_for(&mut cmd, 30).map(|x| x.success()),
+            Some(true),
+            "the process must exit gracefully after signal {}",
+            signal,
+        );
+    }
 
-	run_command_and_kill(SIGINT).await;
-	run_command_and_kill(SIGTERM).await;
+    run_command_and_kill(SIGINT).await;
+    run_command_and_kill(SIGTERM).await;
 }

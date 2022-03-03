@@ -59,7 +59,7 @@ mod tests;
 pub mod weights;
 
 use sp_runtime::{
-    traits::{BadOrigin, Hash, Zero, TrailingZeroInput},
+    traits::{BadOrigin, Hash, TrailingZeroInput, Zero},
     Percent, RuntimeDebug,
 };
 use sp_std::prelude::*;
@@ -564,7 +564,7 @@ impl<T: Config> Pallet<T> {
     /// value and only call this once.
     pub fn account_id() -> T::AccountId {
         let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
-			.expect("infinite input; qed");
+            .expect("infinite input; qed");
 
         if let Some(account) = Self::tip_payment_address() {
             account
@@ -746,7 +746,7 @@ impl<T: Config> Pallet<T> {
         .drain()
         {
             let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
-			.expect("infinite input; qed");
+                .expect("infinite input; qed");
 
             let (finder, deposit, finders_fee) = match old_tip.finder {
                 Some((finder, deposit)) => (finder, deposit, true),

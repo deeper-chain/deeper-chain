@@ -15,12 +15,12 @@
 
 use super::*;
 use crate as pallet_credit;
+use frame_support::traits::ConstU32;
 use frame_support::{
     pallet_prelude::GenesisBuild,
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
-use frame_support::traits::{ConstU32};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{

@@ -1,9 +1,9 @@
 use crate as pallet_eth_sub_bridge;
+use frame_support::traits::ConstU32;
 use frame_support::{
     parameter_types,
     traits::{GenesisBuild, OnFinalize, OnInitialize},
 };
-use frame_support::traits::{ConstU32};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{

@@ -37,7 +37,7 @@ use self::common::{sign, *};
 
 #[test]
 fn fee_multiplier_increases_and_decreases_on_big_weight() {
-	let mut t = new_test_ext(compact_code_unwrap());
+    let mut t = new_test_ext(compact_code_unwrap());
 
     // initial fee multiplier must be one.
     let mut prev_multiplier = Multiplier::one();
@@ -46,7 +46,7 @@ fn fee_multiplier_increases_and_decreases_on_big_weight() {
         assert_eq!(TransactionPayment::next_fee_multiplier(), prev_multiplier);
     });
 
-	let mut tt = new_test_ext(compact_code_unwrap());
+    let mut tt = new_test_ext(compact_code_unwrap());
 
     let time1 = 42 * 1000;
     // big one in terms of weight.
@@ -240,10 +240,10 @@ fn block_weight_capacity_report() {
     // be a few hundred (250 at the time of writing but can change over time). Runs until panic.
     use node_primitives::Index;
 
-	// execution ext.
-	let mut t = new_test_ext(compact_code_unwrap());
-	// setup ext.
-	let mut tt = new_test_ext(compact_code_unwrap());
+    // execution ext.
+    let mut t = new_test_ext(compact_code_unwrap());
+    // setup ext.
+    let mut tt = new_test_ext(compact_code_unwrap());
 
     let factor = 50;
     let mut time = 10;
@@ -256,10 +256,10 @@ fn block_weight_capacity_report() {
         let mut xts = (0..num_transfers)
             .map(|i| CheckedExtrinsic {
                 signed: Some((charlie(), signed_extra(nonce + i as Index, 0))),
-				function: Call::Balances(pallet_balances::Call::transfer {
-					dest: bob().into(),
-					value: 0,
-				}),
+                function: Call::Balances(pallet_balances::Call::transfer {
+                    dest: bob().into(),
+                    value: 0,
+                }),
             })
             .collect::<Vec<CheckedExtrinsic>>();
 
@@ -317,10 +317,10 @@ fn block_length_capacity_report() {
     // writing but can change over time).
     use node_primitives::Index;
 
-	// execution ext.
-	let mut t = new_test_ext(compact_code_unwrap());
-	// setup ext.
-	let mut tt = new_test_ext(compact_code_unwrap());
+    // execution ext.
+    let mut t = new_test_ext(compact_code_unwrap());
+    // setup ext.
+    let mut tt = new_test_ext(compact_code_unwrap());
 
     let factor = 256 * 1024;
     let mut time = 10;

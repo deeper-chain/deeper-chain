@@ -50,8 +50,8 @@ pub mod pallet {
     use pallet_micropayment::AccountCreator;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_std::prelude::Vec;
     use sp_runtime::traits::TrailingZeroInput;
+    use sp_std::prelude::Vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -148,7 +148,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let mut pk = [0u8; 32];
             let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
-			    .expect("infinite input; qed");
+                .expect("infinite input; qed");
             let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account);
             pk.copy_from_slice(&atomos_accountid.encode());
             let pub_key = sr25519::Public::from_raw(pk);

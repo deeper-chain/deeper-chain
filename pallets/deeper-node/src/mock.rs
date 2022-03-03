@@ -14,11 +14,11 @@
 // limitations under the License.
 
 use crate as pallet_deeper_node;
+use frame_support::traits::ConstU32;
 use frame_support::{
     parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
-use frame_support::traits::{ConstU32};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{

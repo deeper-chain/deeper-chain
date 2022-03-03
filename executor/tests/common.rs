@@ -133,11 +133,13 @@ pub fn executor_call<
 }
 
 pub fn new_test_ext(code: &[u8]) -> TestExternalities<BlakeTwo256> {
-	let ext = TestExternalities::new_with_code(
-		code,
-		node_testing::genesis::config(Some(code)).build_storage().unwrap(),
-	);
-	ext
+    let ext = TestExternalities::new_with_code(
+        code,
+        node_testing::genesis::config(Some(code))
+            .build_storage()
+            .unwrap(),
+    );
+    ext
 }
 
 /// Construct a fake block.

@@ -56,14 +56,16 @@ use pallet_session::historical;
 use sp_runtime::{
     traits::{
         AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable, SaturatedConversion, Saturating,
-        StaticLookup, Zero
+        StaticLookup, Zero,
     },
     Perbill, Percent, RuntimeDebug,
 };
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 use sp_staking::{
-    offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence, DisableStrategy},
+    offence::{
+        DisableStrategy, Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence,
+    },
     SessionIndex,
 };
 use sp_std::{
@@ -131,9 +133,12 @@ pub struct EraRewardPoints<AccountId: Ord> {
 }
 
 impl<AccountId: Ord> Default for EraRewardPoints<AccountId> {
-	fn default() -> Self {
-		EraRewardPoints { total: Default::default(), individual: BTreeMap::new() }
-	}
+    fn default() -> Self {
+        EraRewardPoints {
+            total: Default::default(),
+            individual: BTreeMap::new(),
+        }
+    }
 }
 
 /// Indicates the initial status of the staker.
@@ -335,9 +340,7 @@ where
 }
 
 /// A snapshot of the stake backing a single validator in the system.
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, RuntimeDebug, TypeInfo,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Exposure<AccountId, Balance: HasCompact> {
     /// The total balance backing this validator.
     #[codec(compact)]
@@ -350,9 +353,13 @@ pub struct Exposure<AccountId, Balance: HasCompact> {
 }
 
 impl<AccountId, Balance: Default + HasCompact> Default for Exposure<AccountId, Balance> {
-	fn default() -> Self {
-		Self { total: Default::default(), own: Default::default(), others: vec![] }
-	}
+    fn default() -> Self {
+        Self {
+            total: Default::default(),
+            own: Default::default(),
+            others: vec![],
+        }
+    }
 }
 
 /// A pending slash record. The value of the slash has been computed but not applied yet,
@@ -372,16 +379,16 @@ pub struct UnappliedSlash<AccountId, Balance: HasCompact> {
 }
 
 impl<AccountId, Balance: HasCompact + Zero> UnappliedSlash<AccountId, Balance> {
-	/// Initializes the default object using the given `validator`.
-	pub fn default_from(validator: AccountId) -> Self {
-		Self {
-			validator,
-			own: Zero::zero(),
-			others: vec![],
-			reporters: vec![],
-			payout: Zero::zero(),
-		}
-	}
+    /// Initializes the default object using the given `validator`.
+    pub fn default_from(validator: AccountId) -> Self {
+        Self {
+            validator,
+            own: Zero::zero(),
+            others: vec![],
+            reporters: vec![],
+            payout: Zero::zero(),
+        }
+    }
 }
 
 /// Indicate how an election round was computed.
@@ -496,14 +503,14 @@ pub struct DelegatorData<AccountId> {
 }
 
 impl<AccountId: Ord> DelegatorData<AccountId> {
-	pub fn default_from(delegator: AccountId) -> Self {
-		Self { 
+    pub fn default_from(delegator: AccountId) -> Self {
+        Self {
             delegator: delegator,
-            delegated_validators: Default::default(), 
-            unrewarded_since: Default::default(), 
-            delegating: Default::default(), 
+            delegated_validators: Default::default(),
+            unrewarded_since: Default::default(),
+            delegating: Default::default(),
         }
-	}
+    }
 }
 
 #[derive(Decode, Encode, TypeInfo)]
@@ -513,9 +520,12 @@ pub struct ValidatorData<AccountId: Ord> {
 }
 
 impl<AccountId: Ord> Default for ValidatorData<AccountId> {
-	fn default() -> Self {
-		ValidatorData { delegators: BTreeSet::new(), elected_era: Default::default() }
-	}
+    fn default() -> Self {
+        ValidatorData {
+            delegators: BTreeSet::new(),
+            elected_era: Default::default(),
+        }
+    }
 }
 
 /// Mode of era-forcing.
@@ -2232,7 +2242,6 @@ impl<T: Config> pallet::Pallet<T> {
                 .ok()
                 .unwrap(),
         );
-
     }
 
     /// Validators can set reward destination or payee, so we need to handle that.
@@ -2448,7 +2457,6 @@ impl<T: Config> pallet::Pallet<T> {
                     candidate_validator.delegators.len() as u32,
                     candidate_validator.elected_era,
                 )
-                
             })
             .collect();
         if validators.len() < Self::minimum_validator_count().max(1) as usize {
@@ -2489,10 +2497,7 @@ impl<T: Config> pallet::Pallet<T> {
                 let others = if truncated {
                     let candidate = Self::candidate_validators(v);
 
-                    candidate
-                        .delegators
-                        .into_iter()
-                        .collect()
+                    candidate.delegators.into_iter().collect()
                 } else {
                     Vec::new()
                 };
@@ -2748,10 +2753,7 @@ where
     }
     fn note_uncle(author: T::AccountId, _age: T::BlockNumber) {
         if let Some(block_author) = <pallet_authorship::Pallet<T>>::author() {
-            Self::reward_by_ids(vec![
-                (block_author, 2),
-                (author, 1),
-            ])
+            Self::reward_by_ids(vec![(block_author, 2), (author, 1)])
         }
     }
 }

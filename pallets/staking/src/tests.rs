@@ -2800,7 +2800,10 @@ fn delegate() {
             assert_eq!(Staking::active_delegator_count(), 2);
             // check delegator data
             let delegator_data = Staking::delegators(1002);
-            assert_eq!(delegator_data.unwrap().delegated_validators, vec![11, 21, 31, 41]);
+            assert_eq!(
+                delegator_data.unwrap().delegated_validators,
+                vec![11, 21, 31, 41]
+            );
             assert_eq!(Staking::candidate_validators(11).delegators.len(), 2);
             assert!(Staking::candidate_validators(11).delegators.contains(&1002));
             assert_eq!(Staking::candidate_validators(21).delegators.len(), 1);
@@ -2831,7 +2834,10 @@ fn delegate() {
             // 1001, 1002 and 1003 are all delegators now
             assert_eq!(Staking::delegator_count(), 3);
             assert_eq!(Staking::active_delegator_count(), 3);
-            assert_eq!(Staking::delegators(1003).unwrap().delegated_validators, vec![11]);
+            assert_eq!(
+                Staking::delegators(1003).unwrap().delegated_validators,
+                vec![11]
+            );
             assert!(Staking::candidate_validators(11).delegators.contains(&1003));
             assert!(!Staking::candidate_validators(21).delegators.contains(&1003));
             assert!(!Staking::candidate_validators(31).delegators.contains(&1003));

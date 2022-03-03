@@ -19,12 +19,12 @@
 
 use crate as staking;
 use crate::*;
+use frame_support::traits::ConstU32;
 use frame_support::{
     assert_ok, parameter_types,
     traits::{Currency, FindAuthor, GenesisBuild, Get, Hooks, OneSessionHandler},
     weights::constants::RocksDbWeight,
 };
-use frame_support::traits::{ConstU32};
 use node_primitives::Moment;
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use sp_core::H256;
@@ -662,17 +662,17 @@ impl ExtBuilder {
 
         pallet_session::GenesisConfig::<Test> {
             keys: if self.has_stakers {
-				// set the keys for the first session.
-				stakers
-					.into_iter()
-					.map(|(id, ..)| (id, id, SessionKeys { other: id.into() }))
-					.collect()
-			} else {
-				// set some dummy validators in genesis.
-				(0..self.validator_count as u64)
-					.map(|id| (id, id, SessionKeys { other: id.into() }))
-					.collect()
-			},
+                // set the keys for the first session.
+                stakers
+                    .into_iter()
+                    .map(|(id, ..)| (id, id, SessionKeys { other: id.into() }))
+                    .collect()
+            } else {
+                // set some dummy validators in genesis.
+                (0..self.validator_count as u64)
+                    .map(|id| (id, id, SessionKeys { other: id.into() }))
+                    .collect()
+            },
         }
         .assimilate_storage(&mut storage)
         .unwrap();

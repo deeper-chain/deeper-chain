@@ -26,7 +26,9 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, fail, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use sp_core::H160;
-    use sp_runtime::traits::{Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, Zero, TrailingZeroInput};
+    use sp_runtime::traits::{
+        Bounded, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Hash, TrailingZeroInput, Zero,
+    };
     use sp_std::prelude::Vec;
     use types::{
         BridgeMessage, BridgeTransfer, IntoArray, Kind, LimitMessage, Limits, MemberId, ProposalId,
@@ -470,8 +472,8 @@ pub mod pallet {
 
             if <TransferMessages<T>>::contains_key(message_id) {
                 if let Some(msg) = <TransferMessages<T>>::get(message_id) {
-                    let is_approved = msg.status == Status::Approved
-                        || msg.status == Status::Confirmed;
+                    let is_approved =
+                        msg.status == Status::Approved || msg.status == Status::Confirmed;
                     ensure!(is_approved, "This transfer must be approved first.");
 
                     Self::update_status(message_id, Status::Confirmed, Kind::Transfer)?;
@@ -495,7 +497,7 @@ pub mod pallet {
             if let Some(msg) = <TransferMessages<T>>::get(message_id) {
                 has_burned = has_burned && msg.status == Status::Confirmed;
             }
-            
+
             ensure!(
                 !has_burned,
                 "Failed to cancel. This transfer is already executed."
@@ -514,30 +516,33 @@ pub mod pallet {
             let mut transfer = <BridgeTransfers<T>>::get(transfer_id);
 
             let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
-			.expect("infinite input; qed");
+                .expect("infinite input; qed");
 
-            let mut message = <TransferMessages<T>>::get(transfer.message_id).unwrap_or(TransferMessage {
-                message_id: transfer.message_id,
-                eth_address: H160::default(),
-                substrate_address: zero_account.clone(),
-                amount: BalanceOf::<T>::default(),
-                status: Status::Withdraw,
-                action: Status::Withdraw,
-            });
+            let mut message =
+                <TransferMessages<T>>::get(transfer.message_id).unwrap_or(TransferMessage {
+                    message_id: transfer.message_id,
+                    eth_address: H160::default(),
+                    substrate_address: zero_account.clone(),
+                    amount: BalanceOf::<T>::default(),
+                    status: Status::Withdraw,
+                    action: Status::Withdraw,
+                });
             let mut limit_message = <LimitMessages<T>>::get(transfer.message_id);
-            let mut validator_message = <ValidatorHistory<T>>::get(transfer.message_id).unwrap_or(ValidatorMessage {
-                message_id: transfer.message_id,
-                quorum: u64::default(),
-                accounts: Vec::default(),
-                action: Status::Revoked,
-                status: Status::Revoked,
-            });
-            let mut bridge_message = <BridgeMessages<T>>::get(transfer.message_id).unwrap_or(BridgeMessage {
-                message_id: transfer.message_id,
-                account: zero_account,
-                action: Status::Revoked,
-                status: Status::Revoked,
-            });
+            let mut validator_message =
+                <ValidatorHistory<T>>::get(transfer.message_id).unwrap_or(ValidatorMessage {
+                    message_id: transfer.message_id,
+                    quorum: u64::default(),
+                    accounts: Vec::default(),
+                    action: Status::Revoked,
+                    status: Status::Revoked,
+                });
+            let mut bridge_message =
+                <BridgeMessages<T>>::get(transfer.message_id).unwrap_or(BridgeMessage {
+                    message_id: transfer.message_id,
+                    account: zero_account,
+                    action: Status::Revoked,
+                    status: Status::Revoked,
+                });
 
             let voted = <ValidatorVotes<T>>::get((transfer_id, validator.clone()));
             ensure!(!voted, "This validator has already voted.");
