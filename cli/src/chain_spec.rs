@@ -277,7 +277,8 @@ pub fn staging_testnet_config() -> ChainSpec {
                 .expect("Staging telemetry url is valid; qed"),
         ),
         None,
-        Some(chain_spec_properties()),
+        None,
+        None,
         Default::default(),
     )
 }
@@ -358,7 +359,6 @@ pub fn testnet_genesis(
     GenesisConfig {
         system: SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
-            changes_trie_config: Default::default(),
         },
         balances: BalancesConfig { balances },
         indices: IndicesConfig { indices: vec![] },
@@ -435,51 +435,37 @@ pub fn testnet_genesis(
         evm: EVMConfig {
             account_pairs: {
                 let mut map = BTreeMap::new();
-                // Alice's deeper chain address: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-                // H160 address of Alice mapping eth account
-                // eth address: 0x7a5b2024e179b312B924Ff02F4c27b5DF5326601
-                // eth privete key: 0xb52e6d24f6caacc1961d3cedf04ed3a11a7f4a27a6ce85eeea5dbea6c694f53a
-
                 map.insert(
-                    H160::from_str("7a5b2024e179b312B924Ff02F4c27b5DF5326601")
+                    // H160 address of Alice dev account
+                    // Derived from SS58 (42 prefix) address
+                    // SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+                    // hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+                    // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+                    H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
                         .expect("internal H160 is valid; qed"),
                     hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d").into(),
                 );
-                // Bob's deeper chain address: 0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48
-                // H160 address of Bob mapping eth account
-                // eth address: 0x120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581
-                // eth privete key: 0xd2d7f189142e7a0468f97e5f16ef7762bf199a4c6c31b3e38fbf43f38f7d8f30
-
                 map.insert(
-                    H160::from_str("120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581")
+                    // H160 address of Bob dev account
+                    // Derived from SS58 (42 prefix) address
+                    // SS58: 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
+                    // hex: 0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48
+                    // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+                    H160::from_str("8eaf04151687736326c9fea17e25fc5287613693")
                         .expect("internal H160 is valid; qed"),
                     hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into(),
-                );
-                // Dave's deeper chain address: 0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20
-                // H160 address of Dave mapping eth account
-                // eth address: 0x843AFB0DC3aD56696800C0d61C76Ac2A147AD48C
-                // eth privete key: 0xc32a1b133e8164ce6f63441090c29bd41e8ad0af1bf307c49ff3d40b1916db03
-                map.insert(
-                    H160::from_str("843AFB0DC3aD56696800C0d61C76Ac2A147AD48C")
-                        .expect("internal H160 is valid; qed"),
-                    hex!("306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20").into(),
-                );
-                // Eve deeper chain address: 0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e
-                // H160 address of Eve mapping eth account
-                // eth address: 0xe1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B
-                // eth privete key: 0x828f8cdc56b6a78c5e9698900a00d7212780892da3486062d70092e3e9f6a37e
-                map.insert(
-                    H160::from_str("e1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B")
-                        .expect("internal H160 is valid; qed"),
-                    hex!("e659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e").into(),
                 );
                 map
             },
             accounts: {
                 let mut map = BTreeMap::new();
                 map.insert(
-                    // H160 address of Alice eth account
-                    H160::from_str("7a5b2024e179b312B924Ff02F4c27b5DF5326601")
+                    // H160 address of Alice dev account
+                    // Derived from SS58 (42 prefix) address
+                    // SS58: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
+                    // hex: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
+                    // Using the full hex key, truncating to the first 20 bytes (the first 40 hex chars)
+                    H160::from_str("d43593c715fdd31c61141abd04a99fd6822c8558")
                         .expect("internal H160 is valid; qed"),
                     pallet_evm::GenesisAccount {
                         balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
@@ -490,33 +476,8 @@ pub fn testnet_genesis(
                     },
                 );
                 map.insert(
-                    // H160 address of Bob eth account
-                    H160::from_str("120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581")
-                        .expect("internal H160 is valid; qed"),
-                    pallet_evm::GenesisAccount {
-                        balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-                            .expect("internal U256 is valid; qed"),
-                        code: Default::default(),
-                        nonce: Default::default(),
-                        storage: Default::default(),
-                    },
-                );
-
-                map.insert(
-                    // H160 address of dave eth account
-                    H160::from_str("843AFB0DC3aD56696800C0d61C76Ac2A147AD48C")
-                        .expect("internal H160 is valid; qed"),
-                    pallet_evm::GenesisAccount {
-                        balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
-                            .expect("internal U256 is valid; qed"),
-                        code: Default::default(),
-                        nonce: Default::default(),
-                        storage: Default::default(),
-                    },
-                );
-                map.insert(
-                    // H160 address of eve eth account
-                    H160::from_str("e1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B")
+                    // H160 address of Bob dev account
+                    H160::from_str("8eaf04151687736326c9fea17e25fc5287613693")
                         .expect("internal H160 is valid; qed"),
                     pallet_evm::GenesisAccount {
                         balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
@@ -28875,6 +28836,7 @@ pub fn development_config() -> ChainSpec {
         vec![],
         None,
         None,
+        None,
         Some(chain_spec_properties()),
         Default::default(),
     )
@@ -28970,6 +28932,7 @@ pub fn local_testnet_config() -> ChainSpec {
         vec![],
         None,
         None,
+        None,
         Some(chain_spec_properties()),
         Default::default(),
     )
@@ -28979,7 +28942,6 @@ pub fn local_testnet_config() -> ChainSpec {
 pub(crate) mod tests {
     use super::*;
     use crate::cli::Cli;
-    use crate::service::new_light_base;
     use crate::service::{new_full_base, NewFullBase};
     use sc_cli::SubstrateCli;
     use sc_service_test;
@@ -29013,6 +28975,7 @@ pub(crate) mod tests {
             None,
             None,
             None,
+            None,
             Default::default(),
         )
     }
@@ -29028,6 +28991,7 @@ pub(crate) mod tests {
             None,
             None,
             None,
+            None,
             Default::default(),
         )
     }
@@ -29037,34 +29001,22 @@ pub(crate) mod tests {
     fn test_connectivity() {
         sp_tracing::try_init_simple();
 
-        sc_service_test::connectivity(
-            integration_test_config_with_two_authorities(),
-            |config| {
-                let cli = Cli::from_args();
-                let NewFullBase {
-                    task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                    ..
-                } = new_full_base(config, |_, _| (), &cli)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-            |config| {
-                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    keep_alive,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-        );
+        sc_service_test::connectivity(integration_test_config_with_two_authorities(), |config| {
+            let cli = Cli::from_args();
+            let NewFullBase {
+                task_manager,
+                client,
+                network,
+                transaction_pool,
+                ..
+            } = new_full_base(config, |_, _| (), &cli)?;
+            Ok(sc_service_test::TestNetComponents::new(
+                task_manager,
+                client,
+                network,
+                transaction_pool,
+            ))
+        });
     }
 
     #[test]

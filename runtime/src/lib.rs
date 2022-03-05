@@ -26,8 +26,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        Currency, EqualPrivilegeOnly, Everything, FindAuthor, Imbalance, InstanceFilter,
-        KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote, ConstU128,
+        ConstU128, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Imbalance, InstanceFilter,
+        KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -65,7 +65,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber, Perbill,
-    Percent, Permill, Perquintill, RuntimeAppPublic
+    Percent, Permill, Perquintill, RuntimeAppPublic,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(any(feature = "std", test))]
@@ -155,7 +155,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 10,
+    spec_version: 12,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 4,

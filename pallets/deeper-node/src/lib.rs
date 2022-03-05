@@ -47,13 +47,14 @@ pub struct Node<AccountId, BlockNumber> {
 
 impl<AccountId: Decode, BlockNumber: Default> Default for Node<AccountId, BlockNumber> {
     fn default() -> Self {
-		Self {
-            account_id:  AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).expect("nodes should have a valid account id"),
+        Self {
+            account_id: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("nodes should have a valid account id"),
             ipv4: IpV4::default(),
             country: CountryRegion::default(),
             expire: BlockNumber::default(),
-		}
-	}
+        }
+    }
 }
 
 pub trait NodeInterface<AccountId, BlockNumber> {
