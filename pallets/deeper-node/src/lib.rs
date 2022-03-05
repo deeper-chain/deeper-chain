@@ -37,12 +37,23 @@ pub type CountryRegion = Vec<u8>;
 pub type DurationEras = u8;
 
 // struct to store the registered Device Information
-#[derive(Decode, Encode, Default, TypeInfo)]
+#[derive(Decode, Encode, TypeInfo)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
     ipv4: IpV4, // IP will not be exposed in future version
     country: CountryRegion,
     expire: BlockNumber,
+}
+
+impl<AccountId: Decode, BlockNumber: Default> Default for Node<AccountId, BlockNumber> {
+    fn default() -> Self {
+		Self {
+            account_id:  AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes()).expect("nodes should have a valid account id"),
+            ipv4: IpV4::default(),
+            country: CountryRegion::default(),
+            expire: BlockNumber::default(),
+		}
+	}
 }
 
 pub trait NodeInterface<AccountId, BlockNumber> {
@@ -86,6 +97,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]

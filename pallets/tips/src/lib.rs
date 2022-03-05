@@ -117,6 +117,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -183,7 +184,7 @@ pub mod pallet {
     /// Tip payment address
     #[pallet::storage]
     #[pallet::getter(fn tip_payment_address)]
-    pub type TipPaymentAddress<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+    pub type TipPaymentAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -562,7 +563,13 @@ impl<T: Config> Pallet<T> {
     /// This actually does computation. If you need to keep using it, then make sure you cache the
     /// value and only call this once.
     pub fn account_id() -> T::AccountId {
-        Self::tip_payment_address()
+        let zero_account =
+            T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::new(&[][..]))
+                .expect("infinite input; qed");
+        match Self::tip_payment_address() {
+            Some(addr) => addr,
+            None => zero_account,
+        }
     }
 
     /// Given a mutable reference to an `OpenTip`, insert the tip into it and check whether it
@@ -729,6 +736,9 @@ impl<T: Config> Pallet<T> {
         }
 
         use frame_support::{migration::storage_key_iter, Twox64Concat};
+        let zero_account =
+            T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::new(&[][..]))
+                .expect("infinite input; qed");
 
         for (hash, old_tip) in storage_key_iter::<
             T::Hash,
@@ -739,7 +749,7 @@ impl<T: Config> Pallet<T> {
         {
             let (finder, deposit, finders_fee) = match old_tip.finder {
                 Some((finder, deposit)) => (finder, deposit, true),
-                None => (T::AccountId::default(), Zero::zero(), false),
+                None => (zero_account.clone(), Zero::zero(), false),
             };
             let new_tip = OpenTip {
                 reason: old_tip.reason,

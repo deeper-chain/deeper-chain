@@ -145,7 +145,13 @@ pub mod pallet {
             sender: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let mut pk = [0u8; 32];
-            let atomos_accountid = Self::atmos_accountid().unwrap_or_default();
+            let zero_account =
+                T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::new(&[][..]))
+                    .expect("infinite input; qed");
+            let atomos_accountid = match Self::atmos_accountid() {
+                Some(addr) => addr,
+                None => zero_account,
+            };
             pk.copy_from_slice(&atomos_accountid.encode());
             let pub_key = sr25519::Public::from_raw(pk);
 

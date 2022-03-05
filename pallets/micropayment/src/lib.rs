@@ -50,7 +50,8 @@ pub mod pallet {
     use crate::weights::WeightInfo;
     use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
-    use frame_support::traits::{Currency, Get};
+    // use frame_support::traits::{Currency, Get};
+    use frame_support::traits::tokens::currency::Currency;
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use log::error;
@@ -93,8 +94,8 @@ pub mod pallet {
     >;
 
     // struct to store micro-payment channel
-    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, scale_info::TypeInfo)]
-    pub struct Chan<AccountId, BlockNumber, Balance> {
+    #[derive(Decode, Encode, Eq, PartialEq, Debug, scale_info::TypeInfo)]
+    pub struct Chan<AccountId, BlockNumber, Balance: Default> {
         pub client: AccountId,
         pub server: AccountId,
         pub balance: Balance,
@@ -103,8 +104,26 @@ pub mod pallet {
         pub expiration: BlockNumber,
     }
 
+    impl<AccountId: Decode, BlockNumber: Default, Balance: Default> Default
+        for Chan<AccountId, BlockNumber, Balance>
+    {
+        fn default() -> Self {
+            Self {
+                client: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                    .expect("nodes should have a valid account id"),
+                server: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                    .expect("nodes should have a valid account id"),
+                balance: Default::default(),
+                nonce: 0,
+                opened: BlockNumber::default(),
+                expiration: BlockNumber::default(),
+            }
+        }
+    }
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     // get channel info

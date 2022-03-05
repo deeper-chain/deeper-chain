@@ -63,7 +63,9 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 use sp_staking::{
-    offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence},
+    offence::{
+        DisableStrategy, Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence,
+    },
     SessionIndex,
 };
 use sp_std::{
@@ -122,12 +124,21 @@ pub struct ActiveEraInfo {
 /// Reward points of an era. Used to split era total payout between validators.
 ///
 /// This points will be used to reward validators.
-#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct EraRewardPoints<AccountId: Ord> {
     /// Total number of points. Equals the sum of reward points for each validator.
     total: RewardPoint,
     /// The reward points earned by a given validator.
     individual: BTreeMap<AccountId, RewardPoint>,
+}
+
+impl<AccountId: Decode + Ord> Default for EraRewardPoints<AccountId> {
+    fn default() -> Self {
+        Self {
+            total: Default::default(),
+            individual: BTreeMap::new(),
+        }
+    }
 }
 
 /// Indicates the initial status of the staker.
@@ -329,9 +340,7 @@ where
 }
 
 /// A snapshot of the stake backing a single validator in the system.
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Exposure<AccountId, Balance: HasCompact> {
     /// The total balance backing this validator.
     #[codec(compact)]
@@ -341,6 +350,16 @@ pub struct Exposure<AccountId, Balance: HasCompact> {
     pub own: Balance,
     /// The delegators that are exposed.
     pub others: Vec<AccountId>,
+}
+
+impl<AccountId: Decode, Balance: Default + HasCompact> Default for Exposure<AccountId, Balance> {
+    fn default() -> Self {
+        Self {
+            total: Default::default(),
+            own: Default::default(),
+            others: Default::default(),
+        }
+    }
 }
 
 /// A pending slash record. The value of the slash has been computed but not applied yet,
@@ -458,7 +477,7 @@ where
     }
 }
 
-#[derive(Decode, Encode, Default, Debug, TypeInfo)]
+#[derive(Decode, Encode, Debug, TypeInfo)]
 pub struct DelegatorData<AccountId> {
     // delegator itself
     pub delegator: AccountId,
@@ -470,10 +489,31 @@ pub struct DelegatorData<AccountId> {
     pub delegating: bool,
 }
 
-#[derive(Decode, Encode, Default, TypeInfo)]
+impl<AccountId: Decode> Default for DelegatorData<AccountId> {
+    fn default() -> Self {
+        Self {
+            delegator: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("nodes should have a valid account id"),
+            delegated_validators: Default::default(),
+            unrewarded_since: Default::default(),
+            delegating: Default::default(),
+        }
+    }
+}
+
+#[derive(Decode, Encode, TypeInfo)]
 pub struct ValidatorData<AccountId: Ord> {
     pub delegators: BTreeSet<AccountId>,
     pub elected_era: EraIndex,
+}
+
+impl<AccountId: Decode + Ord> Default for ValidatorData<AccountId> {
+    fn default() -> Self {
+        Self {
+            delegators: BTreeSet::new(),
+            elected_era: Default::default(),
+        }
+    }
 }
 
 /// Mode of era-forcing.
@@ -520,6 +560,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -2682,10 +2723,14 @@ where
         Self::reward_by_ids(vec![(author, 20)])
     }
     fn note_uncle(author: T::AccountId, _age: T::BlockNumber) {
-        Self::reward_by_ids(vec![
-            (<pallet_authorship::Pallet<T>>::author(), 2),
-            (author, 1),
-        ])
+        let zero_account =
+            T::AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::new(&[][..]))
+                .expect("infinite input; qed");
+        let block_author_id = match <pallet_authorship::Pallet<T>>::author() {
+            Some(id) => id,
+            None => zero_account,
+        };
+        Self::reward_by_ids(vec![(block_author_id, 2), (author, 1)])
     }
 }
 
@@ -2739,6 +2784,7 @@ where
         >],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
+        _disable_strategy: DisableStrategy,
     ) -> Weight {
         if !Self::era_election_status().is_closed() {
             return 0;
