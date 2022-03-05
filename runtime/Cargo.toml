@@ -56,6 +56,7 @@ pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-babe = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false, path = "../pallets/balances"}
 pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+pallet-child-bounties = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
@@ -71,6 +72,7 @@ pallet-membership = { git = "https://github.com/paritytech/substrate", branch = 
 pallet-mmr = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-offences = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
+pallet-preimage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-recovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}

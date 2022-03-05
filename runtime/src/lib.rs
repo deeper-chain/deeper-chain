@@ -26,8 +26,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        Currency, Everything, FindAuthor, Imbalance, InstanceFilter, KeyOwnerProofSystem,
-        LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
+        Currency, EqualPrivilegeOnly, Everything, FindAuthor, Imbalance, InstanceFilter,
+        KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote, ConstU128,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -51,7 +51,7 @@ use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 use sp_api::impl_runtime_apis;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_core::{
-    crypto::{KeyTypeId, Public},
+    crypto::KeyTypeId,
     u32_trait::{_1, _2, _3},
     OpaqueMetadata, H160, H256, U256,
 };
@@ -65,7 +65,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber, Perbill,
-    Percent, Permill, Perquintill,
+    Percent, Permill, Perquintill, RuntimeAppPublic
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(any(feature = "std", test))]
@@ -159,6 +159,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 4,
+    state_version: 0, // use 0 to use old trie format
 };
 
 /// The BABE epoch configuration at genesis.
@@ -256,6 +257,7 @@ impl frame_system::Config for Runtime {
     type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -263,6 +265,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
+    type PalletsOrigin = OriginCaller;
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
@@ -372,6 +375,7 @@ parameter_types! {
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
         RuntimeBlockWeights::get().max_block;
     pub const MaxScheduledPerBlock: u32 = 50;
+    pub const NoPreimagePostponement: Option<u32> = Some(10);
 }
 
 impl pallet_scheduler::Config for Runtime {
@@ -383,6 +387,24 @@ impl pallet_scheduler::Config for Runtime {
     type ScheduleOrigin = EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type PreimageProvider = Preimage;
+    type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+    pub const PreimageMaxSize: u32 = 4096 * 1024;
+    pub const PreimageBaseDeposit: Balance = 1 * DOLLARS;
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+    type Event = Event;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type MaxSize = PreimageMaxSize;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
 }
 
 parameter_types! {
@@ -751,6 +773,7 @@ impl pallet_treasury::Config for Runtime {
     type OnSlash = ();
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ();
     type SpendPeriod = SpendPeriod;
     type Burn = Burn;
     type BurnDestination = ();
@@ -769,6 +792,20 @@ impl pallet_bounties::Config for Runtime {
     type DataDepositPerByte = DataDepositPerByte;
     type MaximumReasonLength = MaximumReasonLength;
     type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+    type ChildBountyManager = ChildBounties;
+}
+
+parameter_types! {
+    pub const MaxActiveChildBountyCount: u32 = 5;
+    pub const ChildBountyValueMinimum: Balance = 1 * DOLLARS;
+    pub const ChildBountyCuratorDepositBase: Permill = Permill::from_percent(10);
+}
+impl pallet_child_bounties::Config for Runtime {
+    type Event = Event;
+    type MaxActiveChildBountyCount = MaxActiveChildBountyCount;
+    type ChildBountyValueMinimum = ChildBountyValueMinimum;
+    type ChildBountyCuratorDepositBase = ChildBountyCuratorDepositBase;
+    type WeightInfo = pallet_child_bounties::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -789,10 +826,8 @@ impl pallet_tips::Config for Runtime {
 }
 
 parameter_types! {
-    pub ContractDeposit: Balance = deposit(
-      1,
-      <pallet_contracts::Pallet<Runtime>>::contract_info_size(),
-    );
+    pub const DepositPerItem: Balance = deposit(1, 0);
+    pub const DepositPerByte: Balance = deposit(0, 1);
     pub RentFraction: Perbill = Perbill::from_rational(1u32, 30 * DAYS);
     // The lazy deletion runs inside on_initialize.
     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
@@ -819,8 +854,10 @@ impl pallet_contracts::Config for Runtime {
     type Schedule = Schedule;
     type Call = Call;
     type CallFilter = Nothing;
-    type ContractDeposit = ContractDeposit;
     type CallStack = [pallet_contracts::Frame<Self>; 31];
+    type DepositPerItem = DepositPerItem;
+    type DepositPerByte = DepositPerByte;
+    type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1076,6 +1113,7 @@ impl pallet_assets::Config for Runtime {
     type Currency = Balances;
     type ForceOrigin = EnsureRoot<AccountId>;
     type AssetDeposit = AssetDeposit;
+    type AssetAccountDeposit = ConstU128<DOLLARS>;
     type StringLimit = StringLimit;
     type MetadataDepositBase = MetadataDepositBase;
     type MetadataDepositPerByte = MetadataDepositPerByte;
@@ -1281,6 +1319,7 @@ construct_runtime!(
         Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>},
         Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
         Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+        Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>},
         Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
         Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
         Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>},
@@ -1295,6 +1334,7 @@ construct_runtime!(
         EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>},
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent},
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event},
+        ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -1364,7 +1404,7 @@ pub type Executive = frame_executive::Executive<
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
-    AllPallets,
+    AllPalletsWithSystem,
     (),
 >;
 
@@ -1591,21 +1631,32 @@ impl_runtime_apis! {
             dest: AccountId,
             value: Balance,
             gas_limit: u64,
+            storage_deposit_limit: Option<Balance>,
             input_data: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractExecResult {
-            Contracts::bare_call(origin, dest, value, gas_limit, input_data, true)
+        ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+            Contracts::bare_call(origin, dest, value, gas_limit, storage_deposit_limit, input_data, true)
         }
 
         fn instantiate(
             origin: AccountId,
-            endowment: Balance,
+            value: Balance,
             gas_limit: u64,
+            storage_deposit_limit: Option<Balance>,
             code: pallet_contracts_primitives::Code<Hash>,
             data: Vec<u8>,
             salt: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId>
+        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
-            Contracts::bare_instantiate(origin, endowment, gas_limit, code, data, salt, true)
+            Contracts::bare_instantiate(origin, value, gas_limit, storage_deposit_limit, code, data, salt, true)
+        }
+
+        fn upload_code(
+            origin: AccountId,
+            code: Vec<u8>,
+            storage_deposit_limit: Option<Balance>,
+        ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+        {
+            Contracts::bare_upload_code(origin, code, storage_deposit_limit)
         }
 
         fn get_storage(

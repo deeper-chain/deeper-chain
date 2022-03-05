@@ -4599,6 +4599,7 @@ dependencies = [
  "pallet-balances 3.0.0",
  "pallet-base-fee",
  "pallet-bounties",
+ "pallet-child-bounties",
  "pallet-collective",
  "pallet-contracts",
  "pallet-contracts-primitives",
@@ -4629,6 +4630,7 @@ dependencies = [
  "pallet-mmr",
  "pallet-multisig",
  "pallet-offences",
+ "pallet-preimage",
  "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-recovery",
@@ -5078,6 +5080,24 @@ dependencies = [
  "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
  "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
  "log",
+ "pallet-treasury",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core 4.1.0-dev",
+ "sp-io 4.0.0",
+ "sp-runtime 4.1.0-dev",
+ "sp-std 4.0.0",
+]
+
+[[package]]
+name = "pallet-child-bounties"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16#19162e43be45817b44c7d48e50d03f074f60fbf4"
+dependencies = [
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "log",
+ "pallet-bounties",
  "pallet-treasury",
  "parity-scale-codec",
  "scale-info",
@@ -5664,6 +5684,20 @@ dependencies = [
  "serde",
  "sp-runtime 4.1.0-dev",
  "sp-staking 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "sp-std 4.0.0",
+]
+
+[[package]]
+name = "pallet-preimage"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16#19162e43be45817b44c7d48e50d03f074f60fbf4"
+dependencies = [
+ "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-io 4.0.0",
+ "sp-runtime 4.1.0-dev",
  "sp-std 4.0.0",
 ]
 

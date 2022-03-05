@@ -72,8 +72,6 @@ pub struct LightDeps<C, F, P> {
     pub client: Arc<C>,
     /// Transaction pool instance.
     pub pool: Arc<P>,
-    /// Remote access to the blockchain (async).
-    pub remote_blockchain: Arc<dyn sc_client_api::light::RemoteBlockchain<Block>>,
     /// Fetcher instance.
     pub fetcher: Arc<F>,
 }
@@ -350,30 +348,4 @@ where
     )));
 
     Ok(io)
-}
-
-/// Instantiate all Light RPC extensions.
-#[allow(dead_code)]
-pub fn create_light<C, P, M, F>(deps: LightDeps<C, F, P>) -> jsonrpc_core::IoHandler<M>
-where
-    C: sp_blockchain::HeaderBackend<Block>,
-    C: Send + Sync + 'static,
-    F: sc_client_api::light::Fetcher<Block> + 'static,
-    P: TransactionPool + 'static,
-    M: jsonrpc_core::Metadata + Default,
-{
-    use substrate_frame_rpc_system::{LightSystem, SystemApi};
-
-    let LightDeps {
-        client,
-        pool,
-        remote_blockchain,
-        fetcher,
-    } = deps;
-    let mut io = jsonrpc_core::IoHandler::default();
-    io.extend_with(SystemApi::<Hash, AccountId, Index>::to_delegate(
-        LightSystem::new(client, remote_blockchain, fetcher, pool),
-    ));
-
-    io
 }
