@@ -89,7 +89,6 @@ pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../pallets/micropayment" }
 pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
-pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
 
 # frontier frame dependencies
@@ -179,7 +178,6 @@ std = [
 	"pallet-vesting/std",
 	"pallet-micropayment/std",
 	"pallet-credit/std",
-	"pallet-eth-sub-bridge/std",
 	"pallet-deeper-node/std",
 	"pallet-credit-accumulation/std",
 	"fp-rpc/std",
@@ -222,7 +220,6 @@ runtime-benchmarks = [
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-credit/runtime-benchmarks",
-	"pallet-eth-sub-bridge/runtime-benchmarks",
 	"pallet-deeper-node/runtime-benchmarks",
 	"pallet-micropayment/runtime-benchmarks",
 	"pallet-credit-accumulation/runtime-benchmarks",

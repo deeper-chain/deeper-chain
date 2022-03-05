@@ -4387,7 +4387,6 @@ dependencies = [
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-dynamic-fee",
- "pallet-eth-sub-bridge",
  "pallet-ethereum",
  "pallet-evm",
  "pallet-grandpa",
@@ -4610,7 +4609,6 @@ dependencies = [
  "pallet-democracy",
  "pallet-dynamic-fee",
  "pallet-elections-phragmen",
- "pallet-eth-sub-bridge",
  "pallet-ethereum",
  "pallet-evm",
  "pallet-evm-precompile-blake2",
@@ -4685,7 +4683,6 @@ dependencies = [
  "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
  "pallet-contracts",
  "pallet-deeper-node",
- "pallet-eth-sub-bridge",
  "pallet-grandpa",
  "pallet-indices",
  "pallet-session",
@@ -5305,26 +5302,6 @@ dependencies = [
  "sp-core 4.1.0-dev",
  "sp-io 4.0.0",
  "sp-npos-elections",
- "sp-runtime 4.1.0-dev",
- "sp-std 4.0.0",
-]
-
-[[package]]
-name = "pallet-eth-sub-bridge"
-version = "3.0.0"
-dependencies = [
- "frame-benchmarking 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
- "frame-support 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
- "frame-system 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.16)",
- "hex-literal",
- "node-primitives",
- "pallet-balances 3.0.0 (git+https://github.com/deeper-chain/deeper-chain.git)",
- "pallet-timestamp",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core 4.1.0-dev",
- "sp-io 4.0.0",
  "sp-runtime 4.1.0-dev",
  "sp-std 4.0.0",
 ]
