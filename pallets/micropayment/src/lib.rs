@@ -56,6 +56,10 @@ pub mod pallet {
         dispatch::{DispatchError, DispatchResultWithPostInfo},
         pallet_prelude::*,
     };
+    use frame_support::traits::{
+        Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
+    };
+    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use log::error;
     use pallet_balances::MutableCurrency;
@@ -64,6 +68,8 @@ pub mod pallet {
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{Saturating, Zero};
+    use sp_runtime::DispatchError;
+    use sp_runtime::Percent;
     use sp_std::prelude::Vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
@@ -84,10 +90,18 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
         /// NodeInterface of deeper-node pallet
         type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
+
+        type MicropaymentBurn: Get<Percent>;
+
+        type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
 
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::NegativeImbalance;
 
     pub type ChannelOf<T> = Chan<
         <T as frame_system::Config>::AccountId,
@@ -536,13 +550,23 @@ pub mod pallet {
         }
 
         /// Deposit the amount to the account free balance
+        /// some additional fee should be charged
         fn deposit_into_account(
             account: &T::AccountId,
             amount: BalanceOf<T>,
         ) -> Result<(), DispatchError> {
             T::Currency::mutate_account_balance(account, |balance| {
                 balance.free += amount;
-            });
+            })?;
+
+            let fee = T::MicropaymentBurn::get() * amount;
+            let burned = T::Currency::withdraw(
+                account,
+                fee,
+                WithdrawReasons::FEE,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            T::Slash::on_unbalanced(burned);
             Ok(())
         }
     }

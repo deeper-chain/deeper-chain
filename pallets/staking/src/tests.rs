@@ -160,6 +160,40 @@ fn basic_setup_works() {
 }
 
 #[test]
+fn difference_compensation() {
+    ExtBuilder::default().build_and_execute(|| {
+        let reward_data_before = RewardData::<BalanceOf<Test>> {
+            total_referee_reward: 0,
+            received_referee_reward: 0,
+            referee_reward: 0,
+            received_pocr_reward: 100,
+            poc_reward: 10,
+        };
+        Reward::<Test>::insert(&1, &reward_data_before);
+        assert_eq!(Staking::reward(&1), Some(reward_data_before.clone()));
+
+        let reward_data_after = RewardData::<BalanceOf<Test>> {
+            total_referee_reward: 0,
+            received_referee_reward: 0,
+            referee_reward: 0,
+            received_pocr_reward: 120,
+            poc_reward: 20,
+        };
+
+        // If you are a non-root user, the call will fail
+        assert_noop!(
+            Staking::difference_compensation(Origin::signed(1002), 1, 0, 20),
+            BadOrigin
+        );
+        assert_eq!(Staking::reward(&1), Some(reward_data_before));
+
+        // If you are the root user, the call should succeed
+        assert_ok!(Staking::difference_compensation(Origin::root(), 1, 0, 20));
+        assert_eq!(Staking::reward(&1), Some(reward_data_after));
+    });
+}
+
+#[test]
 fn change_controller_works() {
     ExtBuilder::default().build_and_execute(|| {
         // 10 and 11 are bonded as stash controller.

@@ -116,5 +116,6 @@ pub fn config_endowed(code: Option<&[u8]>, extra_endowed: Vec<AccountId>) -> Gen
         ethereum: Default::default(),
         dynamic_fee: Default::default(),
         base_fee: Default::default(),
+        council: Default::default(),
     }
 }

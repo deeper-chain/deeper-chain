@@ -170,7 +170,7 @@ impl<AccountId> Default for RewardDestination<AccountId> {
     }
 }
 
-#[derive(Encode, Decode, Default, RuntimeDebug, TypeInfo)]
+#[derive(Encode, Decode, Default, RuntimeDebug, TypeInfo, Clone, PartialEq)]
 pub struct RewardData<Balance: HasCompact> {
     pub total_referee_reward: Balance,
     pub received_referee_reward: Balance,
@@ -1835,54 +1835,54 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(4,2))]
-        pub fn compensation(
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
+        pub fn difference_compensation(
             origin: OriginFor<T>,
             delegator: T::AccountId,
-            from: EraIndex,
-            to: EraIndex,
+            referee_reward: BalanceOf<T>,
+            poc_reward: BalanceOf<T>,
         ) -> DispatchResult {
             ensure_root(origin)?;
             let remainder_mining_reward = T::NumberToCurrency::convert(
                 Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
             );
 
-            if T::NodeInterface::im_ever_online(&delegator) {
-                let (rewards, _) = T::CreditInterface::get_reward(&delegator, from, to);
-                if let Some((referee_reward, poc_reward)) = rewards {
-                    // update RewardData
-                    if Reward::<T>::contains_key(&delegator) {
-                        // 1 read
-                        Reward::<T>::mutate(&delegator, |data| match data {
-                            // 1 write
-                            Some(reward_data) => {
-                                reward_data.received_referee_reward += referee_reward;
-                                reward_data.referee_reward = referee_reward;
-                                reward_data.received_pocr_reward += poc_reward;
-                                reward_data.poc_reward = poc_reward;
-                            }
-                            _ => (),
-                        });
-                    } else {
-                        let (total_referee_reward, _) =
-                            T::CreditInterface::get_top_referee_reward(&delegator);
-                        let reward_data = RewardData::<BalanceOf<T>> {
-                            total_referee_reward,
-                            received_referee_reward: referee_reward,
-                            referee_reward: referee_reward,
-                            received_pocr_reward: poc_reward,
-                            poc_reward: poc_reward,
-                        };
-                        Reward::<T>::insert(&delegator, reward_data);
+            // update RewardData
+            if Reward::<T>::contains_key(&delegator) {
+                // 1 read
+                Reward::<T>::mutate(&delegator, |data| match data {
+                    // 1 write
+                    Some(reward_data) => {
+                        reward_data.received_referee_reward += referee_reward;
+                        reward_data.referee_reward = referee_reward;
+                        reward_data.received_pocr_reward += poc_reward;
+                        reward_data.poc_reward = poc_reward;
                     }
-                    let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
-                    let imbalance = T::Currency::deposit_creating(&delegator, reward);
-                    Self::deposit_event(Event::DelegatorReward(
-                        delegator.clone(),
-                        imbalance.peek(),
-                    ));
-                }
+                    _ => (),
+                });
+            } else {
+                let (total_referee_reward, _) =
+                    T::CreditInterface::get_top_referee_reward(&delegator);
+                let reward_data = RewardData::<BalanceOf<T>> {
+                    total_referee_reward,
+                    received_referee_reward: referee_reward,
+                    referee_reward: referee_reward,
+                    received_pocr_reward: poc_reward,
+                    poc_reward: poc_reward,
+                };
+                Reward::<T>::insert(&delegator, reward_data);
             }
+            let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
+            let imbalance = T::Currency::deposit_creating(&delegator, reward);
+            RemainderMiningReward::<T>::put(
+                TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(reward))
+                    .ok()
+                    .unwrap(),
+            );
+            Self::deposit_event(Event::CompensationDelegatorReward(
+                delegator.clone(),
+                imbalance.peek(),
+            ));
 
             Ok(())
         }
@@ -1975,6 +1975,8 @@ pub mod pallet {
         UnDelegated(T::AccountId),
         /// The delegator  has been rewarded by this amount. \[account_id, amount\]
         DelegatorReward(T::AccountId, BalanceOf<T>),
+        /// The delegator  has been compensation_rewarded by this amount. \[account_id, amount\]
+        CompensationDelegatorReward(T::AccountId, BalanceOf<T>),
         /// The validator  has been rewarded by this amount. \[account_id, amount\]
         ValidatorReward(T::AccountId, BalanceOf<T>),
     }

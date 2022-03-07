@@ -127,7 +127,7 @@ pub trait CreditInterface<AccountId, Balance> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, UnixTime};
+    use frame_support::traits::{Currency, OnUnbalanced, UnixTime};
     use frame_support::{
         dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
         pallet_prelude::*,
@@ -166,10 +166,18 @@ pub mod pallet {
         type UnixTime: UnixTime;
 
         type SecsPerBlock: Get<u32>;
+
+        type DPRPerCreditBurned: Get<BalanceOf<Self>>;
+
+        type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
     }
 
     pub type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
+    pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::NegativeImbalance;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -265,6 +273,8 @@ pub mod pallet {
         CreditDataAddedByTip(T::AccountId, u64),
         //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
+        CreditHistoryUpdateSuccess(T::AccountId, EraIndex),
+        CreditHistoryUpdateFailed(T::AccountId, EraIndex),
     }
 
     #[pallet::error]
@@ -273,6 +283,14 @@ pub mod pallet {
         InvalidCreditData,
         /// credit data has been initialized
         CreditDataInitialized,
+        /// over history credit max value
+        CreditAddTooMuch,
+        /// balance of burned account not enough
+        BalanceNotEnough,
+        /// credit history or input era is wrong
+        BadEraOrHistory,
+        /// account not found
+        AccountNotFound,
     }
 
     #[pallet::hooks]
@@ -293,6 +311,47 @@ pub mod pallet {
             Self::_update_credit_setting(credit_setting.clone());
             Self::deposit_event(Event::CreditSettingUpdated(credit_setting));
             Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::force_modify_credit_history())]
+        pub fn force_modify_credit_history(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            expected_era: EraIndex,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?; // requires sudo
+            if UserCreditHistory::<T>::contains_key(&account_id) {
+                let is_success = UserCreditHistory::<T>::mutate(&account_id, |history| {
+                    if history.len() > 0 {
+                        for i in 0..history.len() {
+                            if (i + 1 < history.len()
+                                && expected_era >= history[i].0
+                                && expected_era < history[i + 1].0)
+                                || (i + 1 == history.len() && expected_era >= history[i].0)
+                            {
+                                // the first i records were creted before delegate, should be removed
+                                for _j in 0..i {
+                                    history.remove(0);
+                                }
+                                history[0].0 = expected_era;
+                                return true;
+                            }
+                        }
+                    }
+                    false
+                });
+                if is_success {
+                    Self::deposit_event(Event::CreditHistoryUpdateSuccess(
+                        account_id,
+                        expected_era,
+                    ));
+                    return Ok(().into());
+                }
+                Self::deposit_event(Event::CreditHistoryUpdateFailed(account_id, expected_era));
+                return Err(Error::<T>::BadEraOrHistory)?;
+            }
+            Self::deposit_event(Event::CreditHistoryUpdateFailed(account_id, expected_era));
+            Err(Error::<T>::AccountNotFound)?
         }
 
         /// update credit data
@@ -317,6 +376,51 @@ pub mod pallet {
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
                 Self::deposit_event(Event::CreditDataAdded(account_id, credit_data));
+            }
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_for_add_credit())]
+        pub fn burn_for_add_credit(
+            origin: OriginFor<T>,
+            credit_score: u64,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            let cur_credit = UserCredit::<T>::get(&sender)
+                .ok_or(Error::<T>::InvalidCreditData)?
+                .credit;
+            let max_credit = {
+                let history = UserCreditHistory::<T>::get(&sender);
+                if history.is_empty() {
+                    T::MinCreditToDelegate::get()
+                } else {
+                    let max_credit = history
+                        .into_iter()
+                        .max_by(|x, y| (x.1.credit).cmp(&y.1.credit))
+                        .unwrap()
+                        .1
+                        .credit;
+                    if max_credit > T::MinCreditToDelegate::get() {
+                        max_credit
+                    } else {
+                        T::MinCreditToDelegate::get()
+                    }
+                }
+            };
+
+            let target_credit = cur_credit.saturating_add(credit_score);
+            if target_credit > max_credit {
+                Err(Error::<T>::CreditAddTooMuch)?
+            }
+
+            let amount = T::DPRPerCreditBurned::get().saturating_mul((credit_score as u32).into());
+            if T::Currency::can_slash(&sender, amount) {
+                let (burned, _) = T::Currency::slash(&sender, amount.into());
+                T::BurnedTo::on_unbalanced(burned);
+                Self::_update_credit(&sender, target_credit);
+                Self::update_credit_history(&sender, Self::get_current_era());
+            } else {
+                Err(Error::<T>::BalanceNotEnough)?
             }
             Ok(().into())
         }

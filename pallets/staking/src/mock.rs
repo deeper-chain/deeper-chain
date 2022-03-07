@@ -183,6 +183,7 @@ impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
+    pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
@@ -193,6 +194,8 @@ impl pallet_micropayment::Config for Test {
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
     type NodeInterface = DeeperNode;
+    type MicropaymentBurn = MicropaymentBurn;
+    type Slash = ();
 }
 
 parameter_types! {
@@ -223,6 +226,7 @@ parameter_types! {
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
+    pub const DPRPerCreditBurned: Balance = 100;
 }
 
 impl pallet_credit::Config for Test {
@@ -237,6 +241,8 @@ impl pallet_credit::Config for Test {
     type WeightInfo = ();
     type UnixTime = Timestamp;
     type SecsPerBlock = SecsPerBlock;
+    type DPRPerCreditBurned = DPRPerCreditBurned;
+    type BurnedTo = ();
 }
 
 parameter_types! {
