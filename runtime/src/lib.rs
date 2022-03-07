@@ -333,7 +333,7 @@ impl InstanceFilter<Call> for ProxyType {
             ProxyType::Governance => matches!(
                 c,
                 Call::Democracy(..)
-                    //| Call::Council(..)
+                    | Call::Council(..)
                     | Call::Society(..)
                     | Call::TechnicalCommittee(..)
                     | Call::Elections(..)
@@ -627,20 +627,20 @@ impl pallet_democracy::Config for Runtime {
 parameter_types! {
     pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
     pub const CouncilMaxProposals: u32 = 100;
-    pub const CouncilMaxMembers: u32 = 100;
+    pub const CouncilMaxMembers: u32 = 13;
 }
 
-// type CouncilCollective = pallet_collective::Instance1;
-// impl pallet_collective::Config<CouncilCollective> for Runtime {
-//     type Origin = Origin;
-//     type Proposal = Call;
-//     type Event = Event;
-//     type MotionDuration = CouncilMotionDuration;
-//     type MaxProposals = CouncilMaxProposals;
-//     type MaxMembers = CouncilMaxMembers;
-//     type DefaultVote = pallet_collective::PrimeDefaultVote;
-//     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-// }
+type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for Runtime {
+    type Origin = Origin;
+    type Proposal = Call;
+    type Event = Event;
+    type MotionDuration = CouncilMotionDuration;
+    type MaxProposals = CouncilMaxProposals;
+    type MaxMembers = CouncilMaxMembers;
+    type DefaultVote = pallet_collective::PrimeDefaultVote;
+    type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
 
 parameter_types! {
     pub const CandidacyBond: Balance = 10 * DPR;
@@ -661,10 +661,10 @@ impl pallet_elections_phragmen::Config for Runtime {
     type Event = Event;
     type PalletId = ElectionsPhragmenPalletId;
     type Currency = Balances;
-    type ChangeMembers = ();
+    type ChangeMembers = Council;
     // NOTE: this implies that council's genesis members cannot be set directly and must come from
     // this module.
-    type InitializeMembers = ();
+    type InitializeMembers = (); //Council;
     type CurrencyToVote = U128CurrencyToVote;
     type CandidacyBond = CandidacyBond;
     type VotingBondBase = VotingBondBase;
@@ -1263,7 +1263,6 @@ construct_runtime!(
         Staking: pallet_staking::{Pallet, Call, Config<T>, Storage, Event<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>},
-        // Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
         TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -1295,6 +1294,7 @@ construct_runtime!(
         EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>},
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent},
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event},
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
     }
 );
 
@@ -1844,7 +1844,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_babe, Babe);
             list_benchmark!(list, extra, pallet_balances, Balances);
             list_benchmark!(list, extra, pallet_bounties, Bounties);
-            //list_benchmark!(list, extra, pallet_collective, Council);
+            list_benchmark!(list, extra, pallet_collective, Council);
             list_benchmark!(list, extra, pallet_contracts, Contracts);
             list_benchmark!(list, extra, pallet_democracy, Democracy);
             list_benchmark!(list, extra, pallet_elections_phragmen, Elections);
@@ -1907,7 +1907,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_babe, Babe);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_bounties, Bounties);
-            //add_benchmark!(params, batches, pallet_collective, Council);
+            add_benchmark!(params, batches, pallet_collective, Council);
             add_benchmark!(params, batches, pallet_contracts, Contracts);
             add_benchmark!(params, batches, pallet_democracy, Democracy);
             add_benchmark!(params, batches, pallet_elections_phragmen, Elections);
