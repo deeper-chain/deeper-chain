@@ -50,16 +50,13 @@ pub mod pallet {
     use crate::weights::WeightInfo;
     use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
-    use frame_support::traits::tokens::currency::Currency;
-    use frame_support::traits::Get;
+    use frame_support::traits::{
+        tokens::currency::Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
+    };
     use frame_support::{
         dispatch::{DispatchError, DispatchResultWithPostInfo},
         pallet_prelude::*,
     };
-    use frame_support::traits::{
-        Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
-    };
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use log::error;
     use pallet_balances::MutableCurrency;
@@ -68,7 +65,6 @@ pub mod pallet {
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{Saturating, Zero};
-    use sp_runtime::DispatchError;
     use sp_runtime::Percent;
     use sp_std::prelude::Vec;
 
