@@ -45,7 +45,7 @@ async fn running_the_node_works_and_can_be_interrupted() {
                 .unwrap(),
         );
 
-        common::wait_n_finalized_blocks(3, 30).await.unwrap();
+        common::wait_n_finalized_blocks(3, 50).await.unwrap();
         assert!(
             cmd.try_wait().unwrap().is_none(),
             "the process should still be running"

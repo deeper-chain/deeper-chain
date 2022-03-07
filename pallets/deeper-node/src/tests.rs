@@ -26,7 +26,7 @@ fn register_device() {
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
-        let node = DeeperNode::device_info(1).unwrap();
+        let node = DeeperNode::device_info(1);
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
 
@@ -57,7 +57,7 @@ fn register_device() {
             vec![1, 3, 4, 5],
             "CA".as_bytes().to_vec()
         ));
-        let node = DeeperNode::device_info(4).unwrap();
+        let node = DeeperNode::device_info(4);
         assert_eq!(node.ipv4, vec![1, 3, 4, 5]);
         assert_eq!(node.country, "CA".as_bytes().to_vec());
     });

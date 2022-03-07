@@ -502,10 +502,11 @@ pub struct DelegatorData<AccountId> {
     pub delegating: bool,
 }
 
-impl<AccountId: Ord> DelegatorData<AccountId> {
-    pub fn default_from(delegator: AccountId) -> Self {
+impl<AccountId: Decode> Default for DelegatorData<AccountId> {
+    fn default() -> Self {
         Self {
-            delegator: delegator,
+            delegator: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("nodes should have a valid account id"),
             delegated_validators: Default::default(),
             unrewarded_since: Default::default(),
             delegating: Default::default(),
@@ -868,7 +869,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn delegators)]
     pub(crate) type Delegators<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, DelegatorData<T::AccountId>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, DelegatorData<T::AccountId>, ValueQuery>;
 
     /// active delegator count
     #[pallet::storage]
@@ -1757,32 +1758,30 @@ pub mod pallet {
             let current_era = T::CreditInterface::get_current_era();
             if <Delegators<T>>::contains_key(&delegator) {
                 let old_delegator_data = Self::delegators(&delegator);
-                if let Some(old_delegator_data) = old_delegator_data {
-                    if !old_delegator_data.delegating {
-                        // the delegator was not delegating
-                        // the delegator delegates again
-                        ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
-                    }
-                    let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
-                        Some(unrewarded_era) => unrewarded_era,
-                        None => current_era,
-                    };
-                    let delegator_data = DelegatorData {
-                        delegator: delegator.clone(),
-                        delegated_validators: validators.clone(),
-                        unrewarded_since: Some(earliest_unrewarded_era),
-                        delegating: true,
-                    };
-                    <Delegators<T>>::insert(&delegator, delegator_data);
+                if !old_delegator_data.delegating {
+                    // the delegator was not delegating
+                    // the delegator delegates again
+                    ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
+                }
+                let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
+                    Some(unrewarded_era) => unrewarded_era,
+                    None => current_era,
+                };
+                let delegator_data = DelegatorData {
+                    delegator: delegator.clone(),
+                    delegated_validators: validators.clone(),
+                    unrewarded_since: Some(earliest_unrewarded_era),
+                    delegating: true,
+                };
+                <Delegators<T>>::insert(&delegator, delegator_data);
 
-                    for validator in &old_delegator_data.delegated_validators {
-                        <CandidateValidators<T>>::mutate(validator, |v| {
-                            v.delegators.remove(&delegator);
-                        });
-                        let candidate = Self::candidate_validators(validator);
-                        if candidate.delegators.is_empty() {
-                            <CandidateValidators<T>>::remove(validator);
-                        }
+                for validator in &old_delegator_data.delegated_validators {
+                    <CandidateValidators<T>>::mutate(validator, |v| {
+                        v.delegators.remove(&delegator);
+                    });
+                    let candidate = Self::candidate_validators(validator);
+                    if candidate.delegators.is_empty() {
+                        <CandidateValidators<T>>::remove(validator);
                     }
                 }
             } else {
@@ -2375,9 +2374,7 @@ impl<T: Config> pallet::Pallet<T> {
         }
         if delegator_data.delegating {
             Delegators::<T>::mutate(delegator, |data| {
-                if let Some(data) = data {
-                    data.unrewarded_since = Some(current_era);
-                }
+                data.unrewarded_since = Some(current_era);
             });
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
         } else {
@@ -2626,40 +2623,35 @@ impl<T: Config> pallet::Pallet<T> {
 
     fn _undelegate(delegator: &T::AccountId) {
         let delegator_data = Self::delegators(delegator);
-        if let Some(delegator_data) = delegator_data {
-            if delegator_data.delegating {
-                for validator in delegator_data.delegated_validators {
-                    <CandidateValidators<T>>::mutate(&validator, |validator_data| {
-                        validator_data.delegators.remove(delegator);
-                    });
-                    let validator_data = Self::candidate_validators(&validator);
-                    match validator_data.delegators.len() {
-                        0 => <CandidateValidators<T>>::remove(&validator),
-                        _ => (),
-                    }
-                }
 
-                match delegator_data.unrewarded_since {
-                    Some(earliest_unrewarded_era) => {
-                        if earliest_unrewarded_era == CurrentEra::<T>::get().unwrap_or(0) {
-                            <Delegators<T>>::remove(delegator);
-                            DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
-                        } else {
-                            <Delegators<T>>::mutate(delegator, |data| {
-                                if let Some(data) = data {
-                                    data.delegating = false
-                                }
-                            });
-                        }
-                    }
-                    None => {
-                        // remove the delegator
+        if delegator_data.delegating {
+            for validator in delegator_data.delegated_validators {
+                <CandidateValidators<T>>::mutate(&validator, |validator_data| {
+                    validator_data.delegators.remove(delegator);
+                });
+                let validator_data = Self::candidate_validators(&validator);
+                match validator_data.delegators.len() {
+                    0 => <CandidateValidators<T>>::remove(&validator),
+                    _ => (),
+                }
+            }
+
+            match delegator_data.unrewarded_since {
+                Some(earliest_unrewarded_era) => {
+                    if earliest_unrewarded_era == CurrentEra::<T>::get().unwrap_or(0) {
                         <Delegators<T>>::remove(delegator);
                         DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+                    } else {
+                        <Delegators<T>>::mutate(delegator, |data| data.delegating = false);
                     }
                 }
-                ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+                None => {
+                    // remove the delegator
+                    <Delegators<T>>::remove(delegator);
+                    DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+                }
             }
+            ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
         }
     }
 

@@ -46,7 +46,7 @@ benchmarks! {
         let user = create_funded_user::<T>("user",USER_SEED, 100);
     }: _(RawOrigin::Signed(user.clone()), vec![1, 2, 3, 4], "US".as_bytes().to_vec())
     verify {
-        let node = DeeperNode::<T>::device_info(user).unwrap();
+        let node = DeeperNode::<T>::device_info(user);
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
     }
@@ -55,7 +55,7 @@ benchmarks! {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
         DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
-        let node = DeeperNode::<T>::device_info(user.clone()).unwrap();
+        let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
     }: _(RawOrigin::Signed(user.clone()))
@@ -66,7 +66,7 @@ benchmarks! {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
         DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
-        let node = DeeperNode::<T>::device_info(user.clone()).unwrap();
+        let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
     }: _(RawOrigin::Signed(user.clone()), 1)
@@ -80,7 +80,7 @@ benchmarks! {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
         DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
-        let node = DeeperNode::<T>::device_info(user.clone()).unwrap();
+        let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
     }: _(RawOrigin::Signed(user.clone()), 1)
@@ -91,7 +91,7 @@ benchmarks! {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
         DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
-        let node = DeeperNode::<T>::device_info(user.clone()).unwrap();
+        let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
         DeeperNode::<T>::register_server(RawOrigin::Signed(user.clone()).into(), 1)?;

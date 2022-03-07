@@ -45,7 +45,7 @@ async fn temp_base_path_works() {
     );
 
     // Let it produce some blocks.
-    common::wait_n_finalized_blocks(3, 30).await.unwrap();
+    common::wait_n_finalized_blocks(3, 50).await.unwrap();
     assert!(
         child.try_wait().unwrap().is_none(),
         "the process should still be running"
@@ -53,7 +53,7 @@ async fn temp_base_path_works() {
 
     // Stop the process
     kill(Pid::from_raw(child.id().try_into().unwrap()), SIGINT).unwrap();
-    assert!(common::wait_for(&mut child, 40)
+    assert!(common::wait_for(&mut child, 30)
         .map(|x| x.success())
         .unwrap_or_default());
 

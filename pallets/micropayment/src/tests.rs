@@ -36,7 +36,7 @@ fn open_channel() {
             3600
         ));
         assert_eq!(
-            Micropayment::channel(&alice, &bob).unwrap(),
+            Micropayment::channel(&alice, &bob),
             Chan {
                 client: alice.clone(),
                 server: bob.clone(),
