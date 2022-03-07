@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1645783605508,
+  "lastUpdate": 1646661250963,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1279,6 +1279,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 97994012,
             "range": "± 14365091",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "anhuitianyu@163.com",
+            "name": "yubo",
+            "username": "jerry-yu"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b42a8859a8bb27c82f984963dc164348f7549a02",
+          "message": " modify block size limit for wasm update (#202)",
+          "timestamp": "2022-03-07T21:22:09+08:00",
+          "tree_id": "ffe887258af687b5125233d8f5d3aa8249f946c5",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/b42a8859a8bb27c82f984963dc164348f7549a02"
+        },
+        "date": 1646661250620,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5651463,
+            "range": "± 1066088",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 88316330,
+            "range": "± 12902785",
             "unit": "ns/iter"
           }
         ]
