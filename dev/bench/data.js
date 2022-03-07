@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1646661250963,
+  "lastUpdate": 1646666746422,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1315,6 +1315,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 88316330,
             "range": "± 12902785",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d273ac55e45e57ac7c865b41eb3d592fe30da64",
+          "message": "remove useless staging and flamingfir config (#198)",
+          "timestamp": "2022-03-07T22:52:00+08:00",
+          "tree_id": "7acd76f5d22f8d27969e2c37baa9294c9435044e",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/2d273ac55e45e57ac7c865b41eb3d592fe30da64"
+        },
+        "date": 1646666746044,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5654946,
+            "range": "± 1004000",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 96433365,
+            "range": "± 12645567",
             "unit": "ns/iter"
           }
         ]
