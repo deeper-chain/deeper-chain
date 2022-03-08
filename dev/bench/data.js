@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1646666746422,
+  "lastUpdate": 1646704651798,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1351,6 +1351,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 96433365,
             "range": "± 12645567",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6a3ec1d4b6bd6fd654e834c3d4bb4bd1c8add1cd",
+          "message": "credit and micropayment depends on treasury directly (#204)",
+          "timestamp": "2022-03-08T09:24:29+08:00",
+          "tree_id": "53bd52c31707d079a285a067f7bea14d47957bfa",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/6a3ec1d4b6bd6fd654e834c3d4bb4bd1c8add1cd"
+        },
+        "date": 1646704651402,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5293600,
+            "range": "± 860100",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 90974024,
+            "range": "± 13474013",
             "unit": "ns/iter"
           }
         ]
