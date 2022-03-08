@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1646704651798,
+  "lastUpdate": 1646706593128,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1387,6 +1387,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 90974024,
             "range": "± 13474013",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "joey.xie@deeper.network",
+            "name": "Joey",
+            "username": "xcaptain"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7218b7ae4f7209eefe0cf9909db8aa51d3f327d",
+          "message": "remove bridge pallet since we are not using it (#203)",
+          "timestamp": "2022-03-08T09:34:44+08:00",
+          "tree_id": "c6acd524e48cdf3835c12d3cb0c94f48fe1b7ea2",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/d7218b7ae4f7209eefe0cf9909db8aa51d3f327d"
+        },
+        "date": 1646706592770,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5496130,
+            "range": "± 930803",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 92147462,
+            "range": "± 13003968",
             "unit": "ns/iter"
           }
         ]
