@@ -1,0 +1,34 @@
+name: release
+
+on:
+  push:
+
+jobs:
+  release:
+    name: Release
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Srtool build wasm runtime
+        id: srtool_build
+        uses: chevdor/srtool-actions@v0.1.0
+        with:
+          chain: deeper
+          package: node-runtime
+          runtime_dir: ./runtime
+
+      - name: Summary
+        run: |
+          echo '${{ steps.srtool_build.outputs.json }}' | jq . > deeper-srtool-digest.json
+          cat deeper-srtool-digest.json
+          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+
+      - name: Archive Runtime
+        uses: actions/upload-artifact@v2
+        with:
+          name: deeper-runtime-${{ github.sha }}
+          path: |
+            ${{ steps.srtool_build.outputs.wasm }}
+            deeper-srtool-digest.json
