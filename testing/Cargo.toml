@@ -47,7 +47,6 @@ sc-block-builder = { git = "https://github.com/paritytech/substrate", branch = "
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
-pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 log = "0.4.8"
 tempfile = "3.1.0"
 fs_extra = "1"
