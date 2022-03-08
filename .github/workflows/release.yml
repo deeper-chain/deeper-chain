@@ -11,24 +11,21 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@master
 
-      - name: Srtool build wasm runtime
-        id: srtool_build
-        uses: chevdor/srtool-actions@v0.1.0
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          chain: deeper
-          package: node-runtime
-          runtime_dir: ./runtime
+          profile: minimal
+          target: wasm32-unknown-unknown
 
-      - name: Summary
-        run: |
-          echo '${{ steps.srtool_build.outputs.json }}' | jq . > deeper-srtool-digest.json
-          cat deeper-srtool-digest.json
-          echo "Runtime location: ${{ steps.srtool_build.outputs.wasm }}"
+      - name: install srtool-cli
+        run: cargo install --git https://github.com/chevdor/srtool-cli
+
+      - name: build wasm runtime
+        run: srtool build -p node-runtime -r ./runtime
 
       - name: Archive Runtime
         uses: actions/upload-artifact@v2
         with:
           name: deeper-runtime-${{ github.sha }}
           path: |
-            ${{ steps.srtool_build.outputs.wasm }}
-            deeper-srtool-digest.json
+            runtime/target/srtool/release/wbuild/node-runtime/node_runtime.compact.compressed.wasm
