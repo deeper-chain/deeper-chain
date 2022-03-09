@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1646709573410,
+  "lastUpdate": 1646848689489,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1459,6 +1459,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 92529630,
             "range": "± 12302610",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "47657529+kzjin@users.noreply.github.com",
+            "name": "kzjin",
+            "username": "kzjin"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0c6018121685e6d0c90ee53a2e2e8005900a758c",
+          "message": "evm test script update and benchmark changes (#206)\n\nCo-authored-by: Zhuang Jin <zjin@deeper.network>",
+          "timestamp": "2022-03-09T09:44:05-08:00",
+          "tree_id": "eaa499fdcf525e24f297c227cacf25abd9f96a28",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/0c6018121685e6d0c90ee53a2e2e8005900a758c"
+        },
+        "date": 1646848689104,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5909874,
+            "range": "± 1069627",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 95605564,
+            "range": "± 14873062",
             "unit": "ns/iter"
           }
         ]
