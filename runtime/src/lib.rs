@@ -156,10 +156,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 10,
+    spec_version: 11,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 4,
+    transaction_version: 5,
     state_version: 1,
 };
 
@@ -1889,10 +1889,10 @@ impl_runtime_apis! {
             use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
             use frame_support::traits::StorageInfoTrait;
             use frame_system_benchmarking::Pallet as SystemBench;
+            use pallet_evm::Pallet as PalletEvmBench;
 
             let mut list = Vec::<BenchmarkList>::new();
 
-            list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
             list_benchmark!(list, extra, pallet_assets, Assets);
             list_benchmark!(list, extra, pallet_babe, Babe);
             list_benchmark!(list, extra, pallet_balances, Balances);
@@ -1921,6 +1921,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_deeper_node, DeeperNode);
             list_benchmark!(list, extra, pallet_micropayment, Micropayment);
             list_benchmark!(list, extra, pallet_credit_accumulation, CreditAccumulation);
+            list_benchmark!(list, extra, pallet_evm, PalletEvmBench::<Runtime>);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 

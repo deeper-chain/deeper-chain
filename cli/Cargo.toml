@@ -109,7 +109,6 @@ pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", 
 pallet-staking = { path = "../pallets/staking", version = "3.0.0"}
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
-pallet-eth-sub-bridge = { version = "3.0.0", default-features = false, path = "../pallets/bridge"}
 pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets/credit"}
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
 
