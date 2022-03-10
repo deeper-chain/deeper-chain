@@ -621,7 +621,7 @@ impl ExtBuilder {
         let num_validators = self.num_validators.unwrap_or(self.validator_count);
         // Check that the number of validators is sensible.
         assert!(num_validators <= 8);
-        let validators = (0..num_validators)
+        let _validators = (0..num_validators)
             .map(|x| ((x + 1) * 10 + 1) as AccountId)
             .collect::<Vec<_>>();
 

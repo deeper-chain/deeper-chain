@@ -648,7 +648,7 @@ mod tests {
     use sc_service_test::TestNetNode;
     use sc_transaction_pool_api::{ChainEvent, MaintainedTransactionPool};
     use sp_consensus::{BlockOrigin, Environment, Proposer};
-    use sp_core::{crypto::Pair as CryptoPair, Public, H256};
+    use sp_core::{crypto::Pair as CryptoPair, Public};
     use sp_inherents::InherentDataProvider;
     use sp_keyring::AccountKeyring;
     use sp_keystore::{SyncCryptoStore, SyncCryptoStorePtr};
