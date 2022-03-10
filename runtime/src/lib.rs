@@ -1401,8 +1401,14 @@ pub type CheckedSignature = fp_self_contained::CheckedSignature<AccountId, Signe
 pub type GenericUncheckedExtrinsic =
     generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive =
-    frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, ()>;
+pub type Executive = frame_executive::Executive<
+    Runtime,
+    Block,
+    frame_system::ChainContext<Runtime>,
+    Runtime,
+    AllPalletsWithSystem,
+    (),
+>;
 
 impl fp_self_contained::SelfContainedCall for Call {
     type SignedInfo = H160;
