@@ -51,7 +51,7 @@ use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 use sp_api::impl_runtime_apis;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_core::{
-    crypto::{KeyTypeId, Public},
+    crypto::KeyTypeId,
     u32_trait::{_1, _2, _3},
     OpaqueMetadata, H160, H256, U256,
 };
@@ -1401,14 +1401,8 @@ pub type CheckedSignature = fp_self_contained::CheckedSignature<AccountId, Signe
 pub type GenericUncheckedExtrinsic =
     generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = frame_executive::Executive<
-    Runtime,
-    Block,
-    frame_system::ChainContext<Runtime>,
-    Runtime,
-    AllPallets,
-    (),
->;
+pub type Executive =
+    frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, ()>;
 
 impl fp_self_contained::SelfContainedCall for Call {
     type SignedInfo = H160;
