@@ -83,7 +83,7 @@ fn construct_block<E: Externalities>(
     parent_hash: Hash,
     extrinsics: Vec<CheckedExtrinsic>,
 ) -> (Vec<u8>, Hash) {
-    use sp_trie::trie_types::LayoutV0;
+    use sp_trie::{LayoutV0, TrieConfiguration};
 
     // sign extrinsics.
     let extrinsics = extrinsics.into_iter().map(sign).collect::<Vec<_>>();
@@ -187,14 +187,14 @@ fn test_blocks(
 fn bench_execute_block(c: &mut Criterion) {
     let mut group = c.benchmark_group("execute blocks");
     group.bench_function("native", |b| {
-        let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
+        let genesis_config = node_testing::genesis::config(Some(compact_code_unwrap()));
         let strategy = ExecutionMethod::Native;
         let (use_native, wasm_method) = match strategy {
             ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
             ExecutionMethod::Wasm(wasm_method) => (false, wasm_method),
         };
 
-        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8);
+        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8, 2);
         let runtime_code = RuntimeCode {
             code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
             hash: vec![1, 2, 3],
@@ -233,14 +233,14 @@ fn bench_execute_block(c: &mut Criterion) {
     });
 
     group.bench_function("Wasm(Interpreted)", |b| {
-        let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
+        let genesis_config = node_testing::genesis::config(Some(compact_code_unwrap()));
         let strategy = ExecutionMethod::Wasm(WasmExecutionMethod::Interpreted);
         let (use_native, wasm_method) = match strategy {
             ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
             ExecutionMethod::Wasm(wasm_method) => (false, wasm_method),
         };
 
-        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8);
+        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8, 2);
         let runtime_code = RuntimeCode {
             code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
             hash: vec![1, 2, 3],
@@ -280,14 +280,14 @@ fn bench_execute_block(c: &mut Criterion) {
 
     #[cfg(feature = "wasmtime")]
     group.bench_function("Wasm(Compiled)", |b| {
-        let genesis_config = node_testing::genesis::config(false, Some(compact_code_unwrap()));
+        let genesis_config = node_testing::genesis::config(Some(compact_code_unwrap()));
         let strategy = ExecutionMethod::Wasm(WasmExecutionMethod::Compiled);
         let (use_native, wasm_method) = match strategy {
             ExecutionMethod::Native => (true, WasmExecutionMethod::Interpreted),
             ExecutionMethod::Wasm(wasm_method) => (false, wasm_method),
         };
 
-        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8);
+        let executor = NativeElseWasmExecutor::new(wasm_method, None, 8, 2);
         let runtime_code = RuntimeCode {
             code_fetcher: &sp_core::traits::WrappedRuntimeCode(compact_code_unwrap().into()),
             hash: vec![1, 2, 3],
