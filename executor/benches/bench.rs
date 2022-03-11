@@ -52,7 +52,7 @@ const SPEC_VERSION: u32 = node_runtime::VERSION.spec_version;
 
 const HEAP_PAGES: u64 = 20;
 
-type TestExternalities<H> = CoreTestExternalities<H, u64>;
+type TestExternalities<H> = CoreTestExternalities<H>;
 
 #[derive(Debug)]
 enum ExecutionMethod {
@@ -83,14 +83,14 @@ fn construct_block<E: Externalities>(
     parent_hash: Hash,
     extrinsics: Vec<CheckedExtrinsic>,
 ) -> (Vec<u8>, Hash) {
-    use sp_trie::{trie_types::Layout, TrieConfiguration};
+    use sp_trie::trie_types::LayoutV0;
 
     // sign extrinsics.
     let extrinsics = extrinsics.into_iter().map(sign).collect::<Vec<_>>();
 
     // calculate the header fields that we can.
     let extrinsics_root =
-        Layout::<BlakeTwo256>::ordered_trie_root(extrinsics.iter().map(Encode::encode))
+        LayoutV0::<BlakeTwo256>::ordered_trie_root(extrinsics.iter().map(Encode::encode))
             .to_fixed_bytes()
             .into();
 

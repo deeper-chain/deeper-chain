@@ -847,6 +847,7 @@ mod tests {
                     value: amount,
                 });
 
+                let check_non_zero_sender = frame_system::CheckNonZeroSender::new();
                 let check_spec_version = frame_system::CheckSpecVersion::new();
                 let check_tx_version = frame_system::CheckTxVersion::new();
                 let check_genesis = frame_system::CheckGenesis::new();
@@ -855,6 +856,7 @@ mod tests {
                 let check_weight = frame_system::CheckWeight::new();
                 let payment = pallet_transaction_payment::ChargeTransactionPayment::from(0);
                 let extra = (
+                    check_non_zero_sender,
                     check_spec_version,
                     check_tx_version,
                     check_genesis,
@@ -867,6 +869,7 @@ mod tests {
                     function,
                     extra,
                     (
+                        (),
                         spec_version,
                         transaction_version,
                         genesis_hash,
