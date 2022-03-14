@@ -2009,8 +2009,8 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_micropayment, Micropayment);
             add_benchmark!(params, batches, pallet_credit_accumulation, CreditAccumulation);
             add_benchmark!(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
-            add_benchmark!(list, extra, pallet_preimage, Preimage);
-            add_benchmark!(list, extra, pallet_scheduler, Scheduler);
+            add_benchmark!(params, extra, pallet_preimage, Preimage);
+            add_benchmark!(params, extra, pallet_scheduler, Scheduler);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
