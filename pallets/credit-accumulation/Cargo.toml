@@ -1,6 +1,6 @@
 [package]
 authors = ['Deeper Network']
-edition = '2018'
+edition = '2021'
 name = 'pallet-credit-accumulation'
 version = "3.0.0"
 homepage = "https://deeper.network"

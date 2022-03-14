@@ -1,7 +1,7 @@
 [package]
 authors = ['deeper.network dev']
 description = 'credit pallet for PoC in deeper-chain.'
-edition = '2018'
+edition = '2021'
 homepage = 'https://deeper.network'
 name = 'pallet-credit'
 repository = 'https://github.com/deeper-chain/deeper-chain'
