@@ -15,6 +15,7 @@
 
 use crate as pallet_micropayment;
 use crate::testing_utils::*;
+use frame_support::traits::ConstU32;
 use frame_support::{
     pallet_prelude::GenesisBuild,
     parameter_types,
@@ -81,6 +82,7 @@ impl system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -102,6 +104,7 @@ impl pallet_treasury::Config for Test {
     type OnSlash = ();
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ();
     type SpendPeriod = SpendPeriod;
     type Burn = Burn;
     type BurnDestination = (); // Just gets burned.

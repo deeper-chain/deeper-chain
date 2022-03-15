@@ -26,8 +26,8 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        Currency, Everything, FindAuthor, Imbalance, InstanceFilter, KeyOwnerProofSystem,
-        LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
+        ConstU128, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Imbalance, InstanceFilter,
+        KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -51,7 +51,7 @@ use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 use sp_api::impl_runtime_apis;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_core::{
-    crypto::{KeyTypeId, Public},
+    crypto::KeyTypeId,
     u32_trait::{_1, _2, _3},
     OpaqueMetadata, H160, H256, U256,
 };
@@ -63,6 +63,7 @@ use sp_runtime::traits::{
 use sp_runtime::transaction_validity::{
     TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
 };
+use sp_runtime::RuntimeAppPublic;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber, Perbill,
     Percent, Permill, Perquintill,
@@ -159,6 +160,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 5,
+    state_version: 1,
 };
 
 /// The BABE epoch configuration at genesis.
@@ -256,6 +258,7 @@ impl frame_system::Config for Runtime {
     type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -263,6 +266,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 impl pallet_utility::Config for Runtime {
     type Event = Event;
     type Call = Call;
+    type PalletsOrigin = OriginCaller;
     type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
@@ -372,6 +376,7 @@ parameter_types! {
     pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
         RuntimeBlockWeights::get().max_block;
     pub const MaxScheduledPerBlock: u32 = 50;
+    pub const NoPreimagePostponement: Option<u32> = Some(10);
 }
 
 impl pallet_scheduler::Config for Runtime {
@@ -383,6 +388,24 @@ impl pallet_scheduler::Config for Runtime {
     type ScheduleOrigin = EnsureRoot<AccountId>;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+    type OriginPrivilegeCmp = EqualPrivilegeOnly;
+    type PreimageProvider = Preimage;
+    type NoPreimagePostponement = NoPreimagePostponement;
+}
+
+parameter_types! {
+    pub const PreimageMaxSize: u32 = 4096 * 1024;
+    pub const PreimageBaseDeposit: Balance = 1 * DOLLARS;
+}
+
+impl pallet_preimage::Config for Runtime {
+    type WeightInfo = pallet_preimage::weights::SubstrateWeight<Runtime>;
+    type Event = Event;
+    type Currency = Balances;
+    type ManagerOrigin = EnsureRoot<AccountId>;
+    type MaxSize = PreimageMaxSize;
+    type BaseDeposit = PreimageBaseDeposit;
+    type ByteDeposit = PreimageByteDeposit;
 }
 
 parameter_types! {
@@ -730,6 +753,9 @@ parameter_types! {
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 5 * DPR;
     pub const MaxApprovals: u32 = 100;
+    pub const MaxActiveChildBountyCount: u32 = 5;
+    pub const ChildBountyValueMinimum: Balance = 1 * DOLLARS;
+    pub const ChildBountyCuratorDepositBase: Permill = Permill::from_percent(10);
 }
 
 impl pallet_treasury::Config for Runtime {
@@ -751,6 +777,7 @@ impl pallet_treasury::Config for Runtime {
     type OnSlash = ();
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ();
     type SpendPeriod = SpendPeriod;
     type Burn = Burn;
     type BurnDestination = ();
@@ -769,6 +796,15 @@ impl pallet_bounties::Config for Runtime {
     type DataDepositPerByte = DataDepositPerByte;
     type MaximumReasonLength = MaximumReasonLength;
     type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+    type ChildBountyManager = ChildBounties;
+}
+
+impl pallet_child_bounties::Config for Runtime {
+    type Event = Event;
+    type MaxActiveChildBountyCount = MaxActiveChildBountyCount;
+    type ChildBountyValueMinimum = ChildBountyValueMinimum;
+    type ChildBountyCuratorDepositBase = ChildBountyCuratorDepositBase;
+    type WeightInfo = pallet_child_bounties::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -789,10 +825,8 @@ impl pallet_tips::Config for Runtime {
 }
 
 parameter_types! {
-    pub ContractDeposit: Balance = deposit(
-      1,
-      <pallet_contracts::Pallet<Runtime>>::contract_info_size(),
-    );
+    pub const DepositPerItem: Balance = deposit(1, 0);
+    pub const DepositPerByte: Balance = deposit(0, 1);
     pub RentFraction: Perbill = Perbill::from_rational(1u32, 30 * DAYS);
     // The lazy deletion runs inside on_initialize.
     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
@@ -819,8 +853,10 @@ impl pallet_contracts::Config for Runtime {
     type Schedule = Schedule;
     type Call = Call;
     type CallFilter = Nothing;
-    type ContractDeposit = ContractDeposit;
     type CallStack = [pallet_contracts::Frame<Self>; 31];
+    type DepositPerItem = DepositPerItem;
+    type DepositPerByte = DepositPerByte;
+    type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -863,6 +899,7 @@ where
             .saturating_sub(1);
         let era = Era::mortal(period, current_block);
         let extra = (
+            frame_system::CheckNonZeroSender::<Runtime>::new(),
             frame_system::CheckSpecVersion::<Runtime>::new(),
             frame_system::CheckTxVersion::<Runtime>::new(),
             frame_system::CheckGenesis::<Runtime>::new(),
@@ -1076,6 +1113,7 @@ impl pallet_assets::Config for Runtime {
     type Currency = Balances;
     type ForceOrigin = EnsureRoot<AccountId>;
     type AssetDeposit = AssetDeposit;
+    type AssetAccountDeposit = ConstU128<DOLLARS>;
     type StringLimit = StringLimit;
     type MetadataDepositBase = MetadataDepositBase;
     type MetadataDepositPerByte = MetadataDepositPerByte;
@@ -1254,50 +1292,65 @@ construct_runtime!(
         NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Utility: pallet_utility::{Pallet, Call, Event},
-        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
-        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
-        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Staking: pallet_staking::{Pallet, Call, Config<T>, Storage, Event<T>},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>},
-        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event, ValidateUnsigned},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
-        Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>},
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config},
-        Offences: pallet_offences::{Pallet, Storage, Event},
-        Historical: pallet_session_historical::{Pallet},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
-        Society: pallet_society::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>},
-        Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
-        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
-        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
-        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>},
-        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>},
-        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
-        Mmr: pallet_mmr::{Pallet, Storage},
-        Lottery: pallet_lottery::{Pallet, Call, Storage, Event<T>},
-        Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
-        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
-        CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>},
-        Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin},
-        EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>},
-        DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent},
-        BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event},
-        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 1,
+        Preimage: pallet_preimage::{Pallet, Call, Storage, Event<T>} = 10,
+
+        Babe: pallet_babe::{Pallet, Call, Storage, Config, ValidateUnsigned} = 2,
+
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
+        Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 4,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 32,
+
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 6,
+        Staking: pallet_staking::{Pallet, Call, Config<T>, Storage, Event<T>} = 7,
+        Offences: pallet_offences::{Pallet, Storage, Event} = 8,
+        Historical: pallet_session_historical::{Pallet} = 33,
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 9,
+        Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event, ValidateUnsigned} = 11,
+        ImOnline: pallet_im_online::{Pallet, Call, Storage, Event<T>, ValidateUnsigned, Config<T>} = 12,
+        AuthorityDiscovery: pallet_authority_discovery::{Pallet, Config} = 13,
+
+        Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 14,
+        Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 15,
+        TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 16,
+        Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
+        TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 18,
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 19,
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>} = 20,
+
+        Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 25,
+        Utility: pallet_utility::{Pallet, Call, Event} = 26,
+
+        Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} =28,
+
+        Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 29,
+
+        Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 30,
+
+        Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 34,
+
+        Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 35,
+
+        Contracts: pallet_contracts::{Pallet, Call, Storage, Event<T>} = 40,
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 41,
+        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 42,
+        Society: pallet_society::{Pallet, Call, Storage, Event<T>, Config<T>} = 43,
+        Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>} = 44,
+        Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 45,
+        Mmr: pallet_mmr::{Pallet, Storage} = 46,
+        Lottery: pallet_lottery::{Pallet, Call, Storage, Event<T>} = 47,
+        ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 48,
+
+        Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>} = 60,
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> } = 61,
+        CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>} = 62,
+
+        Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin} = 80,
+        EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>} = 81,
+        BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event} = 82,
+        DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent} = 83,
     }
 );
 
@@ -1341,6 +1394,7 @@ pub type BlockId = generic::BlockId<Block>;
 ///
 /// [`sign`]: <../../testing/src/keyring.rs.html>
 pub type SignedExtra = (
+    frame_system::CheckNonZeroSender<Runtime>,
     frame_system::CheckSpecVersion<Runtime>,
     frame_system::CheckTxVersion<Runtime>,
     frame_system::CheckGenesis<Runtime>,
@@ -1367,9 +1421,28 @@ pub type Executive = frame_executive::Executive<
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
-    AllPallets,
-    (),
+    AllPalletsWithSystem,
+    SchedulerMigrationV3,
 >;
+
+// Migration for scheduler pallet to move from a plain Call to a CallOrHash.
+pub struct SchedulerMigrationV3;
+impl frame_support::traits::OnRuntimeUpgrade for SchedulerMigrationV3 {
+    fn on_runtime_upgrade() -> frame_support::weights::Weight {
+        Scheduler::migrate_v2_to_v3();
+        <Runtime as frame_system::Config>::BlockWeights::get().max_block
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn pre_upgrade() -> Result<(), &'static str> {
+        Scheduler::pre_migrate_to_v3()
+    }
+
+    #[cfg(feature = "try-runtime")]
+    fn post_upgrade() -> Result<(), &'static str> {
+        Scheduler::post_migrate_to_v3()
+    }
+}
 
 impl fp_self_contained::SelfContainedCall for Call {
     type SignedInfo = H160;
@@ -1594,21 +1667,32 @@ impl_runtime_apis! {
             dest: AccountId,
             value: Balance,
             gas_limit: u64,
+            storage_deposit_limit: Option<Balance>,
             input_data: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractExecResult {
-            Contracts::bare_call(origin, dest, value, gas_limit, input_data, true)
+        ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
+            Contracts::bare_call(origin, dest, value, gas_limit, storage_deposit_limit, input_data, true)
         }
 
         fn instantiate(
             origin: AccountId,
-            endowment: Balance,
+            value: Balance,
             gas_limit: u64,
+            storage_deposit_limit: Option<Balance>,
             code: pallet_contracts_primitives::Code<Hash>,
             data: Vec<u8>,
             salt: Vec<u8>,
-        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId>
+        ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
-            Contracts::bare_instantiate(origin, endowment, gas_limit, code, data, salt, true)
+            Contracts::bare_instantiate(origin, value, gas_limit, storage_deposit_limit, code, data, salt, true)
+        }
+
+        fn upload_code(
+            origin: AccountId,
+            code: Vec<u8>,
+            storage_deposit_limit: Option<Balance>,
+        ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
+        {
+            Contracts::bare_upload_code(origin, code, storage_deposit_limit)
         }
 
         fn get_storage(
@@ -1872,6 +1956,8 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_micropayment, Micropayment);
             list_benchmark!(list, extra, pallet_credit_accumulation, CreditAccumulation);
             list_benchmark!(list, extra, pallet_evm, PalletEvmBench::<Runtime>);
+            list_benchmark!(list, extra, pallet_preimage, Preimage);
+            list_benchmark!(list, extra, pallet_scheduler, Scheduler);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1936,6 +2022,8 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_micropayment, Micropayment);
             add_benchmark!(params, batches, pallet_credit_accumulation, CreditAccumulation);
             add_benchmark!(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
+            add_benchmark!(params, batches, pallet_preimage, Preimage);
+            add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

@@ -23,7 +23,7 @@ use testing_utils::*;
 
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_system::RawOrigin;
-use sp_runtime::traits::One;
+use sp_runtime::traits::{One, TrailingZeroInput};
 use sp_runtime::PerThing;
 
 const SEED: u32 = 0;
@@ -269,8 +269,9 @@ benchmarks! {
         let s in 1 .. MAX_SLASHES;
         let mut unapplied_slashes = Vec::new();
         let era = EraIndex::one();
+        let dummy = || T::AccountId::decode(&mut TrailingZeroInput::zeroes()).unwrap();
         for _ in 0 .. MAX_SLASHES {
-            unapplied_slashes.push(UnappliedSlash::<T::AccountId, BalanceOf<T>>::default());
+            unapplied_slashes.push(UnappliedSlash::<T::AccountId, BalanceOf<T>>::default_from(dummy()));
         }
         UnappliedSlashes::<T>::insert(era, &unapplied_slashes);
 
@@ -305,9 +306,10 @@ benchmarks! {
         let e in 1 .. 100;
         HistoryDepth::<T>::put(e);
         CurrentEra::<T>::put(e);
+        let dummy = || -> T::AccountId { codec::Decode::decode(&mut TrailingZeroInput::zeroes()).unwrap() };
         for i in 0 .. e {
-            <ErasStakers<T>>::insert(i, T::AccountId::default(), Exposure::<T::AccountId, BalanceOf<T>>::default());
-            <ErasValidatorPrefs<T>>::insert(i, T::AccountId::default(), ValidatorPrefs::default());
+            <ErasStakers<T>>::insert(i, dummy(), Exposure::<T::AccountId, BalanceOf<T>>::default());
+            <ErasValidatorPrefs<T>>::insert(i, dummy(), ValidatorPrefs::default());
             <ErasRewardPoints<T>>::insert(i, EraRewardPoints::<T::AccountId>::default());
             <ErasTotalStake<T>>::insert(i, BalanceOf::<T>::one());
             ErasStartSessionIndex::<T>::insert(i, i);

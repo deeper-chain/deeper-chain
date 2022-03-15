@@ -160,7 +160,6 @@ pub fn testnet_genesis(
     GenesisConfig {
         system: SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
-            changes_trie_config: Default::default(),
         },
         balances: BalancesConfig { balances },
         indices: IndicesConfig { indices: vec![] },
@@ -205,7 +204,9 @@ pub fn testnet_genesis(
                 .collect(),
             phantom: Default::default(),
         },
-        sudo: SudoConfig { key: root_key },
+        sudo: SudoConfig {
+            key: Some(root_key),
+        },
         babe: BabeConfig {
             authorities: vec![],
             epoch_config: Some(node_runtime::BABE_GENESIS_EPOCH_CONFIG),
@@ -498,6 +499,7 @@ pub fn development_config() -> ChainSpec {
         vec![],
         None,
         None,
+        None,
         Some(chain_spec_properties()),
         Default::default(),
     )
@@ -593,6 +595,7 @@ pub fn local_testnet_config() -> ChainSpec {
         vec![],
         None,
         None,
+        None,
         Some(chain_spec_properties()),
         Default::default(),
     )
@@ -602,7 +605,6 @@ pub fn local_testnet_config() -> ChainSpec {
 pub(crate) mod tests {
     use super::*;
     use crate::cli::Cli;
-    use crate::service::new_light_base;
     use crate::service::{new_full_base, NewFullBase};
     use sc_cli::SubstrateCli;
     use sc_service_test;
@@ -636,6 +638,7 @@ pub(crate) mod tests {
             None,
             None,
             None,
+            None,
             Default::default(),
         )
     }
@@ -651,6 +654,7 @@ pub(crate) mod tests {
             None,
             None,
             None,
+            None,
             Default::default(),
         )
     }
@@ -660,34 +664,22 @@ pub(crate) mod tests {
     fn test_connectivity() {
         sp_tracing::try_init_simple();
 
-        sc_service_test::connectivity(
-            integration_test_config_with_two_authorities(),
-            |config| {
-                let cli = Cli::from_args();
-                let NewFullBase {
-                    task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                    ..
-                } = new_full_base(config, |_, _| (), &cli)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    task_manager,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-            |config| {
-                let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
-                Ok(sc_service_test::TestNetComponents::new(
-                    keep_alive,
-                    client,
-                    network,
-                    transaction_pool,
-                ))
-            },
-        );
+        sc_service_test::connectivity(integration_test_config_with_two_authorities(), |config| {
+            let cli = Cli::from_args();
+            let NewFullBase {
+                task_manager,
+                client,
+                network,
+                transaction_pool,
+                ..
+            } = new_full_base(config, |_, _| (), &cli)?;
+            Ok(sc_service_test::TestNetComponents::new(
+                task_manager,
+                client,
+                network,
+                transaction_pool,
+            ))
+        });
     }
 
     #[test]

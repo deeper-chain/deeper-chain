@@ -37,12 +37,24 @@ pub type CountryRegion = Vec<u8>;
 pub type DurationEras = u8;
 
 // struct to store the registered Device Information
-#[derive(Decode, Encode, Default, TypeInfo)]
+#[derive(Decode, Encode, TypeInfo)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
     ipv4: IpV4, // IP will not be exposed in future version
     country: CountryRegion,
     expire: BlockNumber,
+}
+
+impl<AccountId: Decode, BlockNumber: Default> Default for Node<AccountId, BlockNumber> {
+    fn default() -> Self {
+        Self {
+            account_id: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("nodes should have a valid account id"),
+            ipv4: Default::default(),
+            country: Default::default(),
+            expire: Default::default(),
+        }
+    }
 }
 
 pub trait NodeInterface<AccountId, BlockNumber> {
@@ -86,6 +98,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
@@ -321,32 +334,35 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         // try to remove an account from country and region server lists if exists
         fn try_remove_server(sender: &T::AccountId) -> DispatchResult {
-            let mut node = <DeviceInfo<T>>::get(&sender);
-            let first_region = <RegionMap<T>>::get(&node.country);
-            let sec_region = <RegionMap<T>>::get(&first_region);
+            if <DeviceInfo<T>>::contains_key(&sender) {
+                let mut node = <DeviceInfo<T>>::get(&sender);
 
-            // remove from country server list
-            let mut server_list = <ServersByCountry<T>>::get(&node.country);
-            let _ = Self::country_list_remove(&mut server_list, &sender, &node.country);
+                let first_region = <RegionMap<T>>::get(&node.country);
+                let sec_region = <RegionMap<T>>::get(&first_region);
 
-            // remove from level 3 region server list
-            server_list = <ServersByRegion<T>>::get(&first_region);
-            let _ = Self::region_list_remove(&mut server_list, &sender, &first_region);
+                // remove from country server list
+                let mut server_list = <ServersByCountry<T>>::get(&node.country);
+                let _ = Self::country_list_remove(&mut server_list, &sender, &node.country);
 
-            // remove from level 2 region server list
-            server_list = <ServersByRegion<T>>::get(&sec_region);
-            let _ = Self::region_list_remove(&mut server_list, &sender, &sec_region);
+                // remove from level 3 region server list
+                server_list = <ServersByRegion<T>>::get(&first_region);
+                let _ = Self::region_list_remove(&mut server_list, &sender, &first_region);
 
-            // ensure consistency
-            node.expire = <frame_system::Pallet<T>>::block_number();
-            <DeviceInfo<T>>::insert(&sender, node);
+                // remove from level 2 region server list
+                server_list = <ServersByRegion<T>>::get(&sec_region);
+                let _ = Self::region_list_remove(&mut server_list, &sender, &sec_region);
 
+                // ensure consistency
+                node.expire = <frame_system::Pallet<T>>::block_number();
+                <DeviceInfo<T>>::insert(&sender, node);
+            }
             Ok(())
         }
 
         // try to add an account to a country's server list; no double add
         fn try_add_server(sender: &T::AccountId, duration: T::BlockNumber) -> DispatchResult {
             let mut node = <DeviceInfo<T>>::get(&sender);
+
             let first_region = <RegionMap<T>>::get(&node.country);
             let sec_region = <RegionMap<T>>::get(&first_region);
 

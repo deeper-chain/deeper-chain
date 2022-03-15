@@ -29,6 +29,7 @@ use sp_runtime::{
 };
 use sp_storage::Storage;
 
+use frame_support::traits::ConstU32;
 use frame_support::{
     assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types,
     storage::StoragePrefixedMap, traits::SortedMembers, weights::Weight, PalletId,
@@ -88,6 +89,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
@@ -151,6 +153,7 @@ impl pallet_treasury::Config for Test {
     type WeightInfo = ();
     type SpendFunds = ();
     type MaxApprovals = MaxApprovals;
+    type ProposalBondMaximum = ();
 }
 parameter_types! {
     pub const CreditCapTwoEras: u8 = 5;

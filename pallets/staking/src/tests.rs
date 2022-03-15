@@ -1656,7 +1656,7 @@ fn reward_from_authorship_event_handler_works() {
     ExtBuilder::default().build_and_execute(|| {
         use pallet_authorship::EventHandler;
 
-        assert_eq!(<pallet_authorship::Pallet<Test>>::author(), 11);
+        assert_eq!(<pallet_authorship::Pallet<Test>>::author(), Some(11));
 
         <Pallet<Test>>::note_author(11);
         <Pallet<Test>>::note_uncle(21, 1);
@@ -1890,6 +1890,7 @@ fn slash_in_old_span_does_not_deselect() {
             }],
             &[Perbill::from_percent(0)],
             1,
+            DisableStrategy::WhenSlashed,
         );
 
         // not forcing for zero-slash and previous span.
@@ -1908,6 +1909,7 @@ fn slash_in_old_span_does_not_deselect() {
             // NOTE: A 100% slash here would clean up the account, causing de-registration.
             &[Perbill::from_percent(95)],
             1,
+            DisableStrategy::WhenSlashed,
         );
 
         // or non-zero.
@@ -2359,6 +2361,7 @@ fn remove_deferred() {
                 }],
                 &[Perbill::from_percent(15)],
                 1,
+                DisableStrategy::WhenSlashed,
             );
 
             // fails if empty

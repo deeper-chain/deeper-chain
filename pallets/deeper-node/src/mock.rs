@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use crate as pallet_deeper_node;
+use frame_support::traits::ConstU32;
 use frame_support::{
     parameter_types,
     traits::{OnFinalize, OnInitialize},
@@ -72,6 +73,7 @@ impl system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {

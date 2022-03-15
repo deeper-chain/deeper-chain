@@ -21,6 +21,7 @@
 
 use crate::{self as pallet_balances, decl_tests, Config, Pallet};
 use frame_support::parameter_types;
+use frame_support::traits::ConstU32;
 use frame_support::weights::{DispatchInfo, IdentityFee, Weight};
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_core::H256;
@@ -71,6 +72,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 parameter_types! {
     pub const TransactionByteFee: u64 = 1;

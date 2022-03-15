@@ -2,7 +2,7 @@
 name = "node-rpc-client"
 version = "2.0.0"
 authors = ["Parity Technologies <admin@parity.io>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 homepage = "https://substrate.dev"
 repository = "https://github.com/paritytech/substrate/"
@@ -15,5 +15,5 @@ futures = "0.3.16"
 jsonrpc-core-client = { version = "18.0.0", default-features = false, features = ["http"] }
 log = "0.4.8"
 node-primitives = { version = "2.0.0", path = "../primitives" }
-sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }

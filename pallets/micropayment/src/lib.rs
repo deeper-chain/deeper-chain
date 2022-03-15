@@ -51,9 +51,12 @@ pub mod pallet {
     use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
     use frame_support::traits::{
-        Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
+        tokens::currency::Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
     };
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+    use frame_support::{
+        dispatch::{DispatchError, DispatchResultWithPostInfo},
+        pallet_prelude::*,
+    };
     use frame_system::pallet_prelude::*;
     use log::error;
     use pallet_balances::MutableCurrency;
@@ -62,7 +65,6 @@ pub mod pallet {
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::{Saturating, Zero};
-    use sp_runtime::DispatchError;
     use sp_runtime::Percent;
     use sp_std::prelude::Vec;
 
@@ -104,7 +106,7 @@ pub mod pallet {
     >;
 
     // struct to store micro-payment channel
-    #[derive(Decode, Encode, Default, Eq, PartialEq, Debug, scale_info::TypeInfo)]
+    #[derive(Decode, Encode, Eq, PartialEq, Debug, scale_info::TypeInfo)]
     pub struct Chan<AccountId, BlockNumber, Balance> {
         pub client: AccountId,
         pub server: AccountId,
@@ -114,8 +116,26 @@ pub mod pallet {
         pub expiration: BlockNumber,
     }
 
+    impl<AccountId: Decode, BlockNumber: Default, Balance: Default> Default
+        for Chan<AccountId, BlockNumber, Balance>
+    {
+        fn default() -> Self {
+            Self {
+                client: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                    .expect("nodes should have a valid account id"),
+                server: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                    .expect("nodes should have a valid account id"),
+                balance: Default::default(),
+                nonce: Default::default(),
+                opened: Default::default(),
+                expiration: Default::default(),
+            }
+        }
+    }
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     // get channel info
@@ -259,9 +279,11 @@ pub mod pallet {
 
             if Channel::<T>::contains_key(&account_id, &signer) {
                 // signer is server
+
                 let chan = Channel::<T>::get(&account_id, &signer);
                 TotalMicropaymentChannelBalance::<T>::mutate_exists(&account_id, |b| {
                     let total_balance = b.take().unwrap_or_default();
+
                     *b = if total_balance > chan.balance {
                         Some(total_balance - chan.balance)
                     } else {
@@ -273,11 +295,11 @@ pub mod pallet {
                 Self::_close_channel(&account_id, &signer);
                 let end_block = <frame_system::Pallet<T>>::block_number();
                 Self::deposit_event(Event::ChannelClosed(account_id, signer, end_block));
+
                 return Ok(().into());
             } else if Channel::<T>::contains_key(&signer, &account_id) {
                 // signer is client
                 let chan = Channel::<T>::get(&signer, &account_id);
-
                 let current_block = <frame_system::Pallet<T>>::block_number();
                 if chan.expiration < current_block
                     || T::NodeInterface::get_eras_offline(&chan.server) >= 1
@@ -299,6 +321,8 @@ pub mod pallet {
                 } else {
                     Err(Error::<T>::UnexpiredChannelCannotBeClosedBySender)?
                 }
+
+                return Ok(().into());
             } else {
                 Err(Error::<T>::ChannelNotExist)?
             }
@@ -347,7 +371,7 @@ pub mod pallet {
                 Err(Error::<T>::NotEnoughBalance)?
             }
             Channel::<T>::mutate(&client, &server, |c| {
-                (*c).balance += amount;
+                c.balance += amount;
             });
             TotalMicropaymentChannelBalance::<T>::mutate_exists(&client, |b| {
                 let total_balance = b.take().unwrap_or_default();
@@ -374,6 +398,7 @@ pub mod pallet {
             );
 
             // close channel if it expires
+            //let mut chan = Channel::<T>::get(&client, &server);
             let mut chan = Channel::<T>::get(&client, &server);
             let current_block = <frame_system::Pallet<T>>::block_number();
             if chan.expiration < current_block {
@@ -442,6 +467,7 @@ pub mod pallet {
             // update server's credit TODO: reuse in future
             //T::CreditInterface::update_credit((server.clone(), amount));
             Self::deposit_event(Event::ClaimPayment(client, server, amount));
+
             Ok(().into())
         }
     }

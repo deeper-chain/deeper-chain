@@ -21,6 +21,7 @@
 
 use crate::{self as pallet_balances, decl_tests, Config, Pallet};
 use frame_support::parameter_types;
+use frame_support::traits::ConstU32;
 use frame_support::traits::StorageMapShim;
 use frame_support::weights::{DispatchInfo, IdentityFee, Weight};
 use pallet_transaction_payment::CurrencyAdapter;
@@ -73,6 +74,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 parameter_types! {
     pub const TransactionByteFee: u64 = 1;
@@ -166,7 +168,7 @@ fn emit_events_with_no_existential_deposit_suicide_with_dust() {
             assert_eq!(
                 events(),
                 [
-                    Event::System(system::Event::NewAccount(1)),
+                    Event::System(system::Event::NewAccount { account: 1 }),
                     Event::Balances(crate::Event::Endowed(1, 100)),
                     Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
                 ]
@@ -183,7 +185,7 @@ fn emit_events_with_no_existential_deposit_suicide_with_dust() {
                 events(),
                 [
                     Event::Balances(crate::Event::DustLost(1, 1)),
-                    Event::System(system::Event::KilledAccount(1))
+                    Event::System(system::Event::KilledAccount { account: 1 })
                 ]
             );
         });

@@ -63,7 +63,9 @@ use sp_runtime::{
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 use sp_staking::{
-    offence::{Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence},
+    offence::{
+        DisableStrategy, Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence,
+    },
     SessionIndex,
 };
 use sp_std::{
@@ -122,7 +124,7 @@ pub struct ActiveEraInfo {
 /// Reward points of an era. Used to split era total payout between validators.
 ///
 /// This points will be used to reward validators.
-#[derive(PartialEq, Encode, Decode, Default, RuntimeDebug, TypeInfo)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct EraRewardPoints<AccountId: Ord> {
     /// Total number of points. Equals the sum of reward points for each validator.
     total: RewardPoint,
@@ -130,9 +132,18 @@ pub struct EraRewardPoints<AccountId: Ord> {
     individual: BTreeMap<AccountId, RewardPoint>,
 }
 
+impl<AccountId: Ord> Default for EraRewardPoints<AccountId> {
+    fn default() -> Self {
+        EraRewardPoints {
+            total: Default::default(),
+            individual: BTreeMap::new(),
+        }
+    }
+}
+
 /// Indicates the initial status of the staker.
 #[derive(RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Clone))]
 pub enum StakerStatus {
     /// Chilling.
     Idle,
@@ -329,9 +340,7 @@ where
 }
 
 /// A snapshot of the stake backing a single validator in the system.
-#[derive(
-    PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, Default, RuntimeDebug, TypeInfo,
-)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Exposure<AccountId, Balance: HasCompact> {
     /// The total balance backing this validator.
     #[codec(compact)]
@@ -341,6 +350,16 @@ pub struct Exposure<AccountId, Balance: HasCompact> {
     pub own: Balance,
     /// The delegators that are exposed.
     pub others: Vec<AccountId>,
+}
+
+impl<AccountId, Balance: Default + HasCompact> Default for Exposure<AccountId, Balance> {
+    fn default() -> Self {
+        Self {
+            total: Default::default(),
+            own: Default::default(),
+            others: vec![],
+        }
+    }
 }
 
 /// A pending slash record. The value of the slash has been computed but not applied yet,
@@ -357,6 +376,19 @@ pub struct UnappliedSlash<AccountId, Balance: HasCompact> {
     reporters: Vec<AccountId>,
     /// The amount of payout.
     payout: Balance,
+}
+
+impl<AccountId, Balance: HasCompact + Zero> UnappliedSlash<AccountId, Balance> {
+    /// Initializes the default object using the given `validator`.
+    pub fn default_from(validator: AccountId) -> Self {
+        Self {
+            validator,
+            own: Zero::zero(),
+            others: vec![],
+            reporters: vec![],
+            payout: Zero::zero(),
+        }
+    }
 }
 
 /// Indicate how an election round was computed.
@@ -458,7 +490,7 @@ where
     }
 }
 
-#[derive(Decode, Encode, Default, Debug, TypeInfo)]
+#[derive(Decode, Encode, TypeInfo)]
 pub struct DelegatorData<AccountId> {
     // delegator itself
     pub delegator: AccountId,
@@ -470,10 +502,31 @@ pub struct DelegatorData<AccountId> {
     pub delegating: bool,
 }
 
-#[derive(Decode, Encode, Default, TypeInfo)]
+impl<AccountId: Decode> Default for DelegatorData<AccountId> {
+    fn default() -> Self {
+        Self {
+            delegator: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("nodes should have a valid account id"),
+            delegated_validators: Default::default(),
+            unrewarded_since: Default::default(),
+            delegating: Default::default(),
+        }
+    }
+}
+
+#[derive(Decode, Encode, TypeInfo)]
 pub struct ValidatorData<AccountId: Ord> {
     pub delegators: BTreeSet<AccountId>,
     pub elected_era: EraIndex,
+}
+
+impl<AccountId: Ord> Default for ValidatorData<AccountId> {
+    fn default() -> Self {
+        ValidatorData {
+            delegators: BTreeSet::new(),
+            elected_era: Default::default(),
+        }
+    }
 }
 
 /// Mode of era-forcing.
@@ -520,6 +573,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
@@ -1723,9 +1777,10 @@ pub mod pallet {
 
                 for validator in &old_delegator_data.delegated_validators {
                     <CandidateValidators<T>>::mutate(validator, |v| {
-                        v.delegators.remove(&delegator)
+                        v.delegators.remove(&delegator);
                     });
-                    if Self::candidate_validators(validator).delegators.is_empty() {
+                    let candidate = Self::candidate_validators(validator);
+                    if candidate.delegators.is_empty() {
                         <CandidateValidators<T>>::remove(validator);
                     }
                 }
@@ -1746,7 +1801,7 @@ pub mod pallet {
             for validator in &validator_set {
                 if <CandidateValidators<T>>::contains_key(validator) {
                     <CandidateValidators<T>>::mutate(validator, |v| {
-                        v.delegators.insert(delegator.clone())
+                        v.delegators.insert(delegator.clone());
                     });
                 } else {
                     let mut delegators = BTreeSet::new();
@@ -2388,6 +2443,13 @@ impl<T: Config> pallet::Pallet<T> {
         let mut validators: Vec<(T::AccountId, u32, EraIndex)> = Validators::<T>::iter()
             .filter(|(validator, _)| Self::trusted_validator(&validator))
             .map(|(validator, _)| {
+                // if let Some(candidate_validator) = Self::candidate_validators(&validator) {
+                //     (
+                //         validator.clone(),
+                //         candidate_validator.delegators.len() as u32,
+                //         candidate_validator.elected_era,
+                //     )
+                // }
                 let candidate_validator = Self::candidate_validators(&validator);
                 (
                     validator.clone(),
@@ -2432,10 +2494,9 @@ impl<T: Config> pallet::Pallet<T> {
                     .unwrap_or_default();
                 // expose delegators only if not all validators elected.
                 let others = if truncated {
-                    Self::candidate_validators(v)
-                        .delegators
-                        .into_iter()
-                        .collect()
+                    let candidate = Self::candidate_validators(v);
+
+                    candidate.delegators.into_iter().collect()
                 } else {
                     Vec::new()
                 };
@@ -2526,9 +2587,10 @@ impl<T: Config> pallet::Pallet<T> {
     pub fn reward_by_ids(validators_points: impl IntoIterator<Item = (T::AccountId, u32)>) {
         if let Some(active_era) = Self::active_era() {
             <ErasRewardPoints<T>>::mutate(active_era.index, |era_rewards| {
+                let update_era_rewards = era_rewards;
                 for (validator, points) in validators_points.into_iter() {
-                    *era_rewards.individual.entry(validator).or_default() += points;
-                    era_rewards.total += points;
+                    *update_era_rewards.individual.entry(validator).or_default() += points;
+                    update_era_rewards.total += points;
                 }
             });
         }
@@ -2563,12 +2625,14 @@ impl<T: Config> pallet::Pallet<T> {
 
     fn _undelegate(delegator: &T::AccountId) {
         let delegator_data = Self::delegators(delegator);
+
         if delegator_data.delegating {
             for validator in delegator_data.delegated_validators {
                 <CandidateValidators<T>>::mutate(&validator, |validator_data| {
                     validator_data.delegators.remove(delegator);
                 });
-                match Self::candidate_validators(&validator).delegators.len() {
+                let validator_data = Self::candidate_validators(&validator);
+                match validator_data.delegators.len() {
                     0 => <CandidateValidators<T>>::remove(&validator),
                     _ => (),
                 }
@@ -2682,10 +2746,9 @@ where
         Self::reward_by_ids(vec![(author, 20)])
     }
     fn note_uncle(author: T::AccountId, _age: T::BlockNumber) {
-        Self::reward_by_ids(vec![
-            (<pallet_authorship::Pallet<T>>::author(), 2),
-            (author, 1),
-        ])
+        if let Some(block_author) = <pallet_authorship::Pallet<T>>::author() {
+            Self::reward_by_ids(vec![(block_author, 2), (author, 1)])
+        }
     }
 }
 
@@ -2739,6 +2802,7 @@ where
         >],
         slash_fraction: &[Perbill],
         slash_session: SessionIndex,
+        _disable_strategy: DisableStrategy,
     ) -> Weight {
         if !Self::era_election_status().is_closed() {
             return 0;
