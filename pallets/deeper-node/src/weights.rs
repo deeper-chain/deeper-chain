@@ -38,27 +38,87 @@
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
+use frame_support::{
+    traits::Get,
+    weights::{constants::RocksDbWeight, Weight},
+};
 use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_deeper_node.
-pub trait WeightInfo {	fn register_device() -> Weight;	fn unregister_device() -> Weight;	fn register_server() -> Weight;	fn update_server() -> Weight;	fn unregister_server() -> Weight;	fn im_online() -> Weight;}
+pub trait WeightInfo {
+    fn register_device() -> Weight;
+    fn unregister_device() -> Weight;
+    fn register_server() -> Weight;
+    fn update_server() -> Weight;
+    fn unregister_server() -> Weight;
+    fn im_online() -> Weight;
+}
 
 /// Weights for pallet_deeper_node using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {	fn register_device() -> Weight {
-		(46_416_000 as Weight)			.saturating_add(T::DbWeight::get().reads(4 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn unregister_device() -> Weight {
-		(59_143_000 as Weight)			.saturating_add(T::DbWeight::get().reads(7 as Weight))			.saturating_add(T::DbWeight::get().writes(2 as Weight))	}	fn register_server() -> Weight {
-		(57_115_000 as Weight)			.saturating_add(T::DbWeight::get().reads(6 as Weight))			.saturating_add(T::DbWeight::get().writes(4 as Weight))	}	fn update_server() -> Weight {
-		(19_267_000 as Weight)			.saturating_add(T::DbWeight::get().reads(1 as Weight))			.saturating_add(T::DbWeight::get().writes(1 as Weight))	}	fn unregister_server() -> Weight {
-		(62_852_000 as Weight)			.saturating_add(T::DbWeight::get().reads(6 as Weight))			.saturating_add(T::DbWeight::get().writes(4 as Weight))	}	fn im_online() -> Weight {
-		(18_532_000 as Weight)			.saturating_add(T::DbWeight::get().reads(2 as Weight))			.saturating_add(T::DbWeight::get().writes(3 as Weight))	}}
+impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
+    fn register_device() -> Weight {
+        (46_416_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    fn unregister_device() -> Weight {
+        (59_143_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(7 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    fn register_server() -> Weight {
+        (57_115_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(4 as Weight))
+    }
+    fn update_server() -> Weight {
+        (19_267_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn unregister_server() -> Weight {
+        (62_852_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(6 as Weight))
+            .saturating_add(T::DbWeight::get().writes(4 as Weight))
+    }
+    fn im_online() -> Weight {
+        (18_532_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(2 as Weight))
+            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
+}
 
 // For backwards compatibility and tests
-impl WeightInfo for () {	fn register_device() -> Weight {
-		(46_416_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(4 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn unregister_device() -> Weight {
-		(59_143_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(7 as Weight))			.saturating_add(RocksDbWeight::get().writes(2 as Weight))	}	fn register_server() -> Weight {
-		(57_115_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(6 as Weight))			.saturating_add(RocksDbWeight::get().writes(4 as Weight))	}	fn update_server() -> Weight {
-		(19_267_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(1 as Weight))			.saturating_add(RocksDbWeight::get().writes(1 as Weight))	}	fn unregister_server() -> Weight {
-		(62_852_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(6 as Weight))			.saturating_add(RocksDbWeight::get().writes(4 as Weight))	}	fn im_online() -> Weight {
-		(18_532_000 as Weight)			.saturating_add(RocksDbWeight::get().reads(2 as Weight))			.saturating_add(RocksDbWeight::get().writes(3 as Weight))	}}
+impl WeightInfo for () {
+    fn register_device() -> Weight {
+        (46_416_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(4 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(2 as Weight))
+    }
+    fn unregister_device() -> Weight {
+        (59_143_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(7 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(2 as Weight))
+    }
+    fn register_server() -> Weight {
+        (57_115_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(6 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(4 as Weight))
+    }
+    fn update_server() -> Weight {
+        (19_267_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn unregister_server() -> Weight {
+        (62_852_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(6 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(4 as Weight))
+    }
+    fn im_online() -> Weight {
+        (18_532_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(2 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(3 as Weight))
+    }
+}
