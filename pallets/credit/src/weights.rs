@@ -49,6 +49,7 @@ pub trait WeightInfo {
     fn update_credit_setting() -> Weight;
     fn add_or_update_credit_data() -> Weight;
     fn burn_for_add_credit() -> Weight;
+    fn force_modify_credit_history() -> Weight;
 }
 
 /// Weights for pallet_credit using the Substrate node and recommended hardware.
@@ -67,6 +68,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
+    fn force_modify_credit_history() -> Weight {
+        (76_885_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(3 as Weight))
+            .saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
 }
 
 // For backwards compatibility and tests
@@ -81,6 +87,11 @@ impl WeightInfo for () {
     }
     fn burn_for_add_credit() -> Weight {
         (45_811_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(3 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(3 as Weight))
+    }
+    fn force_modify_credit_history() -> Weight {
+        (76_885_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
