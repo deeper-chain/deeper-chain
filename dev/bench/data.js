@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1647319617409,
+  "lastUpdate": 1647394463955,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1531,6 +1531,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 94271183,
             "range": "± 14307629",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b49b5ca3fb09ef40ce1f23c5b465632767ac7ba",
+          "message": "Update/benchmark lto v9.0.16 (#209)\n\n* update benchmark\r\n\r\n* fmt\r\n\r\n* fix force_modify_credit_history weight",
+          "timestamp": "2022-03-16T09:00:41+08:00",
+          "tree_id": "56f73e097128dff875dd4f2d5898c88f3dcbdcbe",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/2b49b5ca3fb09ef40ce1f23c5b465632767ac7ba"
+        },
+        "date": 1647394463618,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 5824996,
+            "range": "± 1064151",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 93267852,
+            "range": "± 13509602",
             "unit": "ns/iter"
           }
         ]
