@@ -23,7 +23,7 @@ pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
-node-executor = { version = "2.0.0", path = "../executor" }
+node-cli = { version = "2.0.0", path = "../cli" }
 node-primitives = { version = "2.0.0", path = "../primitives" }
 node-runtime = { version = "2.0.0", path = "../runtime" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }

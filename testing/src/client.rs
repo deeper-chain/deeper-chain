@@ -24,7 +24,8 @@ use sp_runtime::BuildStorage;
 pub use substrate_test_client::*;
 
 /// Call executor for `node-runtime` `TestClient`.
-pub type ExecutorDispatch = sc_executor::NativeElseWasmExecutor<node_executor::ExecutorDispatch>;
+pub type ExecutorDispatch =
+    sc_executor::NativeElseWasmExecutor<node_cli::service::ExecutorDispatch>;
 
 /// Default backend type.
 pub type Backend = sc_client_db::Backend<node_primitives::Block>;
