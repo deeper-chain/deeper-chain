@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1647394463955,
+  "lastUpdate": 1647403697831,
   "repoUrl": "https://github.com/deeper-chain/deeper-chain",
   "entries": {
     "Deeper Chain Benchmark": [
@@ -1567,6 +1567,42 @@ window.BENCHMARK_DATA = {
             "name": "execute blocks/Wasm(Interpreted)",
             "value": 93267852,
             "range": "± 13509602",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "1069830494@qq.com",
+            "name": "AmadeusGB",
+            "username": "AmadeusGB"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7775801e888e91f3ebd08f8b842d390e9688caf8",
+          "message": "update spec_version:12 (#210)",
+          "timestamp": "2022-03-16T11:48:48+08:00",
+          "tree_id": "156c840d07014c3d52e7c451ad366d531644d409",
+          "url": "https://github.com/deeper-chain/deeper-chain/commit/7775801e888e91f3ebd08f8b842d390e9688caf8"
+        },
+        "date": 1647403697461,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "execute blocks/native",
+            "value": 6012280,
+            "range": "± 1004871",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "execute blocks/Wasm(Interpreted)",
+            "value": 91963160,
+            "range": "± 13180499",
             "unit": "ns/iter"
           }
         ]
