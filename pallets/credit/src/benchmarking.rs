@@ -90,6 +90,24 @@ benchmarks! {
     verify {
         assert_eq!(UserCredit::<T>::get(&user).unwrap().credit,101);
     }
+
+    force_modify_credit_history {
+        let credit_data = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 270,
+        };
+        let user = create_funded_user::<T>("user",USER_SEED, 1000);
+        UserCredit::<T>::insert(&user,credit_data.clone());
+        UserCreditHistory::<T>::insert(&user,vec![(6,credit_data.clone())]);
+    }: _(RawOrigin::Root, user.clone(), 7)
+    verify {
+        assert_eq!(UserCreditHistory::<T>::get(&user), vec![(7, credit_data)]);
+    }
 }
 
 #[cfg(test)]
