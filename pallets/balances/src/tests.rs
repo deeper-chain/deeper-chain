@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2017-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) 2017-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@ macro_rules! decl_tests {
 	($test:ty, $ext_builder:ty, $existential_deposit:expr) => {
 
 		use crate::*;
-		use sp_runtime::{FixedPointNumber, traits::{SignedExtension, BadOrigin}};
+		use sp_runtime::{ArithmeticError, FixedPointNumber, traits::{SignedExtension, BadOrigin}};
 		use frame_support::{
 			assert_noop, assert_storage_noop, assert_ok, assert_err,
 			traits::{
@@ -39,7 +39,7 @@ macro_rules! decl_tests {
 		const ID_2: LockIdentifier = *b"2       ";
 
 		pub const CALL: &<$test as frame_system::Config>::Call =
-    &Call::Balances(pallet_balances::Call::transfer { dest: 0, value: 0 });
+			&Call::Balances(pallet_balances::Call::transfer { dest: 0, value: 0 });
 
 		/// create a transaction info struct from weight. Handy to avoid building the whole struct.
 		pub fn info_from_weight(w: Weight) -> DispatchInfo {
@@ -52,10 +52,6 @@ macro_rules! decl_tests {
 			System::reset_events();
 
 			evt
-		}
-
-		fn last_event() -> Event {
-			system::Pallet::<Test>::events().pop().expect("Event expected").event
 		}
 
 		#[test]
@@ -81,6 +77,30 @@ macro_rules! decl_tests {
 		}
 
 		#[test]
+		fn reap_failed_due_to_provider_and_consumer() {
+			<$ext_builder>::default().existential_deposit(1).monied(true).build().execute_with(|| {
+				// SCENARIO: only one provider and there are remaining consumers.
+				assert_ok!(System::inc_consumers(&1));
+				assert!(!System::can_dec_provider(&1));
+				assert_noop!(
+					<Balances as Currency<_>>::transfer(&1, &2, 10, AllowDeath),
+					Error::<$test, _>::KeepAlive
+				);
+				assert!(System::account_exists(&1));
+				assert_eq!(Balances::free_balance(1), 10);
+
+				// SCENARIO: more than one provider, but will not kill account due to other provider.
+				assert_eq!(System::inc_providers(&1), frame_system::IncRefStatus::Existed);
+				assert_eq!(System::providers(&1), 2);
+				assert!(System::can_dec_provider(&1));
+				assert_ok!(<Balances as Currency<_>>::transfer(&1, &2, 10, AllowDeath));
+				assert_eq!(System::providers(&1), 1);
+				assert!(System::account_exists(&1));
+				assert_eq!(Balances::free_balance(1), 0);
+			});
+		}
+
+		#[test]
 		fn partial_locking_should_work() {
 			<$ext_builder>::default().existential_deposit(1).monied(true).build().execute_with(|| {
 				Balances::set_lock(ID_1, &1, 5, WithdrawReasons::all());
@@ -91,7 +111,7 @@ macro_rules! decl_tests {
 		#[test]
 		fn lock_removal_should_work() {
 			<$ext_builder>::default().existential_deposit(1).monied(true).build().execute_with(|| {
-				Balances::set_lock(ID_1, &1, u64::max_value(), WithdrawReasons::all());
+				Balances::set_lock(ID_1, &1, u64::MAX, WithdrawReasons::all());
 				Balances::remove_lock(ID_1, &1);
 				assert_ok!(<Balances as Currency<_>>::transfer(&1, &2, 1, AllowDeath));
 			});
@@ -100,7 +120,7 @@ macro_rules! decl_tests {
 		#[test]
 		fn lock_replacement_should_work() {
 			<$ext_builder>::default().existential_deposit(1).monied(true).build().execute_with(|| {
-				Balances::set_lock(ID_1, &1, u64::max_value(), WithdrawReasons::all());
+				Balances::set_lock(ID_1, &1, u64::MAX, WithdrawReasons::all());
 				Balances::set_lock(ID_1, &1, 5, WithdrawReasons::all());
 				assert_ok!(<Balances as Currency<_>>::transfer(&1, &2, 1, AllowDeath));
 			});
@@ -118,7 +138,7 @@ macro_rules! decl_tests {
 		#[test]
 		fn combination_locking_should_work() {
 			<$ext_builder>::default().existential_deposit(1).monied(true).build().execute_with(|| {
-				Balances::set_lock(ID_1, &1, u64::max_value(), WithdrawReasons::empty());
+				Balances::set_lock(ID_1, &1, u64::MAX, WithdrawReasons::empty());
 				Balances::set_lock(ID_2, &1, 0, WithdrawReasons::all());
 				assert_ok!(<Balances as Currency<_>>::transfer(&1, &2, 1, AllowDeath));
 			});
@@ -171,13 +191,13 @@ macro_rules! decl_tests {
 						&info_from_weight(1),
 						1,
 					).is_err());
-					assert!(<ChargeTransactionPayment<$test> as SignedExtension>::pre_dispatch(
+					assert_ok!(<ChargeTransactionPayment<$test> as SignedExtension>::pre_dispatch(
 						ChargeTransactionPayment::from(0),
 						&1,
 						CALL,
 						&info_from_weight(1),
 						1,
-					).is_ok());
+					));
 
 					Balances::set_lock(ID_1, &1, 10, WithdrawReasons::TRANSACTION_PAYMENT);
 					assert_ok!(<Balances as Currency<_>>::transfer(&1, &2, 1, AllowDeath));
@@ -294,6 +314,7 @@ macro_rules! decl_tests {
 			<$ext_builder>::default().monied(true).build().execute_with(|| {
 				assert_eq!(Balances::total_balance(&1), 10);
 				assert_ok!(Balances::deposit_into_existing(&1, 10).map(drop));
+				System::assert_last_event(Event::Balances(crate::Event::Deposit { who: 1, amount: 10 }));
 				assert_eq!(Balances::total_balance(&1), 20);
 				assert_eq!(<TotalIssuance<$test>>::get(), 120);
 			});
@@ -321,6 +342,7 @@ macro_rules! decl_tests {
 		fn balance_works() {
 			<$ext_builder>::default().build().execute_with(|| {
 				let _ = Balances::deposit_creating(&1, 42);
+				System::assert_has_event(Event::Balances(crate::Event::Deposit { who: 1, amount: 42 }));
 				assert_eq!(Balances::free_balance(1), 42);
 				assert_eq!(Balances::reserved_balance(1), 0);
 				assert_eq!(Balances::total_balance(&1), 42);
@@ -396,7 +418,7 @@ macro_rules! decl_tests {
 		fn refunding_balance_should_work() {
 			<$ext_builder>::default().build().execute_with(|| {
 				let _ = Balances::deposit_creating(&1, 42);
-				assert!(Balances::mutate_account(&1, |a| a.reserved = 69).is_ok());
+				assert_ok!(Balances::mutate_account(&1, |a| a.reserved = 69));
 				Balances::unreserve(&1, 69);
 				assert_eq!(Balances::free_balance(1), 111);
 				assert_eq!(Balances::reserved_balance(1), 0);
@@ -412,6 +434,19 @@ macro_rules! decl_tests {
 				assert_eq!(Balances::free_balance(1), 0);
 				assert_eq!(Balances::reserved_balance(1), 42);
 				assert_eq!(<TotalIssuance<$test>>::get(), 42);
+			});
+		}
+
+		#[test]
+		fn withdrawing_balance_should_work() {
+			<$ext_builder>::default().build().execute_with(|| {
+				let _ = Balances::deposit_creating(&2, 111);
+				let _ = Balances::withdraw(
+					&2, 11, WithdrawReasons::TRANSFER, ExistenceRequirement::KeepAlive
+				);
+				System::assert_last_event(Event::Balances(crate::Event::Withdraw { who: 2, amount: 11 }));
+				assert_eq!(Balances::free_balance(2), 100);
+				assert_eq!(<TotalIssuance<$test>>::get(), 100);
 			});
 		}
 
@@ -469,9 +504,8 @@ macro_rules! decl_tests {
 				let _ = Balances::deposit_creating(&2, 1);
 				assert_ok!(Balances::reserve(&1, 110));
 				assert_ok!(Balances::repatriate_reserved(&1, &2, 41, Status::Free), 0);
-				assert_eq!(
-					last_event(),
-					Event::Balances(crate::Event::ReserveRepatriated(1, 2, 41, Status::Free)),
+				System::assert_last_event(
+					Event::Balances(crate::Event::ReserveRepatriated { from: 1, to: 2, amount: 41, destination_status: Status::Free })
 				);
 				assert_eq!(Balances::reserved_balance(1), 69);
 				assert_eq!(Balances::free_balance(1), 0);
@@ -520,15 +554,15 @@ macro_rules! decl_tests {
 		#[test]
 		fn transferring_too_high_value_should_not_panic() {
 			<$ext_builder>::default().build().execute_with(|| {
-				Balances::make_free_balance_be(&1, u64::max_value());
+				Balances::make_free_balance_be(&1, u64::MAX);
 				Balances::make_free_balance_be(&2, 1);
 
 				assert_err!(
-					Balances::transfer(Some(1).into(), 2, u64::max_value()),
-					Error::<$test, _>::Overflow,
+					Balances::transfer(Some(1).into(), 2, u64::MAX),
+					ArithmeticError::Overflow,
 				);
 
-				assert_eq!(Balances::free_balance(1), u64::max_value());
+				assert_eq!(Balances::free_balance(1), u64::MAX);
 				assert_eq!(Balances::free_balance(2), 1);
 			});
 		}
@@ -671,7 +705,9 @@ macro_rules! decl_tests {
 					assert_eq!(Balances::reserved_balance(1), 50);
 
 					// Reserve some free balance
-					let _ = Balances::slash(&1, 1);
+					let res = Balances::slash(&1, 1);
+					assert_eq!(res, (NegativeImbalance::new(1), 0));
+
 					// The account should be dead.
 					assert_eq!(Balances::free_balance(1), 0);
 					assert_eq!(Balances::reserved_balance(1), 0);
@@ -686,29 +722,20 @@ macro_rules! decl_tests {
 					let _ = Balances::deposit_creating(&1, 100);
 
 					System::set_block_number(2);
-					let _ = Balances::reserve(&1, 10);
+					assert_ok!(Balances::reserve(&1, 10));
 
-					assert_eq!(
-						last_event(),
-						Event::Balances(crate::Event::Reserved(1, 10)),
-					);
+					System::assert_last_event(Event::Balances(crate::Event::Reserved { who: 1, amount: 10 }));
 
 					System::set_block_number(3);
-					let _ = Balances::unreserve(&1, 5);
+					assert!(Balances::unreserve(&1, 5).is_zero());
 
-					assert_eq!(
-						last_event(),
-						Event::Balances(crate::Event::Unreserved(1, 5)),
-					);
+					System::assert_last_event(Event::Balances(crate::Event::Unreserved { who: 1, amount: 5 }));
 
 					System::set_block_number(4);
-					let _ = Balances::unreserve(&1, 6);
+					assert_eq!(Balances::unreserve(&1, 6), 1);
 
 					// should only unreserve 5
-					assert_eq!(
-						last_event(),
-						Event::Balances(crate::Event::Unreserved(1, 5)),
-					);
+					System::assert_last_event(Event::Balances(crate::Event::Unreserved { who: 1, amount: 5 }));
 				});
 		}
 
@@ -724,18 +751,20 @@ macro_rules! decl_tests {
 						events(),
 						[
 							Event::System(system::Event::NewAccount { account: 1 }),
-							Event::Balances(crate::Event::Endowed(1, 100)),
-							Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
+							Event::Balances(crate::Event::Endowed { account: 1, free_balance: 100 }),
+							Event::Balances(crate::Event::BalanceSet { who: 1, free: 100, reserved: 0 }),
 						]
 					);
 
-					let _ = Balances::slash(&1, 1);
+					let res = Balances::slash(&1, 1);
+					assert_eq!(res, (NegativeImbalance::new(1), 0));
 
 					assert_eq!(
 						events(),
 						[
-							Event::Balances(crate::Event::DustLost(1, 99)),
-							Event::System(system::Event::KilledAccount { account: 1 })
+							Event::System(system::Event::KilledAccount { account: 1 }),
+							Event::Balances(crate::Event::DustLost { account: 1, amount: 99 }),
+							Event::Balances(crate::Event::Slashed { who: 1, amount: 1 }),
 						]
 					);
 				});
@@ -753,17 +782,19 @@ macro_rules! decl_tests {
 						events(),
 						[
 							Event::System(system::Event::NewAccount { account: 1 }),
-							Event::Balances(crate::Event::Endowed(1, 100)),
-							Event::Balances(crate::Event::BalanceSet(1, 100, 0)),
+							Event::Balances(crate::Event::Endowed { account: 1, free_balance: 100 }),
+							Event::Balances(crate::Event::BalanceSet { who: 1, free: 100, reserved: 0 }),
 						]
 					);
 
-					let _ = Balances::slash(&1, 100);
+					let res = Balances::slash(&1, 100);
+					assert_eq!(res, (NegativeImbalance::new(100), 0));
 
 					assert_eq!(
 						events(),
 						[
-							Event::System(system::Event::KilledAccount { account: 1 })
+							Event::System(system::Event::KilledAccount { account: 1 }),
+							Event::Balances(crate::Event::Slashed { who: 1, amount: 100 }),
 						]
 					);
 				});
@@ -783,6 +814,7 @@ macro_rules! decl_tests {
 					assert_eq!(Balances::slash(&1, 900), (NegativeImbalance::new(900), 0));
 					// Account is still alive
 					assert!(System::account_exists(&1));
+					System::assert_last_event(Event::Balances(crate::Event::Slashed { who: 1, amount: 900 }));
 
 					// SCENARIO: Slash will kill account because not enough balance left.
 					assert_ok!(Balances::set_balance(Origin::root(), 1, 1_000, 0));
@@ -965,18 +997,247 @@ macro_rules! decl_tests {
 		}
 
 		#[test]
-		fn set_lock_members_works() {
+		fn transfer_keep_alive_all_free_succeed() {
 			<$ext_builder>::default()
 				.existential_deposit(100)
 				.build()
 				.execute_with(|| {
-					assert_ok!(Balances::set_balance(Origin::root(), 1, 1_000, 0));
-					assert_ok!(Balances::set_lock_members(Origin::root(),vec!(2)));
-					assert_ok!(Balances::force_lock(Some(2).into(),1,500));
-					assert_eq!(Balances::usable_balance(&1),500);
-					assert_ok!(Balances::force_remove_lock(Origin::root(),*b"forcelck",1));
-					assert_eq!(Balances::usable_balance(&1),1000);
+					assert_ok!(Balances::set_balance(Origin::root(), 1, 100, 100));
+					assert_ok!(Balances::transfer_keep_alive(Some(1).into(), 2, 100));
+					assert_eq!(Balances::total_balance(&1), 100);
+					assert_eq!(Balances::total_balance(&2), 100);
 				});
+		}
+
+		#[test]
+		fn transfer_all_works() {
+			<$ext_builder>::default()
+				.existential_deposit(100)
+				.build()
+				.execute_with(|| {
+					// setup
+					assert_ok!(Balances::set_balance(Origin::root(), 1, 200, 0));
+					assert_ok!(Balances::set_balance(Origin::root(), 2, 0, 0));
+					// transfer all and allow death
+					assert_ok!(Balances::transfer_all(Some(1).into(), 2, false));
+					assert_eq!(Balances::total_balance(&1), 0);
+					assert_eq!(Balances::total_balance(&2), 200);
+
+					// setup
+					assert_ok!(Balances::set_balance(Origin::root(), 1, 200, 0));
+					assert_ok!(Balances::set_balance(Origin::root(), 2, 0, 0));
+					// transfer all and keep alive
+					assert_ok!(Balances::transfer_all(Some(1).into(), 2, true));
+					assert_eq!(Balances::total_balance(&1), 100);
+					assert_eq!(Balances::total_balance(&2), 100);
+
+					// setup
+					assert_ok!(Balances::set_balance(Origin::root(), 1, 200, 10));
+					assert_ok!(Balances::set_balance(Origin::root(), 2, 0, 0));
+					// transfer all and allow death w/ reserved
+					assert_ok!(Balances::transfer_all(Some(1).into(), 2, false));
+					assert_eq!(Balances::total_balance(&1), 0);
+					assert_eq!(Balances::total_balance(&2), 200);
+
+					// setup
+					assert_ok!(Balances::set_balance(Origin::root(), 1, 200, 10));
+					assert_ok!(Balances::set_balance(Origin::root(), 2, 0, 0));
+					// transfer all and keep alive w/ reserved
+					assert_ok!(Balances::transfer_all(Some(1).into(), 2, true));
+					assert_eq!(Balances::total_balance(&1), 100);
+					assert_eq!(Balances::total_balance(&2), 110);
+				});
+		}
+
+		#[test]
+		fn named_reserve_should_work() {
+			<$ext_builder>::default().build().execute_with(|| {
+				let _ = Balances::deposit_creating(&1, 111);
+
+				let id_1 = [1u8; 8];
+				let id_2 = [2u8; 8];
+				let id_3 = [3u8; 8];
+
+				// reserve
+
+				assert_noop!(Balances::reserve_named(&id_1, &1, 112), Error::<Test, _>::InsufficientBalance);
+
+				assert_ok!(Balances::reserve_named(&id_1, &1, 12));
+
+				assert_eq!(Balances::reserved_balance(1), 12);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 12);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 0);
+
+				assert_ok!(Balances::reserve_named(&id_1, &1, 2));
+
+				assert_eq!(Balances::reserved_balance(1), 14);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 14);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 0);
+
+				assert_ok!(Balances::reserve_named(&id_2, &1, 23));
+
+				assert_eq!(Balances::reserved_balance(1), 37);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 14);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 23);
+
+				assert_ok!(Balances::reserve(&1, 34));
+
+				assert_eq!(Balances::reserved_balance(1), 71);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 14);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 23);
+
+				assert_eq!(Balances::total_balance(&1), 111);
+				assert_eq!(Balances::free_balance(1), 40);
+
+				assert_noop!(Balances::reserve_named(&id_3, &1, 2), Error::<Test, _>::TooManyReserves);
+
+				// unreserve
+
+				assert_eq!(Balances::unreserve_named(&id_1, &1, 10), 0);
+
+				assert_eq!(Balances::reserved_balance(1), 61);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 4);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 23);
+
+				assert_eq!(Balances::unreserve_named(&id_1, &1, 5), 1);
+
+				assert_eq!(Balances::reserved_balance(1), 57);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 0);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 23);
+
+				assert_eq!(Balances::unreserve_named(&id_2, &1, 3), 0);
+
+				assert_eq!(Balances::reserved_balance(1), 54);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 0);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 20);
+
+				assert_eq!(Balances::total_balance(&1), 111);
+				assert_eq!(Balances::free_balance(1), 57);
+
+				// slash_reserved_named
+
+				assert_ok!(Balances::reserve_named(&id_1, &1, 10));
+
+				assert_eq!(Balances::slash_reserved_named(&id_1, &1, 25).1, 15);
+
+				assert_eq!(Balances::reserved_balance(1), 54);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 0);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 20);
+				assert_eq!(Balances::total_balance(&1), 101);
+
+				assert_eq!(Balances::slash_reserved_named(&id_2, &1, 5).1, 0);
+
+				assert_eq!(Balances::reserved_balance(1), 49);
+				assert_eq!(Balances::reserved_balance_named(&id_1, &1), 0);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 15);
+				assert_eq!(Balances::total_balance(&1), 96);
+
+				// repatriate_reserved_named
+
+				let _ = Balances::deposit_creating(&2, 100);
+
+				assert_eq!(Balances::repatriate_reserved_named(&id_2, &1, &2, 10, Status::Reserved).unwrap(), 0);
+
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 5);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &2), 10);
+				assert_eq!(Balances::reserved_balance(&2), 10);
+
+				assert_eq!(Balances::repatriate_reserved_named(&id_2, &2, &1, 11, Status::Reserved).unwrap(), 1);
+
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 15);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &2), 0);
+				assert_eq!(Balances::reserved_balance(&2), 0);
+
+				assert_eq!(Balances::repatriate_reserved_named(&id_2, &1, &2, 10, Status::Free).unwrap(), 0);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 5);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &2), 0);
+				assert_eq!(Balances::free_balance(&2), 110);
+
+				// repatriate_reserved_named to self
+
+				assert_eq!(Balances::repatriate_reserved_named(&id_2, &1, &1, 10, Status::Reserved).unwrap(), 5);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 5);
+
+				assert_eq!(Balances::free_balance(&1), 47);
+
+				assert_eq!(Balances::repatriate_reserved_named(&id_2, &1, &1, 15, Status::Free).unwrap(), 10);
+				assert_eq!(Balances::reserved_balance_named(&id_2, &1), 0);
+
+				assert_eq!(Balances::free_balance(&1), 52);
+			});
+		}
+
+		#[test]
+		fn ensure_reserved_named_should_work() {
+			<$ext_builder>::default().build().execute_with(|| {
+				let _ = Balances::deposit_creating(&1, 111);
+
+				let id = [1u8; 8];
+
+				assert_ok!(Balances::ensure_reserved_named(&id, &1, 15));
+				assert_eq!(Balances::reserved_balance_named(&id, &1), 15);
+
+				assert_ok!(Balances::ensure_reserved_named(&id, &1, 10));
+				assert_eq!(Balances::reserved_balance_named(&id, &1), 10);
+
+				assert_ok!(Balances::ensure_reserved_named(&id, &1, 20));
+				assert_eq!(Balances::reserved_balance_named(&id, &1), 20);
+			});
+		}
+
+		#[test]
+		fn unreserve_all_named_should_work() {
+			<$ext_builder>::default().build().execute_with(|| {
+				let _ = Balances::deposit_creating(&1, 111);
+
+				let id = [1u8; 8];
+
+				assert_ok!(Balances::reserve_named(&id, &1, 15));
+
+				assert_eq!(Balances::unreserve_all_named(&id, &1), 15);
+				assert_eq!(Balances::reserved_balance_named(&id, &1), 0);
+				assert_eq!(Balances::free_balance(&1), 111);
+
+				assert_eq!(Balances::unreserve_all_named(&id, &1), 0);
+			});
+		}
+
+		#[test]
+		fn slash_all_reserved_named_should_work() {
+			<$ext_builder>::default().build().execute_with(|| {
+				let _ = Balances::deposit_creating(&1, 111);
+
+				let id = [1u8; 8];
+
+				assert_ok!(Balances::reserve_named(&id, &1, 15));
+
+				assert_eq!(Balances::slash_all_reserved_named(&id, &1).peek(), 15);
+				assert_eq!(Balances::reserved_balance_named(&id, &1), 0);
+				assert_eq!(Balances::free_balance(&1), 96);
+
+				assert_eq!(Balances::slash_all_reserved_named(&id, &1).peek(), 0);
+			});
+		}
+
+		#[test]
+		fn repatriate_all_reserved_named_should_work() {
+			<$ext_builder>::default().build().execute_with(|| {
+				let _ = Balances::deposit_creating(&1, 111);
+				let _ = Balances::deposit_creating(&2, 10);
+				let _ = Balances::deposit_creating(&3, 10);
+
+				let id = [1u8; 8];
+
+				assert_ok!(Balances::reserve_named(&id, &1, 15));
+
+				assert_ok!(Balances::repatriate_all_reserved_named(&id, &1, &2, Status::Reserved));
+				assert_eq!(Balances::reserved_balance_named(&id, &1), 0);
+				assert_eq!(Balances::reserved_balance_named(&id, &2), 15);
+
+				assert_ok!(Balances::repatriate_all_reserved_named(&id, &2, &3, Status::Free));
+				assert_eq!(Balances::reserved_balance_named(&id, &2), 0);
+				assert_eq!(Balances::free_balance(&3), 25);
+			});
 		}
 	}
 }

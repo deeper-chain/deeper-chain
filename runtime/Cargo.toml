@@ -92,6 +92,7 @@ pallet-micropayment = { version = "3.0.0", default-features = false, path = "../
 pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
 pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
+pallet-asset-tx-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 
 # frontier frame dependencies
 libsecp256k1 = { version = "0.6", default-features = false, optional = true }

@@ -466,6 +466,8 @@ impl pallet_balances::Config for Runtime {
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = frame_system::Pallet<Runtime>;
+    type MaxReserves = ();
+	type ReserveIdentifier = [u8; 8];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
@@ -906,7 +908,8 @@ where
             frame_system::CheckEra::<Runtime>::from(era),
             frame_system::CheckNonce::<Runtime>::from(nonce),
             frame_system::CheckWeight::<Runtime>::new(),
-            pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+            //pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+            pallet_asset_tx_payment::ChargeAssetTxPayment::<Runtime>::from(tip,None),
         );
         let raw_payload = SignedPayload::new(call, extra)
             .map_err(|e| {
@@ -1108,7 +1111,7 @@ parameter_types! {
 
 impl pallet_assets::Config for Runtime {
     type Event = Event;
-    type Balance = u64;
+    type Balance = u128;
     type AssetId = u32;
     type Currency = Balances;
     type ForceOrigin = EnsureRoot<AccountId>;
@@ -1121,6 +1124,13 @@ impl pallet_assets::Config for Runtime {
     type Freezer = ();
     type Extra = ();
     type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_asset_tx_payment::Config for Runtime {
+	type Fungibles = Assets;
+	type OnChargeAssetTransaction = 
+    pallet_asset_tx_payment::FungiblesAdapter<pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto>,()>;
+    //CreditToBlockAuthor
 }
 
 parameter_types! {
@@ -1302,6 +1312,7 @@ construct_runtime!(
         Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 4,
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 32,
+        AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 36,
 
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 6,
         Staking: pallet_staking::{Pallet, Call, Config<T>, Storage, Event<T>} = 7,
@@ -1401,7 +1412,8 @@ pub type SignedExtra = (
     frame_system::CheckEra<Runtime>,
     frame_system::CheckNonce<Runtime>,
     frame_system::CheckWeight<Runtime>,
-    pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    // pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+    pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 );
 /// The payload being signed in transactions.
 pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
