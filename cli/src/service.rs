@@ -21,7 +21,7 @@
 //! Service implementation. Specialized wrapper over substrate service.
 
 use futures::prelude::*;
-use node_runtime::RuntimeApi;
+pub use node_runtime::RuntimeApi;
 use sc_cli::SubstrateCli;
 use sc_client_api::{BlockBackend, BlockchainEvents, ExecutorProvider};
 use sc_consensus_babe::{self, SlotProportion};
@@ -37,7 +37,7 @@ use fc_consensus::FrontierBlockImport;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::EthTask;
 use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
-use node_runtime::{self, opaque::Block};
+pub use node_runtime::{self, opaque::Block};
 use sc_service::BasePath;
 use sp_core::U256;
 use std::{collections::BTreeMap, sync::Mutex, time::Duration};
