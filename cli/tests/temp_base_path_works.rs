@@ -19,53 +19,59 @@
 #![cfg(unix)]
 
 use assert_cmd::cargo::cargo_bin;
-use nix::sys::signal::{kill, Signal::SIGINT};
-use nix::unistd::Pid;
+use nix::{
+    sys::signal::{kill, Signal::SIGINT},
+    unistd::Pid,
+};
 use regex::Regex;
-use std::convert::TryInto;
-use std::io::Read;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::thread;
-use std::time::Duration;
+use std::{
+    convert::TryInto,
+    io::Read,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 pub mod common;
 
-#[test]
-fn temp_base_path_works() {
+#[tokio::test]
+async fn temp_base_path_works() {
     let mut cmd = Command::new(cargo_bin("deeper-chain"));
-
-    let mut cmd = cmd
-        .args(&["--dev", "--tmp"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
+    let mut child = common::KillChildOnDrop(
+        cmd.args(&["--dev", "--tmp"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap(),
+    );
 
     // Let it produce some blocks.
-    thread::sleep(Duration::from_secs(30));
+    common::wait_n_finalized_blocks(3, 50).await.unwrap();
     assert!(
-        cmd.try_wait().unwrap().is_none(),
+        child.try_wait().unwrap().is_none(),
         "the process should still be running"
     );
 
     // Stop the process
-    kill(Pid::from_raw(cmd.id().try_into().unwrap()), SIGINT).unwrap();
-    assert!(common::wait_for(&mut cmd, 40)
+    kill(Pid::from_raw(child.id().try_into().unwrap()), SIGINT).unwrap();
+    assert!(common::wait_for(&mut child, 30)
         .map(|x| x.success())
         .unwrap_or_default());
 
     // Ensure the database has been deleted
     let mut stderr = String::new();
-    cmd.stderr.unwrap().read_to_string(&mut stderr).unwrap();
+    child
+        .stderr
+        .as_mut()
+        .unwrap()
+        .read_to_string(&mut stderr)
+        .unwrap();
     let re = Regex::new(r"Database: .+ at (\S+)").unwrap();
     let db_path = PathBuf::from(
         re.captures(stderr.as_str())
             .unwrap()
             .get(1)
             .unwrap()
-            .as_str()
-            .to_string(),
+            .as_str(),
     );
 
     assert!(!db_path.exists());

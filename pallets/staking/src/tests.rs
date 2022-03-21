@@ -20,8 +20,7 @@
 use super::*;
 use frame_support::{
     assert_noop, assert_ok,
-    traits::{Currency, OnInitialize, ReservableCurrency},
-    StorageMap,
+    traits::{Currency, Hooks, ReservableCurrency},
 };
 use frame_system::RawOrigin;
 use mock::*;
@@ -161,6 +160,40 @@ fn basic_setup_works() {
 }
 
 #[test]
+fn difference_compensation() {
+    ExtBuilder::default().build_and_execute(|| {
+        let reward_data_before = RewardData::<BalanceOf<Test>> {
+            total_referee_reward: 0,
+            received_referee_reward: 0,
+            referee_reward: 0,
+            received_pocr_reward: 100,
+            poc_reward: 10,
+        };
+        Reward::<Test>::insert(&1, &reward_data_before);
+        assert_eq!(Staking::reward(&1), Some(reward_data_before.clone()));
+
+        let reward_data_after = RewardData::<BalanceOf<Test>> {
+            total_referee_reward: 0,
+            received_referee_reward: 0,
+            referee_reward: 0,
+            received_pocr_reward: 120,
+            poc_reward: 20,
+        };
+
+        // If you are a non-root user, the call will fail
+        assert_noop!(
+            Staking::difference_compensation(Origin::signed(1002), 1, 0, 20),
+            BadOrigin
+        );
+        assert_eq!(Staking::reward(&1), Some(reward_data_before));
+
+        // If you are the root user, the call should succeed
+        assert_ok!(Staking::difference_compensation(Origin::root(), 1, 0, 20));
+        assert_eq!(Staking::reward(&1), Some(reward_data_after));
+    });
+}
+
+#[test]
 fn change_controller_works() {
     ExtBuilder::default().build_and_execute(|| {
         // 10 and 11 are bonded as stash controller.
@@ -206,10 +239,10 @@ fn rewards_should_work() {
             Payee::<Test>::insert(11, RewardDestination::Controller);
             Payee::<Test>::insert(21, RewardDestination::Controller);
 
-            <Module<Test>>::reward_by_ids(vec![(11, 50)]);
-            <Module<Test>>::reward_by_ids(vec![(11, 50)]);
+            <Pallet<Test>>::reward_by_ids(vec![(11, 50)]);
+            <Pallet<Test>>::reward_by_ids(vec![(11, 50)]);
             // This is the second validator of the current elected set.
-            <Module<Test>>::reward_by_ids(vec![(21, 50)]);
+            <Pallet<Test>>::reward_by_ids(vec![(21, 50)]);
 
             start_session(1);
 
@@ -632,7 +665,7 @@ fn delegators_also_get_slashed() {
 
         let slash_amount = slash_percent * exposed_stake;
         let validator_share =
-            Perbill::from_rational_approximation(exposed_validator, exposed_stake) * slash_amount;
+            Perbill::from_rational(exposed_validator, exposed_stake) * slash_amount;
 
         // slash amount need to be positive for the test to make sense.
         assert!(validator_share > 0);
@@ -780,7 +813,7 @@ fn forcing_new_era_works() {
         assert_eq!(active_era(), 1);
 
         // no era change.
-        ForceEra::put(Forcing::ForceNone);
+        ForceEra::<Test>::put(Forcing::ForceNone);
 
         start_session(4);
         assert_eq!(active_era(), 1);
@@ -796,7 +829,7 @@ fn forcing_new_era_works() {
 
         // back to normal.
         // this immediately starts a new session.
-        ForceEra::put(Forcing::NotForcing);
+        ForceEra::<Test>::put(Forcing::NotForcing);
 
         start_session(8);
         assert_eq!(active_era(), 1);
@@ -804,7 +837,7 @@ fn forcing_new_era_works() {
         start_session(9);
         assert_eq!(active_era(), 2);
         // forceful change
-        ForceEra::put(Forcing::ForceAlways);
+        ForceEra::<Test>::put(Forcing::ForceAlways);
 
         start_session(10);
         assert_eq!(active_era(), 2);
@@ -816,10 +849,10 @@ fn forcing_new_era_works() {
         assert_eq!(active_era(), 4);
 
         // just one forceful change
-        ForceEra::put(Forcing::ForceNew);
+        ForceEra::<Test>::put(Forcing::ForceNew);
         start_session(13);
         assert_eq!(active_era(), 5);
-        assert_eq!(ForceEra::get(), Forcing::NotForcing);
+        assert_eq!(ForceEra::<Test>::get(), Forcing::NotForcing);
 
         start_session(14);
         assert_eq!(active_era(), 6);
@@ -1623,12 +1656,12 @@ fn reward_from_authorship_event_handler_works() {
     ExtBuilder::default().build_and_execute(|| {
         use pallet_authorship::EventHandler;
 
-        assert_eq!(<pallet_authorship::Module<Test>>::author(), 11);
+        assert_eq!(<pallet_authorship::Pallet<Test>>::author(), Some(11));
 
-        <Module<Test>>::note_author(11);
-        <Module<Test>>::note_uncle(21, 1);
+        <Pallet<Test>>::note_author(11);
+        <Pallet<Test>>::note_uncle(21, 1);
         // Rewarding the same two times works.
-        <Module<Test>>::note_uncle(11, 1);
+        <Pallet<Test>>::note_uncle(11, 1);
 
         // Not mandatory but must be coherent with rewards
         assert_eq_uvec!(Session::validators(), vec![11, 21]);
@@ -1651,9 +1684,9 @@ fn add_reward_points_fns_works() {
         // Not mandatory but must be coherent with rewards
         assert_eq_uvec!(Session::validators(), vec![21, 11]);
 
-        <Module<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
+        <Pallet<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
 
-        <Module<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
+        <Pallet<Test>>::reward_by_ids(vec![(21, 1), (11, 1), (11, 1)]);
 
         assert_eq!(
             ErasRewardPoints::<Test>::get(Staking::active_era().unwrap().index),
@@ -1698,7 +1731,7 @@ fn era_is_always_same_length() {
         );
 
         let session = Session::current_index();
-        ForceEra::put(Forcing::ForceNew);
+        ForceEra::<Test>::put(Forcing::ForceNew);
         advance_session();
         advance_session();
         assert_eq!(current_era(), 3);
@@ -1857,6 +1890,7 @@ fn slash_in_old_span_does_not_deselect() {
             }],
             &[Perbill::from_percent(0)],
             1,
+            DisableStrategy::WhenSlashed,
         );
 
         // not forcing for zero-slash and previous span.
@@ -1875,6 +1909,7 @@ fn slash_in_old_span_does_not_deselect() {
             // NOTE: A 100% slash here would clean up the account, causing de-registration.
             &[Perbill::from_percent(95)],
             1,
+            DisableStrategy::WhenSlashed,
         );
 
         // or non-zero.
@@ -2326,6 +2361,7 @@ fn remove_deferred() {
                 }],
                 &[Perbill::from_percent(15)],
                 1,
+                DisableStrategy::WhenSlashed,
             );
 
             // fails if empty

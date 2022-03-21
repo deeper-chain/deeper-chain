@@ -15,9 +15,12 @@
 
 use crate as pallet_micropayment;
 use crate::testing_utils::*;
+use frame_support::traits::ConstU32;
 use frame_support::{
+    pallet_prelude::GenesisBuild,
     parameter_types,
     traits::{OnFinalize, OnInitialize},
+    PalletId,
 };
 use frame_system as system;
 use node_primitives::{Balance, Moment};
@@ -25,6 +28,7 @@ use sp_core::{crypto::AccountId32, sr25519, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    Percent, Permill,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -37,11 +41,13 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
-        Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
     }
 );
 
@@ -53,7 +59,7 @@ parameter_types! {
 type AccountId = AccountId32;
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
@@ -75,6 +81,36 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
+}
+
+parameter_types! {
+    pub const ProposalBond: Permill = Permill::from_percent(5);
+    pub const ProposalBondMinimum: u64 = 1;
+    pub const SpendPeriod: u64 = 24;
+    pub const Burn: Permill = Permill::from_percent(0);
+    pub const DataDepositPerByte: u64 = 1;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+    pub const MaximumReasonLength: u32 = 16384;
+    pub const MaxApprovals: u32 = 100;
+}
+impl pallet_treasury::Config for Test {
+    type PalletId = TreasuryPalletId;
+    type Currency = pallet_balances::Pallet<Test>;
+    type ApproveOrigin = frame_system::EnsureRoot<AccountId>;
+    type RejectOrigin = frame_system::EnsureRoot<AccountId>;
+    type Event = Event;
+    type OnSlash = ();
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ();
+    type SpendPeriod = SpendPeriod;
+    type Burn = Burn;
+    type BurnDestination = (); // Just gets burned.
+    type WeightInfo = ();
+    type SpendFunds = ();
+    type MaxApprovals = MaxApprovals;
 }
 
 parameter_types! {
@@ -98,7 +134,7 @@ const MILLISECS_PER_BLOCK: Moment = 5000;
 const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 const CREDIT_ATTENUATION_STEP: u64 = 1;
-const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 
 parameter_types! {
     pub const CreditCapTwoEras: u8 = 5;
@@ -106,6 +142,7 @@ parameter_types! {
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
+    pub const DPRPerCreditBurned: Balance = 100;
 }
 
 impl pallet_credit::Config for Test {
@@ -117,6 +154,21 @@ impl pallet_credit::Config for Test {
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
+    type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+    type DPRPerCreditBurned = DPRPerCreditBurned;
+    type BurnedTo = ();
+}
+
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
 }
 
@@ -146,6 +198,7 @@ impl crate::AccountCreator<AccountId> for TestAccountCreator {
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
+    pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
@@ -155,6 +208,9 @@ impl pallet_micropayment::Config for Test {
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
+    type NodeInterface = DeeperNode;
+    type MicropaymentBurn = MicropaymentBurn;
+    type Slash = Treasury;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -171,6 +227,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         ],
     }
     .assimilate_storage(&mut storage);
+    GenesisBuild::<Test>::assimilate_storage(&pallet_treasury::GenesisConfig, &mut storage)
+        .unwrap();
 
     let ext = sp_io::TestExternalities::from(storage);
     ext

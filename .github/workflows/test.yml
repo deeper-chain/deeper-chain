@@ -1,0 +1,47 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Unit test
+    runs-on: [self-hosted, linux, deeper-chain-runner]
+    env:
+      CARGO_INCREMENTAL: 0
+      SKIP_BUILD_WASM: true
+      BUILD_DUMMY_WASM_BINARY: true
+      LLVM_PROFILE_FILE: "llvmcoveragedata-%p-%m.profraw"
+      WASM_TARGET_DIRECTORY: /tmp/wasm
+      RUSTFLAGS: "-Zinstrument-coverage"
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@master
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: llvm-tools-preview
+          target: wasm32-unknown-unknown
+
+      - name: show rustc version
+        run: rustc --version
+
+      - name: test
+        run: cargo test --workspace --exclude node-cli
+
+      - name: install grcov
+        run: wget -c https://github.com/mozilla/grcov/releases/download/v0.8.7/grcov-x86_64-unknown-linux-musl.tar.bz2 -O - | tar -xj
+
+      - name: generate coverage report
+        run: ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
+
+      - name: upload to codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./lcov.info
+          verbose: true

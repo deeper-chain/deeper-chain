@@ -2,7 +2,7 @@
 name = "substrate-test-client"
 version = "2.0.1"
 authors = ["Parity Technologies <admin@parity.io>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 homepage = "https://substrate.dev"
 repository = "https://github.com/paritytech/substrate/"
@@ -12,23 +12,23 @@ publish = false
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0" }
+codec = { package = "parity-scale-codec", version = "2.3.1" }
 futures = "0.3.9"
 futures01 = { package = "futures", version = "0.1.29" }
 hash-db = "0.15.2"
 hex = "0.4"
 serde = "1.0.55"
 serde_json = "1.0.55"
-sc-client-api = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sc-client-db = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", features = ["test-helpers"]}
-sc-consensus = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sc-executor = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sc-light = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sc-service = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0", default-features = false, features = ["test-helpers"]}
-sp-blockchain = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-consensus = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-core = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
-sp-state-machine = { git = "https://github.com/paritytech/substrate", tag = "v3.0.0" }
+sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-client-db = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", features = ["test-helpers"]}
+sc-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-light = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false, features = ["test-helpers"]}
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }

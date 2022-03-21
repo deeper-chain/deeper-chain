@@ -16,7 +16,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::codec::{Decode, Encode};
-use frame_support::traits::Vec;
+use scale_info::TypeInfo;
 
 pub use pallet::*;
 
@@ -37,12 +37,24 @@ pub type CountryRegion = Vec<u8>;
 pub type DurationEras = u8;
 
 // struct to store the registered Device Information
-#[derive(Decode, Encode, Default)]
+#[derive(Decode, Encode, TypeInfo)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
     ipv4: IpV4, // IP will not be exposed in future version
     country: CountryRegion,
     expire: BlockNumber,
+}
+
+impl<AccountId: Decode, BlockNumber: Default> Default for Node<AccountId, BlockNumber> {
+    fn default() -> Self {
+        Self {
+            account_id: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+                .expect("nodes should have a valid account id"),
+            ipv4: Default::default(),
+            country: Default::default(),
+            expire: Default::default(),
+        }
+    }
 }
 
 pub trait NodeInterface<AccountId, BlockNumber> {
@@ -59,7 +71,7 @@ pub trait NodeInterface<AccountId, BlockNumber> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, Get, ReservableCurrency, Vec};
+    use frame_support::traits::{Currency, Get, ReservableCurrency};
     use frame_support::{dispatch::DispatchResult, ensure};
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
@@ -86,6 +98,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
@@ -153,7 +166,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         // register node: AccountId, ipv4, country
@@ -209,10 +222,7 @@ pub mod pallet {
             country: CountryRegion,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(
-                <RegionMapInit<T>>::get() == true,
-                Error::<T>::InvalidRegionMap
-            );
+            ensure!(<RegionMapInit<T>>::get(), Error::<T>::InvalidRegionMap);
             ensure!(
                 <RegionMap<T>>::contains_key(&country),
                 Error::<T>::InvalidCode
@@ -224,7 +234,7 @@ pub mod pallet {
                     account_id: sender.clone(),
                     ipv4: ip.clone(),
                     country: country.clone(),
-                    expire: <frame_system::Module<T>>::block_number(),
+                    expire: <frame_system::Pallet<T>>::block_number(),
                 };
                 T::Currency::reserve(&sender, BalanceOf::<T>::from(T::MinLockAmt::get()))?;
                 <DeviceInfo<T>>::insert(&sender, node);
@@ -235,7 +245,7 @@ pub mod pallet {
                         node.country = country.clone();
                     }
                     node.ipv4 = ip.clone();
-                    node.expire = <frame_system::Module<T>>::block_number();
+                    node.expire = <frame_system::Pallet<T>>::block_number();
                 });
             }
             Self::deposit_event(Event::RegisterNode(sender, ip, country));
@@ -291,7 +301,7 @@ pub mod pallet {
             );
             let blocks = T::BlockNumber::from(duration_eras) * T::BlocksPerEra::get();
             <DeviceInfo<T>>::mutate(&sender, |node| {
-                node.expire = <frame_system::Module<T>>::block_number() + blocks;
+                node.expire = <frame_system::Pallet<T>>::block_number() + blocks;
             });
             Ok(().into())
         }
@@ -310,7 +320,7 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::im_online())]
         pub fn im_online(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            let current_block = <frame_system::Module<T>>::block_number();
+            let current_block = <frame_system::Pallet<T>>::block_number();
             ImOnline::<T>::insert(&sender, current_block.clone());
             if !OnboardTime::<T>::contains_key(&sender) {
                 OnboardTime::<T>::insert(&sender, current_block.clone());
@@ -321,54 +331,55 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> Module<T> {
+    impl<T: Config> Pallet<T> {
         // try to remove an account from country and region server lists if exists
         fn try_remove_server(sender: &T::AccountId) -> DispatchResult {
-            let mut node = <DeviceInfo<T>>::get(&sender);
-            let first_region = <RegionMap<T>>::get(&node.country);
-            let sec_region = <RegionMap<T>>::get(&first_region);
+            if <DeviceInfo<T>>::contains_key(&sender) {
+                let mut node = <DeviceInfo<T>>::get(&sender);
 
-            // remove from country server list
-            let mut server_list = <ServersByCountry<T>>::get(&node.country);
-            let _ = Self::country_list_remove(&mut server_list, &sender, &node.country);
+                let first_region = <RegionMap<T>>::get(&node.country);
+                let sec_region = <RegionMap<T>>::get(&first_region);
 
-            // remove from level 3 region server list
-            server_list = <ServersByRegion<T>>::get(&first_region);
-            let _ = Self::region_list_remove(&mut server_list, &sender, &first_region);
+                // remove from country server list
+                let mut server_list = <ServersByCountry<T>>::get(&node.country);
+                let _ = Self::country_list_remove(&mut server_list, &sender, &node.country);
 
-            // remove from level 2 region server list
-            server_list = <ServersByRegion<T>>::get(&sec_region);
-            let _ = Self::region_list_remove(&mut server_list, &sender, &sec_region);
+                // remove from level 3 region server list
+                server_list = <ServersByRegion<T>>::get(&first_region);
+                let _ = Self::region_list_remove(&mut server_list, &sender, &first_region);
 
-            // ensure consistency
-            node.expire = <frame_system::Module<T>>::block_number();
-            <DeviceInfo<T>>::insert(&sender, node);
+                // remove from level 2 region server list
+                server_list = <ServersByRegion<T>>::get(&sec_region);
+                let _ = Self::region_list_remove(&mut server_list, &sender, &sec_region);
 
+                // ensure consistency
+                node.expire = <frame_system::Pallet<T>>::block_number();
+                <DeviceInfo<T>>::insert(&sender, node);
+            }
             Ok(())
         }
 
         // try to add an account to a country's server list; no double add
         fn try_add_server(sender: &T::AccountId, duration: T::BlockNumber) -> DispatchResult {
             let mut node = <DeviceInfo<T>>::get(&sender);
+
             let first_region = <RegionMap<T>>::get(&node.country);
             let sec_region = <RegionMap<T>>::get(&first_region);
 
             // country registration
             let mut country_server_list = <ServersByCountry<T>>::get(&node.country);
-            if Self::country_list_insert(
+            if !Self::country_list_insert(
                 &mut country_server_list,
                 &sender,
                 &node.country,
                 &duration,
-            ) == false
-            {
+            ) {
                 Err(Error::<T>::DoubleCountryRegistration)?
             }
 
             // level 3 region registration
             let mut level3_server_list = <ServersByRegion<T>>::get(&first_region);
-            if Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration)
-                == false
+            if !Self::region_list_insert(&mut level3_server_list, &sender, &first_region, &duration)
             {
                 let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
                 Err(Error::<T>::DoubleLevel3Registration)?
@@ -376,16 +387,14 @@ pub mod pallet {
 
             // level 2 region registration
             let mut level2_server_list = <ServersByRegion<T>>::get(&sec_region);
-            if Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration)
-                == false
-            {
+            if !Self::region_list_insert(&mut level2_server_list, &sender, &sec_region, &duration) {
                 let _ = Self::country_list_remove(&mut country_server_list, &sender, &node.country);
                 let _ = Self::region_list_remove(&mut level3_server_list, &sender, &first_region);
                 Err(Error::<T>::DoubleLevel2Registration)?
             }
 
             // ensure consistency
-            node.expire = <frame_system::Module<T>>::block_number() + duration;
+            node.expire = <frame_system::Pallet<T>>::block_number() + duration;
             <DeviceInfo<T>>::insert(&sender, node);
 
             Ok(())
@@ -783,7 +792,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> NodeInterface<T::AccountId, T::BlockNumber> for Module<T> {
+    impl<T: Config> NodeInterface<T::AccountId, T::BlockNumber> for Pallet<T> {
         fn get_onboard_time(account_id: &T::AccountId) -> Option<T::BlockNumber> {
             Self::onboard_time(account_id)
         }
@@ -794,7 +803,7 @@ pub mod pallet {
 
         fn get_eras_offline(account_id: &T::AccountId) -> u32 {
             let block = Self::get_im_online(account_id).unwrap_or(T::BlockNumber::default());
-            let current_block = <frame_system::Module<T>>::block_number();
+            let current_block = <frame_system::Pallet<T>>::block_number();
             let eras = (current_block - block) / T::BlocksPerEra::get();
             TryInto::<u32>::try_into(eras).ok().unwrap()
         }

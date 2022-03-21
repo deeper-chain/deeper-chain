@@ -16,6 +16,7 @@
 use crate as pallet_credit_accumulation;
 use crate::testing_utils::*;
 use frame_support::parameter_types;
+use frame_support::traits::ConstU32;
 use frame_system as system;
 use node_primitives::{Balance, Moment};
 use pallet_micropayment::AccountCreator;
@@ -35,11 +36,12 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
-        CreditAccumulation: pallet_credit_accumulation::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
+        CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
     }
 );
 
@@ -51,7 +53,7 @@ parameter_types! {
 type AccountId = AccountId32;
 
 impl system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
@@ -73,6 +75,8 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -106,6 +110,18 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
 }
 
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+    pub const DPRPerCreditBurned: Balance = 100;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
@@ -116,6 +132,10 @@ impl pallet_credit::Config for Test {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+    type DPRPerCreditBurned = DPRPerCreditBurned;
+    type BurnedTo = ();
 }
 
 parameter_types! {

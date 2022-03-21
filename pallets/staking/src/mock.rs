@@ -19,11 +19,11 @@
 
 use crate as staking;
 use crate::*;
+use frame_support::traits::ConstU32;
 use frame_support::{
     assert_ok, parameter_types,
-    traits::{Currency, FindAuthor, Get, OnFinalize, OnInitialize, OneSessionHandler},
+    traits::{Currency, FindAuthor, GenesisBuild, Get, Hooks, OneSessionHandler},
     weights::constants::RocksDbWeight,
-    IterableStorageMap, StorageDoubleMap, StorageValue,
 };
 use node_primitives::Moment;
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
@@ -71,10 +71,10 @@ impl OneSessionHandler<AccountId> for OtherSessionHandler {
         });
     }
 
-    fn on_disabled(validator_index: usize) {
+    fn on_disabled(validator_index: u32) {
         SESSION.with(|d| {
             let mut d = d.borrow_mut();
-            let value = d.0[validator_index];
+            let value = d.0[validator_index as usize];
             d.1.insert(value);
         })
     }
@@ -98,14 +98,16 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>, Config<T>},
-        Staking: staking::{Module, Call, Config<T>, Storage, Event<T>},
-        Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T>},
-        Micropayment: pallet_micropayment::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Staking: staking::{Pallet, Call, Config<T>, Storage, Event<T>},
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
+        Historical: pallet_session::historical::{Pallet, Storage},
     }
 );
 
@@ -135,7 +137,7 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-    type BaseCallFilter = ();
+    type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = RocksDbWeight;
@@ -157,6 +159,8 @@ impl frame_system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
@@ -179,6 +183,7 @@ impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
+    pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
 impl pallet_micropayment::Config for Test {
     type Event = Event;
@@ -188,6 +193,9 @@ impl pallet_micropayment::Config for Test {
     type DataPerDPR = DataPerDPR;
     type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
+    type NodeInterface = DeeperNode;
+    type MicropaymentBurn = MicropaymentBurn;
+    type Slash = ();
 }
 
 parameter_types! {
@@ -218,6 +226,7 @@ parameter_types! {
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  BLOCKS_PER_ERA;
+    pub const DPRPerCreditBurned: Balance = 100;
 }
 
 impl pallet_credit::Config for Test {
@@ -230,6 +239,10 @@ impl pallet_credit::Config for Test {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+    type DPRPerCreditBurned = DPRPerCreditBurned;
+    type BurnedTo = ();
 }
 
 parameter_types! {
@@ -249,7 +262,6 @@ impl pallet_session::Config for Test {
     type Event = Event;
     type ValidatorId = AccountId;
     type ValidatorIdOf = crate::StashOf<Test>;
-    type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
     type WeightInfo = ();
 }
@@ -262,7 +274,7 @@ impl pallet_authorship::Config for Test {
     type FindAuthor = Author11;
     type UncleGenerations = UncleGenerations;
     type FilterUncle = ();
-    type EventHandler = Module<Test>;
+    type EventHandler = Pallet<Test>;
 }
 parameter_types! {
     pub const MinimumPeriod: u64 = 5;
@@ -609,7 +621,7 @@ impl ExtBuilder {
         let num_validators = self.num_validators.unwrap_or(self.validator_count);
         // Check that the number of validators is sensible.
         assert!(num_validators <= 8);
-        let validators = (0..num_validators)
+        let _validators = (0..num_validators)
             .map(|x| ((x + 1) * 10 + 1) as AccountId)
             .collect::<Vec<_>>();
 
@@ -642,7 +654,7 @@ impl ExtBuilder {
         }
 
         staking::GenesisConfig::<Test> {
-            stakers: stakers,
+            stakers: stakers.clone(),
             delegations: delegations,
             validator_count: self.validator_count,
             era_validator_reward: TOTAL_MINING_REWARD / 100_000,
@@ -655,18 +667,18 @@ impl ExtBuilder {
         .unwrap();
 
         pallet_session::GenesisConfig::<Test> {
-            keys: validators
-                .iter()
-                .map(|x| {
-                    (
-                        *x,
-                        *x,
-                        SessionKeys {
-                            other: UintAuthorityId(*x as u64),
-                        },
-                    )
-                })
-                .collect(),
+            keys: if self.has_stakers {
+                // set the keys for the first session.
+                stakers
+                    .into_iter()
+                    .map(|(id, ..)| (id, id, SessionKeys { other: id.into() }))
+                    .collect()
+            } else {
+                // set some dummy validators in genesis.
+                (0..self.validator_count as u64)
+                    .map(|id| (id, id, SessionKeys { other: id.into() }))
+                    .collect()
+            },
         }
         .assimilate_storage(&mut storage)
         .unwrap();
@@ -684,7 +696,7 @@ impl ExtBuilder {
             ext.execute_with(|| {
                 System::set_block_number(1);
                 Session::on_initialize(1);
-                Staking::on_initialize(1);
+                <Staking as Hooks<u64>>::on_initialize(1);
                 Timestamp::set_timestamp(INIT_TIMESTAMP);
             });
         }
@@ -833,11 +845,12 @@ pub(crate) fn on_offence_in_era(
     >],
     slash_fraction: &[Perbill],
     era: EraIndex,
+    disable_strategy: DisableStrategy,
 ) {
-    let bonded_eras = crate::BondedEras::get();
+    let bonded_eras = crate::BondedEras::<Test>::get();
     for &(bonded_era, start_session) in bonded_eras.iter() {
         if bonded_era == era {
-            let _ = Staking::on_offence(offenders, slash_fraction, start_session).unwrap();
+            let _ = Staking::on_offence(offenders, slash_fraction, start_session, disable_strategy);
             return;
         } else if bonded_era > era {
             break;
@@ -849,8 +862,8 @@ pub(crate) fn on_offence_in_era(
             offenders,
             slash_fraction,
             Staking::eras_start_session_index(era).unwrap(),
-        )
-        .unwrap();
+            disable_strategy,
+        );
     } else {
         panic!("cannot slash in era {}", era);
     }
@@ -864,7 +877,7 @@ pub(crate) fn on_offence_now(
     slash_fraction: &[Perbill],
 ) {
     let now = Staking::active_era().unwrap().index;
-    on_offence_in_era(offenders, slash_fraction, now)
+    on_offence_in_era(offenders, slash_fraction, now, DisableStrategy::WhenSlashed)
 }
 
 pub(crate) fn add_slash(who: &AccountId) {

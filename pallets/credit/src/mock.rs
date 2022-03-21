@@ -15,22 +15,27 @@
 
 use super::*;
 use crate as pallet_credit;
+use frame_support::traits::ConstU32;
 use frame_support::{
     pallet_prelude::GenesisBuild,
     parameter_types,
     traits::{OnFinalize, OnInitialize},
+    PalletId,
 };
-use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    Permill,
 };
 
 use node_primitives::{Balance, BlockNumber, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+pub const INIT_TIMESTAMP: u64 = 30_000;
+pub const BLOCK_TIME: u64 = 5000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -39,20 +44,51 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Event<T>, Config<T>},
-        Credit: pallet_credit::{Module, Call, Storage, Event<T>},
-        DeeperNode: pallet_deeper_node::{Module, Call, Storage, Event<T>, Config<T> },
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>},
+        DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
     }
 );
+
+parameter_types! {
+    pub const ProposalBond: Permill = Permill::from_percent(5);
+    pub const ProposalBondMinimum: u64 = 1;
+    pub const SpendPeriod: u64 = 24;
+    pub const Burn: Permill = Permill::from_percent(0);
+    pub const DataDepositPerByte: u64 = 1;
+    pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+    pub const MaximumReasonLength: u32 = 16384;
+    pub const MaxApprovals: u32 = 100;
+}
+impl pallet_treasury::Config for Test {
+    type PalletId = TreasuryPalletId;
+    type Currency = pallet_balances::Pallet<Test>;
+    type ApproveOrigin = frame_system::EnsureRoot<u64>;
+    type RejectOrigin = frame_system::EnsureRoot<u64>;
+    type Event = Event;
+    type OnSlash = ();
+    type ProposalBond = ProposalBond;
+    type ProposalBondMinimum = ProposalBondMinimum;
+    type ProposalBondMaximum = ();
+    type SpendPeriod = SpendPeriod;
+    type Burn = Burn;
+    type BurnDestination = (); // Just gets burned.
+    type WeightInfo = ();
+    type SpendFunds = ();
+    type MaxApprovals = MaxApprovals;
+}
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 42;
 }
 
-impl system::Config for Test {
-    type BaseCallFilter = ();
+impl frame_system::Config for Test {
+    type BaseCallFilter = frame_support::traits::Everything; // modified by james.soong
+    type OnSetCode = ();
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
@@ -74,6 +110,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -119,6 +156,19 @@ parameter_types! {
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
+    pub const SecsPerBlock: u32 = 5u32;
+    pub const DPRPerCreditBurned: u64 = 50;
+}
+
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
 }
 
 impl pallet_credit::Config for Test {
@@ -131,6 +181,10 @@ impl pallet_credit::Config for Test {
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
     type NodeInterface = DeeperNode;
     type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+    type DPRPerCreditBurned = DPRPerCreditBurned;
+    type BurnedTo = Treasury;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -143,6 +197,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     }
     .assimilate_storage(&mut storage)
     .unwrap();
+    GenesisBuild::<Test>::assimilate_storage(&pallet_treasury::GenesisConfig, &mut storage)
+        .unwrap();
     const DPR: u128 = 1_000_000_000_000_000_000u128;
     let genesis_config = pallet_credit::GenesisConfig::<Test> {
         credit_settings: vec![
@@ -478,10 +534,21 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     reward_eras: 270,
                 },
             ),
+            (
+                12,
+                CreditData {
+                    campaign_id: 1,
+                    credit: 200,
+                    initial_credit_level: CreditLevel::Two,
+                    rank_in_initial_credit_level: 801u32,
+                    number_of_referees: 2,
+                    current_credit_level: CreditLevel::Two,
+                    reward_eras: 270,
+                },
+            ),
         ],
     };
     GenesisBuild::<Test>::assimilate_storage(&genesis_config, &mut storage).unwrap();
-
     storage.into()
 }
 
@@ -490,5 +557,6 @@ pub fn run_to_block(n: u64) {
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
+        Timestamp::set_timestamp(System::block_number() * BLOCK_TIME + INIT_TIMESTAMP);
     }
 }

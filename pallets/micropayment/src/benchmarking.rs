@@ -17,16 +17,17 @@
 
 use super::*;
 use crate::pallet::ChannelOf;
-use crate::Module as Micropayment;
-pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+use crate::Pallet as Micropayment;
+pub use frame_benchmarking::{
+    account, benchmarks, impl_benchmark_test_suite, whitelist_account, whitelisted_caller,
+};
 use frame_support::traits::Currency;
-use frame_system::Module as System;
+use frame_system::Pallet as System;
 use frame_system::RawOrigin;
 //use hex_literal::hex;
 use codec::Encode;
 use sp_core::sr25519;
 use sp_io::crypto::sr25519_sign;
-use sp_std::vec;
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
     let user = T::AccountCreator::create_account(string);
@@ -190,11 +191,13 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-            assert_ok!(test_benchmark_open_channel::<Test>());
-            assert_ok!(test_benchmark_close_channel::<Test>());
-            assert_ok!(test_benchmark_close_expired_channels::<Test>());
-            assert_ok!(test_benchmark_add_balance::<Test>());
+            assert_ok!(Pallet::<Test>::test_benchmark_open_channel());
+            assert_ok!(Pallet::<Test>::test_benchmark_close_channel());
+            assert_ok!(Pallet::<Test>::test_benchmark_close_expired_channels());
+            assert_ok!(Pallet::<Test>::test_benchmark_add_balance());
             //assert_ok!(test_benchmark_claim_payment::<Test>()); // Move to test.rs
         });
     }
 }
+
+//impl_benchmark_test_suite!(Micropayment, crate::mock::new_test_ext(), crate::mock::Test);

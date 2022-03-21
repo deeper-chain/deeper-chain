@@ -1,23 +1,17 @@
 # deeper chain node
 
-deeper chain node is built on top of Substrate v3.0.0 full node
+![Build](https://github.com/deeper-chain/deeper-chain/actions/workflows/build.yml/badge.svg)
+[![Codecov](https://codecov.io/gh/deeper-chain/deeper-chain/branch/master/graph/badge.svg)](https://codecov.io/gh/deeper-chain/deeper-chain)
+
+deeper chain node is built on top of Substrate v4.0.0 full node
 
 ## Local Development
 
 Get the required compiler version and wasm component before compiling.
 
 ```
-rustup install nightly-2021-03-11
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-03-11
-
-# fix environmental package bug if it happens
-cargo update -p environmental
-
-# thread_local 1.1.2 has a bug: "memory leak"
-cargo update -p thread_local
-
-# update libp2p-swarm from v0.27.1 to v0.27.2
-cargo update -p libp2p-swarm
+rustup default nightly-2022-01-01
+rustup target add wasm32-unknown-unknown --toolchain nightly-2022-01-01
 
 # compile
 cargo build --release

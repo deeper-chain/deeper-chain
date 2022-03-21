@@ -43,13 +43,15 @@ pub mod weights;
 pub mod pallet {
     use crate::weights::WeightInfo;
     use frame_support::codec::Encode;
-    use frame_support::traits::{Currency, Vec};
+    use frame_support::traits::Currency;
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use pallet_credit::CreditInterface;
     use pallet_micropayment::AccountCreator;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
+    use sp_runtime::traits::TrailingZeroInput;
+    use sp_std::prelude::Vec;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -70,6 +72,7 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     // atmos_nonce indicates the next available value;
@@ -83,7 +86,7 @@ pub mod pallet {
     pub(super) type AtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         AtmosSignatureValid(T::AccountId),
@@ -144,7 +147,9 @@ pub mod pallet {
             sender: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let mut pk = [0u8; 32];
-            let atomos_accountid = Self::atmos_accountid().unwrap_or_default();
+            let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
+                .expect("infinite input; qed");
+            let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account);
             pk.copy_from_slice(&atomos_accountid.encode());
             let pub_key = sr25519::Public::from_raw(pk);
 

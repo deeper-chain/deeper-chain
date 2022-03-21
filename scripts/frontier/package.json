@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@polkadot/api": "^6.10.3",
+    "@polkadot/keyring": "^8.0.5",
+    "truffle-privatekey-provider": "^1.5.0",
+    "web3": "^1.6.1"
+  }
+}
