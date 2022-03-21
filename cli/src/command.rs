@@ -18,10 +18,9 @@
 
 use crate::{
     chain_spec, service,
-    service::{frontier_database_dir, new_partial},
+    service::{frontier_database_dir, new_partial, ExecutorDispatch},
     Cli, Subcommand,
 };
-use node_executor::ExecutorDispatch;
 use node_runtime::{Block, RuntimeApi};
 use sc_cli::{ChainSpec, Result, RuntimeVersion, SubstrateCli};
 use sc_service::PartialComponents;

@@ -3197,12 +3197,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
-name = "leb128"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
-
-[[package]]
 name = "libc"
 version = "0.2.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4362,7 +4356,6 @@ dependencies = [
  "hex-literal",
  "log",
  "nix",
- "node-executor",
  "node-inspect",
  "node-primitives",
  "node-rpc",
@@ -4437,46 +4430,6 @@ dependencies = [
  "substrate-frame-cli",
  "tempfile",
  "tokio",
-]
-
-[[package]]
-name = "node-executor"
-version = "2.0.0"
-dependencies = [
- "criterion",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "futures 0.3.21",
- "node-primitives",
- "node-runtime",
- "node-testing",
- "pallet-balances 3.0.0",
- "pallet-contracts",
- "pallet-grandpa",
- "pallet-im-online",
- "pallet-indices",
- "pallet-session",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-treasury",
- "parity-scale-codec",
- "sc-executor",
- "scale-info",
- "sp-application-crypto",
- "sp-consensus-babe",
- "sp-core",
- "sp-externalities",
- "sp-io",
- "sp-keyring",
- "sp-keystore",
- "sp-runtime",
- "sp-state-machine",
- "sp-tracing",
- "sp-trie",
- "substrate-test-client",
- "trie-root 0.16.0",
- "wat",
 ]
 
 [[package]]
@@ -4667,7 +4620,7 @@ dependencies = [
  "futures 0.3.21",
  "hex-literal",
  "log",
- "node-executor",
+ "node-cli",
  "node-primitives",
  "node-runtime",
  "pallet-asset-tx-payment",
@@ -9051,7 +9004,7 @@ dependencies = [
  "thiserror",
  "tracing",
  "trie-db",
- "trie-root 0.17.0",
+ "trie-root",
 ]
 
 [[package]]
@@ -9150,7 +9103,7 @@ dependencies = [
  "sp-core",
  "sp-std",
  "trie-db",
- "trie-root 0.17.0",
+ "trie-root",
 ]
 
 [[package]]
@@ -9872,15 +9825,6 @@ dependencies = [
 
 [[package]]
 name = "trie-root"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "652931506d2c1244d7217a70b99f56718a7b4161b37f04e7cd868072a99f68cd"
-dependencies = [
- "hash-db",
-]
-
-[[package]]
-name = "trie-root"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a36c5ca3911ed3c9a5416ee6c679042064b93fc637ded67e25f92e68d783891"
@@ -10301,7 +10245,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca00c5147c319a8ec91ec1a0edbec31e566ce2c9cc93b3f9bb86a9efd0eb795d"
 dependencies = [
  "downcast-rs",
- "errno",
  "libc",
  "libm",
  "memory_units",
@@ -10477,26 +10420,6 @@ dependencies = [
  "serde",
  "thiserror",
  "wasmparser",
-]
-
-[[package]]
-name = "wast"
-version = "39.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9bbbd53432b267421186feee3e52436531fa69a7cfee9403f5204352df3dd05"
-dependencies = [
- "leb128",
- "memchr",
- "unicode-width",
-]
-
-[[package]]
-name = "wat"
-version = "1.0.41"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab98ed25494f97c69f28758617f27c3e92e5336040b5c3a14634f2dd3fe61830"
-dependencies = [
- "wast",
 ]
 
 [[package]]
