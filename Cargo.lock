@@ -44,7 +44,7 @@ checksum = "9e8b47f52ea9bae42228d07ec09eb676433d7c4ed1ebdf0f1d1c29ed446f1ab8"
 dependencies = [
  "cfg-if 1.0.0",
  "cipher",
- "cpufeatures 0.2.1",
+ "cpufeatures 0.2.2",
  "opaque-debug 0.3.0",
 ]
 
@@ -936,9 +936,9 @@ dependencies = [
 
 [[package]]
 name = "cpufeatures"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95059428f66df56b63431fdb4e1947ed2190586af5c5a8a8b71122bdf5a7f469"
+checksum = "59a6001667ab124aebae2a495118e11d30984c3a653e99d86d58971708cf5e4b"
 dependencies = [
  "libc",
 ]
@@ -1081,9 +1081,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-channel"
-version = "0.5.2"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e54ea8bc3fb1ee042f5aace6e3c6e025d3874866da222930f70ce62aceba0bfa"
+checksum = "5aaa7bd5fb665c6864b5f963dd9097905c54125909c7aa94c9e18507cdbe6c53"
 dependencies = [
  "cfg-if 1.0.0",
  "crossbeam-utils",
@@ -1102,10 +1102,11 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.7"
+version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c00d6d2ea26e8b151d99093005cb442fb9a37aeaca582a03ec70946f49ab5ed9"
+checksum = "1145cf131a2c6ba0615079ab6a638f7e1973ac9c2634fcbeaaad6114246efe8c"
 dependencies = [
+ "autocfg",
  "cfg-if 1.0.0",
  "crossbeam-utils",
  "lazy_static",
@@ -1115,9 +1116,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.7"
+version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5e5bed1f1c269533fa816a0a5492b3545209a205ca1a54842be180eb63a16a6"
+checksum = "0bf124c720b7686e3c2663cf54062ab0f68a88af2fb6a030e87e30bf721fcb38"
 dependencies = [
  "cfg-if 1.0.0",
  "lazy_static",
@@ -1202,9 +1203,9 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.1.21"
+version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccc0a48a9b826acdf4028595adc9db92caea352f7af011a3034acd172a52a0aa"
+checksum = "f877be4f7c9f246b183111634f75baa039715e3f46ce860677d3b19a69fb229c"
 dependencies = [
  "quote",
  "syn",
@@ -1369,9 +1370,9 @@ dependencies = [
 
 [[package]]
 name = "dirs-sys"
-version = "0.3.6"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03d86534ed367a67548dc68113a0f5db55432fdfbb6e6f9d77704397d95d5780"
+checksum = "1b1d1d91c932ef41c0f2663aa8b0ca0342d444d842c06914aa0a7e352d0bada6"
 dependencies = [
  "libc",
  "redox_users",
@@ -1440,15 +1441,15 @@ dependencies = [
 
 [[package]]
 name = "dyn-clone"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee2626afccd7561a06cf1367e2950c4718ea04565e20fb5029b6c7d8ad09abcf"
+checksum = "21e50f3adc76d6a43f5ed73b698a87d0760ca74617f60f7c3b879003536fdd28"
 
 [[package]]
 name = "ed25519"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eed12bbf7b5312f8da1c2722bc06d8c6b12c2d86a7fb35a194c7f3e6fc2bbe39"
+checksum = "3d5c4b5e5959dc2c2b89918d8e2cc40fcdd623cef026ed09d2f0ee05199dc8e4"
 dependencies = [
  "signature",
 ]
@@ -1692,7 +1693,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "async-trait",
  "derive_more",
@@ -1718,7 +1719,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-storage",
  "kvdb",
@@ -1734,7 +1735,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fc-consensus",
  "fc-db",
@@ -1752,7 +1753,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1800,7 +1801,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1908,7 +1909,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -1922,7 +1923,7 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "evm",
  "parity-scale-codec",
@@ -1934,7 +1935,7 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1951,7 +1952,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ethereum",
  "frame-support",
@@ -1968,7 +1969,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 
 [[package]]
 name = "frame-benchmarking"
@@ -3051,7 +3052,7 @@ dependencies = [
  "soketto",
  "thiserror",
  "tokio",
- "tokio-rustls 0.23.2",
+ "tokio-rustls 0.23.3",
  "tokio-util",
  "tracing",
  "webpki-roots 0.22.2",
@@ -3198,9 +3199,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "libc"
-version = "0.2.119"
+version = "0.2.121"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
+checksum = "efaa7b300f3b5fe8eb6bf21ce3895e1751d9665086af2d64b42f19701015ff4f"
 
 [[package]]
 name = "libloading"
@@ -4088,9 +4089,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba42135c6a5917b9db9cd7b293e5409e1c6b041e6f9825e92e55a894c63b6f8"
+checksum = "52da4364ffb0e4fe33a9841a98a3f3014fb964045ce4f7a45a398243c8d6b0c9"
 dependencies = [
  "libc",
  "log",
@@ -4670,13 +4671,12 @@ checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "nom"
-version = "7.1.0"
+version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b1d11e1ef389c76fe5b81bcaf2ea32cf88b62bc494e19f493d0b30e7a930109"
+checksum = "a8903e5a29a317527874d0402f867152a3d21c908bb0b933e416c65e301d4c36"
 dependencies = [
  "memchr",
  "minimal-lexical",
- "version_check",
 ]
 
 [[package]]
@@ -4731,6 +4731,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26873667bbbb7c5182d4a37c1add32cdf09f841af72da53318fdb81543c15085"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "num-format"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bafe4179722c2894288ee77a9f044f02811c86af699344c498b0840c698a2465"
+dependencies = [
+ "arrayvec 0.4.12",
+ "itoa 0.4.8",
 ]
 
 [[package]]
@@ -5011,7 +5021,7 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5246,7 +5256,7 @@ dependencies = [
 [[package]]
 name = "pallet-dynamic-fee"
 version = "4.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "async-trait",
  "frame-support",
@@ -5282,7 +5292,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -5310,7 +5320,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "evm",
  "evm-gasometer",
@@ -5338,7 +5348,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5348,7 +5358,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5359,7 +5369,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-curve25519"
 version = "1.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "curve25519-dalek 4.0.0-pre.1",
  "fp-evm",
@@ -5372,7 +5382,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5385,7 +5395,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-ed25519"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "ed25519-dalek",
  "fp-evm",
@@ -5396,7 +5406,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-evm",
  "num",
@@ -5407,7 +5417,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5418,7 +5428,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/baidang201/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
+source = "git+https://github.com/deeper-chain/frontier.git?branch=feature/polkadot0.9.17_dev#232709bb95301dfb238e1a7bdbf426fa56fded12"
 dependencies = [
  "fp-evm",
  "ripemd160",
@@ -6333,7 +6343,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "048aeb476be11a4b6ca432ca569e375810de9294ae78f4774e78ea98a9246ede"
 dependencies = [
- "cpufeatures 0.2.1",
+ "cpufeatures 0.2.2",
  "opaque-debug 0.3.0",
  "universal-hash",
 ]
@@ -6345,7 +6355,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8419d2b623c7c0896ff2d5d96e2cb4ede590fed28fcc34934f4c33c036e620a1"
 dependencies = [
  "cfg-if 1.0.0",
- "cpufeatures 0.2.1",
+ "cpufeatures 0.2.2",
  "opaque-debug 0.3.0",
  "universal-hash",
 ]
@@ -6562,9 +6572,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.15"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "864d3e96a899863136fc6e99f3d7cae289dafe43bf2c5ac19b70df7210c0a145"
+checksum = "b4af2ec4714533fcdf07e886f17025ace8b997b9ce51204ee69b6da831c3da57"
 dependencies = [
  "proc-macro2",
 ]
@@ -6717,12 +6727,13 @@ dependencies = [
 
 [[package]]
 name = "redox_users"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "528532f3d801c87aec9def2add9ca802fe569e44a544afe633765267840abe64"
+checksum = "7776223e2696f1aa4c6b0170e83212f47296a00424305117d013dfe86fb0fe55"
 dependencies = [
  "getrandom 0.2.5",
  "redox_syscall",
+ "thiserror",
 ]
 
 [[package]]
@@ -8247,7 +8258,7 @@ checksum = "99cd6713db3cf16b6c84e06321e049a9b9f699826e16096d23bbcc44d15d51a6"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
- "cpufeatures 0.2.1",
+ "cpufeatures 0.2.2",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
@@ -8272,7 +8283,7 @@ checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
 dependencies = [
  "block-buffer 0.9.0",
  "cfg-if 1.0.0",
- "cpufeatures 0.2.1",
+ "cpufeatures 0.2.2",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
@@ -8284,7 +8295,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55deaec60f81eefe3cce0dc50bda92d6d8e88f2a27df7c5033b42afeb1ed2676"
 dependencies = [
  "cfg-if 1.0.0",
- "cpufeatures 0.2.1",
+ "cpufeatures 0.2.2",
  "digest 0.10.3",
 ]
 
@@ -9155,11 +9166,12 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "ss58-registry"
-version = "1.15.0"
+version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f9799e6d412271cb2414597581128b03f3285f260ea49f5363d07df6a332b3e"
+checksum = "7b84a70894df7a73666e0694f44b41a9571625e9546fb58a0818a565d2c7e084"
 dependencies = [
  "Inflector",
+ "num-format",
  "proc-macro2",
  "quote",
  "serde",
@@ -9450,9 +9462,9 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"
-version = "1.0.86"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a65b3f4ffa0092e9887669db0eae07941f023991ab58ea44da8fe8e2d511c6b"
+checksum = "ea297be220d52398dcc07ce15a209fce436d361735ac1db700cab3b6cdfb9f54"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -9638,7 +9650,7 @@ dependencies = [
  "bytes 1.1.0",
  "libc",
  "memchr",
- "mio 0.8.1",
+ "mio 0.8.2",
  "num_cpus",
  "once_cell",
  "parking_lot 0.12.0",
@@ -9673,9 +9685,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.23.2"
+version = "0.23.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a27d5f2b839802bd8267fa19b0530f5a08b9c08cd417976be2a65d130fe1c11b"
+checksum = "4151fda0cf2798550ad0b34bcfc9b9dcc2a9d2471c895c68f3a8818e54f2389e"
 dependencies = [
  "rustls 0.20.4",
  "tokio",
@@ -10481,9 +10493,9 @@ dependencies = [
 
 [[package]]
 name = "which"
-version = "4.2.4"
+version = "4.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a5a7e487e921cf220206864a94a89b6c6905bfc19f1057fa26a4cb360e5c1d2"
+checksum = "5c4fb54e6113b6a8772ee41c3404fb0301ac79604489467e0a9ce1f3e97c24ae"
 dependencies = [
  "either",
  "lazy_static",
@@ -10634,9 +10646,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.5.3"
+version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50344758e2f40e3a1fcfc8f6f91aa57b5f8ebd8d27919fe6451f15aaaf9ee608"
+checksum = "7eb5728b8afd3f280a869ce1d4c554ffaed35f45c231fc41bfbd0381bef50317"
 dependencies = [
  "zeroize_derive",
 ]
