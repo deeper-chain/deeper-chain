@@ -25,8 +25,8 @@ fn main() {
 mod cli {
     include!("src/cli.rs");
 
-    use clap::{ArgEnum, IntoApp};
-	use clap_complete::{generate_to, Shell};
+    use clap::IntoApp;
+    use clap_complete::{generate_to, Shell};
     use std::{env, fs, path::Path};
     use substrate_build_script_utils::{generate_cargo_keys, rerun_if_git_head_changed};
 

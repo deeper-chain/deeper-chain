@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 use clap::Parser;
+use sc_cli::{SignCmd, VanityCmd, VerifyCmd};
 
 #[allow(missing_docs)]
 #[derive(Debug, Parser)]
@@ -58,10 +58,13 @@ pub struct Cli {
 pub enum Subcommand {
     /// Key management cli utilities
     #[clap(subcommand)]
-	Key(sc_cli::KeySubcommand),
+    Key(sc_cli::KeySubcommand),
 
     /// The custom inspect subcommmand for decoding blocks and extrinsics.
-    #[clap(name = "inspect", about = "Decode given block or extrinsic using current native runtime.")]
+    #[clap(
+        name = "inspect",
+        about = "Decode given block or extrinsic using current native runtime."
+    )]
     Inspect(node_inspect::cli::InspectCmd),
 
     /// The custom benchmark subcommmand benchmarking runtime pallets.
