@@ -59,12 +59,10 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use log::error;
-    use pallet_balances::MutableCurrency;
     use pallet_credit::CreditInterface;
     use pallet_deeper_node::NodeInterface;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
-    use sp_runtime::traits::{Saturating, Zero};
     use sp_runtime::Percent;
     use sp_std::prelude::Vec;
 
@@ -73,7 +71,7 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         // Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type Currency: Currency<Self::AccountId> + MutableCurrency<Self::AccountId>;
+        type Currency: Currency<Self::AccountId>;
         type SecsPerBlock: Get<u32>;
         // CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
@@ -529,20 +527,13 @@ pub mod pallet {
 
         /// Deduct the amount from the account free balance
         fn take_from_account(account: &T::AccountId, amount: BalanceOf<T>) -> bool {
-            let result = T::Currency::mutate_account_balance(account, |balance| {
-                let min_balance = T::Currency::minimum_balance();
-                // ensure after taking amount from account, remaining balance is grater than min_balance
-                if balance.free <= amount.saturating_add(min_balance) {
-                    return Zero::zero();
-                } else {
-                    balance.free -= amount;
-                }
-                return amount;
-            });
-            match result {
-                Ok(actual_amount) => actual_amount == amount,
-                _ => false,
-            }
+            T::Currency::withdraw(
+                account,
+                amount,
+                WithdrawReasons::FEE,
+                ExistenceRequirement::KeepAlive,
+            )
+            .map_or(false, |_| true)
         }
 
         /// Deposit the amount to the account free balance
@@ -551,10 +542,7 @@ pub mod pallet {
             account: &T::AccountId,
             amount: BalanceOf<T>,
         ) -> Result<(), DispatchError> {
-            T::Currency::mutate_account_balance(account, |balance| {
-                balance.free += amount;
-            })?;
-
+            T::Currency::deposit_creating(account, amount);
             let fee = T::MicropaymentBurn::get() * amount;
             let burned = T::Currency::withdraw(
                 account,
