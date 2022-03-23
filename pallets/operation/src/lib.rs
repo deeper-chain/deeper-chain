@@ -94,10 +94,10 @@ pub mod pallet {
                     b"Balances",
                     b"Operation",
                 );
-            } else {
                 StorageVersion::<T>::put(Releases::V1_0_0);
+                return T::DbWeight::get().reads_writes(1, 1);
             }
-            T::DbWeight::get().reads_writes(1, 1)
+            0
         }
     }
 
