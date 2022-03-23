@@ -102,7 +102,7 @@ impl pallet_balances::Config for Test {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type MaxReserves = ();
-	type ReserveIdentifier = [u8; 8];
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 thread_local! {
