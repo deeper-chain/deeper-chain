@@ -134,7 +134,6 @@ node-inspect = { version = "0.8.0", optional = true, path = "../inspect" }
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { optional = true, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", features = [ "wasmtime" ] }
 sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, features = [ "wasmtime" ] }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, features = ["memory-tracker"] }
 
 [dev-dependencies]
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
