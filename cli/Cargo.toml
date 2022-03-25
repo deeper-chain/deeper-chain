@@ -102,7 +102,7 @@ pallet-timestamp = { default-features = false, git = "https://github.com/parityt
 pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
-pallet-balances = { version = "3.0.0", default-features = false, path = "../pallets/balances"}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false}
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
 frame-support = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17"}
 pallet-im-online = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }

@@ -21,7 +21,7 @@ sp-io = {default-features = false, git = "https://github.com/paritytech/substrat
 sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 sp-std = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false}
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
