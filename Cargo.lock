@@ -4362,7 +4362,7 @@ dependencies = [
  "node-rpc",
  "node-runtime",
  "pallet-authority-discovery",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-base-fee",
  "pallet-contracts",
  "pallet-credit",
@@ -4538,7 +4538,7 @@ dependencies = [
  "pallet-authority-discovery",
  "pallet-authorship",
  "pallet-babe",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-base-fee",
  "pallet-bounties",
  "pallet-child-bounties",
@@ -4572,6 +4572,7 @@ dependencies = [
  "pallet-mmr",
  "pallet-multisig",
  "pallet-offences",
+ "pallet-operation",
  "pallet-preimage",
  "pallet-proxy",
  "pallet-randomness-collective-flip",
@@ -4625,7 +4626,7 @@ dependencies = [
  "node-primitives",
  "node-runtime",
  "pallet-asset-tx-payment",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-contracts",
  "pallet-deeper-node",
  "pallet-grandpa",
@@ -4987,24 +4988,6 @@ dependencies = [
 
 [[package]]
 name = "pallet-balances"
-version = "3.0.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "log",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-balances"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.17#22d40c761a985482f93bbbea5ba4199bdba74f8e"
 dependencies = [
@@ -5181,7 +5164,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-deeper-node",
  "pallet-timestamp",
  "pallet-treasury",
@@ -5205,7 +5188,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5227,7 +5210,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5554,7 +5537,7 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",
@@ -5642,12 +5625,31 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
- "pallet-balances 4.0.0-dev",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "serde",
  "sp-runtime",
  "sp-staking",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-operation"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
  "sp-std",
 ]
 
@@ -5772,7 +5774,7 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-authorship",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-micropayment",
@@ -5836,7 +5838,7 @@ dependencies = [
  "frame-system",
  "log",
  "node-primitives",
- "pallet-balances 3.0.0",
+ "pallet-balances",
  "pallet-credit",
  "pallet-deeper-node",
  "pallet-timestamp",
@@ -5905,7 +5907,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
- "pallet-balances 4.0.0-dev",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "serde",

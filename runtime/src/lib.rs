@@ -466,7 +466,16 @@ impl pallet_balances::Config for Runtime {
     type Event = Event;
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = frame_system::Pallet<Runtime>;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_operation::Config for Runtime {
+    type MaxMember = MaxLocks;
+    type Event = Event;
+    type Currency = Balances;
+    type WeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1351,6 +1360,8 @@ construct_runtime!(
         EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>} = 81,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event} = 82,
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent} = 83,
+
+        Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
     }
 );
 
@@ -1939,6 +1950,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_evm, PalletEvmBench::<Runtime>);
             list_benchmark!(list, extra, pallet_preimage, Preimage);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
+            list_benchmark!(list, extra, pallet_operation, Operation);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -2005,6 +2017,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_evm, PalletEvmBench::<Runtime>);
             add_benchmark!(params, batches, pallet_preimage, Preimage);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
+            add_benchmark!(params, batches, pallet_operation, Operation);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

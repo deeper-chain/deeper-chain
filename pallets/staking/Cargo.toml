@@ -31,7 +31,7 @@ pallet-credit = { default-features = false, path = "../credit", version = "3.0.0
 pallet-deeper-node = {version = '3.0.0', default-features =false, path = "../deeper-node"}
 node-primitives = { version = '2.0.0', default-features = false, path = "../../primitives" }
 log = { default-features = false, version = "0.4.11" }
-pallet-balances = { version = "3.0.0", default-features = false, path = "../balances"}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false}
 pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
 
 # Optional imports for benchmarking
