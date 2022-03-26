@@ -130,14 +130,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 fn set_lock_members_works() {
     new_test_ext().execute_with(|| {
         assert_ok!(Balances::set_balance(Origin::root(), 1, 1_000, 0));
-        assert_ok!(Operation::set_lock_members(Origin::root(), vec!(2)));
-        assert_ok!(Operation::force_lock(Some(2).into(), 1, 500));
-        assert_eq!(Balances::usable_balance(&1), 500);
-        assert_ok!(Operation::force_remove_lock(
-            Origin::root(),
-            *b"forcelck",
-            1
-        ));
-        assert_eq!(Balances::usable_balance(&1), 1000);
+        assert_ok!(Operation::set_reserve_members(Origin::root(), vec!(2)));
+        assert_ok!(Operation::force_reserve_by_member(Some(2).into(), 1, 500));
+        assert_eq!(Balances::free_balance(&1), 500);
+        assert_ok!(Balances::force_unreserve(Origin::root(), 1, 500));
+        assert_eq!(Balances::free_balance(&1), 1000);
     });
 }
