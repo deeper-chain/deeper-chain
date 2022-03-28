@@ -15,13 +15,11 @@
 
 use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
-use frame_support::{
-    assert_ok,
-    dispatch::{DispatchError, DispatchErrorWithPostInfo},
-};
+use frame_support::{assert_ok, dispatch::DispatchErrorWithPostInfo};
 use hex_literal::hex;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
+use sp_runtime::{DispatchError, ModuleError};
 
 #[test]
 fn open_channel() {
@@ -75,11 +73,11 @@ fn open_channel() {
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
-                DispatchError::Module {
+                DispatchError::Module(ModuleError {
                     index: 4,
                     error: 0,
                     message: Some("NotEnoughBalance")
-                }
+                })
             );
         }
 
@@ -89,11 +87,11 @@ fn open_channel() {
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
-                DispatchError::Module {
+                DispatchError::Module(ModuleError {
                     index: 4,
                     error: 0,
                     message: Some("NotEnoughBalance")
-                }
+                })
             );
         }
     });
@@ -225,11 +223,11 @@ fn add_balance() {
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
-                DispatchError::Module {
+                DispatchError::Module(ModuleError {
                     index: 4,
                     error: 1,
                     message: Some("ChannelNotExist")
-                }
+                })
             );
         }
 
@@ -245,11 +243,11 @@ fn add_balance() {
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
-                DispatchError::Module {
+                DispatchError::Module(ModuleError {
                     index: 4,
                     error: 0,
                     message: Some("NotEnoughBalance")
-                }
+                })
             );
         }
     });
