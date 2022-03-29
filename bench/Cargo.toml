@@ -17,9 +17,9 @@ node-runtime = { version = "2.0.0", path = "../runtime" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
-serde = "1.0.136"
-serde_json = "1.0.74"
-derive_more = "0.99.16"
+serde = "1.0.126"
+serde_json = "1.0"
+derive_more = "0.99"
 kvdb = "0.10.0"
 kvdb-rocksdb = "0.14.0"
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
