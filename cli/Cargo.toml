@@ -42,7 +42,6 @@ futures = { version = "0.3.16", features = ["compat"] }
 hex-literal = "0.3.1"
 log = "0.4.8"
 rand = "0.7.2"
-structopt = { version = "0.3.8", optional = true }
 parking_lot = "0.11.1"
 async-trait = "0.1"
 
@@ -151,7 +150,6 @@ nix = "0.19"
 serde_json = "1.0"
 regex = "1"
 platforms = "1.1"
-criterion = { version = "0.3.5", features = [ "async_tokio" ] }
 tokio = { version = "1.15", features = ["macros", "time"] }
 
 [build-dependencies]
@@ -178,7 +176,6 @@ cli = [
 	"sc-service/db",
 	"clap",
 	"clap_complete",
-	"structopt",
 	"substrate-build-script-utils",
 ]
 runtime-benchmarks = [
