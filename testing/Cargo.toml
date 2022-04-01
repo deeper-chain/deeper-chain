@@ -18,7 +18,7 @@ sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sc-client-db = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", features = ["kvdb-rocksdb", "parity-db"] }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sc-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
-codec = { package = "parity-scale-codec", version = "2.3.1" }
+codec = { package = "parity-scale-codec", version = "3.0.0" }
 pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }

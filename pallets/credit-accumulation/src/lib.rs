@@ -163,7 +163,7 @@ pub mod pallet {
             data.extend_from_slice(&sender.encode());
             let msg = sp_io::hashing::blake2_256(&data);
 
-            let verified = sr25519_verify(&sig, &msg, &pub_key);
+            let verified = sr25519_verify(&sig.unwrap(), &msg, &pub_key);
             ensure!(verified, Error::<T>::InvalidSignature);
 
             Ok(().into())

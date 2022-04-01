@@ -503,7 +503,7 @@ pub mod pallet {
 
             let msg = Self::construct_byte_array_and_hash(server, nonce, session_id, amount);
 
-            let verified = sr25519_verify(&sig, &msg, &pub_key);
+            let verified = sr25519_verify(&sig.unwrap(), &msg, &pub_key);
             ensure!(verified, Error::<T>::InvalidSignature);
 
             Ok(().into())
