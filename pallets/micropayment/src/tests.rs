@@ -322,6 +322,6 @@ fn signature() {
 
     let pk = Public::from_raw(pk);
     let sig = Signature::from_slice(&sig);
-    let verified = sr25519_verify(&sig, &msg, &pk);
+    let verified = sr25519_verify(&sig.unwrap(), &msg, &pk);
     assert!(verified);
 }
