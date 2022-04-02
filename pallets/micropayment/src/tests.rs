@@ -17,6 +17,7 @@ use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{assert_ok, dispatch::DispatchErrorWithPostInfo};
 use hex_literal::hex;
+use sp_core::crypto::UncheckedFrom;
 use sp_core::sr25519::{Public, Signature};
 use sp_io::crypto::sr25519_verify;
 use sp_runtime::{DispatchError, ModuleError};
@@ -322,6 +323,10 @@ fn signature() {
 
     let pk = Public::from_raw(pk);
     let sig = Signature::from_slice(&sig);
-    let verified = sr25519_verify(&sig.unwrap(), &msg, &pk);
+    let verified = sr25519_verify(
+        &sig.unwrap_or(UncheckedFrom::unchecked_from([0; 64])),
+        &msg,
+        &pk,
+    );
     assert!(verified);
 }

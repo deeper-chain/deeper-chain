@@ -48,6 +48,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use pallet_credit::CreditInterface;
     use pallet_micropayment::AccountCreator;
+    use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::TrailingZeroInput;
@@ -163,7 +164,11 @@ pub mod pallet {
             data.extend_from_slice(&sender.encode());
             let msg = sp_io::hashing::blake2_256(&data);
 
-            let verified = sr25519_verify(&sig.unwrap(), &msg, &pub_key);
+            let verified = sr25519_verify(
+                &sig.unwrap_or(UncheckedFrom::unchecked_from([0; 64])),
+                &msg,
+                &pub_key,
+            );
             ensure!(verified, Error::<T>::InvalidSignature);
 
             Ok(().into())
