@@ -32,7 +32,7 @@ pub mod pallet {
     use super::*;
     use codec::{Decode, Encode, MaxEncodedLen};
     use frame_support::traits::{
-        Currency, Get, LockIdentifier, LockableCurrency, ReservableCurrency, WithdrawReasons,
+        Currency, Get, LockIdentifier, LockableCurrency, ReservableCurrency,
     };
     use frame_support::WeakBoundedVec;
     use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*};
@@ -101,9 +101,6 @@ pub mod pallet {
         }
     }
 
-    // Dispatchable functions allows users to interact with the pallet and invoke state changes.
-    // These functions materialize as "extrinsics", which are often compared to transactions.
-    // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::force_remove_lock())]
@@ -119,21 +116,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::force_unreserve())]
-        pub fn force_unreserve(
-            origin: OriginFor<T>,
-            who: <T::Lookup as StaticLookup>::Source,
-            #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            let who = T::Lookup::lookup(who)?;
-            <T::Currency as ReservableCurrency<_>>::unreserve(&who, value);
-            Self::deposit_event(Event::Unreserve(who, value));
-            Ok(().into())
-        }
-
-        #[pallet::weight(T::WeightInfo::set_lock_members())]
-        pub fn set_lock_members(
+        #[pallet::weight(T::WeightInfo::set_reserve_members())]
+        pub fn set_reserve_members(
             origin: OriginFor<T>,
             whitelist: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
@@ -150,25 +134,19 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::force_lock())]
-        pub fn force_lock(
+        #[pallet::weight(T::WeightInfo::force_reserve_by_member())]
+        pub fn force_reserve_by_member(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
-            const FORCE_LOCK_ID: [u8; 8] = *b"forcelck";
             let sender = ensure_signed(origin)?;
             ensure!(
                 <LockMemberWhiteList<T>>::get().contains(&sender),
                 Error::<T>::NotLockMember
             );
             let who = T::Lookup::lookup(who)?;
-            <T::Currency as LockableCurrency<_>>::set_lock(
-                FORCE_LOCK_ID,
-                &who,
-                value,
-                WithdrawReasons::all(),
-            );
+            <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
             Self::deposit_event(Event::Locked(sender, value));
             Ok(().into())
         }
