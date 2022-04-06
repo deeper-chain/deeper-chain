@@ -835,15 +835,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap_complete"
-version = "3.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df6f3613c0a3cddfd78b41b10203eb322cb29b600cbdf808a7d3db95691b8e25"
-dependencies = [
- "clap",
-]
-
-[[package]]
 name = "clap_derive"
 version = "3.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4263,7 +4254,6 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "clap",
- "clap_complete",
  "fc-consensus",
  "fc-db",
  "fc-mapping-sync",
@@ -4349,7 +4339,6 @@ dependencies = [
  "sp-transaction-pool",
  "sp-transaction-storage-proof",
  "substrate-build-script-utils",
- "substrate-frame-cli",
  "tempfile",
  "tokio",
 ]
@@ -9174,19 +9163,6 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
 dependencies = [
  "platforms 2.0.0",
-]
-
-[[package]]
-name = "substrate-frame-cli"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.18#fc3fd073d3a0acf9933c3994b660ebd7b5833f65"
-dependencies = [
- "clap",
- "frame-support",
- "frame-system",
- "sc-cli",
- "sp-core",
- "sp-runtime",
 ]
 
 [[package]]
