@@ -35,20 +35,29 @@ pub mod pallet {
         Currency, Get, LockIdentifier, LockableCurrency, ReservableCurrency,
     };
     use frame_support::WeakBoundedVec;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, transactional,
+    };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
+    use pallet_credit::CreditInterface;
     use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 
     type BalanceOf<T> = <<T as pallet::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+
+    pub type ClassIdOf<T> = <T as pallet_uniques::Config>::ClassId;
+    pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::InstanceId;
+
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_uniques::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type MaxMember: Get<u32>;
+        // CreditInterface of credit pallet
+        type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
         type WeightInfo: WeightInfo;
     }
 
@@ -70,6 +79,7 @@ pub mod pallet {
     pub enum Error<T> {
         /// not in locker members
         NotLockMember,
+        MiningMachineClassCreditNoConfig,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -84,6 +94,11 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn tips)]
+    pub type MiningMachineClassCredit<T: Config> =
+        StorageMap<_, Twox64Concat, ClassIdOf<T>, u64, ValueQuery>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -103,7 +118,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::force_remove_lock())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::force_remove_lock())]
         pub fn force_remove_lock(
             origin: OriginFor<T>,
             id: LockIdentifier,
@@ -111,12 +126,12 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             let who = T::Lookup::lookup(who)?;
-            <T::Currency as LockableCurrency<_>>::remove_lock(id, &who);
+            <<T as pallet::Config>::Currency as LockableCurrency<_>>::remove_lock(id, &who);
             Self::deposit_event(Event::UnLocked(who));
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::set_reserve_members())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_reserve_members())]
         pub fn set_reserve_members(
             origin: OriginFor<T>,
             whitelist: Vec<T::AccountId>,
@@ -134,7 +149,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::force_reserve_by_member())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::force_reserve_by_member())]
         pub fn force_reserve_by_member(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
@@ -146,8 +161,31 @@ pub mod pallet {
                 Error::<T>::NotLockMember
             );
             let who = T::Lookup::lookup(who)?;
-            <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
+            <<T as pallet::Config>::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
             Self::deposit_event(Event::Locked(sender, value));
+            Ok(().into())
+        }
+
+        //#[pallet::weight(<T as pallet::Config>::WeightInfo::brun_nft())]
+        #[pallet::weight(0)]
+        #[transactional]
+        pub fn brun_nft(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            class_id: ClassIdOf<T>,
+            instance_id: InstanceIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+
+            ensure!(
+                MiningMachineClassCredit::<T>::contains_key(&class_id),
+                Error::<T>::MiningMachineClassCreditNoConfig
+            );
+
+            let credit = MiningMachineClassCredit::<T>::get(&class_id);
+            pallet_uniques::Pallet::<T>::do_burn(class_id, instance_id, |_, _| Ok(()))?;
+            T::CreditInterface::update_credit_by_tip(sender, credit);
+
             Ok(().into())
         }
     }

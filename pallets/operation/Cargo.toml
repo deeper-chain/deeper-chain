@@ -16,6 +16,8 @@ frame-support = {default-features = false, git = "https://github.com/paritytech/
 frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sp-io = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false}
+pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
+pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false}
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18" }
@@ -40,6 +42,8 @@ std = [
     'sp-io/std',
     'sp-std/std',
     'pallet-balances/std',
+    'pallet-credit/std',
+    'pallet-uniques/std',
     'node-primitives/std',
 ]
 runtime-benchmarks = [

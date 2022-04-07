@@ -87,6 +87,7 @@ pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
+pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.18", default-features = false }
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../pallets/micropayment" }
 pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
