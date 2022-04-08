@@ -72,6 +72,8 @@ pub mod pallet {
         Locked(T::AccountId, BalanceOf<T>),
         UnLocked(T::AccountId),
         Unreserve(T::AccountId, BalanceOf<T>),
+        UpdateNftCredit(ClassIdOf<T>, u64),
+        BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
     }
 
     // Errors inform users that something went wrong.
@@ -166,26 +168,42 @@ pub mod pallet {
             Ok(().into())
         }
 
+        //#[pallet::weight(<T as pallet::Config>::WeightInfo::force_reserve_by_member())]
+        #[pallet::weight(0)]
+        pub fn update_nft_class_credit(
+            origin: OriginFor<T>,
+            #[pallet::compact] class_id: ClassIdOf<T>,
+            credit: u64,
+        ) -> DispatchResultWithPostInfo {
+            let _sender = ensure_root(origin)?;
+
+            MiningMachineClassCredit::<T>::insert(class_id, credit);
+
+            Self::deposit_event(Event::UpdateNftCredit(class_id, credit));
+            Ok(().into())
+        }
+
         //#[pallet::weight(<T as pallet::Config>::WeightInfo::brun_nft())]
         #[pallet::weight(0)]
         #[transactional]
         pub fn brun_nft(
             origin: OriginFor<T>,
-            who: <T::Lookup as StaticLookup>::Source,
-            class_id: ClassIdOf<T>,
-            instance_id: InstanceIdOf<T>,
+            #[pallet::compact] class_id: ClassIdOf<T>,
+            #[pallet::compact] instance_id: InstanceIdOf<T>,
         ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
+            let sender = ensure_signed(origin.clone())?;
 
             ensure!(
                 MiningMachineClassCredit::<T>::contains_key(&class_id),
                 Error::<T>::MiningMachineClassCreditNoConfig
             );
 
-            let credit = MiningMachineClassCredit::<T>::get(&class_id);
-            pallet_uniques::Pallet::<T>::do_burn(class_id, instance_id, |_, _| Ok(()))?;
-            T::CreditInterface::update_credit_by_tip(sender, credit);
+            pallet_uniques::Pallet::<T>::burn(origin, class_id, instance_id, None)?;
 
+            let credit = MiningMachineClassCredit::<T>::get(&class_id);
+            T::CreditInterface::update_credit_by_burn_nft(sender.clone(), credit)?;
+
+            Self::deposit_event(Event::BurnNft(sender, class_id, instance_id, credit));
             Ok(().into())
         }
     }

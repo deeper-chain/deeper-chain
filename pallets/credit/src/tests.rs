@@ -358,6 +358,18 @@ fn update_credit_by_tip() {
 }
 
 #[test]
+fn update_credit_by_burn_nft() {
+    new_test_ext().execute_with(|| {
+        Credit::update_credit_by_burn_nft(1, 8);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
+
+        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        Credit::update_credit_by_burn_nft(1, 8);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 8); // 0 + 8
+    });
+}
+
+#[test]
 fn get_reward_work() {
     new_test_ext().execute_with(|| {
         assert_eq!(Credit::get_reward(&3, 0, 0).0, None);

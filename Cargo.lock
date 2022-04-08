@@ -5550,6 +5550,8 @@ dependencies = [
  "node-primitives",
  "pallet-balances",
  "pallet-credit",
+ "pallet-deeper-node",
+ "pallet-timestamp",
  "pallet-uniques",
  "parity-scale-codec",
  "scale-info",
