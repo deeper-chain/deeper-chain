@@ -181,7 +181,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::set_release_owner_address())]
         pub fn set_release_owner_address(
             origin: OriginFor<T>,
             owner: T::AccountId,
@@ -192,7 +192,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::set_release_limit_parameter())]
         pub fn set_release_limit_parameter(
             origin: OriginFor<T>,
             #[pallet::compact] single_max_limit: BalanceOf<T>,
@@ -206,7 +206,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(T::WeightInfo::staking_release())]
         pub fn staking_release(
             origin: OriginFor<T>,
             who: T::AccountId,
