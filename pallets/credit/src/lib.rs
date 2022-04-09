@@ -275,6 +275,7 @@ pub mod pallet {
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
         CreditHistoryUpdateSuccess(T::AccountId, EraIndex),
         CreditHistoryUpdateFailed(T::AccountId, EraIndex),
+        BurnForAddCredit(T::AccountId, u64),
     }
 
     #[pallet::error]
@@ -419,6 +420,7 @@ pub mod pallet {
                 T::BurnedTo::on_unbalanced(burned);
                 Self::_update_credit(&sender, target_credit);
                 Self::update_credit_history(&sender, Self::get_current_era());
+                Self::deposit_event(Event::<T>::BurnForAddCredit(sender.clone(), credit_score));
             } else {
                 Err(Error::<T>::BalanceNotEnough)?
             }
