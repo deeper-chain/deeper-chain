@@ -1512,7 +1512,8 @@ pub mod pallet {
             whitelist: Vec<T::AccountId>,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            <ValidatorWhiteList<T>>::put(whitelist);
+            <ValidatorWhiteList<T>>::put(whitelist.clone());
+            Self::deposit_event(Event::<T>::SetValidatorWhitelist(whitelist));
             Ok(())
         }
 
@@ -1565,6 +1566,7 @@ pub mod pallet {
             ensure_root(origin)?;
             let remainder = Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get());
             RemainderMiningReward::<T>::put(remainder + additional_reward);
+            Self::deposit_event(Event::<T>::IncreaseMiningReward(additional_reward));
             Ok(())
         }
 
@@ -1979,6 +1981,10 @@ pub mod pallet {
         CompensationDelegatorReward(T::AccountId, BalanceOf<T>),
         /// The validator  has been rewarded by this amount. \[account_id, amount\]
         ValidatorReward(T::AccountId, BalanceOf<T>),
+        /// Increase mining pool DPR
+        IncreaseMiningReward(u128),
+        /// Set validator whitelist list
+        SetValidatorWhitelist(Vec<T::AccountId>),
     }
 
     /// Error for the staking module.
