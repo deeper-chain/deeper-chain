@@ -22,7 +22,7 @@
 use super::*;
 
 use frame_benchmarking::{account, benchmarks, Zero};
-use frame_support::traits::{Currency, LockableCurrency, ReservableCurrency, WithdrawReasons};
+use frame_support::traits::{Currency, LockableCurrency, WithdrawReasons};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Saturating;
 use sp_runtime::traits::StaticLookup;
@@ -30,6 +30,7 @@ use sp_runtime::traits::StaticLookup;
 use crate::Pallet as Op;
 
 const SEED: u32 = 0;
+const USER_SEED: u32 = 999666;
 // existential deposit multiplier
 const ED_MULTIPLIER: u32 = 10;
 
@@ -69,13 +70,43 @@ benchmarks! {
         let existential_deposit = T::Currency::minimum_balance();
         let user_a: T::AccountId = account("a", 0, SEED);
         let user_b: T::AccountId = account("b", 0, SEED);
-        // let a_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user_a.clone());
-        // let b_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user_b.clone());
         let _ = T::Currency::make_free_balance_be(&user_a, existential_deposit);
         let _ = T::Currency::make_free_balance_be(&user_b, existential_deposit);
     }: set_reserve_members(RawOrigin::Root, vec!(user_a,user_b))
     verify {
         assert_eq!(Op::<T>::lock_member_whitelist().len(), 2);
+    }
+
+    set_release_owner_address {
+        let user: T::AccountId = account("user", 0, SEED);
+    }: set_release_owner_address(RawOrigin::Root, user.clone())
+    verify {
+        assert_eq!(ReleasePaymentAddress::<T>::get(),Some(user.clone()));
+    }
+
+    set_release_limit_parameter {
+        let existential_deposit = T::Currency::minimum_balance();
+        let single_limit = existential_deposit * 10u32.into();
+        let daily_limit = existential_deposit * 1000u32.into();
+    }: set_release_limit_parameter(RawOrigin::Root, single_limit, daily_limit)
+    verify {
+        assert_eq!(SingleMaxLimit::<T>::get(),single_limit);
+        assert_eq!(DailyMaxLimit::<T>::get(),daily_limit);
+    }
+
+    staking_release {
+        let existential_deposit = T::Currency::minimum_balance();
+        let admin: T::AccountId = account("a", 0, SEED);
+        <ReleasePaymentAddress<T>>::put(admin.clone());
+        let single_limit = existential_deposit * 10u32.into();
+        let daily_limit = existential_deposit * 1000u32.into();
+        <SingleMaxLimit<T>>::put(single_limit);
+        <DailyMaxLimit<T>>::put(daily_limit);
+        let who: T::AccountId = account("b", 1, USER_SEED);
+        let _ = T::Currency::make_free_balance_be(&who, existential_deposit);
+    }: staking_release(RawOrigin::Signed(admin), who.clone(), existential_deposit * 5u32.into())
+    verify {
+        assert_eq!(T::Currency::free_balance(&who), existential_deposit * 6u32.into());
     }
 
     impl_benchmark_test_suite!(Op, crate::tests::new_test_ext(), crate::tests::Test);

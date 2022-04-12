@@ -474,6 +474,7 @@ impl pallet_balances::Config for Runtime {
 impl pallet_operation::Config for Runtime {
     type MaxMember = MaxLocks;
     type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type WeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
 }
