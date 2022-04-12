@@ -98,7 +98,7 @@ pub mod pallet {
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
 
     #[pallet::storage]
-    #[pallet::getter(fn tips)]
+    #[pallet::getter(fn mining_machine_class_credit)]
     pub type MiningMachineClassCredit<T: Config> =
         StorageMap<_, Twox64Concat, ClassIdOf<T>, u64, ValueQuery>;
 
