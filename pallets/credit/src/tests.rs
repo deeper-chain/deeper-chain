@@ -358,6 +358,14 @@ fn update_credit_by_tip() {
 }
 
 #[test]
+fn update_credit_by_burn_nft() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Credit::update_credit_by_burn_nft(1, 8));
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 8); // 0 + 8
+    });
+}
+
+#[test]
 fn get_reward_work() {
     new_test_ext().execute_with(|| {
         assert_eq!(Credit::get_reward(&3, 0, 0).0, None);
@@ -877,6 +885,81 @@ fn force_modify_credit_history() {
                     reward_eras: 270,
                 },
             )]
+        );
+    });
+}
+
+#[test]
+fn update_nft_class_credit() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            Credit::update_nft_class_credit(Origin::signed(1), 0, 5),
+            BadOrigin
+        );
+
+        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 0, 5));
+        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
+
+        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 1, 10));
+        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
+    });
+}
+
+#[test]
+fn burn_nft() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Uniques::force_create(Origin::root(), 0, 1, true));
+        assert_ok!(Uniques::force_create(Origin::root(), 1, 1, true));
+        assert_ok!(Uniques::force_create(Origin::root(), 2, 1, true));
+
+        assert_ok!(Uniques::mint(Origin::signed(1), 0, 42, 1));
+        assert_ok!(Uniques::mint(Origin::signed(1), 1, 42, 1));
+        assert_ok!(Uniques::mint(Origin::signed(1), 2, 42, 1));
+
+        assert_noop!(
+            Credit::brun_nft(Origin::signed(1), 0, 42),
+            Error::<Test>::MiningMachineClassCreditNoConfig
+        );
+        assert_noop!(
+            Credit::brun_nft(Origin::signed(1), 1, 42),
+            Error::<Test>::MiningMachineClassCreditNoConfig
+        );
+        assert_noop!(
+            Credit::brun_nft(Origin::signed(1), 2, 42),
+            Error::<Test>::MiningMachineClassCreditNoConfig
+        );
+
+        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 0, 5));
+        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
+        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 1, 10));
+        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
+
+        let credit_data = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+        // update_credit_data works
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            1,
+            credit_data.clone()
+        ));
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 100);
+
+        assert_ok!(Credit::brun_nft(Origin::signed(1), 0, 42));
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 105);
+
+        assert_ok!(Credit::brun_nft(Origin::signed(1), 1, 42));
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 115);
+
+        assert_noop!(
+            Credit::brun_nft(Origin::signed(1), 2, 42),
+            Error::<Test>::MiningMachineClassCreditNoConfig
         );
     });
 }

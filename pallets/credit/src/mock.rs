@@ -15,7 +15,7 @@
 
 use super::*;
 use crate as pallet_credit;
-use frame_support::traits::ConstU32;
+use frame_support::traits::{ConstU128, ConstU32};
 use frame_support::{
     pallet_prelude::GenesisBuild,
     parameter_types,
@@ -50,6 +50,7 @@ frame_support::construct_runtime!(
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
+        Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -170,6 +171,35 @@ impl pallet_timestamp::Config for Test {
     type Moment = u64;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
+const MILLICENTS: Balance = 10_000_000_000_000;
+const CENTS: Balance = 1_000 * MILLICENTS;
+const DOLLARS: Balance = 100 * CENTS;
+
+parameter_types! {
+    pub const ClassDeposit: Balance = 100 * DOLLARS;
+    pub const InstanceDeposit: Balance = 1 * DOLLARS;
+    pub const KeyLimit: u32 = 32;
+    pub const ValueLimit: u32 = 256;
+    pub const StringLimit: u32 = 50;
+}
+
+impl pallet_uniques::Config for Test {
+    type Event = Event;
+    type ClassId = u32;
+    type InstanceId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<u64>;
+    type ClassDeposit = ConstU128<2>;
+    type InstanceDeposit = ConstU128<1>;
+    type MetadataDepositBase = ConstU128<1>;
+    type AttributeDepositBase = ConstU128<1>;
+    type DepositPerByte = ConstU128<1>;
+    type StringLimit = ConstU32<50>;
+    type KeyLimit = ConstU32<50>;
+    type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
 }
 

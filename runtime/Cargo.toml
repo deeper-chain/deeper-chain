@@ -93,6 +93,7 @@ pallet-credit = { version = "3.0.0", default-features = false, path = "../pallet
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
 pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
 pallet-operation = { version = "3.0.0", default-features = false, path = "../pallets/operation" }
+pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
 
 # frontier frame dependencies
 libsecp256k1 = { version = "0.6", default-features = false, optional = true }
@@ -186,6 +187,7 @@ std = [
 	"pallet-deeper-node/std",
 	"pallet-credit-accumulation/std",
 	"pallet-operation/std",
+	"pallet-uniques/std",
 	"fp-rpc/std",
 	"fp-self-contained/std",
 	"pallet-ethereum/std",
