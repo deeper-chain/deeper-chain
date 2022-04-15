@@ -52,26 +52,28 @@ pub trait WeightInfo {
     fn force_modify_credit_history() -> Weight;
     fn update_nft_class_credit() -> Weight;
     fn burn_nft() -> Weight;
+    fn set_switch_campaign() -> Weight;
+    fn set_switch_accounts() -> Weight;
 }
 
 /// Weights for pallet_credit using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn update_credit_setting() -> Weight {
-        (12_472_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
+        (14_608_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn add_or_update_credit_data() -> Weight {
-        (17_707_000 as Weight)
+        (21_021_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn burn_for_add_credit() -> Weight {
-        (45_811_000 as Weight)
+        (64_465_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn force_modify_credit_history() -> Weight {
-        (17_599_000 as Weight)
+        (18_686_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -82,26 +84,31 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
         (106_066_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
+    fn set_switch_campaign() -> Weight {
+        (4_368_000 as Weight).saturating_add(T::DbWeight::get().writes(3 as Weight))
+    }
+    fn set_switch_accounts() -> Weight {
+        (3_657_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn update_credit_setting() -> Weight {
-        (12_472_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
+        (14_608_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn add_or_update_credit_data() -> Weight {
-        (17_707_000 as Weight)
+        (21_021_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn burn_for_add_credit() -> Weight {
-        (45_811_000 as Weight)
+        (64_465_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn force_modify_credit_history() -> Weight {
-        (17_599_000 as Weight)
+        (18_686_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
@@ -112,5 +119,10 @@ impl WeightInfo for () {
         (106_066_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
+    fn set_switch_campaign() -> Weight {
+        (4_368_000 as Weight).saturating_add(RocksDbWeight::get().writes(3 as Weight))
+    }
+    fn set_switch_accounts() -> Weight {
+        (3_657_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
 }
