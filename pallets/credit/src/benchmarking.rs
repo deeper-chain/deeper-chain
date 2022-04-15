@@ -108,6 +108,22 @@ benchmarks! {
     verify {
         assert_eq!(UserCreditHistory::<T>::get(&user), vec![(7, credit_data)]);
     }
+
+    set_switch_campaign {
+
+    }: _(RawOrigin::Root, vec!(0,1,2), vec!(3,4,5))
+    verify {
+        assert_eq!(CampaignIdSwitch::<T>::get(&0), Some(3));
+    }
+
+    set_switch_accounts {
+        let user1: T::AccountId = account("user1", USER_SEED, SEED);
+        let user2: T::AccountId = account("user2", USER_SEED, SEED);
+       }: _(RawOrigin::Root, vec!(user1.clone(),user2.clone()))
+       verify {
+           assert_eq!(SwitchAccounts::<T>::get(&user1), Some(true));
+       }
+
 }
 
 #[cfg(test)]

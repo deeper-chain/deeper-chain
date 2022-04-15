@@ -548,6 +548,18 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                     reward_eras: 270,
                 },
             ),
+            (
+                13,
+                CreditData {
+                    campaign_id: 0,
+                    credit: 210,
+                    initial_credit_level: CreditLevel::Two,
+                    rank_in_initial_credit_level: 1u32,
+                    number_of_referees: 0,
+                    current_credit_level: CreditLevel::Two,
+                    reward_eras: 1,
+                },
+            ),
         ],
     };
     GenesisBuild::<Test>::assimilate_storage(&genesis_config, &mut storage).unwrap();

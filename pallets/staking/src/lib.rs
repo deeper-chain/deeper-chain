@@ -1837,6 +1837,19 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::weight(T::WeightInfo::undelegate())]
+        pub fn force_undelegate(
+            origin: OriginFor<T>,
+            accounts: Vec<T::AccountId>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            for account in accounts {
+                Self::_undelegate(&account);
+                Self::deposit_event(Event::<T>::UnDelegated(account));
+            }
+            Ok(())
+        }
+
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
         pub fn difference_compensation(
             origin: OriginFor<T>,

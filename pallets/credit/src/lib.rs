@@ -231,6 +231,16 @@ pub mod pallet {
     pub type LastCreditUpdateTimestamp<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn campaign_id_switch)]
+    pub type CampaignIdSwitch<T: Config> =
+        StorageMap<_, Twox64Concat, CampaignId, CampaignId, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn switch_accounts)]
+    pub type SwitchAccounts<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, bool, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -292,6 +302,8 @@ pub mod pallet {
         BadEraOrHistory,
         /// account not found
         AccountNotFound,
+        /// Campain id switch not match
+        CampaignIdNotMatch,
     }
 
     #[pallet::hooks]
@@ -423,6 +435,35 @@ pub mod pallet {
                 Self::deposit_event(Event::<T>::BurnForAddCredit(sender.clone(), credit_score));
             } else {
                 Err(Error::<T>::BalanceNotEnough)?
+            }
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_switch_campaign())]
+        pub fn set_switch_campaign(
+            origin: OriginFor<T>,
+            old_ids: Vec<CampaignId>,
+            new_ids: Vec<CampaignId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            ensure!(
+                old_ids.len() == new_ids.len(),
+                Error::<T>::CampaignIdNotMatch
+            );
+            for i in 0..old_ids.len() {
+                CampaignIdSwitch::<T>::insert(old_ids[i], new_ids[i]);
+            }
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_switch_accounts())]
+        pub fn set_switch_accounts(
+            origin: OriginFor<T>,
+            accounts: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            for id in accounts {
+                SwitchAccounts::<T>::insert(id, true);
             }
             Ok(().into())
         }
@@ -622,6 +663,27 @@ pub mod pallet {
             }
             (diffs, era_used)
         }
+
+        fn do_switch_campaign(
+            who: &T::AccountId,
+            mut old_data: CreditData,
+            expire_era: u32,
+        ) -> bool {
+            if !SwitchAccounts::<T>::contains_key(who) {
+                return false;
+            }
+            let new_id = Self::campaign_id_switch(old_data.campaign_id);
+            if new_id.is_none() {
+                return false;
+            }
+
+            old_data.campaign_id = new_id.unwrap();
+            old_data.reward_eras += 180;
+
+            UserCredit::<T>::insert(who, old_data.clone());
+            Self::update_credit_history(who, expire_era);
+            true
+        }
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
@@ -719,6 +781,7 @@ pub mod pallet {
                     cur_era,
                 ));
             }
+            // TODO: for those not continue delegating's account, also need slash credit
             weight = weight.saturating_add(Self::slash_offline_device_credit(account_id));
             let credit_history = Self::user_credit_history(account_id);
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
@@ -726,10 +789,12 @@ pub mod pallet {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 4));
                 return (None, weight);
             }
-
             let delegate_era = credit_history[0].0;
             let expiry_era = delegate_era + credit_data.reward_eras - 1;
-            if from > expiry_era {
+            if from == expiry_era {
+                // switcch campaign forehead
+                Self::do_switch_campaign(account_id, credit_data, expiry_era);
+            } else if from > expiry_era {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 5));
                 return (None, weight);
             }

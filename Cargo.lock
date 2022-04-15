@@ -5531,6 +5531,7 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-balances",
+ "pallet-credit",
  "parity-scale-codec",
  "scale-info",
  "serde",
