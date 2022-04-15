@@ -120,10 +120,9 @@ benchmarks! {
         assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
     }
 
-    brun_nft {
+    burn_nft {
         let class_id = Default::default();
         let instance_id = Default::default();
-        //let user: T::AccountId = account("user", USER_SEED, SEED);
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let signed_user = RawOrigin::Signed(user.clone());
@@ -153,7 +152,7 @@ benchmarks! {
         ));
 
         assert_ok!(pallet_uniques::Pallet::<T>::mint(signed_user.clone().into(), class_id, instance_id, user_lookup.clone()));
-    }: brun_nft(signed_user, class_id, instance_id)
+    }: burn_nft(signed_user, class_id, instance_id)
     verify {
         assert_eq!(UserCredit::<T>::get(user).unwrap().credit, 105);
     }
@@ -174,7 +173,7 @@ mod tests {
             assert_ok!(Pallet::<Test>::test_benchmark_burn_for_add_credit());
             assert_ok!(Pallet::<Test>::test_benchmark_force_modify_credit_history());
             assert_ok!(Pallet::<Test>::test_benchmark_update_nft_class_credit());
-            assert_ok!(Pallet::<Test>::test_benchmark_brun_nft());
+            assert_ok!(Pallet::<Test>::test_benchmark_burn_nft());
         });
     }
 }

@@ -51,34 +51,34 @@ pub trait WeightInfo {
     fn burn_for_add_credit() -> Weight;
     fn force_modify_credit_history() -> Weight;
     fn update_nft_class_credit() -> Weight;
-    fn brun_nft() -> Weight;
+    fn burn_nft() -> Weight;
 }
 
 /// Weights for pallet_credit using the Substrate node and recommended hardware.
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn update_credit_setting() -> Weight {
-        (38_003_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
+        (12_472_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn add_or_update_credit_data() -> Weight {
-        (53_347_000 as Weight)
+        (17_707_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn burn_for_add_credit() -> Weight {
-        (103_907_000 as Weight)
+        (45_811_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn force_modify_credit_history() -> Weight {
-        (46_387_000 as Weight)
+        (17_599_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn update_nft_class_credit() -> Weight {
         (33_802_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn brun_nft() -> Weight {
+    fn burn_nft() -> Weight {
         (106_066_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
@@ -88,27 +88,27 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn update_credit_setting() -> Weight {
-        (38_003_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
+        (12_472_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn add_or_update_credit_data() -> Weight {
-        (53_347_000 as Weight)
+        (17_707_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn burn_for_add_credit() -> Weight {
-        (103_907_000 as Weight)
+        (45_811_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn force_modify_credit_history() -> Weight {
-        (46_387_000 as Weight)
+        (17_599_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn update_nft_class_credit() -> Weight {
         (33_802_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn brun_nft() -> Weight {
+    fn burn_nft() -> Weight {
         (106_066_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))

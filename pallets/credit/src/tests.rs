@@ -917,15 +917,15 @@ fn burn_nft() {
         assert_ok!(Uniques::mint(Origin::signed(1), 2, 42, 1));
 
         assert_noop!(
-            Credit::brun_nft(Origin::signed(1), 0, 42),
+            Credit::burn_nft(Origin::signed(1), 0, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
         assert_noop!(
-            Credit::brun_nft(Origin::signed(1), 1, 42),
+            Credit::burn_nft(Origin::signed(1), 1, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
         assert_noop!(
-            Credit::brun_nft(Origin::signed(1), 2, 42),
+            Credit::burn_nft(Origin::signed(1), 2, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
 
@@ -951,14 +951,14 @@ fn burn_nft() {
         ));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 100);
 
-        assert_ok!(Credit::brun_nft(Origin::signed(1), 0, 42));
+        assert_ok!(Credit::burn_nft(Origin::signed(1), 0, 42));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 105);
 
-        assert_ok!(Credit::brun_nft(Origin::signed(1), 1, 42));
+        assert_ok!(Credit::burn_nft(Origin::signed(1), 1, 42));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 115);
 
         assert_noop!(
-            Credit::brun_nft(Origin::signed(1), 2, 42),
+            Credit::burn_nft(Origin::signed(1), 2, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
     });

@@ -458,9 +458,9 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::brun_nft())]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_nft())]
         #[transactional]
-        pub fn brun_nft(
+        pub fn burn_nft(
             origin: OriginFor<T>,
             #[pallet::compact] class_id: ClassIdOf<T>,
             #[pallet::compact] instance_id: InstanceIdOf<T>,
