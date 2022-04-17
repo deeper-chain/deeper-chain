@@ -45,9 +45,10 @@ use sp_runtime::Percent;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 
+use frame_support::dispatch::DispatchResult;
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
-
+use frame_support::transactional;
 use frame_support::weights::Weight;
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
@@ -121,6 +122,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
+    fn update_credit_by_burn_nft(who: AccountId, add_credit: u64) -> DispatchResult;
     fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
 }
 
@@ -143,7 +145,7 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_uniques::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// Number of blocks per era.
@@ -178,6 +180,9 @@ pub mod pallet {
     pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
+
+    pub type ClassIdOf<T> = <T as pallet_uniques::Config>::ClassId;
+    pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::InstanceId;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -231,6 +236,11 @@ pub mod pallet {
     pub type LastCreditUpdateTimestamp<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn mining_machine_class_credit)]
+    pub type MiningMachineClassCredit<T: Config> =
+        StorageMap<_, Twox64Concat, ClassIdOf<T>, u64, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -271,11 +281,14 @@ pub mod pallet {
         CreditScoreSlashed(T::AccountId, u64),
         CreditDataAddedByTraffic(T::AccountId, u64),
         CreditDataAddedByTip(T::AccountId, u64),
+        CreditDataAddedByBurnNft(T::AccountId, u64),
         //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
         CreditHistoryUpdateSuccess(T::AccountId, EraIndex),
         CreditHistoryUpdateFailed(T::AccountId, EraIndex),
         BurnForAddCredit(T::AccountId, u64),
+        UpdateNftCredit(ClassIdOf<T>, u64),
+        BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
     }
 
     #[pallet::error]
@@ -292,6 +305,10 @@ pub mod pallet {
         BadEraOrHistory,
         /// account not found
         AccountNotFound,
+        /// account not exist in user credit
+        AccountNoExistInUserCredit,
+        /// mining machine class credit no config
+        MiningMachineClassCreditNoConfig,
     }
 
     #[pallet::hooks]
@@ -415,8 +432,8 @@ pub mod pallet {
             }
 
             let amount = T::DPRPerCreditBurned::get().saturating_mul((credit_score as u32).into());
-            if T::Currency::can_slash(&sender, amount) {
-                let (burned, _) = T::Currency::slash(&sender, amount.into());
+            if <T as pallet::Config>::Currency::can_slash(&sender, amount) {
+                let (burned, _) = <T as pallet::Config>::Currency::slash(&sender, amount.into());
                 T::BurnedTo::on_unbalanced(burned);
                 Self::_update_credit(&sender, target_credit);
                 Self::update_credit_history(&sender, Self::get_current_era());
@@ -424,6 +441,43 @@ pub mod pallet {
             } else {
                 Err(Error::<T>::BalanceNotEnough)?
             }
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_nft_class_credit())]
+        pub fn update_nft_class_credit(
+            origin: OriginFor<T>,
+            #[pallet::compact] class_id: ClassIdOf<T>,
+            credit: u64,
+        ) -> DispatchResultWithPostInfo {
+            let _sender = ensure_root(origin)?;
+
+            MiningMachineClassCredit::<T>::insert(class_id, credit);
+
+            Self::deposit_event(Event::UpdateNftCredit(class_id, credit));
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_nft())]
+        #[transactional]
+        pub fn burn_nft(
+            origin: OriginFor<T>,
+            #[pallet::compact] class_id: ClassIdOf<T>,
+            #[pallet::compact] instance_id: InstanceIdOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin.clone())?;
+
+            ensure!(
+                MiningMachineClassCredit::<T>::contains_key(&class_id),
+                Error::<T>::MiningMachineClassCreditNoConfig
+            );
+
+            pallet_uniques::Pallet::<T>::burn(origin, class_id, instance_id, None)?;
+
+            let credit = MiningMachineClassCredit::<T>::get(&class_id);
+            Self::update_credit_by_burn_nft(sender.clone(), credit)?;
+
+            Self::deposit_event(Event::BurnNft(sender, class_id, instance_id, credit));
             Ok(().into())
         }
     }
@@ -965,6 +1019,27 @@ pub mod pallet {
                     who
                 );
             }
+        }
+
+        fn update_credit_by_burn_nft(who: T::AccountId, add_credit: u64) -> DispatchResult {
+            let current_era = Self::get_current_era();
+            let new_credit = Self::get_credit_score(&who)
+                .unwrap_or(0)
+                .saturating_add(add_credit);
+
+            if Self::_update_credit(&who, new_credit) {
+                Self::update_credit_history(&who, current_era);
+                Self::deposit_event(Event::CreditDataAddedByBurnNft(who.clone(), new_credit));
+            } else {
+                log!(
+                    error,
+                    "failed to update credit {} for who: {:?}",
+                    new_credit,
+                    who
+                );
+                return Err(Error::<T>::AccountNoExistInUserCredit.into());
+            }
+            Ok(())
         }
 
         fn init_delegator_history(account_id: &T::AccountId, era: u32) -> bool {

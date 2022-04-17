@@ -1111,7 +1111,7 @@ impl pallet_lottery::Config for Runtime {
 parameter_types! {
     pub const AssetDeposit: Balance = 100 * DPR;
     pub const ApprovalDeposit: Balance = 1 * DPR;
-    pub const StringLimit: u32 = 50;
+    pub const StringLimit: u32 = 256;
     pub const MetadataDepositBase: Balance = 10 * DPR;
     pub const MetadataDepositPerByte: Balance = 1 * DPR;
 }
@@ -1190,6 +1190,30 @@ parameter_types! {
     pub const MicropaymentToCreditFactor: u128 = MICROPAYMENT_TO_CREDIT_FACTOR;
     pub const BlocksPerEra: BlockNumber = BLOCKS_PER_ERA;
     pub const DPRPerCreditBurned: Balance = 50 * DPR;
+}
+
+parameter_types! {
+    pub const ClassDeposit: Balance = 100 * DOLLARS;
+    pub const InstanceDeposit: Balance = 1 * DOLLARS;
+    pub const KeyLimit: u32 = 32;
+    pub const ValueLimit: u32 = 256;
+}
+
+impl pallet_uniques::Config for Runtime {
+    type Event = Event;
+    type ClassId = u32;
+    type InstanceId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type ClassDeposit = ClassDeposit;
+    type InstanceDeposit = InstanceDeposit;
+    type MetadataDepositBase = MetadataDepositBase;
+    type AttributeDepositBase = MetadataDepositBase;
+    type DepositPerByte = MetadataDepositPerByte;
+    type StringLimit = StringLimit;
+    type KeyLimit = KeyLimit;
+    type ValueLimit = ValueLimit;
+    type WeightInfo = pallet_uniques::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_credit::Config for Runtime {
@@ -1352,6 +1376,7 @@ construct_runtime!(
         Mmr: pallet_mmr::{Pallet, Storage} = 46,
         Lottery: pallet_lottery::{Pallet, Call, Storage, Event<T>} = 47,
         ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 48,
+        Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>} = 49,
 
         Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>} = 60,
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> } = 61,

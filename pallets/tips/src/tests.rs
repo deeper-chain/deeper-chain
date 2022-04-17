@@ -29,11 +29,12 @@ use sp_runtime::{
 };
 use sp_storage::Storage;
 
-use frame_support::traits::ConstU32;
+use frame_support::traits::{ConstU32, ConstU64};
 use frame_support::{
     assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types,
     storage::StoragePrefixedMap, traits::SortedMembers, weights::Weight, PalletId,
 };
+use node_primitives::Balance;
 
 use super::*;
 use crate::{self as pallet_tips, Event as TipEvent};
@@ -56,6 +57,7 @@ frame_support::construct_runtime!(
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -157,6 +159,36 @@ impl pallet_treasury::Config for Test {
     type MaxApprovals = MaxApprovals;
     type ProposalBondMaximum = ();
 }
+
+const MILLICENTS: Balance = 10_000_000_000_000;
+const CENTS: Balance = 1_000 * MILLICENTS;
+const DOLLARS: Balance = 100 * CENTS;
+
+parameter_types! {
+    pub const ClassDeposit: Balance = 100 * DOLLARS;
+    pub const InstanceDeposit: Balance = 1 * DOLLARS;
+    pub const KeyLimit: u32 = 32;
+    pub const ValueLimit: u32 = 256;
+    pub const StringLimit: u32 = 50;
+}
+
+impl pallet_uniques::Config for Test {
+    type Event = Event;
+    type ClassId = u32;
+    type InstanceId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<u128>;
+    type ClassDeposit = ConstU64<2>;
+    type InstanceDeposit = ConstU64<1>;
+    type MetadataDepositBase = ConstU64<1>;
+    type AttributeDepositBase = ConstU64<1>;
+    type DepositPerByte = ConstU64<1>;
+    type StringLimit = ConstU32<50>;
+    type KeyLimit = ConstU32<50>;
+    type ValueLimit = ConstU32<50>;
+    type WeightInfo = ();
+}
+
 parameter_types! {
     pub const CreditCapTwoEras: u8 = 5;
     pub const CreditAttenuationStep: u64 = 1;

@@ -4481,6 +4481,7 @@ dependencies = [
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury",
+ "pallet-uniques",
  "pallet-utility",
  "pallet-vesting",
  "parity-scale-codec",
@@ -5055,6 +5056,7 @@ dependencies = [
  "pallet-deeper-node",
  "pallet-timestamp",
  "pallet-treasury",
+ "pallet-uniques",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5080,6 +5082,7 @@ dependencies = [
  "pallet-deeper-node",
  "pallet-micropayment",
  "pallet-timestamp",
+ "pallet-uniques",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5429,6 +5432,7 @@ dependencies = [
  "pallet-deeper-node",
  "pallet-timestamp",
  "pallet-treasury",
+ "pallet-uniques",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5667,6 +5671,7 @@ dependencies = [
  "pallet-micropayment",
  "pallet-session",
  "pallet-timestamp",
+ "pallet-uniques",
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "rand_chacha 0.2.2",
@@ -5730,6 +5735,7 @@ dependencies = [
  "pallet-deeper-node",
  "pallet-timestamp",
  "pallet-treasury",
+ "pallet-uniques",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -5798,6 +5804,21 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-uniques"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.17#22d40c761a985482f93bbbea5ba4199bdba74f8e"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "scale-info",
  "sp-runtime",
  "sp-std",
 ]

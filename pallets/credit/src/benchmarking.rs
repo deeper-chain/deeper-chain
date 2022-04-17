@@ -19,9 +19,12 @@
 
 use super::*;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+use frame_support::assert_ok;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use sp_runtime::Percent;
+use sp_runtime::{traits::StaticLookup, Percent};
+
+use crate::Pallet as Credit;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
@@ -32,9 +35,9 @@ pub fn create_funded_user<T: Config>(
     balance_factor: u32,
 ) -> T::AccountId {
     let user = account(string, n, SEED);
-    let balance = T::Currency::minimum_balance() * balance_factor.into();
-    T::Currency::make_free_balance_be(&user, balance);
-    T::Currency::issue(balance);
+    let balance = <T as pallet::Config>::Currency::minimum_balance() * balance_factor.into();
+    <T as pallet::Config>::Currency::make_free_balance_be(&user, balance);
+    <T as pallet::Config>::Currency::issue(balance);
     user
 }
 
@@ -108,6 +111,52 @@ benchmarks! {
     verify {
         assert_eq!(UserCreditHistory::<T>::get(&user), vec![(7, credit_data)]);
     }
+
+    update_nft_class_credit {
+        let class_id: ClassIdOf<T> = Default::default();
+        let credit = 1;
+    }: update_nft_class_credit(RawOrigin::Root, class_id, credit)
+    verify {
+        assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
+    }
+
+    burn_nft {
+        let class_id = Default::default();
+        let instance_id = Default::default();
+        let user = create_funded_user::<T>("user",USER_SEED, 1000);
+        let user_lookup = T::Lookup::unlookup(user.clone());
+        let signed_user = RawOrigin::Signed(user.clone());
+
+        assert_ok!(pallet_uniques::Pallet::<T>::force_create(
+            RawOrigin::Root.into(),
+            class_id,
+            user_lookup.clone(),
+            true
+        ));
+
+        let credit_data = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+
+        assert_ok!(Credit::<T>::update_nft_class_credit(RawOrigin::Root.into(), class_id, 5));
+        assert_ok!(Credit::<T>::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            user.clone(),
+            credit_data.clone()
+        ));
+
+        assert_ok!(pallet_uniques::Pallet::<T>::mint(signed_user.clone().into(), class_id, instance_id, user_lookup.clone()));
+    }: burn_nft(signed_user, class_id, instance_id)
+    verify {
+        assert_eq!(UserCredit::<T>::get(user).unwrap().credit, 105);
+    }
+
 }
 
 #[cfg(test)]
@@ -120,7 +169,11 @@ mod tests {
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
             assert_ok!(Pallet::<Test>::test_benchmark_update_credit_setting());
-            assert_ok!(Pallet::<Test>::test_benchmark_update_credit_setting());
+            assert_ok!(Pallet::<Test>::test_benchmark_add_or_update_credit_data());
+            assert_ok!(Pallet::<Test>::test_benchmark_burn_for_add_credit());
+            assert_ok!(Pallet::<Test>::test_benchmark_force_modify_credit_history());
+            assert_ok!(Pallet::<Test>::test_benchmark_update_nft_class_credit());
+            assert_ok!(Pallet::<Test>::test_benchmark_burn_nft());
         });
     }
 }
