@@ -154,9 +154,7 @@ pub mod pallet {
             pk.copy_from_slice(&atomos_accountid.encode());
             let pub_key = sr25519::Public::from_raw(pk);
 
-            let mut sig = [0u8; 64];
-            sig.copy_from_slice(&signature);
-            let sig = sr25519::Signature::from_slice(&sig);
+            let sig = sr25519::Signature::from_slice(&signature);
 
             let mut data = Vec::new();
             data.extend_from_slice(&atomos_accountid.encode());

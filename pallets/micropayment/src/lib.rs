@@ -498,9 +498,7 @@ pub mod pallet {
             pk.copy_from_slice(&client.encode());
             let pub_key = sr25519::Public::from_raw(pk);
 
-            let mut sig = [0u8; 64];
-            sig.copy_from_slice(&signature);
-            let sig = sr25519::Signature::from_slice(&sig);
+            let sig = sr25519::Signature::from_slice(&signature);
 
             let msg = Self::construct_byte_array_and_hash(server, nonce, session_id, amount);
 
