@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
-use crate::{mock::*, CreditInterface, Error, UserCreditHistory};
+use crate::{mock::*, CampaignIdSwitch, CreditInterface, Error, SwitchAccounts, UserCreditHistory};
 use frame_support::traits::Currency;
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use frame_system::RawOrigin;
@@ -739,6 +739,39 @@ fn burn_dpr_add_credit() {
         assert_eq!(Balances::free_balance(&1), 500);
         assert_eq!(Balances::free_balance(&3), 500);
         assert_eq!(Treasury::pot(), 10000 + 5000);
+    });
+}
+
+#[test]
+fn switch_campaign_duration() {
+    new_test_ext().execute_with(|| {
+        // 1,3's gennesis balance = 500
+        let _ = Balances::deposit_creating(&13, 5000);
+        SwitchAccounts::<Test>::insert(13, true);
+        CampaignIdSwitch::<Test>::insert(0, 1);
+        //let credit_data = Credit::user_credit(1).unwrap();
+        assert!(Credit::init_delegator_history(&13, 1));
+        // run_to_block, era=1
+        run_to_block(BLOCKS_PER_ERA * 2);
+        assert_eq!(
+            Credit::get_reward(&13, 1, 1).0,
+            Some((0, 60263002216294070076))
+        );
+
+        run_to_block(BLOCKS_PER_ERA * 3);
+        assert_eq!(
+            Credit::get_reward(&13, 2, 2).0,
+            Some((0, 56416427606743384752))
+        );
+
+        assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 1);
+        assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 1 + 180);
+
+        run_to_block(BLOCKS_PER_ERA * 4);
+        assert_eq!(
+            Credit::get_reward(&13, 3, 3).0,
+            Some((0, 56416427606743384752))
+        );
     });
 }
 
