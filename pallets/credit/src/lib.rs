@@ -241,6 +241,7 @@ pub mod pallet {
     pub type MiningMachineClassCredit<T: Config> =
         StorageMap<_, Twox64Concat, ClassIdOf<T>, u64, ValueQuery>;
 
+    #[pallet::storage]
     #[pallet::getter(fn campaign_id_switch)]
     pub type CampaignIdSwitch<T: Config> =
         StorageMap<_, Twox64Concat, CampaignId, CampaignId, OptionQuery>;
@@ -489,6 +490,9 @@ pub mod pallet {
             Self::update_credit_by_burn_nft(sender.clone(), credit)?;
 
             Self::deposit_event(Event::BurnNft(sender, class_id, instance_id, credit));
+
+            Ok(().into())
+        }
 
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_switch_campaign())]
         pub fn set_switch_campaign(
@@ -1118,21 +1122,21 @@ pub mod pallet {
             true
         }
     }
-}
 
-#[cfg(feature = "std")]
-impl<T: Config> GenesisConfig<T> {
-    /// Direct implementation of `GenesisBuild::build_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
-        <Self as GenesisBuild<T>>::build_storage(self)
-    }
+    #[cfg(feature = "std")]
+    impl<T: Config> GenesisConfig<T> {
+        /// Direct implementation of `GenesisBuild::build_storage`.
+        ///
+        /// Kept in order not to break dependency.
+        pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
+            <Self as GenesisBuild<T>>::build_storage(self)
+        }
 
-    /// Direct implementation of `GenesisBuild::assimilate_storage`.
-    ///
-    /// Kept in order not to break dependency.
-    pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-        <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+        /// Direct implementation of `GenesisBuild::assimilate_storage`.
+        ///
+        /// Kept in order not to break dependency.
+        pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
+            <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+        }
     }
 }
