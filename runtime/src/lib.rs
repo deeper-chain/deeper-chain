@@ -1112,8 +1112,8 @@ parameter_types! {
     pub const AssetDeposit: Balance = 100 * DPR;
     pub const ApprovalDeposit: Balance = 1 * DPR;
     pub const StringLimit: u32 = 256;
-    pub const MetadataDepositBase: Balance = 10 * DPR;
-    pub const MetadataDepositPerByte: Balance = 1 * DPR;
+    pub const MetadataDepositBase: Balance = Balance::min_value();
+    pub const MetadataDepositPerByte: Balance = Balance::min_value();
 }
 
 impl pallet_assets::Config for Runtime {
@@ -1193,8 +1193,8 @@ parameter_types! {
 }
 
 parameter_types! {
-    pub const ClassDeposit: Balance = 100 * DOLLARS;
-    pub const InstanceDeposit: Balance = 1 * DOLLARS;
+    pub const ClassDeposit: Balance = Balance::min_value();
+    pub const InstanceDeposit: Balance = Balance::min_value();
     pub const KeyLimit: u32 = 32;
     pub const ValueLimit: u32 = 256;
 }
