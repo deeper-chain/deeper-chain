@@ -248,7 +248,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn switch_accounts)]
-    pub type SwitchAccounts<T: Config> =
+    pub type NotSwitchAccounts<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, bool, OptionQuery>;
 
     #[pallet::genesis_config]
@@ -511,14 +511,14 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_switch_accounts())]
-        pub fn set_switch_accounts(
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_not_switch_accounts())]
+        pub fn set_not_switch_accounts(
             origin: OriginFor<T>,
             accounts: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             ensure_root(origin)?;
             for id in accounts {
-                SwitchAccounts::<T>::insert(id, true);
+                NotSwitchAccounts::<T>::insert(id, true);
             }
             Ok(().into())
         }
@@ -724,7 +724,7 @@ pub mod pallet {
             mut old_data: CreditData,
             expire_era: u32,
         ) -> bool {
-            if !SwitchAccounts::<T>::contains_key(who) {
+            if NotSwitchAccounts::<T>::contains_key(who) {
                 return false;
             }
             let new_id = Self::campaign_id_switch(old_data.campaign_id);

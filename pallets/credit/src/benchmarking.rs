@@ -164,12 +164,12 @@ benchmarks! {
         assert_eq!(CampaignIdSwitch::<T>::get(&0), Some(3));
     }
 
-    set_switch_accounts {
+    set_not_switch_accounts {
         let user1: T::AccountId = account("user1", USER_SEED, SEED);
         let user2: T::AccountId = account("user2", USER_SEED, SEED);
        }: _(RawOrigin::Root, vec!(user1.clone(),user2.clone()))
        verify {
-           assert_eq!(SwitchAccounts::<T>::get(&user1), Some(true));
+           assert_eq!(NotSwitchAccounts::<T>::get(&user1), Some(true));
        }
 
 }
