@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
-use crate::{mock::*, CampaignIdSwitch, CreditInterface, Error, SwitchAccounts, UserCreditHistory};
+use crate::{mock::*, CampaignIdSwitch, CreditInterface, Error, UserCreditHistory};
 use frame_support::traits::Currency;
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use frame_system::RawOrigin;
@@ -747,7 +747,6 @@ fn switch_campaign_duration() {
     new_test_ext().execute_with(|| {
         // 1,3's gennesis balance = 500
         let _ = Balances::deposit_creating(&13, 5000);
-        SwitchAccounts::<Test>::insert(13, true);
         CampaignIdSwitch::<Test>::insert(0, 1);
         //let credit_data = Credit::user_credit(1).unwrap();
         assert!(Credit::init_delegator_history(&13, 1));

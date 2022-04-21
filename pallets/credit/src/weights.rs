@@ -53,7 +53,7 @@ pub trait WeightInfo {
     fn update_nft_class_credit() -> Weight;
     fn burn_nft() -> Weight;
     fn set_switch_campaign() -> Weight;
-    fn set_switch_accounts() -> Weight;
+    fn set_not_switch_accounts() -> Weight;
 }
 
 /// Weights for pallet_credit using the Substrate node and recommended hardware.
@@ -90,7 +90,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
         (4_368_000 as Weight).saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
 
-    fn set_switch_accounts() -> Weight {
+    fn set_not_switch_accounts() -> Weight {
         (3_657_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
 }
@@ -128,7 +128,7 @@ impl WeightInfo for () {
         (4_368_000 as Weight).saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
 
-    fn set_switch_accounts() -> Weight {
+    fn set_not_switch_accounts() -> Weight {
         (3_657_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
 }
