@@ -392,16 +392,16 @@ pub mod pallet {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
 
-            let current_era = Self::get_current_era();
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
                     Some(data) => *data = credit_data.clone(),
                     _ => (),
                 });
-                Self::update_credit_history(&account_id, current_era);
+                if !Self::user_credit_history(&account_id).is_empty() {
+                    Self::update_credit_history(&account_id, Self::get_current_era());
+                }
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
-                Self::init_credit_history(&account_id, credit_data.clone(), current_era);
             }
             Self::deposit_event(Event::CreditUpdateSuccess(account_id, credit_data.credit));
             Ok(().into())

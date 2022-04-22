@@ -142,10 +142,7 @@ fn add_or_update_credit_data() {
             credit_data.clone()
         ));
         assert_eq!(Credit::user_credit(14), Some(credit_data.clone()));
-        assert_eq!(
-            Credit::user_credit_history(14),
-            vec![(1, credit_data.clone())]
-        );
+        assert_eq!(Credit::user_credit_history(14), vec![]);
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
