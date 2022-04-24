@@ -17,6 +17,7 @@
 
 pub use pallet::*;
 
+#[cfg(test)]
 mod tests;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
@@ -40,20 +41,25 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-    use pallet_credit::EraIndex;
-    use sp_runtime::{traits::Saturating, traits::StaticLookup, RuntimeDebug};
+    use sp_runtime::{
+        traits::{StaticLookup, UniqueSaturatedInto},
+        RuntimeDebug,
+    };
 
     type BalanceOf<T> = <<T as pallet::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+
+    pub const MILLISECS_PER_DAY: u64 = 1000 * 3600 * 24;
+
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         type MaxMember: Get<u32>;
-        type WeightInfo: WeightInfo;
+        type OPWeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -68,6 +74,8 @@ pub mod pallet {
         UnLocked(T::AccountId),
         Unreserve(T::AccountId, BalanceOf<T>),
         ReleaseReward(T::AccountId, BalanceOf<T>),
+        AccountReleaseEnd(T::AccountId),
+        SingleReleaseTooMuch(T::AccountId, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -79,11 +87,59 @@ pub mod pallet {
         NotMatchOwner,
         ReachDailyMaximumLimit,
         ReachSingleMaximumLimit,
+        ReleaseDayZero,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
     pub enum Releases {
         V1_0_0,
+    }
+
+    #[derive(Encode, Decode, Clone, PartialEq, Eq, MaxEncodedLen, TypeInfo)]
+    #[scale_info(skip_type_params(T))]
+    pub struct ReleaseInfo<T: Config> {
+        account: T::AccountId,
+        total_release_days: u32,
+        start_release_moment: u64,
+        total_balance: BalanceOf<T>,
+    }
+
+    impl<T: Config> ReleaseInfo<T> {
+        pub fn new(
+            account: T::AccountId,
+            total_release_days: u32,
+            start_release_moment: u64,
+            total_balance: BalanceOf<T>,
+        ) -> Self {
+            Self {
+                account,
+                total_release_days,
+                start_release_moment,
+                total_balance,
+            }
+        }
+    }
+
+    impl<T: Config> sp_std::fmt::Debug for ReleaseInfo<T> {
+        fn fmt(&self, f: &mut sp_std::fmt::Formatter<'_>) -> sp_std::fmt::Result {
+            write!(
+                f,
+                "account {:?} days {} start {}, balance {:?}",
+                self.account,
+                self.total_release_days,
+                self.start_release_moment,
+                self.total_balance
+            )
+        }
+    }
+
+    #[derive(Encode, Decode, Clone, Debug, MaxEncodedLen, TypeInfo)]
+    #[scale_info(skip_type_params(T))]
+    pub struct CurrentRelease<T: Config> {
+        pub basic_info: ReleaseInfo<T>,
+        pub start_day: u32,
+        pub last_release_day: u32,
+        pub balance_per_day: BalanceOf<T>,
     }
 
     #[pallet::storage]
@@ -110,7 +166,25 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn total_daily_release)]
     pub type TotalDailyRelease<T: Config> =
-        StorageMap<_, Blake2_128Concat, EraIndex, BalanceOf<T>, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, u32, BalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn accounts_release_info)]
+    pub type AccountsReleaseInfo<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, CurrentRelease<T>, OptionQuery>;
+
+    /// delegators last key
+    #[pallet::storage]
+    #[pallet::getter(fn account_release_last_key)]
+    pub(crate) type AccountReleaseLastKey<T> = StorageValue<_, Vec<u8>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn saved_day)]
+    pub(crate) type SavedDay<T> = StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn day_release_end)]
+    pub(crate) type DayReleaseEnd<T> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
@@ -129,11 +203,25 @@ pub mod pallet {
             }
             0
         }
+
+        fn on_finalize(_: T::BlockNumber) {
+            let saved_day = Self::saved_day();
+            let cur_time: u64 = <pallet_timestamp::Pallet<T>>::get().unique_saturated_into();
+            let cur_day = (cur_time / MILLISECS_PER_DAY) as u32;
+            if cur_day > saved_day {
+                SavedDay::<T>::put(cur_day);
+                DayReleaseEnd::<T>::put(false);
+                let prefix = Self::get_account_release_prefix_hash();
+                AccountReleaseLastKey::<T>::put(prefix);
+            } else {
+                Self::release_staking_balance(cur_day);
+            }
+        }
     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::force_remove_lock())]
+        #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
         pub fn force_remove_lock(
             origin: OriginFor<T>,
             id: LockIdentifier,
@@ -146,7 +234,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::set_reserve_members())]
+        #[pallet::weight(T::OPWeightInfo::set_reserve_members())]
         pub fn set_reserve_members(
             origin: OriginFor<T>,
             whitelist: Vec<T::AccountId>,
@@ -164,7 +252,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::force_reserve_by_member())]
+        #[pallet::weight(T::OPWeightInfo::force_reserve_by_member())]
         pub fn force_reserve_by_member(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
@@ -181,7 +269,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::set_release_owner_address())]
+        #[pallet::weight(T::OPWeightInfo::set_release_owner_address())]
         pub fn set_release_owner_address(
             origin: OriginFor<T>,
             owner: T::AccountId,
@@ -192,7 +280,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::set_release_limit_parameter())]
+        #[pallet::weight(T::OPWeightInfo::set_release_limit_parameter())]
         pub fn set_release_limit_parameter(
             origin: OriginFor<T>,
             #[pallet::compact] single_max_limit: BalanceOf<T>,
@@ -206,47 +294,120 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::staking_release())]
-        pub fn staking_release(
+        #[pallet::weight(T::OPWeightInfo::set_staking_release_info())]
+        pub fn set_staking_release_info(
             origin: OriginFor<T>,
-            who: T::AccountId,
-            #[pallet::compact] value: BalanceOf<T>,
+            infos: Vec<ReleaseInfo<T>>,
         ) -> DispatchResultWithPostInfo {
-            let admin = ensure_signed(origin)?;
+            let setter = ensure_signed(origin)?;
             let owner =
                 Self::release_payment_address().ok_or(Error::<T>::NotReleaseOwnerAddress)?;
 
-            ensure!(admin == owner, Error::<T>::NotMatchOwner);
-            ensure!(
-                value <= Self::single_max_limit(),
-                Error::<T>::ReachSingleMaximumLimit
-            );
+            log::warn!("setter {:?}", setter);
+            ensure!(setter == owner, Error::<T>::NotMatchOwner);
+            for basic_info in infos {
+                let remainder_release_days = basic_info.total_release_days;
+                ensure!(remainder_release_days > 0, Error::<T>::ReleaseDayZero);
 
-            let current_era = Self::get_current_era();
-            let daily_release_total = value.saturating_add(Self::total_daily_release(current_era));
-
-            ensure!(
-                daily_release_total <= Self::daily_max_limit(),
-                Error::<T>::ReachDailyMaximumLimit
-            );
-
-            let imbalance = T::Currency::deposit_creating(&who, value);
-            TotalDailyRelease::<T>::insert(current_era, daily_release_total);
-            let total = value.saturating_add(Self::total_release());
-            <TotalRelease<T>>::put(total);
-
-            Self::deposit_event(Event::<T>::ReleaseReward(who.clone(), imbalance.peek()));
-
+                let start_day = (basic_info.start_release_moment / (1000 * 3600 * 24)) as u32;
+                let balance_per_day = basic_info.total_balance / remainder_release_days.into();
+                let single_max_limit = Self::single_max_limit();
+                if balance_per_day > single_max_limit {
+                    Self::deposit_event(Event::<T>::SingleReleaseTooMuch(
+                        basic_info.account,
+                        balance_per_day,
+                    ));
+                    continue;
+                }
+                let account = basic_info.account.clone();
+                let cur_info = CurrentRelease::<T> {
+                    basic_info,
+                    last_release_day: start_day,
+                    start_day,
+                    balance_per_day,
+                };
+                AccountsReleaseInfo::<T>::insert(&account, cur_info);
+            }
             Ok(().into())
         }
     }
 
     impl<T: Config> Pallet<T> {
-        fn get_current_era() -> EraIndex {
-            let block_number = <frame_system::Pallet<T>>::block_number();
-            TryInto::<EraIndex>::try_into(block_number / T::BlocksPerEra::get())
-                .ok()
-                .unwrap()
+        fn get_account_release_prefix_hash() -> Vec<u8> {
+            use frame_support::storage::generator::StorageMap;
+            AccountsReleaseInfo::<T>::prefix_hash()
+        }
+
+        fn next_account_release_key(last_key: &Vec<u8>) -> Vec<u8> {
+            sp_io::storage::next_key(last_key).unwrap_or(Vec::<u8>::new())
+        }
+
+        fn get_account_release_data(next_key: &Vec<u8>) -> Option<CurrentRelease<T>> {
+            frame_support::storage::unhashed::get::<CurrentRelease<T>>(next_key)
+        }
+
+        fn release_staking_balance(cur_day: u32) {
+            if Self::day_release_end() {
+                return;
+            }
+            let prefix = Self::get_account_release_prefix_hash();
+            let last_key = Self::account_release_last_key().unwrap_or(prefix.clone());
+            let mut next_key = Self::next_account_release_key(&last_key);
+            let mut total_release = Self::total_release();
+            let mut daily_release = Self::total_daily_release(cur_day);
+            let mut to_be_removed = Vec::new();
+
+            loop {
+                if next_key.starts_with(&prefix) {
+                    let data = Self::get_account_release_data(&next_key);
+                    if data.is_none() {
+                        break;
+                    }
+                    let data = data.unwrap();
+
+                    let released_balance = data.balance_per_day
+                        * (cur_day.saturating_sub(data.last_release_day).into());
+                    if released_balance > Self::single_max_limit() {
+                        Self::deposit_event(Event::<T>::SingleReleaseTooMuch(
+                            data.basic_info.account,
+                            released_balance,
+                        ));
+                        break;
+                    }
+
+                    let imbalance =
+                        T::Currency::deposit_creating(&data.basic_info.account, released_balance);
+                    total_release += released_balance;
+                    daily_release += released_balance;
+
+                    AccountsReleaseInfo::<T>::mutate(data.basic_info.account.clone(), |info| {
+                        info.as_mut().unwrap().last_release_day = cur_day;
+                    });
+
+                    if cur_day.saturating_sub(data.start_day) >= data.basic_info.total_release_days
+                    {
+                        to_be_removed.push(data.basic_info.account.clone());
+                    }
+
+                    Self::deposit_event(Event::<T>::ReleaseReward(
+                        data.basic_info.account,
+                        imbalance.peek(),
+                    ));
+                    if daily_release >= Self::daily_max_limit() {
+                        break;
+                    }
+                    next_key = Self::next_account_release_key(&next_key);
+                } else {
+                    DayReleaseEnd::<T>::put(true);
+                    break;
+                }
+            }
+            TotalDailyRelease::<T>::insert(cur_day, daily_release);
+            TotalRelease::<T>::put(total_release);
+            AccountReleaseLastKey::<T>::put(next_key);
+            for account in to_be_removed {
+                AccountsReleaseInfo::<T>::remove(account);
+            }
         }
     }
 }
