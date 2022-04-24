@@ -110,7 +110,7 @@ pub struct CreditData {
 pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
     fn pass_threshold(account_id: &AccountId) -> bool;
-    fn slash_credit(account_id: &AccountId) -> Weight;
+    fn slash_credit(account_id: &AccountId, score: Option<u64>) -> Weight;
     fn get_credit_level(credit_score: u64) -> CreditLevel;
     fn get_reward(
         account_id: &AccountId,
@@ -530,7 +530,7 @@ pub mod pallet {
             let eras = T::NodeInterface::get_eras_offline(&account_id);
             if eras > 0 && eras % 3 == 0 {
                 // slash one credit for being offline every 3 eras
-                weight = weight.saturating_add(Self::slash_credit(&account_id));
+                weight = weight.saturating_add(Self::slash_credit(&account_id, None));
             }
             weight
         }
@@ -762,10 +762,10 @@ pub mod pallet {
             false
         }
 
-        fn slash_credit(account_id: &T::AccountId) -> Weight {
+        fn slash_credit(account_id: &T::AccountId, score: Option<u64>) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             if UserCredit::<T>::contains_key(account_id) {
-                let penalty = T::CreditAttenuationStep::get();
+                let penalty = score.unwrap_or(T::CreditAttenuationStep::get());
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty);

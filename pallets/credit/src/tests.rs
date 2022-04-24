@@ -282,7 +282,7 @@ fn slash_credit() {
                 current_credit_level: CreditLevel::One,
             },
         );
-        Credit::slash_credit(&1);
+        Credit::slash_credit(&1, None);
         assert_eq!(
             Credit::get_credit_score(&1).unwrap(),
             100 - CREDIT_ATTENUATION_STEP
@@ -519,7 +519,7 @@ fn get_reward_with_slash_credit_with_bonus() {
             Some((0, 223068450647875213020))
         );
 
-        Credit::slash_credit(&7);
+        Credit::slash_credit(&7, None);
         assert_eq!(
             Credit::user_credit(&7).unwrap().credit,
             400 - CREDIT_ATTENUATION_STEP
