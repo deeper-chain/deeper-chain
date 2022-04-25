@@ -303,22 +303,18 @@ pub mod pallet {
             let owner =
                 Self::release_payment_address().ok_or(Error::<T>::NotReleaseOwnerAddress)?;
 
-            log::warn!("setter {:?}", setter);
             ensure!(setter == owner, Error::<T>::NotMatchOwner);
             for basic_info in infos {
                 let remainder_release_days = basic_info.total_release_days;
                 ensure!(remainder_release_days > 0, Error::<T>::ReleaseDayZero);
 
-                let start_day = (basic_info.start_release_moment / (1000 * 3600 * 24)) as u32;
+                let start_day = (basic_info.start_release_moment / MILLISECS_PER_DAY) as u32;
                 let balance_per_day = basic_info.total_balance / remainder_release_days.into();
                 let single_max_limit = Self::single_max_limit();
-                if balance_per_day > single_max_limit {
-                    Self::deposit_event(Event::<T>::SingleReleaseTooMuch(
-                        basic_info.account,
-                        balance_per_day,
-                    ));
-                    continue;
-                }
+                ensure!(
+                    balance_per_day <= single_max_limit,
+                    Error::<T>::ReachSingleMaximumLimit
+                );
                 let account = basic_info.account.clone();
                 let cur_info = CurrentRelease::<T> {
                     basic_info,
@@ -327,6 +323,22 @@ pub mod pallet {
                     balance_per_day,
                 };
                 AccountsReleaseInfo::<T>::insert(&account, cur_info);
+            }
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::set_staking_release_info())]
+        pub fn remove_staking_release_info(
+            origin: OriginFor<T>,
+            release_accounts: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            let setter = ensure_signed(origin)?;
+            let owner =
+                Self::release_payment_address().ok_or(Error::<T>::NotReleaseOwnerAddress)?;
+
+            ensure!(setter == owner, Error::<T>::NotMatchOwner);
+            for account in release_accounts {
+                AccountsReleaseInfo::<T>::remove(&account);
             }
             Ok(().into())
         }
