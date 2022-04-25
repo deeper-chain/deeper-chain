@@ -119,12 +119,37 @@ fn add_or_update_credit_data() {
         );
 
         // update_credit_data works
+        run_to_block(1);
         assert_ok!(Credit::add_or_update_credit_data(
             RawOrigin::Root.into(),
             1,
             credit_data.clone()
         ));
-        assert_eq!(Credit::user_credit(1), Some(credit_data));
+        assert_eq!(Credit::user_credit(1), Some(credit_data.clone()));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(1, 100))
+        );
+
+        // add_credit_data works
+        run_to_block(2 * BLOCKS_PER_ERA - 1);
+        assert_ok!(Credit::add_or_update_credit_data(
+            RawOrigin::Root.into(),
+            14,
+            credit_data.clone()
+        ));
+        assert_eq!(Credit::user_credit(14), Some(credit_data.clone()));
+        assert_eq!(Credit::user_credit_history(14), vec![]);
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(14, 100))
+        );
 
         // credit_data invalid
         let credit_data = CreditData {
