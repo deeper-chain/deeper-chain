@@ -201,5 +201,9 @@ fn set_staking_release_info() {
         run_to_block(BLOCKS_PER_DAY * 2 + 3);
         assert_eq!(Balances::free_balance(&3), 2000);
         assert_eq!(Balances::free_balance(&4), 1000);
+
+        run_to_block(BLOCKS_PER_DAY * 3 + 3);
+        assert_eq!(Operation::accounts_release_info(&3).is_none(), true);
+        assert_eq!(Operation::accounts_release_info(&4).is_none(), true);
     });
 }
