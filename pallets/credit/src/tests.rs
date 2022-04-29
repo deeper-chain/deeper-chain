@@ -13,10 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(test)]
+
+
 use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
 use crate::{mock::*, CampaignIdSwitch, CreditInterface, Error, UserCreditHistory};
 use frame_support::traits::Currency;
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo};
+use frame_support::{
+    assert_noop, assert_ok,
+    dispatch::{DispatchError},
+};
 use frame_system::RawOrigin;
 use sp_runtime::traits::BadOrigin;
 use sp_runtime::Percent;
@@ -138,9 +144,7 @@ fn add_or_update_credit_data() {
         };
         assert_eq!(
             Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
-            Err(DispatchErrorWithPostInfo::from(
-                Error::<Test>::InvalidCreditData
-            ))
+            Err(DispatchError::from(Error::<Test>::InvalidCreditData))
         );
 
         let credit_data = CreditData {
@@ -154,9 +158,7 @@ fn add_or_update_credit_data() {
         };
         assert_eq!(
             Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
-            Err(DispatchErrorWithPostInfo::from(
-                Error::<Test>::InvalidCreditData
-            ))
+            Err(DispatchError::from(Error::<Test>::InvalidCreditData))
         );
     });
 }

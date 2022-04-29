@@ -40,13 +40,14 @@ use frame_support::{
     ensure,
     pallet_prelude::*,
     traits::{
-        Currency, EnsureOrigin, Get, Imbalance, IsSubType, LockIdentifier, LockableCurrency,
-        OnUnbalanced, UnixTime, WithdrawReasons,
+        Currency, EnsureOrigin, ExistenceRequirement, Get, Imbalance, IsSubType, LockIdentifier,
+        LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
     },
     weights::{
         constants::{WEIGHT_PER_MICROS, WEIGHT_PER_NANOS},
         Weight,
     },
+    PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 pub use pallet::*;
@@ -55,8 +56,8 @@ use pallet_deeper_node::NodeInterface;
 use pallet_session::historical;
 use sp_runtime::{
     traits::{
-        AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable, SaturatedConversion, Saturating,
-        StaticLookup, Zero,
+        AccountIdConversion, AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable,
+        SaturatedConversion, Saturating, StaticLookup, UniqueSaturatedInto, Zero,
     },
     Perbill, Percent, RuntimeDebug,
 };
@@ -633,6 +634,9 @@ pub mod pallet {
         type TotalMiningReward: Get<u128>;
 
         type ExistentialDeposit: Get<BalanceOf<Self>>;
+
+        #[pallet::constant]
+        type PalletId: Get<PalletId>;
     }
 
     #[pallet::type_value]
@@ -913,6 +917,11 @@ pub mod pallet {
     #[pallet::storage]
     pub(crate) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn delegator_balances)]
+    pub(crate) type DelegatorBalances<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
@@ -990,6 +999,38 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(10_000)]
+        pub fn staking_delegate(origin: OriginFor<T>, dst_level: u8) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            let credit_score = T::CreditInterface::get_credit_score(&who).unwrap_or(0);
+            let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
+            ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
+
+            let credit_balances = T::CreditInterface::get_credit_balance();
+            ensure!(
+                usize::from(dst_level) < credit_balances.len(),
+                Error::<T>::TargetLevelLow
+            );
+
+            let need_balance = credit_balances[dst_level as usize]
+                .saturating_sub(credit_balances[cur_level as usize]);
+            T::Currency::transfer(
+                &who,
+                &Self::account_id(),
+                need_balance,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            DelegatorBalances::<T>::insert(&who, need_balance);
+
+            let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
+
+            T::CreditInterface::add_or_update_credit(who.clone(), credit_score + score_gap)?;
+
+            Self::delegate_any(who)?;
+
+            Ok(())
+        }
+
         /// Take the origin account as a stash and lock up `value` of its balance. `controller` will
         /// be the account that controls it.
         ///
@@ -1739,9 +1780,6 @@ pub mod pallet {
                 Error::<T>::CallNotAllowed
             );
 
-            let enough_credit = T::CreditInterface::pass_threshold(&delegator);
-            ensure!(enough_credit, Error::<T>::CreditTooLow);
-
             ensure!(!validators.is_empty(), Error::<T>::NoValidators);
             // remove duplicates
             let validator_set: BTreeSet<T::AccountId> = validators.iter().cloned().collect();
@@ -1757,70 +1795,7 @@ pub mod pallet {
                 );
             }
 
-            let current_era = T::CreditInterface::get_current_era();
-            if <Delegators<T>>::contains_key(&delegator) {
-                let old_delegator_data = Self::delegators(&delegator);
-                if !old_delegator_data.delegating {
-                    // the delegator was not delegating
-                    // the delegator delegates again
-                    ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
-                }
-                let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
-                    Some(unrewarded_era) => unrewarded_era,
-                    None => current_era,
-                };
-                let delegator_data = DelegatorData {
-                    delegator: delegator.clone(),
-                    delegated_validators: validators.clone(),
-                    unrewarded_since: Some(earliest_unrewarded_era),
-                    delegating: true,
-                };
-                <Delegators<T>>::insert(&delegator, delegator_data);
-
-                for validator in &old_delegator_data.delegated_validators {
-                    <CandidateValidators<T>>::mutate(validator, |v| {
-                        v.delegators.remove(&delegator);
-                    });
-                    let candidate = Self::candidate_validators(validator);
-                    if candidate.delegators.is_empty() {
-                        <CandidateValidators<T>>::remove(validator);
-                    }
-                }
-            } else {
-                let delegator_data = DelegatorData {
-                    delegator: delegator.clone(),
-                    delegated_validators: validators.clone(),
-                    unrewarded_since: Some(current_era),
-                    delegating: true,
-                };
-                <Delegators<T>>::insert(&delegator, delegator_data);
-                ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
-                DelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
-                //  delegator must has enough credit score,so this init must success
-                T::CreditInterface::init_delegator_history(&delegator, current_era);
-            };
-
-            for validator in &validator_set {
-                if <CandidateValidators<T>>::contains_key(validator) {
-                    <CandidateValidators<T>>::mutate(validator, |v| {
-                        v.delegators.insert(delegator.clone());
-                    });
-                } else {
-                    let mut delegators = BTreeSet::new();
-                    delegators.insert(delegator.clone());
-                    let elected_era = EraIndex::default();
-                    <CandidateValidators<T>>::insert(
-                        validator,
-                        ValidatorData {
-                            delegators,
-                            elected_era,
-                        },
-                    );
-                }
-            }
-
-            Self::deposit_event(Event::<T>::Delegated(delegator, validators));
-            Ok(())
+            Self::do_delegate(delegator, validators)
         }
 
         /// undelegate credit from the validators
@@ -2052,6 +2027,8 @@ pub mod pallet {
         TooManyValidators,
         /// No candidate validator has been selected
         NoValidators,
+        /// target credit level not greater than current
+        TargetLevelLow,
     }
 }
 
@@ -2079,6 +2056,89 @@ pub mod migrations {
 }
 
 impl<T: Config> pallet::Pallet<T> {
+    pub fn account_id() -> T::AccountId {
+        T::PalletId::get().into_account()
+    }
+
+    fn delegate_any(delegator: T::AccountId) -> DispatchResult {
+        let validators: Vec<_> = Validators::<T>::iter_keys().collect();
+        ensure!(!validators.is_empty(), Error::<T>::NoValidators);
+        let num: u64 = <frame_system::Pallet<T>>::block_number().unique_saturated_into();
+        let idx = (num as usize) % validators.len();
+
+        Self::do_delegate(delegator, vec![validators[idx].clone()])
+    }
+
+    pub fn do_delegate(delegator: T::AccountId, validators: Vec<T::AccountId>) -> DispatchResult {
+        let enough_credit = T::CreditInterface::pass_threshold(&delegator);
+        ensure!(enough_credit, Error::<T>::CreditTooLow);
+
+        let current_era = T::CreditInterface::get_current_era();
+        if <Delegators<T>>::contains_key(&delegator) {
+            let old_delegator_data = Self::delegators(&delegator);
+            if !old_delegator_data.delegating {
+                // the delegator was not delegating
+                // the delegator delegates again
+                ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
+            }
+            let earliest_unrewarded_era = match old_delegator_data.unrewarded_since {
+                Some(unrewarded_era) => unrewarded_era,
+                None => current_era,
+            };
+            let delegator_data = DelegatorData {
+                delegator: delegator.clone(),
+                delegated_validators: validators.clone(),
+                unrewarded_since: Some(earliest_unrewarded_era),
+                delegating: true,
+            };
+            <Delegators<T>>::insert(&delegator, delegator_data);
+
+            for validator in &old_delegator_data.delegated_validators {
+                <CandidateValidators<T>>::mutate(validator, |v| {
+                    v.delegators.remove(&delegator);
+                });
+                let candidate = Self::candidate_validators(validator);
+                if candidate.delegators.is_empty() {
+                    <CandidateValidators<T>>::remove(validator);
+                }
+            }
+        } else {
+            let delegator_data = DelegatorData {
+                delegator: delegator.clone(),
+                delegated_validators: validators.clone(),
+                unrewarded_since: Some(current_era),
+                delegating: true,
+            };
+            <Delegators<T>>::insert(&delegator, delegator_data);
+            ActiveDelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
+            DelegatorCount::<T>::mutate(|count| *count = count.saturating_add(1));
+            //  delegator must has enough credit score,so this init must success
+            T::CreditInterface::init_delegator_history(&delegator, current_era);
+        };
+
+        for validator in &validators {
+            if <CandidateValidators<T>>::contains_key(validator) {
+                <CandidateValidators<T>>::mutate(validator, |v| {
+                    v.delegators.insert(delegator.clone());
+                });
+            } else {
+                let mut delegators = BTreeSet::new();
+                delegators.insert(delegator.clone());
+                let elected_era = EraIndex::default();
+                <CandidateValidators<T>>::insert(
+                    validator,
+                    ValidatorData {
+                        delegators,
+                        elected_era,
+                    },
+                );
+            }
+        }
+
+        Self::deposit_event(Event::<T>::Delegated(delegator, validators));
+        Ok(())
+    }
+
     /// The total balance that can be slashed from a stash account as of right now.
     pub fn slashable_balance_of(stash: &T::AccountId) -> BalanceOf<T> {
         // Weight note: consider making the stake accessible through stash.

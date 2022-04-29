@@ -474,7 +474,6 @@ impl pallet_balances::Config for Runtime {
 impl pallet_operation::Config for Runtime {
     type MaxMember = MaxLocks;
     type Event = Event;
-    type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type OPWeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
 }
@@ -554,6 +553,9 @@ parameter_types! {
     pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     pub const MaxDelegates: usize = 1;
+
+    pub const StakingPalletId: PalletId = PalletId(*b"stak_ing");
+
 }
 
 pub struct NumberCurrencyConverter;
@@ -564,6 +566,7 @@ impl Convert<u128, Balance> for NumberCurrencyConverter {
 }
 
 impl pallet_staking::Config for Runtime {
+    type PalletId = StakingPalletId;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditInterface = Credit;
