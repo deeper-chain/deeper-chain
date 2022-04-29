@@ -21,9 +21,13 @@ It is expected that in the early stages of NPoW there will be insufficient tasks
 |  ----  | ---- |  ---- |
 |  NPoW  | 25%  | 1,025,000 |
 |  PoCr  | 60%  | 2,460,000 |
-|  Validator  | 15%  | 615,000 |
+|  Validator  | 15%  | 615,000 |  
+
 When the node reward is insufficient (≤100 DPR), the node will be rewarded based on the daily obtained EZC receipts as their contribution. Assuming that the number of EZCs of node A is m, the total number of EZCs in a day is M, and the maximum daily DPR reward is MaxReward(NPoW)=2,460,000, the following formula can buse used:
-$$Reward(A) = MaxReward(NPoW)\times{m\over M}$$When a node gains enough rewards (>100 DPR), it will no longer be considered as a subsidized node, thus will not be compensated by any $DPR subsidies. In an effort to encourage a node to take on more Web3 tasks, rewards will be redeemed 1:1 | EZC:DPR. 
+
+$$Reward(A) = MaxReward(NPoW)\times{m\over M}$$
+
+When a node gains enough rewards (>100 DPR), it will no longer be considered as a subsidized node, thus will not be compensated by any $DPR subsidies. In an effort to encourage a node to take on more Web3 tasks, rewards will be redeemed 1:1 | EZC:DPR. 
 
 Notes:
 * The maximum reward allocation represents the maximum budget of this task. It does not represent an individual’s reward.
