@@ -513,7 +513,7 @@ pub fn do_slash<T: Config>(
 }
 
 pub fn do_credit_slash<T: Config>(delegator: &T::AccountId) {
-    T::CreditInterface::slash_credit(delegator);
+    T::CreditInterface::slash_credit(delegator, None);
     if !T::CreditInterface::pass_threshold(delegator) {
         <Pallet<T>>::_undelegate(delegator);
     }

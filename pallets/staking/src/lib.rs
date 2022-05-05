@@ -1840,10 +1840,11 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::undelegate())]
         pub fn force_undelegate(
             origin: OriginFor<T>,
-            accounts: Vec<T::AccountId>,
+            accounts: Vec<(T::AccountId, u64)>,
         ) -> DispatchResult {
             ensure_root(origin)?;
-            for account in accounts {
+            for (account, score) in accounts {
+                T::CreditInterface::slash_credit(&account, Some(score));
                 Self::_undelegate(&account);
                 Self::deposit_event(Event::<T>::UnDelegated(account));
             }

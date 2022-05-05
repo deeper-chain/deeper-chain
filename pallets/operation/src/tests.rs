@@ -17,8 +17,6 @@
 
 //! Macro for creating the tests for the module.
 
-#![cfg(test)]
-
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -26,8 +24,8 @@ use sp_runtime::{
     Perbill,
 };
 
-use frame_support::traits::ConstU32;
-use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
+use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
+use frame_support::{assert_ok, parameter_types, weights::Weight};
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -43,6 +41,7 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Operation: pallet_operation::{Pallet, Call, Event<T>},
     }
 );
@@ -94,18 +93,30 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
 pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+pub const BLOCKS_PER_DAY: Moment = 24 * 3600 / 5;
 
 parameter_types! {
     pub const MaxMember: u32 = 100;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
-impl Config for Test {
+impl pallet_operation::Config for Test {
     type Event = Event;
-    type WeightInfo = ();
+    type OPWeightInfo = ();
     type BlocksPerEra = BlocksPerEra;
     type MaxMember = MaxMember;
     type Currency = Balances;
@@ -122,6 +133,16 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     .assimilate_storage(&mut t)
     .unwrap();
     t.into()
+}
+
+pub fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        Timestamp::set_timestamp(System::block_number() * 5000);
+        System::on_finalize(System::block_number());
+        Operation::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+    }
 }
 
 #[test]
@@ -157,83 +178,32 @@ fn set_release_limit_parameter() {
 }
 
 #[test]
-fn staking_release() {
+fn set_staking_release_info() {
     new_test_ext().execute_with(|| {
         assert_ok!(Operation::set_release_owner_address(Origin::root(), 1));
         assert_ok!(Operation::set_release_limit_parameter(
             Origin::root(),
-            10,
-            1000
+            2000,
+            2000
         ));
+        let info1 = ReleaseInfo::<Test>::new(3, 2, 0, 2000);
+        let info2 = ReleaseInfo::<Test>::new(4, 2, 0, 1000);
         assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
-        assert_ok!(Operation::staking_release(Origin::signed(1), 2, 5));
-        assert_eq!(Balances::free_balance(&2), 15);
-    });
-}
-
-#[test]
-fn staking_release_not_owner() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1));
-        assert_ok!(Operation::set_release_limit_parameter(
-            Origin::root(),
-            10,
-            1000
+        assert_eq!(Balances::free_balance(&3), 0);
+        assert_ok!(Operation::set_staking_release_info(
+            Origin::signed(1),
+            vec!(info1, info2)
         ));
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
-        assert_err!(
-            Operation::staking_release(Origin::signed(3), 2, 5),
-            Error::<Test>::NotMatchOwner
-        );
-        assert_eq!(Balances::free_balance(&2), 10);
-    });
-}
+        run_to_block(BLOCKS_PER_DAY + 3);
+        assert_eq!(Balances::free_balance(&3), 1000);
+        assert_eq!(Balances::free_balance(&4), 500);
 
-#[test]
-fn staking_release_reach_single_maximum_limit() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1));
-        assert_ok!(Operation::set_release_limit_parameter(
-            Origin::root(),
-            10,
-            1000
-        ));
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
-        assert_err!(
-            Operation::staking_release(Origin::signed(1), 2, 11),
-            Error::<Test>::ReachSingleMaximumLimit
-        );
-        assert_eq!(Balances::free_balance(&2), 10);
-    });
-}
+        run_to_block(BLOCKS_PER_DAY * 2 + 3);
+        assert_eq!(Balances::free_balance(&3), 2000);
+        assert_eq!(Balances::free_balance(&4), 1000);
 
-#[test]
-fn staking_release_reach_daily_maximum_limit() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1));
-        assert_ok!(Operation::set_release_limit_parameter(
-            Origin::root(),
-            10,
-            20
-        ));
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
-
-        assert_ok!(Operation::staking_release(Origin::signed(1), 2, 5));
-        assert_eq!(Balances::free_balance(&2), 15);
-
-        assert_ok!(Operation::staking_release(Origin::signed(1), 2, 5));
-        assert_eq!(Balances::free_balance(&2), 20);
-
-        assert_ok!(Operation::staking_release(Origin::signed(1), 2, 5));
-        assert_eq!(Balances::free_balance(&2), 25);
-
-        assert_ok!(Operation::staking_release(Origin::signed(1), 2, 5));
-        assert_eq!(Balances::free_balance(&2), 30);
-
-        assert_err!(
-            Operation::staking_release(Origin::signed(1), 2, 5),
-            Error::<Test>::ReachDailyMaximumLimit
-        );
-        assert_eq!(Balances::free_balance(&2), 30);
+        run_to_block(BLOCKS_PER_DAY * 3 + 3);
+        assert_eq!(Operation::accounts_release_info(&3).is_none(), true);
+        assert_eq!(Operation::accounts_release_info(&4).is_none(), true);
     });
 }
