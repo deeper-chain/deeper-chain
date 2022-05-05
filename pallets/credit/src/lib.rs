@@ -628,6 +628,16 @@ pub mod pallet {
             CreditBalances::<T>::put(credit_balances);
             Ok(().into())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_default_campaign_id(
+            origin: OriginFor<T>,
+            id: u16,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            DefaultCampaignId::<T>::put(id);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {

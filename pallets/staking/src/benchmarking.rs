@@ -138,11 +138,12 @@ benchmarks! {
     verify {
         assert!(Validators::<T>::contains_key(stash));
     }
+
     staking_delegate {
-        let delegator = create_delegator::<T>(101, 1000000)?;
+        let delegator = create_high_funded_user::<T>("aa",USER_SEED, 1000);
         let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
         whitelist_account!(delegator);
-    }: _(RawOrigin::Signed(delegator.clone()), 3)
+    }: _(RawOrigin::Signed(delegator.clone()), 2)
     verify {
         assert!(Delegators::<T>::contains_key(delegator));
     }
