@@ -54,6 +54,7 @@ pub trait WeightInfo {
     fn validate() -> Weight;
     fn delegate(n: u32) -> Weight;
     fn undelegate() -> Weight;
+    fn staking_delegate() -> Weight;
     fn chill() -> Weight;
     fn set_payee() -> Weight;
     fn set_controller() -> Weight;
@@ -121,6 +122,12 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
+    fn staking_delegate() -> Weight {
+        (108_056_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(11 as Weight))
+            .saturating_add(T::DbWeight::get().writes(8 as Weight))
+    }
+
     fn chill() -> Weight {
         (10_500_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
@@ -266,6 +273,13 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
+
+    fn staking_delegate() -> Weight {
+        (108_056_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(11 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(8 as Weight))
+    }
+
     fn chill() -> Weight {
         (10_500_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))

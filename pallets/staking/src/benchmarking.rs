@@ -138,6 +138,14 @@ benchmarks! {
     verify {
         assert!(Validators::<T>::contains_key(stash));
     }
+    staking_delegate {
+        let delegator = create_delegator::<T>(101, 1000000)?;
+        let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
+        whitelist_account!(delegator);
+    }: _(RawOrigin::Signed(delegator.clone()), 3)
+    verify {
+        assert!(Delegators::<T>::contains_key(delegator));
+    }
 
     // Worst case scenario, MAX_DELEGATORS
     delegate {
@@ -464,6 +472,7 @@ mod tests {
                 assert_ok!(Pallet::<Test>::test_benchmark_rebond());
                 assert_ok!(Pallet::<Test>::test_benchmark_set_history_depth());
                 assert_ok!(Pallet::<Test>::test_benchmark_reap_stash());
+                assert_ok!(Pallet::<Test>::test_benchmark_staking_delegate());
                 assert_ok!(Pallet::<Test>::test_benchmark_delegate());
                 assert_ok!(Pallet::<Test>::test_benchmark_undelegate());
                 assert_ok!(Pallet::<Test>::test_benchmark_do_slash());

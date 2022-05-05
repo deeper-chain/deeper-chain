@@ -136,6 +136,10 @@ pub type CampaignId = u16;
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
+/// default reward eras
+pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
+pub const DPR: u128 = 1_000_000_000_000_000_000;
+
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -164,14 +168,14 @@ pub struct CreditData {
 }
 
 impl CreditData {
-    pub fn new(campaign_id: CampaignId, credit: u64, reward_eras: EraIndex) -> Self {
+    pub fn new(campaign_id: CampaignId, credit: u64) -> Self {
         let lv = CreditLevel::get_credit_level(credit);
         CreditData {
             campaign_id,
             credit,
             initial_credit_level: lv,
             current_credit_level: lv,
-            reward_eras,
+            reward_eras: DEFAULT_REWARD_ERAS,
             ..Default::default()
         }
     }
@@ -217,7 +221,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
     use sp_runtime::{
-        traits::{Saturating, Zero},
+        traits::{Saturating, UniqueSaturatedFrom, Zero},
         Perbill,
     };
     use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto};
@@ -332,7 +336,23 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn credit_balances)]
-    pub type CreditBalances<T: Config> = StorageValue<_, Vec<BalanceOf<T>>, ValueQuery>;
+    pub type CreditBalances<T: Config> =
+        StorageValue<_, Vec<BalanceOf<T>>, ValueQuery, CreditDefaultBalance<T>>;
+
+    #[pallet::type_value]
+    pub fn CreditDefaultBalance<T: Config>() -> Vec<BalanceOf<T>> {
+        vec![
+            UniqueSaturatedFrom::unique_saturated_from(1000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(5000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(20000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(30000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(50000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(60000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(80000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
+        ]
+    }
 
     #[pallet::type_value]
     pub fn NewUserCampaignId() -> u16 {
@@ -834,11 +854,16 @@ pub mod pallet {
             if new_id.is_none() {
                 return false;
             }
+            let new_id = new_id.unwrap();
 
-            old_data.campaign_id = new_id.unwrap();
-            old_data.reward_eras += 180;
+            if old_data.campaign_id == new_id {
+                old_data.reward_eras += 180;
+            } else {
+                old_data.campaign_id = new_id;
+                old_data.reward_eras = DEFAULT_REWARD_ERAS;
+            }
 
-            UserCredit::<T>::insert(who, old_data.clone());
+            UserCredit::<T>::insert(who, old_data);
             Self::update_credit_history(who, expire_era);
             true
         }
@@ -879,7 +904,7 @@ pub mod pallet {
                     }
                     None => {
                         let default_id = Self::default_campaign_id();
-                        CreditData::new(default_id, credit_score, Self::get_current_era())
+                        CreditData::new(default_id, credit_score)
                     }
                 }
             };

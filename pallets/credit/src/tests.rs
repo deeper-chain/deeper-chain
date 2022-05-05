@@ -14,15 +14,10 @@
 // limitations under the License.
 
 #[cfg(test)]
-
-
 use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
 use crate::{mock::*, CampaignIdSwitch, CreditInterface, Error, UserCreditHistory};
 use frame_support::traits::Currency;
-use frame_support::{
-    assert_noop, assert_ok,
-    dispatch::{DispatchError},
-};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::RawOrigin;
 use sp_runtime::traits::BadOrigin;
 use sp_runtime::Percent;

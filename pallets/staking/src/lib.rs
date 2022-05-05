@@ -999,21 +999,31 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)]
+        #[pallet::weight(T::WeightInfo::staking_delegate())]
         pub fn staking_delegate(origin: OriginFor<T>, dst_level: u8) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let credit_score = T::CreditInterface::get_credit_score(&who).unwrap_or(0);
-            let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
-            ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
-
             let credit_balances = T::CreditInterface::get_credit_balance();
             ensure!(
                 usize::from(dst_level) < credit_balances.len(),
-                Error::<T>::TargetLevelLow
+                Error::<T>::TargetLevelNotCorrect
             );
 
-            let need_balance = credit_balances[dst_level as usize]
-                .saturating_sub(credit_balances[cur_level as usize]);
+            let credit_score = T::CreditInterface::get_credit_score(&who);
+            let (need_balance, score_gap) = {
+                if let Some(credit_score) = credit_score {
+                    let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
+                    ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
+                    let need_balance = credit_balances[dst_level as usize]
+                        .saturating_sub(credit_balances[cur_level as usize]);
+                    let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
+                    (need_balance, score_gap)
+                } else {
+                    let need_balance = credit_balances[dst_level as usize];
+                    let score_gap = T::CreditInterface::get_credit_gap(dst_level, 0);
+                    (need_balance, score_gap)
+                }
+            };
+
             T::Currency::transfer(
                 &who,
                 &Self::account_id(),
@@ -1021,13 +1031,11 @@ pub mod pallet {
                 ExistenceRequirement::KeepAlive,
             )?;
             DelegatorBalances::<T>::insert(&who, need_balance);
-
-            let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
-
-            T::CreditInterface::add_or_update_credit(who.clone(), credit_score + score_gap)?;
-
+            T::CreditInterface::add_or_update_credit(
+                who.clone(),
+                credit_score.unwrap_or(0) + score_gap,
+            )?;
             Self::delegate_any(who)?;
-
             Ok(())
         }
 
@@ -2029,6 +2037,8 @@ pub mod pallet {
         NoValidators,
         /// target credit level not greater than current
         TargetLevelLow,
+        /// target credit level greater than all level
+        TargetLevelNotCorrect,
     }
 }
 

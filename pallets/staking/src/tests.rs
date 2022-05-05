@@ -25,7 +25,7 @@ use frame_support::{
 use frame_system::RawOrigin;
 use mock::*;
 use pallet_balances::Error as BalancesError;
-use pallet_credit::CreditInterface;
+use pallet_credit::{CreditInterface, CreditLevel};
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
 use sp_std::convert::TryFrom;
@@ -2805,7 +2805,7 @@ fn delegate() {
             // TEST0： delegate with low score
             assert_noop!(
                 Staking::delegate(Origin::signed(1000), vec![4, 6]),
-                Error::<Test>::CreditTooLow
+                Error::<Test>::NotValidator
             );
             // 1001 is the only delegator
             assert_eq!(Staking::delegator_count(), 1);
@@ -2966,5 +2966,53 @@ fn elected_validators_should_rotate() {
             assert_eq_uvec!(Session::validators(), vec![31, 41]);
             mock::start_active_era(4);
             assert_eq_uvec!(Session::validators(), vec![11, 21]);
+        });
+}
+
+#[test]
+fn staking_delegate() {
+    ExtBuilder::default()
+        .validator_pool(true)
+        .build_and_execute(|| {
+            assert_ok!(Credit::set_credit_balances(
+                Origin::root(),
+                vec![
+                    1u32.into(),
+                    10u32.into(),
+                    100u32.into(),
+                    1000u32.into(),
+                    10000u32.into(),
+                    100000u32.into(),
+                    1000000u32.into(),
+                    10000000u32.into()
+                ]
+            ));
+            assert_eq!(Balances::free_balance(&51), 2000);
+            assert_ok!(Staking::staking_delegate(Origin::signed(51), 1));
+            let credit_balances = Credit::get_credit_balance();
+            let pay = credit_balances[1];
+            assert_eq!(Balances::free_balance(&51), 2000 - pay);
+            assert_eq!(Credit::user_credit(&51).unwrap().credit, 100);
+            assert_eq!(
+                Credit::user_credit(&51).unwrap().current_credit_level,
+                CreditLevel::One
+            );
+            assert_eq!(
+                Credit::user_credit(&51).unwrap().initial_credit_level,
+                CreditLevel::One
+            );
+            assert_eq!(Credit::user_credit(&51).unwrap().reward_eras, 10 * 365);
+
+            assert_ok!(Staking::staking_delegate(Origin::signed(51), 3));
+            let sec_pay = credit_balances[3] - credit_balances[1];
+            assert_eq!(Balances::free_balance(&51), 2000 - pay - sec_pay);
+            assert_eq!(Credit::user_credit(&51).unwrap().credit, 300);
+            assert_eq!(
+                Credit::user_credit(&51).unwrap().current_credit_level,
+                CreditLevel::Three
+            );
+
+            assert_eq!(Staking::delegators(&51).delegator, 51);
+            assert_eq!(Staking::delegators(&51).delegating, true);
         });
 }
