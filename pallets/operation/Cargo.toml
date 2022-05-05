@@ -18,8 +18,6 @@ sp-io = {default-features = false, git = "https://github.com/paritytech/substrat
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false}
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false}
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
-pallet-staking = {default-features = false, path = "../staking"}
-pallet-credit = {default-features = false, path = "../credit"}
 sp-runtime = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 log = { version = "0.4.14", default-features = false }
@@ -30,8 +28,6 @@ frame-benchmarking = { default-features = false, git = "https://github.com/parit
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
-pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false}
-
 
 [features]
 default = ['std']
@@ -45,8 +41,6 @@ std = [
     'sp-io/std',
     'sp-std/std',
     'pallet-balances/std',
-    'pallet-staking/std',
-    'pallet-credit/std',
     'node-primitives/std',
     'pallet-timestamp/std',
 ]

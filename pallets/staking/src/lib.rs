@@ -1030,7 +1030,9 @@ pub mod pallet {
                 need_balance,
                 ExistenceRequirement::KeepAlive,
             )?;
-            DelegatorBalances::<T>::insert(&who, need_balance);
+            DelegatorBalances::<T>::mutate(&who, |balance| {
+                *balance = balance.saturating_add(need_balance)
+            });
             T::CreditInterface::add_or_update_credit(
                 who.clone(),
                 credit_score.unwrap_or(0) + score_gap,

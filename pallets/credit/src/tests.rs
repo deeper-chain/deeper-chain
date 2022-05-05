@@ -786,13 +786,39 @@ fn switch_campaign_duration() {
         );
 
         assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 1);
-        assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 1 + 180);
+        assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 3650);
 
         run_to_block(BLOCKS_PER_ERA * 4);
         assert_eq!(
             Credit::get_reward(&13, 3, 3).0,
             Some((0, 56416427606743384752))
         );
+    });
+}
+
+#[test]
+fn switch_campaign_same_id() {
+    new_test_ext().execute_with(|| {
+        // 1,3's gennesis balance = 500
+        let _ = Balances::deposit_creating(&13, 5000);
+        CampaignIdSwitch::<Test>::insert(0, 0);
+        //let credit_data = Credit::user_credit(1).unwrap();
+        assert!(Credit::init_delegator_history(&13, 1));
+        // run_to_block, era=1
+        run_to_block(BLOCKS_PER_ERA * 2);
+        assert_eq!(
+            Credit::get_reward(&13, 1, 1).0,
+            Some((0, 60263002216294070076))
+        );
+
+        run_to_block(BLOCKS_PER_ERA * 3);
+        assert_eq!(
+            Credit::get_reward(&13, 2, 2).0,
+            Some((0, 60263002216294070076))
+        );
+
+        assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 0);
+        assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 1 + 180);
     });
 }
 
