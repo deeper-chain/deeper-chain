@@ -76,7 +76,7 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 
-use fp_rpc::{TransactionStatus, TxPoolResponse};
+use fp_rpc::{TransactionStatusV2, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
 use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, PairedAddressMapping, Runner};
@@ -1839,7 +1839,7 @@ impl_runtime_apis! {
             ).map_err(|err| err.into())
         }
 
-        fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
+        fn current_transaction_statuses() -> Option<Vec<TransactionStatusV2>> {
             Ethereum::current_transaction_statuses()
         }
 
@@ -1854,7 +1854,7 @@ impl_runtime_apis! {
         fn current_all() -> (
             Option<pallet_ethereum::Block>,
             Option<Vec<pallet_ethereum::Receipt>>,
-            Option<Vec<TransactionStatus>>
+            Option<Vec<TransactionStatusV2>>
         ) {
             (
                 Ethereum::current_block(),
