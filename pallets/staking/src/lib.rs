@@ -1036,7 +1036,7 @@ pub mod pallet {
             T::CreditInterface::add_or_update_credit(
                 who.clone(),
                 credit_score.unwrap_or(0) + score_gap,
-            )?;
+            );
             Self::delegate_any(who)?;
             Ok(())
         }

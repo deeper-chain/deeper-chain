@@ -210,7 +210,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
     fn get_credit_balance() -> Vec<Balance>;
     fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
-    fn add_or_update_credit(account_id: AccountId, credit_score: u64) -> DispatchResult;
+    fn add_or_update_credit(account_id: AccountId, credit_score: u64);
 }
 
 #[frame_support::pallet]
@@ -503,7 +503,8 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
-            Self::do_add_credit(account_id, credit_data)
+            Self::do_add_credit(account_id, credit_data);
+            Ok(())
         }
 
         #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_for_add_credit())]
@@ -861,7 +862,7 @@ pub mod pallet {
             true
         }
 
-        fn do_add_credit(account_id: T::AccountId, credit_data: CreditData) -> DispatchResult {
+        fn do_add_credit(account_id: T::AccountId, credit_data: CreditData) {
             if UserCredit::<T>::contains_key(&account_id) {
                 UserCredit::<T>::mutate(&account_id, |d| match d {
                     Some(data) => *data = credit_data.clone(),
@@ -874,7 +875,6 @@ pub mod pallet {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
             }
             Self::deposit_event(Event::CreditUpdateSuccess(account_id, credit_data.credit));
-            Ok(())
         }
     }
 
@@ -887,7 +887,7 @@ pub mod pallet {
             CreditLevel::credit_level_gap(dst_lv.into(), cur_lv.into())
         }
 
-        fn add_or_update_credit(account_id: T::AccountId, credit_score: u64) -> DispatchResult {
+        fn add_or_update_credit(account_id: T::AccountId, credit_score: u64) {
             let credit_data = {
                 match UserCredit::<T>::get(account_id.clone()) {
                     Some(mut credit_data) => {
@@ -900,9 +900,7 @@ pub mod pallet {
                     }
                 }
             };
-
-            Self::do_add_credit(account_id, credit_data)?;
-            Ok(())
+            Self::do_add_credit(account_id, credit_data);
         }
 
         fn get_current_era() -> EraIndex {
