@@ -348,9 +348,11 @@ pub const TOTAL_MINING_REWARD: u128 = 6_000_000_000_000_000_000_000_000;
 parameter_types! {
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
     pub const MaxDelegates: usize = 10;
+    pub const StakingPalletId: PalletId = PalletId(*b"stak_ing");
 }
 
 impl Config for Test {
+    type PalletId = StakingPalletId;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type UnixTime = Timestamp;

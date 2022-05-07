@@ -74,11 +74,71 @@ impl Default for CreditLevel {
     }
 }
 
+impl From<u8> for CreditLevel {
+    fn from(num: u8) -> Self {
+        match num {
+            0 => Self::Zero,
+            1 => Self::One,
+            2 => Self::Two,
+            3 => Self::Three,
+            4 => Self::Four,
+            5 => Self::Five,
+            6 => Self::Six,
+            7 => Self::Seven,
+            8 => Self::Eight,
+            _ => Self::Zero,
+        }
+    }
+}
+
+impl Into<u8> for CreditLevel {
+    fn into(self) -> u8 {
+        match self {
+            Self::Zero => 0,
+            Self::One => 1,
+            Self::Two => 2,
+            Self::Three => 3,
+            Self::Four => 4,
+            Self::Five => 5,
+            Self::Six => 6,
+            Self::Seven => 7,
+            Self::Eight => 8,
+        }
+    }
+}
+
+impl CreditLevel {
+    pub fn get_credit_level(credit_score: u64) -> CreditLevel {
+        let credit_level = match credit_score {
+            0..=99 => CreditLevel::Zero,
+            100..=199 => CreditLevel::One,
+            200..=299 => CreditLevel::Two,
+            300..=399 => CreditLevel::Three,
+            400..=499 => CreditLevel::Four,
+            500..=599 => CreditLevel::Five,
+            600..=699 => CreditLevel::Six,
+            700..=799 => CreditLevel::Seven,
+            _ => CreditLevel::Eight,
+        };
+        credit_level
+    }
+
+    pub fn credit_level_gap(lhs: CreditLevel, rhs: CreditLevel) -> u64 {
+        let lhs: u8 = lhs.into();
+        let rhs: u8 = rhs.into();
+        100u64 * (lhs.saturating_sub(rhs) as u64)
+    }
+}
+
 /// Each campaign_id represents a DPR Proof-of-Credit promotion campaign.
 pub type CampaignId = u16;
 
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
+
+/// default reward eras
+pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
+pub const DPR: u128 = 1_000_000_000_000_000_000;
 
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
@@ -107,6 +167,30 @@ pub struct CreditData {
     pub reward_eras: EraIndex, // reward eras since device gets online
 }
 
+impl CreditData {
+    pub fn new(campaign_id: CampaignId, credit: u64) -> Self {
+        let lv = CreditLevel::get_credit_level(credit);
+        CreditData {
+            campaign_id,
+            credit,
+            initial_credit_level: lv,
+            current_credit_level: lv,
+            reward_eras: DEFAULT_REWARD_ERAS,
+            ..Default::default()
+        }
+    }
+
+    pub fn update(&mut self, credit: u64) {
+        let lv = CreditLevel::get_credit_level(credit);
+        self.current_credit_level = lv;
+        self.credit = credit;
+    }
+
+    pub fn update_campaign(&mut self, campaign_id: CampaignId) {
+        self.campaign_id = campaign_id;
+    }
+}
+
 pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
     fn pass_threshold(account_id: &AccountId) -> bool;
@@ -124,21 +208,20 @@ pub trait CreditInterface<AccountId, Balance> {
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
     fn update_credit_by_burn_nft(who: AccountId, add_credit: u64) -> DispatchResult;
     fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
+    fn get_credit_balance() -> Vec<Balance>;
+    fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
+    fn add_or_update_credit(account_id: AccountId, credit_score: u64);
 }
 
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
     use frame_support::traits::{Currency, OnUnbalanced, UnixTime};
-    use frame_support::{
-        dispatch::{DispatchErrorWithPostInfo, DispatchResultWithPostInfo},
-        pallet_prelude::*,
-        weights::Weight,
-    };
+    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, weights::Weight};
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
     use sp_runtime::{
-        traits::{Saturating, Zero},
+        traits::{Saturating, UniqueSaturatedFrom, Zero},
         Perbill,
     };
     use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto};
@@ -250,6 +333,35 @@ pub mod pallet {
     #[pallet::getter(fn switch_accounts)]
     pub type NotSwitchAccounts<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, bool, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn credit_balances)]
+    pub type CreditBalances<T: Config> =
+        StorageValue<_, Vec<BalanceOf<T>>, ValueQuery, CreditDefaultBalance<T>>;
+
+    #[pallet::type_value]
+    pub fn CreditDefaultBalance<T: Config>() -> Vec<BalanceOf<T>> {
+        vec![
+            UniqueSaturatedFrom::unique_saturated_from(1000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(5000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(20000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(30000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(50000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(60000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(80000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
+        ]
+    }
+
+    #[pallet::type_value]
+    pub fn NewUserCampaignId() -> u16 {
+        4
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn default_campaign_id)]
+    pub(crate) type DefaultCampaignId<T> = StorageValue<_, u16, ValueQuery, NewUserCampaignId>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -388,23 +500,11 @@ pub mod pallet {
             origin: OriginFor<T>,
             account_id: T::AccountId,
             credit_data: CreditData,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
-
-            if UserCredit::<T>::contains_key(&account_id) {
-                UserCredit::<T>::mutate(&account_id, |d| match d {
-                    Some(data) => *data = credit_data.clone(),
-                    _ => (),
-                });
-                if !Self::user_credit_history(&account_id).is_empty() {
-                    Self::update_credit_history(&account_id, Self::get_current_era());
-                }
-            } else {
-                UserCredit::<T>::insert(&account_id, credit_data.clone());
-            }
-            Self::deposit_event(Event::CreditUpdateSuccess(account_id, credit_data.credit));
-            Ok(().into())
+            Self::do_add_credit(account_id, credit_data);
+            Ok(())
         }
 
         #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_for_add_credit())]
@@ -519,6 +619,26 @@ pub mod pallet {
             }
             Ok(().into())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_credit_balances(
+            origin: OriginFor<T>,
+            credit_balances: Vec<BalanceOf<T>>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            CreditBalances::<T>::put(credit_balances);
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_default_campaign_id(
+            origin: OriginFor<T>,
+            id: u16,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            DefaultCampaignId::<T>::put(id);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -538,7 +658,7 @@ pub mod pallet {
                 UserCredit::<T>::mutate(account_id, |v| match v {
                     Some(credit_data) => {
                         credit_data.credit = score;
-                        credit_data.current_credit_level = Self::get_credit_level(score);
+                        credit_data.current_credit_level = CreditLevel::get_credit_level(score);
                     }
                     _ => (),
                 });
@@ -642,9 +762,9 @@ pub mod pallet {
         }
 
         /// credit data check
-        fn check_credit_data(data: &CreditData) -> Result<(), DispatchErrorWithPostInfo> {
+        fn check_credit_data(data: &CreditData) -> DispatchResult {
             ensure!(
-                Self::get_credit_level(data.credit) == data.current_credit_level,
+                CreditLevel::get_credit_level(data.credit) == data.current_credit_level,
                 Error::<T>::InvalidCreditData
             );
             let credit_setting = Self::credit_settings(data.campaign_id, data.initial_credit_level);
@@ -728,17 +848,61 @@ pub mod pallet {
             if new_id.is_none() {
                 return false;
             }
+            let new_id = new_id.unwrap();
 
-            old_data.campaign_id = new_id.unwrap();
-            old_data.reward_eras += 180;
+            if old_data.campaign_id == new_id {
+                old_data.reward_eras += 180;
+            } else {
+                old_data.campaign_id = new_id;
+                old_data.reward_eras = DEFAULT_REWARD_ERAS;
+            }
 
-            UserCredit::<T>::insert(who, old_data.clone());
+            UserCredit::<T>::insert(who, old_data);
             Self::update_credit_history(who, expire_era);
             true
+        }
+
+        fn do_add_credit(account_id: T::AccountId, credit_data: CreditData) {
+            if UserCredit::<T>::contains_key(&account_id) {
+                UserCredit::<T>::mutate(&account_id, |d| match d {
+                    Some(data) => *data = credit_data.clone(),
+                    _ => (),
+                });
+                if !Self::user_credit_history(&account_id).is_empty() {
+                    Self::update_credit_history(&account_id, Self::get_current_era());
+                }
+            } else {
+                UserCredit::<T>::insert(&account_id, credit_data.clone());
+            }
+            Self::deposit_event(Event::CreditUpdateSuccess(account_id, credit_data.credit));
         }
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
+        fn get_credit_balance() -> Vec<BalanceOf<T>> {
+            Self::credit_balances()
+        }
+
+        fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64 {
+            CreditLevel::credit_level_gap(dst_lv.into(), cur_lv.into())
+        }
+
+        fn add_or_update_credit(account_id: T::AccountId, credit_score: u64) {
+            let credit_data = {
+                match UserCredit::<T>::get(account_id.clone()) {
+                    Some(mut credit_data) => {
+                        credit_data.update(credit_score);
+                        credit_data
+                    }
+                    None => {
+                        let default_id = Self::default_campaign_id();
+                        CreditData::new(default_id, credit_score)
+                    }
+                }
+            };
+            Self::do_add_credit(account_id, credit_data);
+        }
+
         fn get_current_era() -> EraIndex {
             Self::block_to_era(<frame_system::Pallet<T>>::block_number())
         }
@@ -767,7 +931,7 @@ pub mod pallet {
                     Some(credit_data) => {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty);
                         credit_data.current_credit_level =
-                            Self::get_credit_level(credit_data.credit);
+                            CreditLevel::get_credit_level(credit_data.credit);
 
                         Self::deposit_event(Event::CreditScoreSlashed(
                             (*account_id).clone(),
@@ -786,18 +950,7 @@ pub mod pallet {
         }
 
         fn get_credit_level(credit_score: u64) -> CreditLevel {
-            let credit_level = match credit_score {
-                0..=99 => CreditLevel::Zero,
-                100..=199 => CreditLevel::One,
-                200..=299 => CreditLevel::Two,
-                300..=399 => CreditLevel::Three,
-                400..=499 => CreditLevel::Four,
-                500..=599 => CreditLevel::Five,
-                600..=699 => CreditLevel::Six,
-                700..=799 => CreditLevel::Seven,
-                _ => CreditLevel::Eight,
-            };
-            credit_level
+            CreditLevel::get_credit_level(credit_score)
         }
 
         fn get_reward(

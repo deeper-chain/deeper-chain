@@ -41,6 +41,22 @@ pub fn clear_validators_and_delegators<T: Config>() {
 }
 
 /// Grab a funded user.
+pub fn create_high_funded_user<T: Config>(
+    string: &'static str,
+    n: u32,
+    balance_factor: u32,
+) -> T::AccountId {
+    let user = account(string, n, SEED);
+    let balance = T::Currency::minimum_balance().saturating_mul(u32::MAX.into());
+    let balance = balance.saturating_mul(u32::MAX.into());
+    let balance = balance.saturating_mul(balance_factor.into());
+    T::Currency::make_free_balance_be(&user, balance);
+    // ensure T::CurrencyToVote will work correctly.
+    T::Currency::issue(balance);
+    user
+}
+
+/// Grab a funded user.
 pub fn create_funded_user<T: Config>(
     string: &'static str,
     n: u32,

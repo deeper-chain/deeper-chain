@@ -57,7 +57,6 @@ pub mod pallet {
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
-        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         type MaxMember: Get<u32>;
         type OPWeightInfo: WeightInfo;
     }

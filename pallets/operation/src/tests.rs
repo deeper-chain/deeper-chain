@@ -117,7 +117,6 @@ parameter_types! {
 impl pallet_operation::Config for Test {
     type Event = Event;
     type OPWeightInfo = ();
-    type BlocksPerEra = BlocksPerEra;
     type MaxMember = MaxMember;
     type Currency = Balances;
 }
