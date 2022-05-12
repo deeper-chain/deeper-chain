@@ -35,8 +35,8 @@ pub mod pallet {
     use super::*;
     use codec::{Decode, Encode, MaxEncodedLen};
     use frame_support::traits::{
-        Currency, Get, Imbalance, LockIdentifier, LockableCurrency, OnUnbalanced,
-        ReservableCurrency,
+        Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
+        OnUnbalanced, ReservableCurrency, WithdrawReasons,
     };
     use frame_support::WeakBoundedVec;
     use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*};
@@ -94,7 +94,6 @@ pub mod pallet {
         ReachDailyMaximumLimit,
         ReachSingleMaximumLimit,
         ReleaseDayZero,
-        BalanceNotEnough,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -358,14 +357,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
 
-            if T::Currency::can_slash(&sender, burned) {
-                let (burned, _) = T::Currency::slash(&sender, burned);
-                let balance = burned.peek();
-                T::BurnedTo::on_unbalanced(burned);
-                Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
-            } else {
-                Err(Error::<T>::BalanceNotEnough)?
-            }
+            let burned = T::Currency::withdraw(
+                &sender,
+                burned,
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            let balance = burned.peek();
+            T::BurnedTo::on_unbalanced(burned);
+            Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
             Ok(().into())
         }
     }

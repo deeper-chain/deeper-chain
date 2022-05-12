@@ -207,3 +207,12 @@ fn set_staking_release_info() {
         assert_eq!(Operation::accounts_release_info(&4).is_none(), true);
     });
 }
+
+#[test]
+fn burn_for_ezc() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(Balances::free_balance(&1), 98);
+        assert_ok!(Operation::burn_for_ezc(Origin::signed(1), 48, H160::zero()));
+        assert_eq!(Balances::free_balance(&1), 50);
+    });
+}
