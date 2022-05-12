@@ -475,6 +475,7 @@ impl pallet_operation::Config for Runtime {
     type MaxMember = MaxLocks;
     type Event = Event;
     type Currency = Balances;
+    type BurnedTo = Treasury;
     type OPWeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
 }
 

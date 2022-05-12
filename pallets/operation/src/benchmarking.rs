@@ -118,5 +118,14 @@ benchmarks! {
         assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
     }
 
+    burn_for_ezc {
+        let existential_deposit = T::Currency::minimum_balance();
+        let user: T::AccountId = account("user", 0, SEED);
+        let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+    }: burn_for_ezc(RawOrigin::Signed(user.clone()), existential_deposit, H160::zero())
+    verify {
+        assert_eq!(T::Currency::free_balance(&user),existential_deposit);
+    }
+
     impl_benchmark_test_suite!(Op, crate::tests::new_test_ext(), crate::tests::Test);
 }

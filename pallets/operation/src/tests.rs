@@ -119,6 +119,7 @@ impl pallet_operation::Config for Test {
     type OPWeightInfo = ();
     type MaxMember = MaxMember;
     type Currency = Balances;
+    type BurnedTo = ();
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
