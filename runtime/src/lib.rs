@@ -479,6 +479,7 @@ impl pallet_operation::Config for Runtime {
     type BurnedTo = Treasury;
     type OPWeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
     type MinimumBurnedDPR = MinimumBurnedDPR;
+    type CreditInterface = Credit;
 }
 
 parameter_types! {

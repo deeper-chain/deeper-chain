@@ -38,10 +38,13 @@ pub mod pallet {
         Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
         OnUnbalanced, ReservableCurrency, WithdrawReasons,
     };
-    use frame_support::WeakBoundedVec;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, transactional,
+        WeakBoundedVec,
+    };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
+    use pallet_credit::CreditInterface;
     pub use sp_core::H160;
     use sp_runtime::{
         traits::{StaticLookup, UniqueSaturatedInto},
@@ -66,6 +69,7 @@ pub mod pallet {
         type OPWeightInfo: WeightInfo;
         type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
+        type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
     }
 
     #[pallet::pallet]
@@ -96,6 +100,7 @@ pub mod pallet {
         ReachSingleMaximumLimit,
         ReleaseDayZero,
         BurnedDprTooLow,
+        FirstCampaignNotEnd,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -303,6 +308,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::OPWeightInfo::set_staking_release_info())]
+        #[transactional]
         pub fn set_staking_release_info(
             origin: OriginFor<T>,
             infos: Vec<ReleaseInfo<T>>,
@@ -324,6 +330,11 @@ pub mod pallet {
                     Error::<T>::ReachSingleMaximumLimit
                 );
                 let account = basic_info.account.clone();
+                ensure!(
+                    T::CreditInterface::is_first_campaign_end(account.clone()).unwrap_or(false),
+                    Error::<T>::FirstCampaignNotEnd
+                );
+
                 let cur_info = CurrentRelease::<T> {
                     basic_info,
                     last_release_day: start_day,

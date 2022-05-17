@@ -42,6 +42,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         Operation: pallet_operation::{Pallet, Call, Event<T>},
     }
 );
@@ -115,6 +116,30 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
+parameter_types! {
+    pub const CreditCapTwoEras: u8 = 5;
+    pub const CreditAttenuationStep: u64 = 1;
+    pub const MinCreditToDelegate: u64 = 100;
+    pub const MicropaymentToCreditFactor: u128 = 1;
+    pub const DPRPerCreditBurned: Balance = 100;
+}
+
+impl pallet_credit::Config for Test {
+    type Event = Event;
+    type BlocksPerEra = BlocksPerEra;
+    type Currency = Balances;
+    type CreditCapTwoEras = CreditCapTwoEras;
+    type CreditAttenuationStep = CreditAttenuationStep;
+    type MinCreditToDelegate = MinCreditToDelegate;
+    type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
+    type NodeInterface = ();
+    type WeightInfo = ();
+    type UnixTime = Timestamp;
+    type SecsPerBlock = SecsPerBlock;
+    type DPRPerCreditBurned = DPRPerCreditBurned;
+    type BurnedTo = ();
+}
+
 impl pallet_operation::Config for Test {
     type Event = Event;
     type OPWeightInfo = ();
@@ -122,6 +147,7 @@ impl pallet_operation::Config for Test {
     type Currency = Balances;
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
+    type CreditInterface = Credit;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
