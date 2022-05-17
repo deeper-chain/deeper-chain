@@ -44,7 +44,7 @@ pub mod pallet {
     use frame_system::{self, ensure_signed};
     pub use sp_core::H160;
     use sp_runtime::{
-        traits::{StaticLookup, UniqueSaturatedInto},
+        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto},
         RuntimeDebug,
     };
 
@@ -94,6 +94,7 @@ pub mod pallet {
         ReachDailyMaximumLimit,
         ReachSingleMaximumLimit,
         ReleaseDayZero,
+        BurnedDprTooLow,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -191,6 +192,15 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn day_release_end)]
     pub(crate) type DayReleaseEnd<T> = StorageValue<_, bool, ValueQuery>;
+
+    #[pallet::storage]
+    pub(crate) type MinimumBurnedDPR<T> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, GetMinBurnedDpr<T>>;
+
+    #[pallet::type_value]
+    pub(crate) fn GetMinBurnedDpr<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(50 * 1_000_000_000_000_000_000u128)
+    }
 
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
@@ -356,7 +366,10 @@ pub mod pallet {
             benifity: H160,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-
+            ensure!(
+                burned >= MinimumBurnedDPR::<T>::get(),
+                Error::<T>::BurnedDprTooLow
+            );
             let burned = T::Currency::withdraw(
                 &sender,
                 burned,
