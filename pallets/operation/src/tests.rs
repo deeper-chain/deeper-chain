@@ -80,6 +80,7 @@ impl frame_system::Config for Test {
 }
 parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
+    pub const MinimumBurnedDPR: u64 = 1;
 }
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
@@ -120,6 +121,7 @@ impl pallet_operation::Config for Test {
     type MaxMember = MaxMember;
     type Currency = Balances;
     type BurnedTo = ();
+    type MinimumBurnedDPR = MinimumBurnedDPR;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

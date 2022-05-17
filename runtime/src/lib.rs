@@ -457,6 +457,7 @@ parameter_types! {
     // For weight estimation, we assume that the most locks on an individual account will be 50.
     // This number may need to be adjusted in the future if this assumption no longer holds true.
     pub const MaxLocks: u32 = 50;
+    pub const MinimumBurnedDPR: Balance = 50 * DPR;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -477,6 +478,7 @@ impl pallet_operation::Config for Runtime {
     type Currency = Balances;
     type BurnedTo = Treasury;
     type OPWeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
+    type MinimumBurnedDPR = MinimumBurnedDPR;
 }
 
 parameter_types! {
