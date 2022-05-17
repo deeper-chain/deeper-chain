@@ -35,12 +35,14 @@ pub mod pallet {
     use super::*;
     use codec::{Decode, Encode, MaxEncodedLen};
     use frame_support::traits::{
-        Currency, Get, Imbalance, LockIdentifier, LockableCurrency, ReservableCurrency,
+        Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
+        OnUnbalanced, ReservableCurrency, WithdrawReasons,
     };
     use frame_support::WeakBoundedVec;
     use frame_support::{dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
+    pub use sp_core::H160;
     use sp_runtime::{
         traits::{StaticLookup, UniqueSaturatedInto},
         RuntimeDebug,
@@ -49,6 +51,9 @@ pub mod pallet {
     type BalanceOf<T> = <<T as pallet::Config>::Currency as Currency<
         <T as frame_system::Config>::AccountId,
     >>::Balance;
+    pub type NegativeImbalanceOf<T> = <<T as pallet::Config>::Currency as Currency<
+        <T as frame_system::Config>::AccountId,
+    >>::NegativeImbalance;
 
     pub const MILLISECS_PER_DAY: u64 = 1000 * 3600 * 24;
 
@@ -59,6 +64,8 @@ pub mod pallet {
         type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type MaxMember: Get<u32>;
         type OPWeightInfo: WeightInfo;
+        type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
+        type MinimumBurnedDPR: Get<BalanceOf<Self>>;
     }
 
     #[pallet::pallet]
@@ -75,6 +82,7 @@ pub mod pallet {
         ReleaseReward(T::AccountId, BalanceOf<T>),
         AccountReleaseEnd(T::AccountId),
         SingleReleaseTooMuch(T::AccountId, BalanceOf<T>),
+        BurnForEZC(T::AccountId, BalanceOf<T>, H160),
     }
 
     // Errors inform users that something went wrong.
@@ -87,6 +95,7 @@ pub mod pallet {
         ReachDailyMaximumLimit,
         ReachSingleMaximumLimit,
         ReleaseDayZero,
+        BurnedDprTooLow,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -339,6 +348,29 @@ pub mod pallet {
             for account in release_accounts {
                 AccountsReleaseInfo::<T>::remove(&account);
             }
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::burn_for_ezc())]
+        pub fn burn_for_ezc(
+            origin: OriginFor<T>,
+            burned: BalanceOf<T>,
+            benifity: H160,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                burned >= T::MinimumBurnedDPR::get(),
+                Error::<T>::BurnedDprTooLow
+            );
+            let burned = T::Currency::withdraw(
+                &sender,
+                burned,
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            let balance = burned.peek();
+            T::BurnedTo::on_unbalanced(burned);
+            Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
             Ok(().into())
         }
     }

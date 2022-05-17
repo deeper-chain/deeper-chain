@@ -80,6 +80,7 @@ impl frame_system::Config for Test {
 }
 parameter_types! {
     pub const ExistentialDeposit: u64 = 1;
+    pub const MinimumBurnedDPR: u64 = 1;
 }
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
@@ -119,6 +120,8 @@ impl pallet_operation::Config for Test {
     type OPWeightInfo = ();
     type MaxMember = MaxMember;
     type Currency = Balances;
+    type BurnedTo = ();
+    type MinimumBurnedDPR = MinimumBurnedDPR;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -204,5 +207,14 @@ fn set_staking_release_info() {
         run_to_block(BLOCKS_PER_DAY * 3 + 3);
         assert_eq!(Operation::accounts_release_info(&3).is_none(), true);
         assert_eq!(Operation::accounts_release_info(&4).is_none(), true);
+    });
+}
+
+#[test]
+fn burn_for_ezc() {
+    new_test_ext().execute_with(|| {
+        assert_eq!(Balances::free_balance(&1), 98);
+        assert_ok!(Operation::burn_for_ezc(Origin::signed(1), 48, H160::zero()));
+        assert_eq!(Balances::free_balance(&1), 50);
     });
 }

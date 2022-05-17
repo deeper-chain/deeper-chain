@@ -216,7 +216,9 @@ pub trait CreditInterface<AccountId, Balance> {
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, OnUnbalanced, UnixTime};
+    use frame_support::traits::{
+        Currency, ExistenceRequirement, OnUnbalanced, UnixTime, WithdrawReasons,
+    };
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, weights::Weight};
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
@@ -427,8 +429,6 @@ pub mod pallet {
         CreditDataInitialized,
         /// over history credit max value
         CreditAddTooMuch,
-        /// balance of burned account not enough
-        BalanceNotEnough,
         /// credit history or input era is wrong
         BadEraOrHistory,
         /// account not found
@@ -668,15 +668,18 @@ pub mod pallet {
             }
 
             let amount = T::DPRPerCreditBurned::get().saturating_mul((credit_score as u32).into());
-            if <T as pallet::Config>::Currency::can_slash(&sender, amount) {
-                let (burned, _) = <T as pallet::Config>::Currency::slash(&sender, amount.into());
-                T::BurnedTo::on_unbalanced(burned);
-                Self::_update_credit(&sender, target_credit);
-                Self::update_credit_history(&sender, Self::get_current_era());
-                Self::deposit_event(Event::<T>::BurnForAddCredit(sender.clone(), credit_score));
-            } else {
-                Err(Error::<T>::BalanceNotEnough)?
-            }
+
+            let burned = <T as pallet::Config>::Currency::withdraw(
+                &sender,
+                amount.into(),
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            T::BurnedTo::on_unbalanced(burned);
+            Self::_update_credit(&sender, target_credit);
+            Self::update_credit_history(&sender, Self::get_current_era());
+            Self::deposit_event(Event::<T>::BurnForAddCredit(sender.clone(), credit_score));
+
             Ok(().into())
         }
 
