@@ -331,7 +331,7 @@ pub mod pallet {
                 );
                 let account = basic_info.account.clone();
                 ensure!(
-                    T::CreditInterface::is_first_campaign_end(account.clone()).unwrap_or(false),
+                    T::CreditInterface::is_first_campaign_end(&account).unwrap_or(false),
                     Error::<T>::FirstCampaignNotEnd
                 );
 

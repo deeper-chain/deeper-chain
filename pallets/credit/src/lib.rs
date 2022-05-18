@@ -212,7 +212,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_balance() -> Vec<Balance>;
     fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
     fn add_or_update_credit(account_id: AccountId, credit_score: u64);
-    fn is_first_campaign_end(account_id: AccountId) -> Option<bool>;
+    fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
 }
 
 #[frame_support::pallet]
@@ -447,6 +447,8 @@ pub mod pallet {
         MiningMachineClassCreditNoConfig,
         /// Campain id switch not match
         CampaignIdNotMatch,
+        /// first campaign not end
+        FirstCampaignNotEnd,
     }
 
     #[pallet::hooks]
@@ -790,19 +792,21 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
-            let staking_score = Self::user_staking_credit(user.clone());
+            ensure!(
+                Self::is_first_campaign_end(&user).unwrap_or(false),
+                Error::<T>::FirstCampaignNotEnd
+            );
+            let staking_score = Self::user_staking_credit(&user);
             let whole_score =
                 Self::get_credit_score(&user).ok_or(Error::<T>::AccountNoExistInUserCredit)?;
 
             let new_score = whole_score.saturating_sub(staking_score);
             let camp_id = Self::default_campaign_id();
             let credit_data = CreditData::new(camp_id, new_score);
-
-            UserCredit::<T>::insert(user.clone(), credit_data);
-
+            UserCredit::<T>::insert(&user, credit_data);
             Self::deposit_event(Event::CreditScoreSlashed(user, new_score));
             Ok(())
         }
@@ -1439,7 +1443,7 @@ pub mod pallet {
             true
         }
 
-        fn is_first_campaign_end(account_id: T::AccountId) -> Option<bool> {
+        fn is_first_campaign_end(account_id: &T::AccountId) -> Option<bool> {
             let credit = UserCredit::<T>::get(account_id);
             match credit {
                 Some(data) => {
