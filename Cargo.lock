@@ -5553,6 +5553,7 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-balances",
+ "pallet-credit",
  "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",

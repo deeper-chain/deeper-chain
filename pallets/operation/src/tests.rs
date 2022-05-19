@@ -122,6 +122,7 @@ impl pallet_operation::Config for Test {
     type Currency = Balances;
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
+    type CreditInterface = ();
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
