@@ -1043,3 +1043,36 @@ fn burn_nft() {
         );
     });
 }
+
+#[test]
+fn unstaking_slash_credit() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Credit::set_user_staking_credit(
+            Origin::root(),
+            vec!((3, 50))
+        ));
+        assert_eq!(
+            Credit::unstaking_slash_credit(Origin::root(), 3),
+            Err(DispatchError::from(Error::<Test>::FirstCampaignNotEnd))
+        );
+
+        let new_credit_data = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 1u32,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 270 + 1,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            3,
+            new_credit_data
+        ));
+
+        assert_ok!(Credit::unstaking_slash_credit(Origin::root(), 3));
+        assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
+        assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 4);
+    });
+}

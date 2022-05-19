@@ -139,6 +139,7 @@ pub type EraIndex = u32;
 /// default reward eras
 pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
 pub const DPR: u128 = 1_000_000_000_000_000_000;
+pub const OLD_REWARD_ERAS: EraIndex = 270;
 
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
@@ -211,6 +212,54 @@ pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_balance() -> Vec<Balance>;
     fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
     fn add_or_update_credit(account_id: AccountId, credit_score: u64);
+    fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
+}
+
+impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
+    fn get_credit_score(_account_id: &AccountId) -> Option<u64> {
+        None
+    }
+    fn pass_threshold(_account_id: &AccountId) -> bool {
+        false
+    }
+    fn slash_credit(_account_id: &AccountId, _score: Option<u64>) -> Weight {
+        0
+    }
+    fn get_credit_level(_credit_score: u64) -> CreditLevel {
+        CreditLevel::Zero
+    }
+    fn get_reward(
+        _account_id: &AccountId,
+        _from: EraIndex,
+        _to: EraIndex,
+    ) -> (Option<(Balance, Balance)>, Weight) {
+        (None, 0)
+    }
+    fn get_top_referee_reward(_account_id: &AccountId) -> (Balance, Weight) {
+        (0u32.into(), 0)
+    }
+    fn update_credit(_micropayment: (AccountId, Balance)) {}
+    fn update_credit_by_traffic(_server: AccountId) {}
+    fn get_current_era() -> EraIndex {
+        0
+    }
+    fn update_credit_by_tip(_who: AccountId, _add_credit: u64) {}
+    fn update_credit_by_burn_nft(_who: AccountId, _add_credit: u64) -> DispatchResult {
+        Ok(()).into()
+    }
+    fn init_delegator_history(_account_id: &AccountId, _era: u32) -> bool {
+        false
+    }
+    fn get_credit_balance() -> Vec<Balance> {
+        Vec::new()
+    }
+    fn get_credit_gap(_dst_lv: u8, _cur_lv: u8) -> u64 {
+        0
+    }
+    fn add_or_update_credit(_account_id: AccountId, _credit_score: u64) {}
+    fn is_first_campaign_end(_account_id: &AccountId) -> Option<bool> {
+        Some(true)
+    }
 }
 
 #[frame_support::pallet]
@@ -283,6 +332,11 @@ pub mod pallet {
     #[pallet::getter(fn user_credit)]
     pub type UserCredit<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, CreditData, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn user_staking_credit)]
+    pub type UserStakingCredit<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery>;
 
     /// user credit history is empty until user's device gets onboard   
     #[pallet::storage]
@@ -419,6 +473,7 @@ pub mod pallet {
         BurnForAddCredit(T::AccountId, u64),
         UpdateNftCredit(ClassIdOf<T>, u64),
         BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
+        StakingCreditScore(T::AccountId, u64),
     }
 
     #[pallet::error]
@@ -439,6 +494,8 @@ pub mod pallet {
         MiningMachineClassCreditNoConfig,
         /// Campain id switch not match
         CampaignIdNotMatch,
+        /// first campaign not end
+        FirstCampaignNotEnd,
     }
 
     #[pallet::hooks]
@@ -768,6 +825,38 @@ pub mod pallet {
             ensure_root(origin)?;
             DefaultCampaignId::<T>::put(id);
             Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_user_staking_credit(
+            origin: OriginFor<T>,
+            user_scores: Vec<(T::AccountId, u64)>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            for (user, score) in user_scores {
+                UserStakingCredit::<T>::insert(user, score);
+            }
+            Ok(())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
+        pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
+            ensure_root(origin)?;
+            ensure!(
+                Self::is_first_campaign_end(&user).unwrap_or(false),
+                Error::<T>::FirstCampaignNotEnd
+            );
+            let staking_score = Self::user_staking_credit(&user);
+            let whole_score =
+                Self::get_credit_score(&user).ok_or(Error::<T>::AccountNoExistInUserCredit)?;
+
+            let new_score = whole_score.saturating_sub(staking_score);
+            let camp_id = Self::default_campaign_id();
+            // when unstaking,change campaign id to defalut campaign id
+            let credit_data = CreditData::new(camp_id, new_score);
+            UserCredit::<T>::insert(&user, credit_data);
+            Self::deposit_event(Event::CreditScoreSlashed(user, new_score));
+            Ok(())
         }
     }
 
@@ -1400,6 +1489,20 @@ pub mod pallet {
             }
             Self::init_credit_history(account_id, credit_data.unwrap(), era);
             true
+        }
+
+        fn is_first_campaign_end(account_id: &T::AccountId) -> Option<bool> {
+            let credit = UserCredit::<T>::get(account_id);
+            match credit {
+                Some(data) => {
+                    if data.reward_eras > OLD_REWARD_ERAS {
+                        Some(true)
+                    } else {
+                        Some(false)
+                    }
+                }
+                None => None,
+            }
         }
     }
 
