@@ -16,7 +16,7 @@
 use crate as pallet_credit_accumulation;
 use crate::testing_utils::*;
 use frame_support::parameter_types;
-use frame_support::traits::{ConstU128, ConstU32};
+use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
 use frame_system as system;
 use node_primitives::{Balance, Moment};
 use pallet_micropayment::AccountCreator;
@@ -151,6 +151,7 @@ impl pallet_uniques::Config for Test {
     type KeyLimit = ConstU32<50>;
     type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 }
 
 impl pallet_credit::Config for Test {

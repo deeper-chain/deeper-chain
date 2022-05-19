@@ -19,7 +19,7 @@
 
 use crate as staking;
 use crate::*;
-use frame_support::traits::{ConstU128, ConstU32};
+use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
 use frame_support::{
     assert_ok, parameter_types,
     traits::{Currency, FindAuthor, GenesisBuild, Get, Hooks, OneSessionHandler},
@@ -249,6 +249,7 @@ impl pallet_uniques::Config for Test {
     type KeyLimit = ConstU32<50>;
     type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 }
 
 parameter_types! {

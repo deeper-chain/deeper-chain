@@ -31,14 +31,14 @@
 #![warn(missing_docs)]
 
 use fc_rpc::{
-    EthBlockDataCache, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
+    EthBlockDataCacheTask, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
     SchemaV2Override, SchemaV3Override, StorageOverride,
 };
-use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
+use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
+use fp_storage::EthereumStorageSchema;
 use jsonrpc_pubsub::manager::SubscriptionManager;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::opaque::Block;
-use pallet_ethereum::EthereumStorageSchema;
 use sc_client_api::{
     backend::{AuxStore, Backend, StateBackend, StorageProvider},
     client::BlockchainEvents,
@@ -130,14 +130,14 @@ pub struct FullDeps<C, P, SC, B, A: ChainApi> {
     pub backend: Arc<fc_db::Backend<Block>>,
     /// Maximum number of logs in a query.
     pub max_past_logs: u32,
-    /// Maximum fee history cache size.
-    pub fee_history_limit: u64,
     /// Fee history cache.
     pub fee_history_cache: FeeHistoryCache,
+    /// Maximum fee history cache size.
+    pub fee_history_cache_limit: FeeHistoryCacheLimit,
     /// Ethereum data access overrides.
     pub overrides: Arc<OverrideHandle<Block>>,
     /// Cache for Ethereum block data.
-    pub block_data_cache: Arc<EthBlockDataCache<Block>>,
+    pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
 }
 
 /// override handle
@@ -147,6 +147,7 @@ where
     C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
     C: Send + Sync + 'static,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+    C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
     BE: Backend<Block> + 'static,
     BE::State: StateBackend<BlakeTwo256>,
 {
@@ -196,6 +197,7 @@ where
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: BabeApi<Block>,
     C::Api: BlockBuilder<Block>,
+    C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
     C::Api: fp_rpc::TxPoolRuntimeRPCApi<Block>,
     P: TransactionPool<Block = Block> + 'static,
@@ -205,9 +207,8 @@ where
     A: ChainApi<Block = Block> + 'static,
 {
     use fc_rpc::{
-        EthApi, EthApiServer, EthDevSigner, EthFilterApi, EthFilterApiServer, EthPubSubApi,
-        EthPubSubApiServer, EthSigner, HexEncodedIdProvider, NetApi, NetApiServer, TxPoolApi,
-        TxPoolApiServer, Web3Api, Web3ApiServer,
+        Eth, EthApi, EthDevSigner, EthFilter, EthFilterApi, EthPubSub, EthPubSubApi, EthSigner,
+        HexEncodedIdProvider, Net, NetApi, TxPool, TxPoolApi, Web3, Web3Api,
     };
     use pallet_contracts_rpc::{Contracts, ContractsApi};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -229,8 +230,8 @@ where
         filter_pool,
         backend,
         max_past_logs,
-        fee_history_limit,
         fee_history_cache,
+        fee_history_cache_limit,
         overrides,
         block_data_cache,
     } = deps;
@@ -286,7 +287,6 @@ where
             client.clone(),
             shared_authority_set,
             shared_epoch_changes,
-            deny_unsafe,
         )?,
     ));
 
@@ -295,24 +295,23 @@ where
         signers.push(Box::new(EthDevSigner::new()) as Box<dyn EthSigner>);
     }
 
-    io.extend_with(EthApiServer::to_delegate(EthApi::new(
+    io.extend_with(EthApi::to_delegate(Eth::new(
         client.clone(),
         pool.clone(),
         graph.clone(),
-        node_runtime::TransactionConverter,
+        Some(node_runtime::TransactionConverter),
         network.clone(),
         signers,
         overrides.clone(),
         backend.clone(),
         is_authority,
-        max_past_logs,
         block_data_cache.clone(),
-        fee_history_limit,
         fee_history_cache,
+        fee_history_cache_limit,
     )));
 
     if let Some(filter_pool) = filter_pool {
-        io.extend_with(EthFilterApiServer::to_delegate(EthFilterApi::new(
+        io.extend_with(EthFilterApi::to_delegate(EthFilter::new(
             client.clone(),
             backend,
             filter_pool.clone(),
@@ -322,16 +321,16 @@ where
         )));
     }
 
-    io.extend_with(NetApiServer::to_delegate(NetApi::new(
+    io.extend_with(NetApi::to_delegate(Net::new(
         client.clone(),
         network.clone(),
         // Whether to format the `peer_count` response as Hex (default) or not.
         true,
     )));
 
-    io.extend_with(Web3ApiServer::to_delegate(Web3Api::new(client.clone())));
+    io.extend_with(Web3Api::to_delegate(Web3::new(client.clone())));
 
-    io.extend_with(EthPubSubApiServer::to_delegate(EthPubSubApi::new(
+    io.extend_with(EthPubSubApi::to_delegate(EthPubSub::new(
         pool.clone(),
         client.clone(),
         network.clone(),
@@ -342,10 +341,7 @@ where
         overrides,
     )));
 
-    io.extend_with(TxPoolApiServer::to_delegate(TxPoolApi::new(
-        client.clone(),
-        graph,
-    )));
+    io.extend_with(TxPoolApi::to_delegate(TxPool::new(client.clone(), graph)));
 
     Ok(io)
 }
