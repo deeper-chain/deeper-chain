@@ -44,6 +44,7 @@ std = [
     'pallet-balances/std',
     'node-primitives/std',
     'pallet-timestamp/std',
+     'pallet-credit/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

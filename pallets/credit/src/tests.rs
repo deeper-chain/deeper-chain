@@ -1051,7 +1051,6 @@ fn unstaking_slash_credit() {
             Origin::root(),
             vec!((3, 50))
         ));
-
         assert_eq!(
             Credit::unstaking_slash_credit(Origin::root(), 3),
             Err(DispatchError::from(Error::<Test>::FirstCampaignNotEnd))
@@ -1066,7 +1065,11 @@ fn unstaking_slash_credit() {
             current_credit_level: CreditLevel::One,
             reward_eras: 270 + 1,
         };
-        Credit::add_or_update_credit_data(Origin::root(), 3, new_credit_data);
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            3,
+            new_credit_data
+        ));
 
         assert_ok!(Credit::unstaking_slash_credit(Origin::root(), 3));
         assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
