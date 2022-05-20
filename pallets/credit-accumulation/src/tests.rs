@@ -146,8 +146,6 @@ fn verify_atomos_signature() {
         let msg = sp_io::hashing::blake2_256(&data);
 
         let sig = sr25519_sign(SR25519, &bob_pub_key, &msg).unwrap();
-        println!("sig: {:?}", sig);
-
         assert_ok!(CreditAccumulation::verify_atomos_signature(
             nonce,
             &sig.encode(),

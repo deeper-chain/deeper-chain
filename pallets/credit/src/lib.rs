@@ -204,7 +204,6 @@ pub trait CreditInterface<AccountId, Balance> {
         to: EraIndex,
     ) -> (Option<(Balance, Balance)>, Weight);
     fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
-    fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
@@ -239,7 +238,6 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn get_top_referee_reward(_account_id: &AccountId) -> (Balance, Weight) {
         (0u32.into(), 0)
     }
-    fn update_credit(_micropayment: (AccountId, Balance)) {}
     fn update_credit_by_traffic(_server: AccountId) {}
     fn get_current_era() -> EraIndex {
         0
@@ -287,8 +285,6 @@ pub mod pallet {
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
-        /// Credit cap every two eras
-        type CreditCapTwoEras: Get<u8>;
         /// credit attenuation step
         type CreditAttenuationStep: Get<u64>;
         /// Minimum credit to delegate
@@ -1307,77 +1303,6 @@ pub mod pallet {
             let top_referee_reward =
                 daily_referee_reward.saturating_mul(credit_data.reward_eras.into());
             (top_referee_reward, weight)
-        }
-
-        /// update credit score based on micropayment tuple
-        fn update_credit(micropayment: (T::AccountId, BalanceOf<T>)) {
-            let (server_id, balance) = micropayment;
-            let onboard_era = Self::get_onboard_era(&server_id);
-            if onboard_era.is_none() {
-                // credit is not updated if the device is never online
-                log!(
-                    info,
-                    "update_credit account : {:?}, never online",
-                    server_id
-                );
-                return;
-            }
-            let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
-            let mut score_delta: u64 = balance_num
-                .checked_div(T::MicropaymentToCreditFactor::get())
-                .unwrap_or(0) as u64;
-            log!(
-                info,
-                "server_id: {:?}, balance_num: {}, score_delta:{}",
-                server_id.clone(),
-                balance_num,
-                score_delta
-            );
-            if score_delta > 0 {
-                let current_era = Self::get_current_era();
-                let now_as_secs = T::UnixTime::now().as_secs();
-                let (mut time_eras, era_used) = Self::check_update_credit_interval(
-                    &server_id,
-                    current_era,
-                    onboard_era.unwrap(),
-                    now_as_secs,
-                );
-
-                if time_eras < ERAS_CAN_INC_CREDIT && Self::last_credit_update_timestamp(&server_id).is_none() {
-                    // first update within 2 eras, we boost it to 2 eras so that credit can be updated
-                    time_eras = ERAS_CAN_INC_CREDIT;
-                }
-                if time_eras >= ERAS_CAN_INC_CREDIT {
-                    let total_cap = time_eras;
-                    if score_delta > total_cap {
-                        score_delta = total_cap;
-                        log!(
-                            info,
-                            "server_id: {:?} score_delta capped at {}",
-                            server_id.clone(),
-                            total_cap
-                        );
-                    }
-
-                    let new_credit = Self::get_credit_score(&server_id)
-                        .unwrap_or(0)
-                        .saturating_add(score_delta);
-                    if Self::_update_credit(&server_id, new_credit) {
-                        LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
-                        Self::update_credit_history(&server_id, current_era);
-                        if era_used {
-                            LastCreditUpdate::<T>::remove(server_id);
-                        }
-                    } else {
-                        log!(
-                            error,
-                            "failed to update credit {} for server_id: {:?}",
-                            new_credit,
-                            server_id.clone()
-                        );
-                    }
-                }
-            }
         }
 
         /// update credit score by traffic
