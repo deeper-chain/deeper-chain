@@ -22,7 +22,7 @@ where
         Self(Default::default())
     }
     pub fn used_addresses() -> sp_std::vec::Vec<H160> {
-        sp_std::vec![1, 2, 3, 4, 5, 1024, 1025]
+        sp_std::vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1024, 1025, 1026, 1027, 1028, 1029]
             .into_iter()
             .map(|x| hash(x))
             .collect()
