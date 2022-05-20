@@ -137,7 +137,7 @@ const MILLISECS_PER_BLOCK: Moment = 5000;
 const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 const CREDIT_ATTENUATION_STEP: u64 = 1;
-pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS; // 72 blocks 1 era
 
 const MILLICENTS: Balance = 10_000_000_000_000;
 const CENTS: Balance = 1_000 * MILLICENTS;

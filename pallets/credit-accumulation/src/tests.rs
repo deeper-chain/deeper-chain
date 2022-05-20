@@ -71,26 +71,103 @@ fn add_credit_by_traffic() {
 }
 
 #[test]
-fn test_add_credit_by_traffic_event() {
+fn add_one_credit_one_era() {
     new_test_ext().execute_with(|| {
-        // OK
         assert_ok!(CreditAccumulation::set_atmos_pubkey(
             RawOrigin::Root.into(),
             bob(),
         ));
 
-        // OK
         let nonce: u64 = 1;
         AtmosNonce::<Test>::insert(alice(), nonce);
-        OnboardTime::<Test>::insert(alice(), 1);
-        LastCreditUpdateTimestamp::<Test>::insert(alice(), 1);
+        OnboardTime::<Test>::insert(alice(), 40); // block2
+        LastCreditUpdateTimestamp::<Test>::insert(alice(), 40); // block2
 
-        run_to_block(2*BLOCKS_PER_ERA+1);
+        run_to_block(BLOCKS_PER_ERA+2);
         let signature: [u8; 64] = hex!("34fb245d1d6df01f8177a8e3d29d30a63eb22b9d6c691a97536e1a2805953951194250865971237cf70edb934d76c91744460fe78a7cb86b537ab56146e32b81");
         assert_ok!(CreditAccumulation::add_credit_by_traffic(
             Origin::signed(alice()),
             nonce, signature.into()
         ));
+
+        assert_eq!(400, Credit::last_credit_update_timestamp(alice()).unwrap()); // (72+2)*5+30
+        assert_eq!(211, Credit::user_credit(alice()).unwrap().credit);
+
+        let mut events = <frame_system::Pallet<Test>>::events();
+        assert_eq!(
+            events.pop().expect("should get first events").event,
+            crate::tests::Event::from(pallet_credit::Event::CreditDataAddedByTraffic(alice(), 211))
+        );
+
+        assert_eq!(
+            events.pop().expect("should get second events").event,
+            crate::tests::Event::from(pallet_credit::Event::CreditUpdateSuccess(alice(), 211))
+        );
+
+        assert_eq!(
+            events.pop().expect("should get third events").event,
+            crate::tests::Event::from(crate::Event::AtmosSignatureValid(alice()))
+        );
+
+        assert!(events.is_empty());
+    });
+}
+
+#[test]
+fn not_add_credit_less_than_one_era() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(CreditAccumulation::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob(),
+        ));
+
+        let nonce: u64 = 1;
+        AtmosNonce::<Test>::insert(alice(), nonce);
+        OnboardTime::<Test>::insert(alice(), 40); // block2
+        LastCreditUpdateTimestamp::<Test>::insert(alice(), 40); // block2
+
+        run_to_block(BLOCKS_PER_ERA+1);
+        let signature: [u8; 64] = hex!("34fb245d1d6df01f8177a8e3d29d30a63eb22b9d6c691a97536e1a2805953951194250865971237cf70edb934d76c91744460fe78a7cb86b537ab56146e32b81");
+        assert_ok!(CreditAccumulation::add_credit_by_traffic(
+            Origin::signed(alice()),
+            nonce, signature.into()
+        ));
+
+        assert_eq!(40, Credit::last_credit_update_timestamp(alice()).unwrap()); // (72+2)*5+30
+        assert_eq!(210, Credit::user_credit(alice()).unwrap().credit);
+
+        let mut events = <frame_system::Pallet<Test>>::events();
+        assert_eq!(
+            events.pop().expect("should get third events").event,
+            crate::tests::Event::from(crate::Event::AtmosSignatureValid(alice()))
+        );
+
+        assert!(events.is_empty());
+    });
+}
+
+#[test]
+fn only_add_one_credit_even_if_more_eras() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(CreditAccumulation::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob(),
+        ));
+
+        let nonce: u64 = 1;
+        AtmosNonce::<Test>::insert(alice(), nonce);
+        OnboardTime::<Test>::insert(alice(), 40); // block2
+        LastCreditUpdateTimestamp::<Test>::insert(alice(), 40); // block2
+
+        run_to_block(2*BLOCKS_PER_ERA+3);
+        let signature: [u8; 64] = hex!("34fb245d1d6df01f8177a8e3d29d30a63eb22b9d6c691a97536e1a2805953951194250865971237cf70edb934d76c91744460fe78a7cb86b537ab56146e32b81");
+        assert_ok!(CreditAccumulation::add_credit_by_traffic(
+            Origin::signed(alice()),
+            nonce, signature.into()
+        ));
+
+        assert_eq!(765, Credit::last_credit_update_timestamp(alice()).unwrap()); // (2*72+3)*5+30
+        assert_eq!(211, Credit::user_credit(alice()).unwrap().credit);
 
         let mut events = <frame_system::Pallet<Test>>::events();
         assert_eq!(
