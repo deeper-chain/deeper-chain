@@ -138,7 +138,7 @@ fn not_add_credit_less_than_one_era() {
 
         let mut events = <frame_system::Pallet<Test>>::events();
         assert_eq!(
-            events.pop().expect("should get third events").event,
+            events.pop().expect("should get first events").event,
             crate::tests::Event::from(crate::Event::AtmosSignatureValid(alice()))
         );
 
@@ -214,7 +214,10 @@ fn verify_atomos_signature() {
             bob(),
         ));
         let nonce: u64 = 1;
-        let bob_pub_key = sp_io::crypto::sr25519_public_keys(SR25519)[0];
+        let atomos_accountid = CreditAccumulation::atmos_accountid().unwrap();
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(&atomos_accountid.encode());
+        let pub_key = sp_core::sr25519::Public::from_raw(pk);
 
         let mut data = Vec::new();
         data.extend_from_slice(&bob().encode());
@@ -222,7 +225,7 @@ fn verify_atomos_signature() {
         data.extend_from_slice(&alice().encode());
         let msg = sp_io::hashing::blake2_256(&data);
 
-        let sig = sr25519_sign(SR25519, &bob_pub_key, &msg).unwrap();
+        let sig = sr25519_sign(SR25519, &pub_key, &msg).unwrap();
         assert_ok!(CreditAccumulation::verify_atomos_signature(
             nonce,
             &sig.encode(),

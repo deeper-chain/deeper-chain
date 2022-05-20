@@ -253,6 +253,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     .assimilate_storage(&mut storage);
 
     let mut ext = sp_io::TestExternalities::from(storage);
+    // initialize test keystore, we can access this key with
+    // sp_io::crypto::sr25519_public_keys(SR25519)[0];
     let keystore = KeyStore::new();
     let _ = keystore
         .sr25519_generate_new(SR25519, Some("//Bob"))
