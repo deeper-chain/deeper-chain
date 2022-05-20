@@ -140,6 +140,7 @@ pub type EraIndex = u32;
 pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
 pub const DPR: u128 = 1_000_000_000_000_000_000;
 pub const OLD_REWARD_ERAS: EraIndex = 270;
+pub const ERAS_CAN_INC_CREDIT: u64 = 1;
 
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
@@ -1342,13 +1343,12 @@ pub mod pallet {
                     now_as_secs,
                 );
 
-                if time_eras < 2 && Self::last_credit_update_timestamp(&server_id).is_none() {
+                if time_eras < ERAS_CAN_INC_CREDIT && Self::last_credit_update_timestamp(&server_id).is_none() {
                     // first update within 2 eras, we boost it to 2 eras so that credit can be updated
-                    time_eras = 2;
+                    time_eras = ERAS_CAN_INC_CREDIT;
                 }
-                if time_eras >= 2 {
-                    let cap: u64 = T::CreditCapTwoEras::get() as u64;
-                    let total_cap = cap * (time_eras / 2);
+                if time_eras >= ERAS_CAN_INC_CREDIT {
+                    let total_cap = time_eras;
                     if score_delta > total_cap {
                         score_delta = total_cap;
                         log!(
@@ -1400,11 +1400,10 @@ pub mod pallet {
                 onboard_era.unwrap(),
                 now_as_secs,
             );
-            if time_eras >= 2 {
-                let cap: u64 = T::CreditCapTwoEras::get() as u64;
+            if time_eras >= ERAS_CAN_INC_CREDIT {
                 let new_credit = Self::get_credit_score(&server_id)
                     .unwrap_or(0)
-                    .saturating_add(cap);
+                    .saturating_add(ERAS_CAN_INC_CREDIT);
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
