@@ -45,4 +45,5 @@ jobs:
         working-directory: ./integration-tests
         run: |
           npm install
+          sleep 60s
           npm run test
