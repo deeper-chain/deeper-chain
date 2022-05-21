@@ -313,37 +313,6 @@ fn slash_credit() {
 }
 
 #[test]
-fn update_credit() {
-    new_test_ext().execute_with(|| {
-        Credit::update_credit((1, 1_000 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
-
-        for i in 1..5 {
-            assert_ok!(DeeperNode::im_online(Origin::signed(i)));
-        }
-
-        Credit::update_credit((1, 1_000 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1);
-
-        Credit::update_credit((2, 1 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&2).unwrap().credit, 1);
-
-        Credit::update_credit((3, 1 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 101);
-
-        run_to_block(BLOCKS_PER_ERA * 2);
-        Credit::update_credit((1, 4 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
-
-        Credit::update_credit((2, 2 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&2).unwrap().credit, 2); // 1 + 1
-
-        Credit::update_credit((4, 1_000_000_000_000_000 / 10));
-        assert_eq!(Credit::user_credit(&4).unwrap().credit, 0);
-    });
-}
-
-#[test]
 fn update_credit_by_traffic() {
     new_test_ext().execute_with(|| {
         Credit::update_credit_by_traffic(1);
@@ -359,11 +328,11 @@ fn update_credit_by_traffic() {
 
         run_to_block(BLOCKS_PER_ERA * 3);
         Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1); // 1 + 0
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
 
         run_to_block(BLOCKS_PER_ERA * 4);
         Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 3); // 2 + 1
     });
 }
 
@@ -443,89 +412,6 @@ fn get_reward_work() {
         assert_eq!(
             Credit::get_reward(&11, 1, 1).0,
             Some((0, 56416427606743384752))
-        );
-    });
-}
-
-#[test]
-fn get_reward_with_update_credit_no_bonus() {
-    new_test_ext().execute_with(|| {
-        Timestamp::set_timestamp(INIT_TIMESTAMP);
-        assert_ok!(DeeperNode::im_online(Origin::signed(6)));
-        assert_eq!(Credit::user_credit(&6).unwrap().credit, 100);
-        assert!(Credit::init_delegator_history(&6, 0));
-        run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(
-            Credit::get_reward(&6, 0, 0).0,
-            Some((0, 21369858941948251800))
-        );
-
-        let mut i: u32 = 1;
-        while i < 20 {
-            // run 19 times
-            run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
-            Credit::update_credit((6, 5 * 1_000_000_000_000_000));
-            // to avoid slashing for being offline for 3 eras
-            assert_ok!(DeeperNode::im_online(Origin::signed(6)));
-            assert_eq!(
-                Credit::user_credit(&6).unwrap().credit,
-                100 + (i as u64 + 1) / 2
-            );
-            assert_eq!(
-                Credit::get_reward(&6, i - 1, i - 1).0,
-                Some((0, 21369858941948251800))
-            );
-            i += 1;
-        }
-
-        run_to_block(BLOCKS_PER_ERA * 200);
-        Credit::update_credit((6, 190 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&6).unwrap().credit, 100 + 100);
-        run_to_block(BLOCKS_PER_ERA * 201);
-        assert_eq!(
-            Credit::get_reward(&6, 200, 200).0,
-            Some((0, 60263002216294070076))
-        );
-    });
-}
-
-#[test]
-fn get_reward_with_update_credit_with_bonus() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::im_online(Origin::signed(7)));
-        assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
-        assert!(Credit::init_delegator_history(&7, 0));
-        run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(
-            Credit::get_reward(&7, 0, 0).0,
-            Some((0, 223068450647875213020))
-        );
-
-        let mut i: u32 = 1;
-        while i < 20 {
-            // run 19 times
-            run_to_block(BLOCKS_PER_ERA * i as u64 + 1);
-            Credit::update_credit((7, 5 * 1_000_000_000_000_000));
-            // to avoid slashing for being offline for 3 eras
-            assert_ok!(DeeperNode::im_online(Origin::signed(7)));
-            assert_eq!(
-                Credit::user_credit(&7).unwrap().credit,
-                400 + (i as u64 + 1) / 2
-            );
-            assert_eq!(
-                Credit::get_reward(&7, i - 1, i - 1).0,
-                Some((0, 223068450647875213020))
-            );
-            i += 1;
-        }
-
-        run_to_block(BLOCKS_PER_ERA * 200);
-        Credit::update_credit((7, 190 * 1_000_000_000_000_000));
-        assert_eq!(Credit::user_credit(&7).unwrap().credit, 400 + 100);
-        run_to_block(BLOCKS_PER_ERA * 201);
-        assert_eq!(
-            Credit::get_reward(&7, 200, 200).0,
-            Some((0, 394191705713783906280))
         );
     });
 }
