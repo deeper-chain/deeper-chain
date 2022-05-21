@@ -41,8 +41,8 @@ macro_rules! log {
 
 use codec::alloc::vec;
 use codec::{Decode, Encode};
-use sp_runtime::Percent;
 use sp_runtime::traits::One;
+use sp_runtime::Percent;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 
