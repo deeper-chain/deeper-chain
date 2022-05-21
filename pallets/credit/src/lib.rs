@@ -41,6 +41,7 @@ macro_rules! log {
 
 use codec::alloc::vec;
 use codec::{Decode, Encode};
+use sp_runtime::traits::One;
 use sp_runtime::Percent;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
@@ -140,6 +141,8 @@ pub type EraIndex = u32;
 pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
 pub const DPR: u128 = 1_000_000_000_000_000_000;
 pub const OLD_REWARD_ERAS: EraIndex = 270;
+// Allow 1 era to increase credit score once
+pub const CREDIT_CAP_ONE_ERAS: u64 = 1;
 
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
@@ -203,7 +206,6 @@ pub trait CreditInterface<AccountId, Balance> {
         to: EraIndex,
     ) -> (Option<(Balance, Balance)>, Weight);
     fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
-    fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
@@ -238,7 +240,6 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn get_top_referee_reward(_account_id: &AccountId) -> (Balance, Weight) {
         (0u32.into(), 0)
     }
-    fn update_credit(_micropayment: (AccountId, Balance)) {}
     fn update_credit_by_traffic(_server: AccountId) {}
     fn get_current_era() -> EraIndex {
         0
@@ -286,8 +287,6 @@ pub mod pallet {
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
-        /// Credit cap every two eras
-        type CreditCapTwoEras: Get<u8>;
         /// credit attenuation step
         type CreditAttenuationStep: Get<u64>;
         /// Minimum credit to delegate
@@ -1308,78 +1307,6 @@ pub mod pallet {
             (top_referee_reward, weight)
         }
 
-        /// update credit score based on micropayment tuple
-        fn update_credit(micropayment: (T::AccountId, BalanceOf<T>)) {
-            let (server_id, balance) = micropayment;
-            let onboard_era = Self::get_onboard_era(&server_id);
-            if onboard_era.is_none() {
-                // credit is not updated if the device is never online
-                log!(
-                    info,
-                    "update_credit account : {:?}, never online",
-                    server_id
-                );
-                return;
-            }
-            let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
-            let mut score_delta: u64 = balance_num
-                .checked_div(T::MicropaymentToCreditFactor::get())
-                .unwrap_or(0) as u64;
-            log!(
-                info,
-                "server_id: {:?}, balance_num: {}, score_delta:{}",
-                server_id.clone(),
-                balance_num,
-                score_delta
-            );
-            if score_delta > 0 {
-                let current_era = Self::get_current_era();
-                let now_as_secs = T::UnixTime::now().as_secs();
-                let (mut time_eras, era_used) = Self::check_update_credit_interval(
-                    &server_id,
-                    current_era,
-                    onboard_era.unwrap(),
-                    now_as_secs,
-                );
-
-                if time_eras < 2 && Self::last_credit_update_timestamp(&server_id).is_none() {
-                    // first update within 2 eras, we boost it to 2 eras so that credit can be updated
-                    time_eras = 2;
-                }
-                if time_eras >= 2 {
-                    let cap: u64 = T::CreditCapTwoEras::get() as u64;
-                    let total_cap = cap * (time_eras / 2);
-                    if score_delta > total_cap {
-                        score_delta = total_cap;
-                        log!(
-                            info,
-                            "server_id: {:?} score_delta capped at {}",
-                            server_id.clone(),
-                            total_cap
-                        );
-                    }
-
-                    let new_credit = Self::get_credit_score(&server_id)
-                        .unwrap_or(0)
-                        .saturating_add(score_delta);
-                    if Self::_update_credit(&server_id, new_credit) {
-                        LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
-                        Self::update_credit_history(&server_id, current_era);
-                        if era_used {
-                            LastCreditUpdate::<T>::remove(server_id);
-                        }
-                    } else {
-                        log!(
-                            error,
-                            "failed to update credit {} for server_id: {:?}",
-                            new_credit,
-                            server_id.clone()
-                        );
-                    }
-                }
-            }
-        }
-
         /// update credit score by traffic
         fn update_credit_by_traffic(server_id: T::AccountId) {
             let onboard_era = Self::get_onboard_era(&server_id);
@@ -1400,11 +1327,10 @@ pub mod pallet {
                 onboard_era.unwrap(),
                 now_as_secs,
             );
-            if time_eras >= 2 {
-                let cap: u64 = T::CreditCapTwoEras::get() as u64;
+            if time_eras >= CREDIT_CAP_ONE_ERAS {
                 let new_credit = Self::get_credit_score(&server_id)
                     .unwrap_or(0)
-                    .saturating_add(cap);
+                    .saturating_add(One::one());
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);

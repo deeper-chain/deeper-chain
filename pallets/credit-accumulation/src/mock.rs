@@ -16,18 +16,26 @@
 use crate as pallet_credit_accumulation;
 use crate::testing_utils::*;
 use frame_support::parameter_types;
-use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
+use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, OnFinalize, OnInitialize};
 use frame_system as system;
 use node_primitives::{Balance, Moment};
+use pallet_credit::{CreditData, CreditLevel};
 use pallet_micropayment::AccountCreator;
+use sp_core::testing::SR25519;
 use sp_core::{crypto::AccountId32, sr25519, H256};
+use sp_keystore::SyncCryptoStore;
+use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
 };
+use std::sync::Arc;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
+pub const INIT_TIMESTAMP: u64 = 30_000;
+pub const BLOCK_TIME: u64 = 5000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -103,10 +111,9 @@ const MILLISECS_PER_BLOCK: Moment = 5000;
 const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 const CREDIT_ATTENUATION_STEP: u64 = 1;
-const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
+pub const BLOCKS_PER_ERA: BlockNumber = 6 * EPOCH_DURATION_IN_BLOCKS;
 
 parameter_types! {
-    pub const CreditCapTwoEras: u8 = 5;
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
@@ -158,7 +165,6 @@ impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
-    type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;
@@ -211,15 +217,57 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .build_storage::<Test>()
         .unwrap();
     let _ = pallet_balances::GenesisConfig::<Test> {
-        balances: vec![
-            (alice(), 500),
-            (bob(), 500),
-            (charlie(), 500),
-            (dave(), 500),
+        balances: vec![(alice(), 500), (bob(), 500)],
+    }
+    .assimilate_storage(&mut storage);
+
+    let _ = pallet_credit::GenesisConfig::<Test> {
+        credit_settings: vec![],
+        user_credit_data: vec![
+            (
+                alice(),
+                CreditData {
+                    campaign_id: 0,
+                    credit: 210,
+                    initial_credit_level: CreditLevel::Two,
+                    rank_in_initial_credit_level: 1u32,
+                    number_of_referees: 0,
+                    current_credit_level: CreditLevel::Two,
+                    reward_eras: 1,
+                },
+            ),
+            (
+                bob(),
+                CreditData {
+                    campaign_id: 0,
+                    credit: 220,
+                    initial_credit_level: CreditLevel::Two,
+                    rank_in_initial_credit_level: 1u32,
+                    number_of_referees: 0,
+                    current_credit_level: CreditLevel::Two,
+                    reward_eras: 1,
+                },
+            ),
         ],
     }
     .assimilate_storage(&mut storage);
 
-    let ext = sp_io::TestExternalities::from(storage);
+    let mut ext = sp_io::TestExternalities::from(storage);
+    // initialize test keystore, we can access this key with
+    // sp_io::crypto::sr25519_public_keys(SR25519)[0];
+    let keystore = KeyStore::new();
+    let _ = keystore
+        .sr25519_generate_new(SR25519, Some("//Bob"))
+        .unwrap();
+    ext.register_extension(KeystoreExt(Arc::new(keystore)));
     ext
+}
+
+pub fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        Timestamp::set_timestamp(System::block_number() * BLOCK_TIME + INIT_TIMESTAMP);
+    }
 }
