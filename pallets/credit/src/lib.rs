@@ -42,6 +42,7 @@ macro_rules! log {
 use codec::alloc::vec;
 use codec::{Decode, Encode};
 use sp_runtime::Percent;
+use sp_runtime::traits::One;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
 
@@ -140,7 +141,8 @@ pub type EraIndex = u32;
 pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
 pub const DPR: u128 = 1_000_000_000_000_000_000;
 pub const OLD_REWARD_ERAS: EraIndex = 270;
-pub const ERAS_CAN_INC_CREDIT: u64 = 1;
+// Allow 1 era to increase credit score once
+pub const CREDIT_CAP_ONE_ERAS: u64 = 1;
 
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
@@ -1325,10 +1327,10 @@ pub mod pallet {
                 onboard_era.unwrap(),
                 now_as_secs,
             );
-            if time_eras >= ERAS_CAN_INC_CREDIT {
+            if time_eras >= CREDIT_CAP_ONE_ERAS {
                 let new_credit = Self::get_credit_score(&server_id)
                     .unwrap_or(0)
-                    .saturating_add(ERAS_CAN_INC_CREDIT);
+                    .saturating_add(One::one());
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
