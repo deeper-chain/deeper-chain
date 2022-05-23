@@ -115,7 +115,9 @@ benchmarks! {
     update_nft_class_credit {
         let class_id: ClassIdOf<T> = Default::default();
         let credit = 1;
-    }: update_nft_class_credit(RawOrigin::Root, class_id, credit)
+        let user = create_funded_user::<T>("user",USER_SEED, 1000);
+        CreditAdmin::<T>::put(user.clone());
+    }: update_nft_class_credit(RawOrigin::Signed(user), class_id, credit)
     verify {
         assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
     }
@@ -124,6 +126,7 @@ benchmarks! {
         let class_id = Default::default();
         let instance_id = Default::default();
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
+        CreditAdmin::<T>::put(user.clone());
         let user_lookup = T::Lookup::unlookup(user.clone());
         let signed_user = RawOrigin::Signed(user.clone());
 
@@ -144,7 +147,7 @@ benchmarks! {
             reward_eras: 0,
         };
 
-        assert_ok!(Credit::<T>::update_nft_class_credit(RawOrigin::Root.into(), class_id, 5));
+        assert_ok!(Credit::<T>::update_nft_class_credit(RawOrigin::Signed(user.clone()).into(), class_id, 5) );
         assert_ok!(Credit::<T>::add_or_update_credit_data(
             RawOrigin::Root.into(),
             user.clone(),

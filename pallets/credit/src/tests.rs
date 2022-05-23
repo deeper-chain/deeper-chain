@@ -860,13 +860,14 @@ fn update_nft_class_credit() {
     new_test_ext().execute_with(|| {
         assert_noop!(
             Credit::update_nft_class_credit(Origin::signed(1), 0, 5),
-            BadOrigin
+            Error::<Test>::NotAdmin
         );
+        assert_ok!(Credit::set_credit_admin(Origin::root(), 3));
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 0, 5));
+        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 1, 10));
+        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 1, 10));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
     });
 }
@@ -895,9 +896,11 @@ fn burn_nft() {
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 0, 5));
+        assert_ok!(Credit::set_credit_admin(Origin::root(), 3));
+
+        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
-        assert_ok!(Credit::update_nft_class_credit(Origin::root(), 1, 10));
+        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 1, 10));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
 
         let credit_data = CreditData {
@@ -933,12 +936,14 @@ fn burn_nft() {
 #[test]
 fn unstaking_slash_credit() {
     new_test_ext().execute_with(|| {
+        assert_ok!(Credit::set_credit_admin(Origin::root(), 1));
+
         assert_ok!(Credit::set_user_staking_credit(
-            Origin::root(),
+            Origin::signed(1),
             vec!((3, 50))
         ));
         assert_eq!(
-            Credit::unstaking_slash_credit(Origin::root(), 3),
+            Credit::unstaking_slash_credit(Origin::signed(1), 3),
             Err(DispatchError::from(Error::<Test>::FirstCampaignNotEnd))
         );
 
@@ -957,7 +962,7 @@ fn unstaking_slash_credit() {
             new_credit_data
         ));
 
-        assert_ok!(Credit::unstaking_slash_credit(Origin::root(), 3));
+        assert_ok!(Credit::unstaking_slash_credit(Origin::signed(1), 3));
         assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
         assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 4);
     });

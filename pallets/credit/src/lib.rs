@@ -426,6 +426,10 @@ pub mod pallet {
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn credit_admin)]
+    pub type CreditAdmin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -473,6 +477,7 @@ pub mod pallet {
         UpdateNftCredit(ClassIdOf<T>, u64),
         BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
         StakingCreditScore(T::AccountId, u64),
+        SetAdmin(T::AccountId),
     }
 
     #[pallet::error]
@@ -495,6 +500,8 @@ pub mod pallet {
         CampaignIdNotMatch,
         /// first campaign not end
         FirstCampaignNotEnd,
+        /// Not Admin
+        NotAdmin,
     }
 
     #[pallet::hooks]
@@ -745,7 +752,8 @@ pub mod pallet {
             #[pallet::compact] class_id: ClassIdOf<T>,
             credit: u64,
         ) -> DispatchResultWithPostInfo {
-            let _sender = ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
 
             MiningMachineClassCredit::<T>::insert(class_id, credit);
 
@@ -783,7 +791,9 @@ pub mod pallet {
             old_ids: Vec<CampaignId>,
             new_ids: Vec<CampaignId>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             ensure!(
                 old_ids.len() == new_ids.len(),
                 Error::<T>::CampaignIdNotMatch
@@ -799,7 +809,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             accounts: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             for id in accounts {
                 NotSwitchAccounts::<T>::insert(id, true);
             }
@@ -811,7 +823,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             CreditBalances::<T>::put(credit_balances);
             Ok(().into())
         }
@@ -821,7 +835,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             id: u16,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             DefaultCampaignId::<T>::put(id);
             Ok(().into())
         }
@@ -831,7 +847,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             user_scores: Vec<(T::AccountId, u64)>,
         ) -> DispatchResult {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             for (user, score) in user_scores {
                 UserStakingCredit::<T>::insert(user, score);
             }
@@ -840,7 +858,8 @@ pub mod pallet {
 
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
             ensure!(
                 Self::is_first_campaign_end(&user).unwrap_or(false),
                 Error::<T>::FirstCampaignNotEnd
@@ -854,12 +873,24 @@ pub mod pallet {
             // when unstaking,change campaign id to defalut campaign id
             let credit_data = CreditData::new(camp_id, new_score);
             UserCredit::<T>::insert(&user, credit_data);
-            Self::deposit_event(Event::CreditScoreSlashed(user, new_score));
+
+            Ok(())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_credit_admin(origin: OriginFor<T>, admin: T::AccountId) -> DispatchResult {
+            ensure_root(origin)?;
+            CreditAdmin::<T>::put(admin.clone());
+            Self::deposit_event(Event::SetAdmin(admin));
             Ok(())
         }
     }
 
     impl<T: Config> Pallet<T> {
+        pub fn is_admin(user: T::AccountId) -> bool {
+            Self::credit_admin() == Some(user)
+        }
+
         pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             let eras = T::NodeInterface::get_eras_offline(&account_id);
