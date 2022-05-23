@@ -2974,8 +2974,9 @@ fn staking_delegate() {
     ExtBuilder::default()
         .validator_pool(true)
         .build_and_execute(|| {
+            assert_ok!(Credit::set_credit_admin(Origin::root(), 51));
             assert_ok!(Credit::set_credit_balances(
-                Origin::root(),
+                Origin::signed(51),
                 vec![
                     1u32.into(),
                     10u32.into(),
