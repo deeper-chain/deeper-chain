@@ -193,10 +193,8 @@ fn set_staking_release_info() {
         let info2 = ReleaseInfo::<Test>::new(4, 2, 0, 1000);
         assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
         assert_eq!(Balances::free_balance(&3), 0);
-        assert_ok!(Operation::set_staking_release_info(
-            Origin::signed(1),
-            vec!(info1, info2)
-        ));
+        assert_ok!(Operation::unstaking_release(Origin::signed(1), info1));
+        assert_ok!(Operation::unstaking_release(Origin::signed(1), info2));
         run_to_block(BLOCKS_PER_DAY + 3);
         assert_eq!(Balances::free_balance(&3), 1000);
         assert_eq!(Balances::free_balance(&4), 500);

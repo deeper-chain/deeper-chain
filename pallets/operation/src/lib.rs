@@ -100,7 +100,6 @@ pub mod pallet {
         ReachSingleMaximumLimit,
         ReleaseDayZero,
         BurnedDprTooLow,
-        FirstCampaignNotEnd,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -309,40 +308,38 @@ pub mod pallet {
 
         #[pallet::weight(T::OPWeightInfo::set_staking_release_info())]
         #[transactional]
-        pub fn set_staking_release_info(
+        pub fn unstaking_release(
             origin: OriginFor<T>,
-            infos: Vec<ReleaseInfo<T>>,
+            basic_info: ReleaseInfo<T>,
         ) -> DispatchResultWithPostInfo {
             let setter = ensure_signed(origin)?;
             let owner =
                 Self::release_payment_address().ok_or(Error::<T>::NotReleaseOwnerAddress)?;
 
             ensure!(setter == owner, Error::<T>::NotMatchOwner);
-            for basic_info in infos {
-                let remainder_release_days = basic_info.total_release_days;
-                ensure!(remainder_release_days > 0, Error::<T>::ReleaseDayZero);
 
-                let start_day = (basic_info.start_release_moment / MILLISECS_PER_DAY) as u32;
-                let balance_per_day = basic_info.total_balance / remainder_release_days.into();
-                let single_max_limit = Self::single_max_limit();
-                ensure!(
-                    balance_per_day <= single_max_limit,
-                    Error::<T>::ReachSingleMaximumLimit
-                );
-                let account = basic_info.account.clone();
-                ensure!(
-                    T::CreditInterface::is_first_campaign_end(&account).unwrap_or(false),
-                    Error::<T>::FirstCampaignNotEnd
-                );
+            let remainder_release_days = basic_info.total_release_days;
+            ensure!(remainder_release_days > 0, Error::<T>::ReleaseDayZero);
 
-                let cur_info = CurrentRelease::<T> {
-                    basic_info,
-                    last_release_day: start_day,
-                    start_day,
-                    balance_per_day,
-                };
-                AccountsReleaseInfo::<T>::insert(&account, cur_info);
-            }
+            let start_day = (basic_info.start_release_moment / MILLISECS_PER_DAY) as u32;
+            let balance_per_day = basic_info.total_balance / remainder_release_days.into();
+            let single_max_limit = Self::single_max_limit();
+            ensure!(
+                balance_per_day <= single_max_limit,
+                Error::<T>::ReachSingleMaximumLimit
+            );
+            let account = basic_info.account.clone();
+
+            T::CreditInterface::do_unstaking_slash_credit(&account)?;
+
+            let cur_info = CurrentRelease::<T> {
+                basic_info,
+                last_release_day: start_day,
+                start_day,
+                balance_per_day,
+            };
+            AccountsReleaseInfo::<T>::insert(&account, cur_info);
+
             Ok(().into())
         }
 

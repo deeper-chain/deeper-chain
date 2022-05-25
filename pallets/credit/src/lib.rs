@@ -215,6 +215,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
     fn add_or_update_credit(account_id: AccountId, credit_score: u64);
     fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
+    fn do_unstaking_slash_credit(user: &AccountId) -> DispatchResult;
 }
 
 impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
@@ -260,6 +261,9 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn add_or_update_credit(_account_id: AccountId, _credit_score: u64) {}
     fn is_first_campaign_end(_account_id: &AccountId) -> Option<bool> {
         Some(true)
+    }
+    fn do_unstaking_slash_credit(_user: &AccountId) -> DispatchResult {
+        Ok(()).into()
     }
 }
 
@@ -335,7 +339,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn user_staking_credit)]
     pub type UserStakingCredit<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
 
     /// user credit history is empty until user's device gets onboard   
     #[pallet::storage]
@@ -502,6 +506,8 @@ pub mod pallet {
         FirstCampaignNotEnd,
         /// Not Admin
         NotAdmin,
+        /// Staking credit score not set
+        StakingCreditNotSet,
     }
 
     #[pallet::hooks]
@@ -860,21 +866,7 @@ pub mod pallet {
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
             let admin = ensure_signed(origin)?;
             ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
-            ensure!(
-                Self::is_first_campaign_end(&user).unwrap_or(false),
-                Error::<T>::FirstCampaignNotEnd
-            );
-            let staking_score = Self::user_staking_credit(&user);
-            let whole_score =
-                Self::get_credit_score(&user).ok_or(Error::<T>::AccountNoExistInUserCredit)?;
-
-            let new_score = whole_score.saturating_sub(staking_score);
-            let camp_id = Self::default_campaign_id();
-            // when unstaking,change campaign id to defalut campaign id
-            let credit_data = CreditData::new(camp_id, new_score);
-            UserCredit::<T>::insert(&user, credit_data);
-
-            Ok(())
+            Self::do_unstaking_slash_credit(&user)
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
@@ -1460,6 +1452,26 @@ pub mod pallet {
                 }
                 None => None,
             }
+        }
+
+        fn do_unstaking_slash_credit(user: &T::AccountId) -> DispatchResult {
+            ensure!(
+                Self::is_first_campaign_end(user).unwrap_or(false),
+                Error::<T>::FirstCampaignNotEnd
+            );
+            let staking_score =
+                Self::user_staking_credit(user).ok_or(Error::<T>::StakingCreditNotSet)?;
+            let whole_score =
+                Self::get_credit_score(user).ok_or(Error::<T>::AccountNoExistInUserCredit)?;
+
+            let new_score = whole_score.saturating_sub(staking_score);
+            let camp_id = Self::default_campaign_id();
+            // when unstaking,change campaign id to defalut campaign id
+            let credit_data = CreditData::new(camp_id, new_score);
+            UserCredit::<T>::insert(user, credit_data);
+            UserStakingCredit::<T>::remove(user);
+
+            Ok(())
         }
     }
 
