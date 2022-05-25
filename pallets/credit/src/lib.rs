@@ -1467,9 +1467,10 @@ pub mod pallet {
         }
 
         fn do_unstaking_slash_credit(user: &T::AccountId) -> DispatchResult {
+            let user_clone = user.clone();
             if !Self::is_first_campaign_end(user).unwrap_or(false) {
                 Self::deposit_event(Event::UnstakingResult(
-                    user.clone(),
+                    user_clone,
                     "first campaign not end".to_string(),
                 ));
                 return Err(Error::<T>::FirstCampaignNotEnd.into());
@@ -1478,7 +1479,7 @@ pub mod pallet {
             let staking_score = Self::user_staking_credit(user);
             if staking_score.is_none() {
                 Self::deposit_event(Event::UnstakingResult(
-                    user.clone(),
+                    user_clone,
                     "staking credit not set".to_string(),
                 ));
                 return Err(Error::<T>::StakingCreditNotSet.into());
@@ -1487,7 +1488,7 @@ pub mod pallet {
             let whole_score = Self::get_credit_score(user);
             if whole_score.is_none() {
                 Self::deposit_event(Event::UnstakingResult(
-                    user.clone(),
+                    user_clone,
                     "user credit not exist".to_string(),
                 ));
                 return Err(Error::<T>::AccountNoExistInUserCredit.into());
