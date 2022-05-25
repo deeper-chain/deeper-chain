@@ -45,6 +45,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
     use pallet_credit::CreditInterface;
+    use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
         traits::{StaticLookup, UniqueSaturatedInto},
@@ -87,6 +88,7 @@ pub mod pallet {
         AccountReleaseEnd(T::AccountId),
         SingleReleaseTooMuch(T::AccountId, BalanceOf<T>),
         BurnForEZC(T::AccountId, BalanceOf<T>, H160),
+        UnstakingResult(T::AccountId, String),
     }
 
     // Errors inform users that something went wrong.
@@ -311,25 +313,45 @@ pub mod pallet {
         pub fn unstaking_release(
             origin: OriginFor<T>,
             basic_info: ReleaseInfo<T>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             let setter = ensure_signed(origin)?;
-            let owner =
-                Self::release_payment_address().ok_or(Error::<T>::NotReleaseOwnerAddress)?;
-
-            ensure!(setter == owner, Error::<T>::NotMatchOwner);
+            let owner = Self::release_payment_address();
+            if owner.is_none() {
+                Self::deposit_event(Event::UnstakingResult(
+                    setter,
+                    "release owner not set".to_string(),
+                ));
+                return Err(Error::<T>::NotReleaseOwnerAddress.into());
+            }
+            if setter != owner.unwrap() {
+                Self::deposit_event(Event::UnstakingResult(
+                    setter,
+                    "not release owner".to_string(),
+                ));
+                return Err(Error::<T>::NotMatchOwner.into());
+            }
 
             let remainder_release_days = basic_info.total_release_days;
-            ensure!(remainder_release_days > 0, Error::<T>::ReleaseDayZero);
+            if remainder_release_days == 0 {
+                Self::deposit_event(Event::UnstakingResult(
+                    setter,
+                    "release day is zero".to_string(),
+                ));
+                return Err(Error::<T>::ReleaseDayZero.into());
+            }
 
             let start_day = (basic_info.start_release_moment / MILLISECS_PER_DAY) as u32;
             let balance_per_day = basic_info.total_balance / remainder_release_days.into();
             let single_max_limit = Self::single_max_limit();
-            ensure!(
-                balance_per_day <= single_max_limit,
-                Error::<T>::ReachSingleMaximumLimit
-            );
-            let account = basic_info.account.clone();
+            if balance_per_day > single_max_limit {
+                Self::deposit_event(Event::UnstakingResult(
+                    setter,
+                    "reach single max limit".to_string(),
+                ));
+                return Err(Error::<T>::ReachSingleMaximumLimit.into());
+            }
 
+            let account = basic_info.account.clone();
             T::CreditInterface::do_unstaking_slash_credit(&account)?;
 
             let cur_info = CurrentRelease::<T> {
@@ -339,7 +361,6 @@ pub mod pallet {
                 balance_per_day,
             };
             AccountsReleaseInfo::<T>::insert(&account, cur_info);
-
             Ok(().into())
         }
 
