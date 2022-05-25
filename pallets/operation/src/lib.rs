@@ -330,11 +330,12 @@ pub mod pallet {
                 ));
                 return Err(Error::<T>::NotMatchOwner.into());
             }
+            let account = basic_info.account.clone();
 
             let remainder_release_days = basic_info.total_release_days;
             if remainder_release_days == 0 {
                 Self::deposit_event(Event::UnstakingResult(
-                    setter,
+                    account,
                     "release day is zero".to_string(),
                 ));
                 return Err(Error::<T>::ReleaseDayZero.into());
@@ -345,15 +346,13 @@ pub mod pallet {
             let single_max_limit = Self::single_max_limit();
             if balance_per_day > single_max_limit {
                 Self::deposit_event(Event::UnstakingResult(
-                    setter,
-                    "reach single max limit".to_string(),
+                    account,
+                    "more than single max limit".to_string(),
                 ));
                 return Err(Error::<T>::ReachSingleMaximumLimit.into());
             }
 
-            let account = basic_info.account.clone();
             T::CreditInterface::do_unstaking_slash_credit(&account)?;
-
             let cur_info = CurrentRelease::<T> {
                 basic_info,
                 last_release_day: start_day,
@@ -361,6 +360,7 @@ pub mod pallet {
                 balance_per_day,
             };
             AccountsReleaseInfo::<T>::insert(&account, cur_info);
+            Self::deposit_event(Event::UnstakingResult(account, "success".to_string()));
             Ok(().into())
         }
 
