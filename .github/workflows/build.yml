@@ -38,12 +38,11 @@ jobs:
         run: nohup ./target/debug/deeper-chain --dev > /tmp/chain-dev.log &
 
       - name: Sleep for 60 seconds
-        run: sleep 60s
+        run: sleep 180s
         shell: bash
 
       - name: run integration tests
         working-directory: ./integration-tests
         run: |
           npm install
-          sleep 180s
           npm run test
