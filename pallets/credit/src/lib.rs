@@ -415,7 +415,7 @@ pub mod pallet {
             UniqueSaturatedFrom::unique_saturated_from(50000 * DPR),
             UniqueSaturatedFrom::unique_saturated_from(60000 * DPR),
             UniqueSaturatedFrom::unique_saturated_from(80000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(100000 * DPR),
         ]
     }
 
