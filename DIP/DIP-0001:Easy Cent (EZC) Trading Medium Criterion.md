@@ -1,4 +1,4 @@
-# Easy Cent (EZC) Trading Medium Criterion
+# Easy Cent(EZC) Trading Medium Criterion
 ## Overview:
 EZC(Easy Cent) stable coin is an on-chain non-transferable and non-tradable credit converted from DPR.The purchase and use of EZC is not investment related which is able to pass the SEC's Howey test.Users can use many types of payment methods to make purchases of EZC,such as credit card,Paypal,Apple Pay,etc.
 ## Objective:

@@ -41,6 +41,7 @@ macro_rules! log {
 
 use codec::alloc::vec;
 use codec::{Decode, Encode};
+use sp_runtime::traits::One;
 use sp_runtime::Percent;
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
@@ -140,6 +141,8 @@ pub type EraIndex = u32;
 pub const DEFAULT_REWARD_ERAS: EraIndex = 10 * 365;
 pub const DPR: u128 = 1_000_000_000_000_000_000;
 pub const OLD_REWARD_ERAS: EraIndex = 270;
+// Allow 1 era to increase credit score once
+pub const CREDIT_CAP_ONE_ERAS: u64 = 1;
 
 /// settings for a specific campaign_id and credit level
 #[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
@@ -203,7 +206,6 @@ pub trait CreditInterface<AccountId, Balance> {
         to: EraIndex,
     ) -> (Option<(Balance, Balance)>, Weight);
     fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
-    fn update_credit(micropayment: (AccountId, Balance));
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
@@ -213,6 +215,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
     fn add_or_update_credit(account_id: AccountId, credit_score: u64);
     fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
+    fn do_unstaking_slash_credit(user: &AccountId) -> DispatchResult;
 }
 
 impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
@@ -238,7 +241,6 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn get_top_referee_reward(_account_id: &AccountId) -> (Balance, Weight) {
         (0u32.into(), 0)
     }
-    fn update_credit(_micropayment: (AccountId, Balance)) {}
     fn update_credit_by_traffic(_server: AccountId) {}
     fn get_current_era() -> EraIndex {
         0
@@ -260,6 +262,9 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn is_first_campaign_end(_account_id: &AccountId) -> Option<bool> {
         Some(true)
     }
+    fn do_unstaking_slash_credit(_user: &AccountId) -> DispatchResult {
+        Ok(()).into()
+    }
 }
 
 #[frame_support::pallet]
@@ -271,6 +276,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, weights::Weight};
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
+    use scale_info::prelude::string::{String, ToString};
     use sp_runtime::{
         traits::{Saturating, UniqueSaturatedFrom, Zero},
         Perbill,
@@ -286,8 +292,6 @@ pub mod pallet {
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
-        /// Credit cap every two eras
-        type CreditCapTwoEras: Get<u8>;
         /// credit attenuation step
         type CreditAttenuationStep: Get<u64>;
         /// Minimum credit to delegate
@@ -336,7 +340,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn user_staking_credit)]
     pub type UserStakingCredit<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
 
     /// user credit history is empty until user's device gets onboard   
     #[pallet::storage]
@@ -411,7 +415,7 @@ pub mod pallet {
             UniqueSaturatedFrom::unique_saturated_from(50000 * DPR),
             UniqueSaturatedFrom::unique_saturated_from(60000 * DPR),
             UniqueSaturatedFrom::unique_saturated_from(80000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(100000 * DPR),
         ]
     }
 
@@ -426,6 +430,10 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn credit_admin)]
+    pub type CreditAdmin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -474,6 +482,8 @@ pub mod pallet {
         UpdateNftCredit(ClassIdOf<T>, u64),
         BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
         StakingCreditScore(T::AccountId, u64),
+        SetAdmin(T::AccountId),
+        UnstakingResult(T::AccountId, String),
     }
 
     #[pallet::error]
@@ -496,6 +506,10 @@ pub mod pallet {
         CampaignIdNotMatch,
         /// first campaign not end
         FirstCampaignNotEnd,
+        /// Not Admin
+        NotAdmin,
+        /// Staking credit score not set
+        StakingCreditNotSet,
     }
 
     #[pallet::hooks]
@@ -746,7 +760,8 @@ pub mod pallet {
             class_id: ClassIdOf<T>,
             credit: u64,
         ) -> DispatchResultWithPostInfo {
-            let _sender = ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
 
             MiningMachineClassCredit::<T>::insert(class_id, credit);
 
@@ -784,7 +799,9 @@ pub mod pallet {
             old_ids: Vec<CampaignId>,
             new_ids: Vec<CampaignId>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             ensure!(
                 old_ids.len() == new_ids.len(),
                 Error::<T>::CampaignIdNotMatch
@@ -800,7 +817,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             accounts: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             for id in accounts {
                 NotSwitchAccounts::<T>::insert(id, true);
             }
@@ -812,7 +831,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             CreditBalances::<T>::put(credit_balances);
             Ok(().into())
         }
@@ -822,7 +843,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             id: u16,
         ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             DefaultCampaignId::<T>::put(id);
             Ok(().into())
         }
@@ -832,7 +855,9 @@ pub mod pallet {
             origin: OriginFor<T>,
             user_scores: Vec<(T::AccountId, u64)>,
         ) -> DispatchResult {
-            ensure_root(origin)?;
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+
             for (user, score) in user_scores {
                 UserStakingCredit::<T>::insert(user, score);
             }
@@ -841,26 +866,31 @@ pub mod pallet {
 
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
-            ensure_root(origin)?;
-            ensure!(
-                Self::is_first_campaign_end(&user).unwrap_or(false),
-                Error::<T>::FirstCampaignNotEnd
-            );
-            let staking_score = Self::user_staking_credit(&user);
-            let whole_score =
-                Self::get_credit_score(&user).ok_or(Error::<T>::AccountNoExistInUserCredit)?;
+            let admin = ensure_signed(origin)?;
+            if !Self::is_admin(admin.clone()) {
+                Self::deposit_event(Event::UnstakingResult(
+                    admin,
+                    "not credit admin".to_string(),
+                ));
+                return Err(Error::<T>::NotAdmin.into());
+            }
+            Self::do_unstaking_slash_credit(&user)
+        }
 
-            let new_score = whole_score.saturating_sub(staking_score);
-            let camp_id = Self::default_campaign_id();
-            // when unstaking,change campaign id to defalut campaign id
-            let credit_data = CreditData::new(camp_id, new_score);
-            UserCredit::<T>::insert(&user, credit_data);
-            Self::deposit_event(Event::CreditScoreSlashed(user, new_score));
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_credit_admin(origin: OriginFor<T>, admin: T::AccountId) -> DispatchResult {
+            ensure_root(origin)?;
+            CreditAdmin::<T>::put(admin.clone());
+            Self::deposit_event(Event::SetAdmin(admin));
             Ok(())
         }
     }
 
     impl<T: Config> Pallet<T> {
+        pub fn is_admin(user: T::AccountId) -> bool {
+            Self::credit_admin() == Some(user)
+        }
+
         pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             let eras = T::NodeInterface::get_eras_offline(&account_id);
@@ -1106,20 +1136,24 @@ pub mod pallet {
             CreditLevel::credit_level_gap(dst_lv.into(), cur_lv.into())
         }
 
-        fn add_or_update_credit(account_id: T::AccountId, credit_score: u64) {
+        fn add_or_update_credit(account_id: T::AccountId, credit_gap: u64) {
             let credit_data = {
                 match UserCredit::<T>::get(account_id.clone()) {
                     Some(mut credit_data) => {
-                        credit_data.update(credit_score);
+                        let new_score = credit_data.credit + credit_gap;
+                        credit_data.update(new_score);
                         credit_data
                     }
                     None => {
                         let default_id = Self::default_campaign_id();
-                        CreditData::new(default_id, credit_score)
+                        CreditData::new(default_id, credit_gap)
                     }
                 }
             };
-            Self::do_add_credit(account_id, credit_data);
+            Self::do_add_credit(account_id.clone(), credit_data);
+
+            let staking_credit = Self::user_staking_credit(&account_id).unwrap_or(0);
+            UserStakingCredit::<T>::insert(account_id, staking_credit + credit_gap);
         }
 
         fn get_current_era() -> EraIndex {
@@ -1308,78 +1342,6 @@ pub mod pallet {
             (top_referee_reward, weight)
         }
 
-        /// update credit score based on micropayment tuple
-        fn update_credit(micropayment: (T::AccountId, BalanceOf<T>)) {
-            let (server_id, balance) = micropayment;
-            let onboard_era = Self::get_onboard_era(&server_id);
-            if onboard_era.is_none() {
-                // credit is not updated if the device is never online
-                log!(
-                    info,
-                    "update_credit account : {:?}, never online",
-                    server_id
-                );
-                return;
-            }
-            let balance_num = TryInto::<u128>::try_into(balance).ok().unwrap();
-            let mut score_delta: u64 = balance_num
-                .checked_div(T::MicropaymentToCreditFactor::get())
-                .unwrap_or(0) as u64;
-            log!(
-                info,
-                "server_id: {:?}, balance_num: {}, score_delta:{}",
-                server_id.clone(),
-                balance_num,
-                score_delta
-            );
-            if score_delta > 0 {
-                let current_era = Self::get_current_era();
-                let now_as_secs = T::UnixTime::now().as_secs();
-                let (mut time_eras, era_used) = Self::check_update_credit_interval(
-                    &server_id,
-                    current_era,
-                    onboard_era.unwrap(),
-                    now_as_secs,
-                );
-
-                if time_eras < 2 && Self::last_credit_update_timestamp(&server_id).is_none() {
-                    // first update within 2 eras, we boost it to 2 eras so that credit can be updated
-                    time_eras = 2;
-                }
-                if time_eras >= 2 {
-                    let cap: u64 = T::CreditCapTwoEras::get() as u64;
-                    let total_cap = cap * (time_eras / 2);
-                    if score_delta > total_cap {
-                        score_delta = total_cap;
-                        log!(
-                            info,
-                            "server_id: {:?} score_delta capped at {}",
-                            server_id.clone(),
-                            total_cap
-                        );
-                    }
-
-                    let new_credit = Self::get_credit_score(&server_id)
-                        .unwrap_or(0)
-                        .saturating_add(score_delta);
-                    if Self::_update_credit(&server_id, new_credit) {
-                        LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
-                        Self::update_credit_history(&server_id, current_era);
-                        if era_used {
-                            LastCreditUpdate::<T>::remove(server_id);
-                        }
-                    } else {
-                        log!(
-                            error,
-                            "failed to update credit {} for server_id: {:?}",
-                            new_credit,
-                            server_id.clone()
-                        );
-                    }
-                }
-            }
-        }
-
         /// update credit score by traffic
         fn update_credit_by_traffic(server_id: T::AccountId) {
             let onboard_era = Self::get_onboard_era(&server_id);
@@ -1400,11 +1362,10 @@ pub mod pallet {
                 onboard_era.unwrap(),
                 now_as_secs,
             );
-            if time_eras >= 2 {
-                let cap: u64 = T::CreditCapTwoEras::get() as u64;
+            if time_eras >= CREDIT_CAP_ONE_ERAS {
                 let new_credit = Self::get_credit_score(&server_id)
                     .unwrap_or(0)
-                    .saturating_add(cap);
+                    .saturating_add(One::one());
                 if Self::_update_credit(&server_id, new_credit) {
                     LastCreditUpdateTimestamp::<T>::insert(&server_id, now_as_secs);
                     Self::update_credit_history(&server_id, current_era);
@@ -1503,6 +1464,44 @@ pub mod pallet {
                 }
                 None => None,
             }
+        }
+
+        fn do_unstaking_slash_credit(user: &T::AccountId) -> DispatchResult {
+            let user_clone = user.clone();
+            if !Self::is_first_campaign_end(user).unwrap_or(false) {
+                Self::deposit_event(Event::UnstakingResult(
+                    user_clone,
+                    "first campaign not end".to_string(),
+                ));
+                return Err(Error::<T>::FirstCampaignNotEnd.into());
+            }
+
+            let staking_score = Self::user_staking_credit(user);
+            if staking_score.is_none() {
+                Self::deposit_event(Event::UnstakingResult(
+                    user_clone,
+                    "staking credit not set".to_string(),
+                ));
+                return Err(Error::<T>::StakingCreditNotSet.into());
+            }
+
+            let whole_score = Self::get_credit_score(user);
+            if whole_score.is_none() {
+                Self::deposit_event(Event::UnstakingResult(
+                    user_clone,
+                    "user credit not exist".to_string(),
+                ));
+                return Err(Error::<T>::AccountNoExistInUserCredit.into());
+            }
+
+            let new_score = whole_score.unwrap().saturating_sub(staking_score.unwrap());
+            let camp_id = Self::default_campaign_id();
+            // when unstaking,change campaign id to defalut campaign id
+            let credit_data = CreditData::new(camp_id, new_score);
+            UserCredit::<T>::insert(user, credit_data);
+            UserStakingCredit::<T>::remove(user);
+
+            Ok(())
         }
     }
 

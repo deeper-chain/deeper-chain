@@ -73,7 +73,7 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 
-use fp_rpc::{TransactionStatus, TxPoolResponse};
+use fp_rpc::{TransactionStatusV2 as TransactionStatus, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
 use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, PairedAddressMapping, Runner};
@@ -153,10 +153,10 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 14,
+    spec_version: 15,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
-    transaction_version: 8,
+    transaction_version: 9,
     state_version: 1,
 };
 
@@ -1192,7 +1192,6 @@ impl pallet_deeper_node::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CreditCapTwoEras: u8 = 1;
     pub const CreditAttenuationStep: u64 = 1;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = MICROPAYMENT_TO_CREDIT_FACTOR;
@@ -1229,7 +1228,6 @@ impl pallet_credit::Config for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
-    type CreditCapTwoEras = CreditCapTwoEras;
     type CreditAttenuationStep = CreditAttenuationStep;
     type MinCreditToDelegate = MinCreditToDelegate;
     type MicropaymentToCreditFactor = MicropaymentToCreditFactor;

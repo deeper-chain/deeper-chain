@@ -151,7 +151,7 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn onboard_time)]
-    pub(super) type OnboardTime<T: Config> =
+    pub type OnboardTime<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
 
     #[pallet::storage]
