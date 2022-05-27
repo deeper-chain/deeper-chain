@@ -37,8 +37,8 @@ jobs:
       - name: start dev chain
         run: nohup ./target/debug/deeper-chain --dev > /tmp/chain-dev.log &
 
-      - name: Sleep for 60 seconds
-        run: sleep 180s
+      - name: Sleep for 120 seconds
+        run: sleep 120s
         shell: bash
 
       - name: run integration tests
