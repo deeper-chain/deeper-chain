@@ -478,6 +478,10 @@ pub mod pallet {
                         imbalance.peek(),
                     ));
                     if daily_release >= Self::daily_max_limit() {
+                        DayReleaseEnd::<T>::put(true);
+                        break;
+                    } else if daily_release >= Self::single_max_limit() {
+                        // One block only release single_max_limit DPR
                         break;
                     }
                     next_key = Self::next_account_release_key(&next_key);
