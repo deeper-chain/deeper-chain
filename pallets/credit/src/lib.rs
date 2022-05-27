@@ -504,8 +504,8 @@ pub mod pallet {
         MiningMachineClassCreditNoConfig,
         /// Campain id switch not match
         CampaignIdNotMatch,
-        /// first campaign not end
-        FirstCampaignNotEnd,
+        // /// first campaign not end
+        // FirstCampaignNotEnd,
         /// Not Admin
         NotAdmin,
         /// Staking credit score not set
@@ -1468,13 +1468,13 @@ pub mod pallet {
 
         fn do_unstaking_slash_credit(user: &T::AccountId) -> DispatchResult {
             let user_clone = user.clone();
-            if !Self::is_first_campaign_end(user).unwrap_or(false) {
-                Self::deposit_event(Event::UnstakingResult(
-                    user_clone,
-                    "first campaign not end".to_string(),
-                ));
-                return Err(Error::<T>::FirstCampaignNotEnd.into());
-            }
+            // if !Self::is_first_campaign_end(user).unwrap_or(false) {
+            //     Self::deposit_event(Event::UnstakingResult(
+            //         user_clone,
+            //         "first campaign not end".to_string(),
+            //     ));
+            //     return Err(Error::<T>::FirstCampaignNotEnd.into());
+            // }
 
             let staking_score = Self::user_staking_credit(user);
             if staking_score.is_none() {
