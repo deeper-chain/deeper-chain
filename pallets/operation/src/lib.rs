@@ -48,7 +48,7 @@ pub mod pallet {
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
-        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto},
+        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
         RuntimeDebug,
     };
 
@@ -440,6 +440,7 @@ pub mod pallet {
             let mut total_release = Self::total_release();
             let mut daily_release = Self::total_daily_release(cur_day);
             let mut to_be_removed = Vec::new();
+            let mut blockly_release = BalanceOf::<T>::zero();
 
             loop {
                 if next_key.starts_with(&prefix) {
@@ -463,6 +464,7 @@ pub mod pallet {
                         T::Currency::deposit_creating(&data.basic_info.account, released_balance);
                     total_release += released_balance;
                     daily_release += released_balance;
+                    blockly_release += released_balance;
 
                     AccountsReleaseInfo::<T>::mutate(data.basic_info.account.clone(), |info| {
                         info.as_mut().unwrap().last_release_day = cur_day;
@@ -480,7 +482,8 @@ pub mod pallet {
                     if daily_release >= Self::daily_max_limit() {
                         DayReleaseEnd::<T>::put(true);
                         break;
-                    } else if daily_release >= Self::single_max_limit() {
+                    }
+                    if blockly_release >= Self::single_max_limit() {
                         // One block only release single_max_limit DPR
                         break;
                     }
