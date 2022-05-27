@@ -44,11 +44,11 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-    use pallet_credit::CreditInterface;
+    use pallet_credit::{CreditInterface, DPR};
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
-        traits::{StaticLookup, UniqueSaturatedInto},
+        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto},
         RuntimeDebug,
     };
 
@@ -160,13 +160,25 @@ pub mod pallet {
     #[pallet::getter(fn total_release)]
     pub(super) type TotalRelease<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    #[pallet::type_value]
+    pub fn DefaultDailyMax<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(1_000_000 * DPR)
+    }
+
     #[pallet::storage]
     #[pallet::getter(fn daily_max_limit)]
-    pub(super) type DailyMaxLimit<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(super) type DailyMaxLimit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultDailyMax<T>>;
+
+    #[pallet::type_value]
+    pub fn DefaultSingleMax<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR)
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn single_max_limit)]
-    pub(super) type SingleMaxLimit<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(super) type SingleMaxLimit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultSingleMax<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn lock_member_whitelist)]
