@@ -1615,7 +1615,7 @@ dependencies = [
 [[package]]
 name = "fc-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "async-trait",
  "fc-db",
@@ -1634,7 +1634,7 @@ dependencies = [
 [[package]]
 name = "fc-db"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-storage",
  "kvdb-rocksdb",
@@ -1650,7 +1650,7 @@ dependencies = [
 [[package]]
 name = "fc-mapping-sync"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fc-db",
  "fp-consensus",
@@ -1667,7 +1667,7 @@ dependencies = [
 [[package]]
 name = "fc-rpc"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -1694,8 +1694,6 @@ dependencies = [
  "sc-service",
  "sc-transaction-pool",
  "sc-transaction-pool-api",
- "serde",
- "sha3 0.10.1",
  "sp-api",
  "sp-block-builder",
  "sp-blockchain",
@@ -1710,11 +1708,10 @@ dependencies = [
 [[package]]
 name = "fc-rpc-core"
 version = "1.1.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "evm",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -1818,7 +1815,7 @@ dependencies = [
 [[package]]
 name = "fp-consensus"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ethereum",
  "parity-scale-codec",
@@ -1830,7 +1827,7 @@ dependencies = [
 [[package]]
 name = "fp-dynamic-fee"
 version = "1.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "async-trait",
  "sp-core",
@@ -1840,10 +1837,9 @@ dependencies = [
 [[package]]
 name = "fp-evm"
 version = "3.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "evm",
- "frame-support",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -1853,11 +1849,10 @@ dependencies = [
 [[package]]
 name = "fp-rpc"
 version = "3.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ethereum",
  "ethereum-types",
- "evm",
  "fp-evm",
  "parity-scale-codec",
  "scale-info",
@@ -1871,7 +1866,7 @@ dependencies = [
 [[package]]
 name = "fp-self-contained"
 version = "1.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ethereum",
  "frame-support",
@@ -1887,7 +1882,7 @@ dependencies = [
 [[package]]
 name = "fp-storage"
 version = "2.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -4221,6 +4216,7 @@ dependencies = [
  "fc-rpc",
  "fc-rpc-core",
  "fp-consensus",
+ "fp-evm",
  "fp-rpc",
  "frame-benchmarking",
  "frame-benchmarking-cli",
@@ -4420,6 +4416,7 @@ dependencies = [
  "pallet-contracts-rpc-runtime-api",
  "pallet-credit",
  "pallet-credit-accumulation",
+ "pallet-deeper-machine",
  "pallet-deeper-node",
  "pallet-democracy",
  "pallet-dynamic-fee",
@@ -4867,7 +4864,7 @@ dependencies = [
 [[package]]
 name = "pallet-base-fee"
 version = "1.0.0"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5068,6 +5065,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-deeper-machine"
+version = "1.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-evm",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-deeper-node"
 version = "3.0.0"
 dependencies = [
@@ -5104,7 +5116,7 @@ dependencies = [
 [[package]]
 name = "pallet-dynamic-fee"
 version = "4.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "async-trait",
  "fp-dynamic-fee",
@@ -5141,7 +5153,7 @@ dependencies = [
 [[package]]
 name = "pallet-ethereum"
 version = "4.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ethereum",
  "ethereum-types",
@@ -5153,6 +5165,7 @@ dependencies = [
  "fp-storage",
  "frame-support",
  "frame-system",
+ "pallet-balances",
  "pallet-evm",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5168,7 +5181,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm"
 version = "6.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "evm",
  "fp-evm",
@@ -5176,8 +5189,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex",
- "libsecp256k1 0.7.0",
  "log",
+ "pallet-balances",
  "pallet-timestamp",
  "parity-scale-codec",
  "primitive-types",
@@ -5194,7 +5207,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-blake2"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
 ]
@@ -5202,7 +5215,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-bn128"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
  "sp-core",
@@ -5212,7 +5225,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-curve25519"
 version = "1.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "curve25519-dalek 4.0.0-pre.1",
  "fp-evm",
@@ -5221,7 +5234,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-dispatch"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
  "frame-support",
@@ -5231,7 +5244,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-ed25519"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "ed25519-dalek",
  "fp-evm",
@@ -5240,7 +5253,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-modexp"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
  "num",
@@ -5249,7 +5262,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-sha3fips"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
  "tiny-keccak",
@@ -5258,7 +5271,7 @@ dependencies = [
 [[package]]
 name = "pallet-evm-precompile-simple"
 version = "2.0.0-dev"
-source = "git+https://github.com/deeper-chain/frontier.git?branch=frontier_sync#783798ebcc4582c842e735990f1c57d3f4f8734d"
+source = "git+https://github.com/paritytech/frontier.git?branch=polkadot-v0.9.19#7c32b1401d94ca46abc6ac9fed2006ff4803b766"
 dependencies = [
  "fp-evm",
  "ripemd",

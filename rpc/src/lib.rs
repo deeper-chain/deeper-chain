@@ -199,7 +199,6 @@ where
     C::Api: BlockBuilder<Block>,
     C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
-    C::Api: fp_rpc::TxPoolRuntimeRPCApi<Block>,
     P: TransactionPool<Block = Block> + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
@@ -208,7 +207,7 @@ where
 {
     use fc_rpc::{
         Eth, EthApi, EthDevSigner, EthFilter, EthFilterApi, EthPubSub, EthPubSubApi, EthSigner,
-        HexEncodedIdProvider, Net, NetApi, TxPool, TxPoolApi, Web3, Web3Api,
+        HexEncodedIdProvider, Net, NetApi, Web3, Web3Api,
     };
     use pallet_contracts_rpc::{Contracts, ContractsApi};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -340,8 +339,6 @@ where
         ),
         overrides,
     )));
-
-    io.extend_with(TxPoolApi::to_delegate(TxPool::new(client.clone(), graph)));
 
     Ok(io)
 }

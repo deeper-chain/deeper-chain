@@ -41,10 +41,10 @@ sc-transaction-pool = { git = "https://github.com/paritytech/substrate", branch 
 sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 jsonrpc-pubsub = "18.0.0"
-fc-db = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fp-storage = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
+fc-db = { git = "https://github.com/paritytech/frontier.git", branch = "polkadot-v0.9.19" }
+fc-rpc = { git = "https://github.com/paritytech/frontier.git", branch = "polkadot-v0.9.19" }
+fc-rpc-core = { git = "https://github.com/paritytech/frontier.git", branch = "polkadot-v0.9.19" }
+fp-rpc = { git = "https://github.com/paritytech/frontier.git", branch = "polkadot-v0.9.19" }
+fp-storage = { git = "https://github.com/paritytech/frontier.git", branch = "polkadot-v0.9.19" }
+pallet-ethereum = { git = "https://github.com/paritytech/frontier.git", branch = "polkadot-v0.9.19" }
 sc-network = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }

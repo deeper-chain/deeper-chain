@@ -24,9 +24,9 @@ use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
     wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CreditConfig,
-    DeeperNodeConfig, DemocracyConfig, EVMConfig, ElectionsConfig, EthereumConfig, GrandpaConfig,
-    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
-    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+    DeeperMachineConfig, DeeperNodeConfig, DemocracyConfig, EVMConfig, ElectionsConfig,
+    EthereumConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
+    SocietyConfig, StakerStatus, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
 use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -233,7 +233,7 @@ pub fn testnet_genesis(
             credit_settings,
             user_credit_data,
         },
-        evm: EVMConfig {
+        deeper_machine: DeeperMachineConfig {
             account_pairs: {
                 let mut map = BTreeMap::new();
                 // Alice's deeper chain address: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
@@ -276,13 +276,15 @@ pub fn testnet_genesis(
                 );
                 map
             },
+        },
+        evm: EVMConfig {
             accounts: {
                 let mut map = BTreeMap::new();
                 map.insert(
                     // H160 address of Alice eth account
                     H160::from_str("7a5b2024e179b312B924Ff02F4c27b5DF5326601")
                         .expect("internal H160 is valid; qed"),
-                    pallet_evm::GenesisAccount {
+                    fp_evm::GenesisAccount {
                         balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
                             .expect("internal U256 is valid; qed"),
                         code: Default::default(),
@@ -294,7 +296,7 @@ pub fn testnet_genesis(
                     // H160 address of Bob eth account
                     H160::from_str("120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581")
                         .expect("internal H160 is valid; qed"),
-                    pallet_evm::GenesisAccount {
+                    fp_evm::GenesisAccount {
                         balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
                             .expect("internal U256 is valid; qed"),
                         code: Default::default(),
@@ -307,7 +309,7 @@ pub fn testnet_genesis(
                     // H160 address of dave eth account
                     H160::from_str("843AFB0DC3aD56696800C0d61C76Ac2A147AD48C")
                         .expect("internal H160 is valid; qed"),
-                    pallet_evm::GenesisAccount {
+                    fp_evm::GenesisAccount {
                         balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
                             .expect("internal U256 is valid; qed"),
                         code: Default::default(),
@@ -319,7 +321,7 @@ pub fn testnet_genesis(
                     // H160 address of eve eth account
                     H160::from_str("e1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B")
                         .expect("internal H160 is valid; qed"),
-                    pallet_evm::GenesisAccount {
+                    fp_evm::GenesisAccount {
                         balance: U256::from_str("0xffffffffffffffffffffffffffffffff")
                             .expect("internal U256 is valid; qed"),
                         code: Default::default(),

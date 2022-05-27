@@ -113,6 +113,7 @@ pub fn config_endowed(code: Option<&[u8]>, extra_endowed: Vec<AccountId>) -> Gen
         deeper_node: Default::default(),
         credit: Default::default(),
         evm: Default::default(),
+        deeper_machine: Default::default(),
         ethereum: Default::default(),
         dynamic_fee: Default::default(),
         base_fee: Default::default(),

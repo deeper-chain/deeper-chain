@@ -73,10 +73,11 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 
-use fp_rpc::{TransactionStatusV2 as TransactionStatus, TxPoolResponse};
+use fp_rpc::TransactionStatus;
+use pallet_deeper_machine::{PairedAddressMapping, EnsureAddressPaired};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
-use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, PairedAddressMapping, Runner};
+use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, Runner};
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -1247,6 +1248,10 @@ impl pallet_credit_accumulation::Config for Runtime {
     type WeightInfo = pallet_credit_accumulation::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_deeper_machine::Config for Runtime {
+    type Event = Event;
+}
+
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
 impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
     fn find_author<'a, I>(digests: I) -> Option<H160>
@@ -1280,6 +1285,8 @@ impl pallet_evm::Config for Runtime {
     type GasWeightMapping = ();
     type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
     type AddressMapping = PairedAddressMapping<Runtime>;
+    type CallOrigin = EnsureAddressPaired<Runtime>;
+    type WithdrawOrigin = EnsureAddressPaired<Runtime>;
     type Currency = Balances;
     type Event = Event;
     type Runner = pallet_evm::runner::stack::Runner<Self>;
@@ -1392,11 +1399,12 @@ construct_runtime!(
         CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>} = 62,
 
         Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin} = 80,
-        EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>} = 81,
+        EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>} = 81,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event} = 82,
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent} = 83,
 
-        Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
+        Operation: pallet_operation::{Pallet, Call, Storage, Event<T>} = 90,
+        DeeperMachine: pallet_deeper_machine::{Pallet, Call, Config<T>, Storage, Event<T>} = 91,
     }
 );
 
@@ -1488,14 +1496,9 @@ impl fp_self_contained::SelfContainedCall for Call {
         }
     }
 
-    fn validate_self_contained(
-        &self,
-        info: &Self::SignedInfo,
-        dispatch_info: &DispatchInfoOf<Call>,
-        len: usize,
-    ) -> Option<TransactionValidity> {
+    fn validate_self_contained(&self, info: &Self::SignedInfo) -> Option<TransactionValidity> {
         match self {
-            Call::Ethereum(call) => call.validate_self_contained(info, dispatch_info, len),
+            Call::Ethereum(call) => call.validate_self_contained(info),
             _ => None,
         }
     }
@@ -1735,44 +1738,17 @@ impl_runtime_apis! {
         }
     }
 
-    impl fp_rpc::TxPoolRuntimeRPCApi<Block> for Runtime {
-        fn extrinsic_filter(
-            xts_ready: Vec<<Block as BlockT>::Extrinsic>,
-            xts_future: Vec<<Block as BlockT>::Extrinsic>,
-        ) -> TxPoolResponse {
-            TxPoolResponse {
-                ready: xts_ready
-                    .into_iter()
-                    .filter_map(|xt| match xt.0.function {
-                        Call::Ethereum(transact { transaction }) => Some(transaction),
-                        _ => None,
-                    })
-                    .collect(),
-                future: xts_future
-                    .into_iter()
-                    .filter_map(|xt| match xt.0.function {
-                        Call::Ethereum(transact { transaction }) => Some(transaction),
-                        _ => None,
-                    })
-                    .collect(),
-            }
-        }
-    }
-
-
     impl fp_rpc::EthereumRuntimeRPCApi<Block> for Runtime {
         fn chain_id() -> u64 {
             <Runtime as pallet_evm::Config>::ChainId::get()
         }
 
         fn account_basic(address: H160) -> EVMAccount {
-            let (account, _) = EVM::account_basic(&address);
-            account
+            EVM::account_basic(&address)
         }
 
         fn gas_price() -> U256 {
-            let (gas_price, _) = <Runtime as pallet_evm::Config>::FeeCalculator::min_gas_price();
-            gas_price
+            <Runtime as pallet_evm::Config>::FeeCalculator::min_gas_price()
         }
 
         fn account_code_at(address: H160) -> Vec<u8> {
@@ -1822,7 +1798,7 @@ impl_runtime_apis! {
                 access_list.unwrap_or_default(),
                 is_transactional,
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
-            ).map_err(|err| err.error.into())
+            ).map_err(|err| err.into())
         }
 
         fn create(
@@ -1856,7 +1832,7 @@ impl_runtime_apis! {
                 access_list.unwrap_or_default(),
                 is_transactional,
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
-            ).map_err(|err| err.error.into())
+            ).map_err(|err| err.into())
         }
 
         fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
