@@ -44,11 +44,11 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-    use pallet_credit::CreditInterface;
+    use pallet_credit::{CreditInterface, DPR};
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
-        traits::{StaticLookup, UniqueSaturatedInto},
+        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
         RuntimeDebug,
     };
 
@@ -160,13 +160,25 @@ pub mod pallet {
     #[pallet::getter(fn total_release)]
     pub(super) type TotalRelease<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+    #[pallet::type_value]
+    pub fn DefaultDailyMax<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(1_000_000 * DPR)
+    }
+
     #[pallet::storage]
     #[pallet::getter(fn daily_max_limit)]
-    pub(super) type DailyMaxLimit<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(super) type DailyMaxLimit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultDailyMax<T>>;
+
+    #[pallet::type_value]
+    pub fn DefaultSingleMax<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR)
+    }
 
     #[pallet::storage]
     #[pallet::getter(fn single_max_limit)]
-    pub(super) type SingleMaxLimit<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+    pub(super) type SingleMaxLimit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultSingleMax<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn lock_member_whitelist)]
@@ -428,6 +440,7 @@ pub mod pallet {
             let mut total_release = Self::total_release();
             let mut daily_release = Self::total_daily_release(cur_day);
             let mut to_be_removed = Vec::new();
+            let mut blockly_release = BalanceOf::<T>::zero();
 
             loop {
                 if next_key.starts_with(&prefix) {
@@ -451,6 +464,7 @@ pub mod pallet {
                         T::Currency::deposit_creating(&data.basic_info.account, released_balance);
                     total_release += released_balance;
                     daily_release += released_balance;
+                    blockly_release += released_balance;
 
                     AccountsReleaseInfo::<T>::mutate(data.basic_info.account.clone(), |info| {
                         info.as_mut().unwrap().last_release_day = cur_day;
@@ -466,6 +480,11 @@ pub mod pallet {
                         imbalance.peek(),
                     ));
                     if daily_release >= Self::daily_max_limit() {
+                        DayReleaseEnd::<T>::put(true);
+                        break;
+                    }
+                    if blockly_release >= Self::single_max_limit() {
+                        // One block only release single_max_limit DPR
                         break;
                     }
                     next_key = Self::next_account_release_key(&next_key);
