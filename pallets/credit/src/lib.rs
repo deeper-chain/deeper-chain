@@ -1500,6 +1500,7 @@ pub mod pallet {
             let credit_data = CreditData::new(camp_id, new_score);
             UserCredit::<T>::insert(user, credit_data);
             UserStakingCredit::<T>::remove(user);
+            Self::update_credit_history(&user, Self::get_current_era());
 
             Ok(())
         }
