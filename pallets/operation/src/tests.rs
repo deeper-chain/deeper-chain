@@ -42,7 +42,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Operation: pallet_operation::{Pallet, Call, Event<T>},
+        Operation: pallet_operation::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -226,5 +226,23 @@ fn burn_for_ezc() {
         assert_eq!(Balances::free_balance(&1), 98);
         assert_ok!(Operation::burn_for_ezc(Origin::signed(1), 48, H160::zero()));
         assert_eq!(Balances::free_balance(&1), 50);
+    });
+}
+
+#[test]
+fn start_withdraw_ezc() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        assert_ok!(Operation::start_withdraw_ezc(
+            Origin::signed(1),
+            H160::zero()
+        ));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::StartWithdrawEZC(1, H160::zero()))
+        );
     });
 }

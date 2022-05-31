@@ -94,6 +94,7 @@ pub mod pallet {
         SingleReleaseTooMuch(T::AccountId, BalanceOf<T>),
         BurnForEZC(T::AccountId, BalanceOf<T>, H160),
         UnstakingResult(T::AccountId, String),
+        StartWithdrawEZC(T::AccountId, H160),
     }
 
     // Errors inform users that something went wrong.
@@ -426,6 +427,17 @@ pub mod pallet {
             let balance = burned.peek();
             T::BurnedTo::on_unbalanced(burned);
             Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
+            Ok(().into())
+        }
+
+        // TODO: use real weight
+        #[pallet::weight(T::OPWeightInfo::start_withdraw_ezc())]
+        pub fn start_withdraw_ezc(
+            origin: OriginFor<T>,
+            eth_address: H160,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            Self::deposit_event(Event::<T>::StartWithdrawEZC(sender, eth_address));
             Ok(().into())
         }
     }
