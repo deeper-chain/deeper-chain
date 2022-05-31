@@ -48,6 +48,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use pallet_credit::CreditInterface;
     use pallet_micropayment::AccountCreator;
+    use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::TrailingZeroInput;
@@ -153,9 +154,7 @@ pub mod pallet {
             pk.copy_from_slice(&atomos_accountid.encode());
             let pub_key = sr25519::Public::from_raw(pk);
 
-            let mut sig = [0u8; 64];
-            sig.copy_from_slice(&signature);
-            let sig = sr25519::Signature::from_slice(&sig);
+            let sig = sr25519::Signature::from_slice(&signature);
 
             let mut data = Vec::new();
             data.extend_from_slice(&atomos_accountid.encode());
@@ -163,7 +162,11 @@ pub mod pallet {
             data.extend_from_slice(&sender.encode());
             let msg = sp_io::hashing::blake2_256(&data);
 
-            let verified = sr25519_verify(&sig, &msg, &pub_key);
+            let verified = sr25519_verify(
+                &sig.unwrap_or(UncheckedFrom::unchecked_from([0; 64])),
+                &msg,
+                &pub_key,
+            );
             ensure!(verified, Error::<T>::InvalidSignature);
 
             Ok(().into())

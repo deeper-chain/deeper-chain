@@ -42,6 +42,8 @@ pub fn create_funded_user<T: Config>(
 }
 
 benchmarks! {
+    where_clause {where T::ClassId: From<u16>, T::InstanceId: From<u16>}
+
     update_credit_setting {
         let credit_setting = CreditSetting::<BalanceOf<T>> {
             campaign_id: 0,
@@ -113,7 +115,7 @@ benchmarks! {
     }
 
     update_nft_class_credit {
-        let class_id: ClassIdOf<T> = Default::default();
+        let class_id: T::ClassId = 0u16.into();
         let credit = 1;
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         CreditAdmin::<T>::put(user.clone());
@@ -123,8 +125,8 @@ benchmarks! {
     }
 
     burn_nft {
-        let class_id = Default::default();
-        let instance_id = Default::default();
+        let class_id: T::ClassId =  0u16.into();
+        let instance_id: T::InstanceId =  0u16.into();
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         CreditAdmin::<T>::put(user.clone());
         let user_lookup = T::Lookup::unlookup(user.clone());

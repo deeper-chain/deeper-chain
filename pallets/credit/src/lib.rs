@@ -757,7 +757,7 @@ pub mod pallet {
         #[pallet::weight(<T as pallet::Config>::WeightInfo::update_nft_class_credit())]
         pub fn update_nft_class_credit(
             origin: OriginFor<T>,
-            #[pallet::compact] class_id: ClassIdOf<T>,
+            class_id: ClassIdOf<T>,
             credit: u64,
         ) -> DispatchResultWithPostInfo {
             let admin = ensure_signed(origin)?;
@@ -773,8 +773,8 @@ pub mod pallet {
         #[transactional]
         pub fn burn_nft(
             origin: OriginFor<T>,
-            #[pallet::compact] class_id: ClassIdOf<T>,
-            #[pallet::compact] instance_id: InstanceIdOf<T>,
+            class_id: ClassIdOf<T>,
+            instance_id: InstanceIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
 

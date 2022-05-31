@@ -29,7 +29,7 @@ use sp_runtime::{
 };
 use sp_storage::Storage;
 
-use frame_support::traits::{ConstU32, ConstU64};
+use frame_support::traits::{AsEnsureOriginWithArg, ConstU32, ConstU64};
 use frame_support::{
     assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types,
     storage::StoragePrefixedMap, traits::SortedMembers, weights::Weight, PalletId,
@@ -187,6 +187,7 @@ impl pallet_uniques::Config for Test {
     type KeyLimit = ConstU32<50>;
     type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<u128>>;
 }
 
 parameter_types! {

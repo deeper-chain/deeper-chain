@@ -26,12 +26,13 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        ConstU128, Currency, EqualPrivilegeOnly, Everything, FindAuthor, Imbalance, InstanceFilter,
-        KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
+        AsEnsureOriginWithArg, ConstU128, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
+        Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced,
+        U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-        DispatchClass, IdentityFee, Weight,
+        ConstantMultiplier, DispatchClass, IdentityFee, Weight,
     },
     ConsensusEngineId, PalletId, RuntimeDebug,
 };
@@ -50,15 +51,11 @@ pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdj
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 use sp_api::impl_runtime_apis;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use sp_core::{
-    crypto::KeyTypeId,
-    u32_trait::{_1, _2, _3},
-    OpaqueMetadata, H160, H256, U256,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160, H256, U256};
 use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::traits::{
-    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, Dispatchable, NumberFor, OpaqueKeys,
-    PostDispatchInfoOf, SaturatedConversion, StaticLookup,
+    self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, DispatchInfoOf, Dispatchable,
+    NumberFor, OpaqueKeys, PostDispatchInfoOf, SaturatedConversion, StaticLookup,
 };
 use sp_runtime::transaction_validity::{
     TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
@@ -76,7 +73,7 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 
-use fp_rpc::{TransactionStatusV2, TxPoolResponse};
+use fp_rpc::{TransactionStatusV2 as TransactionStatus, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
 use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, PairedAddressMapping, Runner};
@@ -492,11 +489,11 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
-    type TransactionByteFee = TransactionByteFee;
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate =
         TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
     type OperationalFeeMultiplier = OperationalFeeMultiplier;
+    type LengthToFee = ConstantMultiplier<Balance, TransactionByteFee>;
 }
 
 parameter_types! {
@@ -633,9 +630,9 @@ impl pallet_democracy::Config for Runtime {
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
     type FastTrackOrigin =
-        pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
     type InstantOrigin =
-        pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
     type InstantAllowed = InstantAllowed;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
@@ -763,6 +760,9 @@ parameter_types! {
     pub const TipReportDepositBase: Balance = 1 * DPR;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
     pub const BountyDepositBase: Balance = 1 * DPR;
+    pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
+    pub const CuratorDepositMin: Balance = 1 * DOLLARS;
+    pub const CuratorDepositMax: Balance = 100 * DOLLARS;
     pub const BountyDepositPayoutDelay: BlockNumber = 1 * DAYS;
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
     pub const BountyUpdatePeriod: BlockNumber = 14 * DAYS;
@@ -808,8 +808,10 @@ impl pallet_bounties::Config for Runtime {
     type BountyDepositBase = BountyDepositBase;
     type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
     type BountyUpdatePeriod = BountyUpdatePeriod;
-    type BountyCuratorDeposit = BountyCuratorDeposit;
     type BountyValueMinimum = BountyValueMinimum;
+    type CuratorDepositMultiplier = CuratorDepositMultiplier;
+    type CuratorDepositMin = CuratorDepositMin;
+    type CuratorDepositMax = CuratorDepositMax;
     type DataDepositPerByte = DataDepositPerByte;
     type MaximumReasonLength = MaximumReasonLength;
     type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
@@ -820,7 +822,6 @@ impl pallet_child_bounties::Config for Runtime {
     type Event = Event;
     type MaxActiveChildBountyCount = MaxActiveChildBountyCount;
     type ChildBountyValueMinimum = ChildBountyValueMinimum;
-    type ChildBountyCuratorDepositBase = ChildBountyCuratorDepositBase;
     type WeightInfo = pallet_child_bounties::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1118,7 +1119,7 @@ impl pallet_lottery::Config for Runtime {
 parameter_types! {
     pub const AssetDeposit: Balance = 100 * DPR;
     pub const ApprovalDeposit: Balance = 1 * DPR;
-    pub const StringLimit: u32 = 768;
+    pub const StringLimit: u32 = 256;
     pub const MetadataDepositBase: Balance = Balance::min_value();
     pub const MetadataDepositPerByte: Balance = Balance::min_value();
 }
@@ -1220,6 +1221,7 @@ impl pallet_uniques::Config for Runtime {
     type KeyLimit = KeyLimit;
     type ValueLimit = ValueLimit;
     type WeightInfo = pallet_uniques::weights::SubstrateWeight<Runtime>;
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 }
 
 impl pallet_credit::Config for Runtime {
@@ -1291,7 +1293,7 @@ impl pallet_evm::Config for Runtime {
 
 impl pallet_ethereum::Config for Runtime {
     type Event = Event;
-    type StateRoot = pallet_ethereum::IntermediateStateRoot;
+    type StateRoot = pallet_ethereum::IntermediateStateRoot<Self>;
 }
 
 frame_support::parameter_types! {
@@ -1304,6 +1306,7 @@ impl pallet_dynamic_fee::Config for Runtime {
 
 frame_support::parameter_types! {
     pub IsActive: bool = true;
+    pub DefaultBaseFeePerGas: U256 = U256::from(1_000_000_000);
 }
 
 pub struct BaseFeeThreshold;
@@ -1323,6 +1326,7 @@ impl pallet_base_fee::Config for Runtime {
     type Event = Event;
     type Threshold = BaseFeeThreshold;
     type IsActive = IsActive;
+    type DefaultBaseFeePerGas = DefaultBaseFeePerGas;
 }
 
 construct_runtime!(
@@ -1484,9 +1488,14 @@ impl fp_self_contained::SelfContainedCall for Call {
         }
     }
 
-    fn validate_self_contained(&self, info: &Self::SignedInfo) -> Option<TransactionValidity> {
+    fn validate_self_contained(
+        &self,
+        info: &Self::SignedInfo,
+        dispatch_info: &DispatchInfoOf<Call>,
+        len: usize,
+    ) -> Option<TransactionValidity> {
         match self {
-            Call::Ethereum(call) => call.validate_self_contained(info),
+            Call::Ethereum(call) => call.validate_self_contained(info, dispatch_info, len),
             _ => None,
         }
     }
@@ -1757,11 +1766,13 @@ impl_runtime_apis! {
         }
 
         fn account_basic(address: H160) -> EVMAccount {
-            EVM::account_basic(&address)
+            let (account, _) = EVM::account_basic(&address);
+            account
         }
 
         fn gas_price() -> U256 {
-            <Runtime as pallet_evm::Config>::FeeCalculator::min_gas_price()
+            let (gas_price, _) = <Runtime as pallet_evm::Config>::FeeCalculator::min_gas_price();
+            gas_price
         }
 
         fn account_code_at(address: H160) -> Vec<u8> {
@@ -1798,6 +1809,7 @@ impl_runtime_apis! {
                 None
             };
 
+            let is_transactional = false;
             <Runtime as pallet_evm::Config>::Runner::call(
                 from,
                 to,
@@ -1808,8 +1820,9 @@ impl_runtime_apis! {
                 max_priority_fee_per_gas,
                 nonce,
                 access_list.unwrap_or_default(),
+                is_transactional,
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
-            ).map_err(|err| err.into())
+            ).map_err(|err| err.error.into())
         }
 
         fn create(
@@ -1831,6 +1844,7 @@ impl_runtime_apis! {
                 None
             };
 
+            let is_transactional = false;
             <Runtime as pallet_evm::Config>::Runner::create(
                 from,
                 data,
@@ -1840,11 +1854,12 @@ impl_runtime_apis! {
                 max_priority_fee_per_gas,
                 nonce,
                 access_list.unwrap_or_default(),
+                is_transactional,
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
-            ).map_err(|err| err.into())
+            ).map_err(|err| err.error.into())
         }
 
-        fn current_transaction_statuses() -> Option<Vec<TransactionStatusV2>> {
+        fn current_transaction_statuses() -> Option<Vec<TransactionStatus>> {
             Ethereum::current_transaction_statuses()
         }
 
@@ -1859,7 +1874,7 @@ impl_runtime_apis! {
         fn current_all() -> (
             Option<pallet_ethereum::Block>,
             Option<Vec<pallet_ethereum::Receipt>>,
-            Option<Vec<TransactionStatusV2>>
+            Option<Vec<TransactionStatus>>
         ) {
             (
                 Ethereum::current_block(),
@@ -1879,6 +1894,14 @@ impl_runtime_apis! {
 
         fn elasticity() -> Option<Permill> {
             Some(BaseFee::elasticity())
+        }
+    }
+
+    impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
+        fn convert_transaction(transaction: EthereumTransaction) -> <Block as BlockT>::Extrinsic {
+            UncheckedExtrinsic::new_unsigned(
+                pallet_ethereum::Call::<Runtime>::transact { transaction }.into(),
+            )
         }
     }
 

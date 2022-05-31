@@ -61,6 +61,7 @@ pub mod pallet {
     use log::error;
     use pallet_credit::CreditInterface;
     use pallet_deeper_node::NodeInterface;
+    use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::Percent;
@@ -493,13 +494,15 @@ pub mod pallet {
             pk.copy_from_slice(&client.encode());
             let pub_key = sr25519::Public::from_raw(pk);
 
-            let mut sig = [0u8; 64];
-            sig.copy_from_slice(&signature);
-            let sig = sr25519::Signature::from_slice(&sig);
+            let sig = sr25519::Signature::from_slice(&signature);
 
             let msg = Self::construct_byte_array_and_hash(server, nonce, session_id, amount);
 
-            let verified = sr25519_verify(&sig, &msg, &pub_key);
+            let verified = sr25519_verify(
+                &sig.unwrap_or(UncheckedFrom::unchecked_from([0; 64])),
+                &msg,
+                &pub_key,
+            );
             ensure!(verified, Error::<T>::InvalidSignature);
 
             Ok(().into())

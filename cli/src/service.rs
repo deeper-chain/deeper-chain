@@ -20,6 +20,8 @@
 
 //! Service implementation. Specialized wrapper over substrate service.
 
+use codec::Encode;
+use frame_system_rpc_runtime_api::AccountNonceApi;
 use futures::prelude::*;
 pub use node_runtime::RuntimeApi;
 use sc_cli::SubstrateCli;
@@ -29,16 +31,19 @@ use sc_executor::NativeElseWasmExecutor;
 use sc_network::{Event, NetworkService};
 use sc_service::{config::Configuration, error::Error as ServiceError, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryWorker};
-use sp_runtime::traits::Block as BlockT;
+use sp_runtime::{traits::Block as BlockT, SaturatedConversion};
 use std::sync::Arc;
 
 use crate::cli::Cli;
 use fc_consensus::FrontierBlockImport;
+use fc_db::DatabaseSource;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::EthTask;
-use fc_rpc_core::types::{FeeHistoryCache, FilterPool};
+use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
 pub use node_runtime::{self, opaque::Block};
 use sc_service::BasePath;
+use sp_api::ProvideRuntimeApi;
+use sp_core::crypto::Pair;
 use sp_core::U256;
 use std::{collections::BTreeMap, sync::Mutex, time::Duration};
 
@@ -67,7 +72,7 @@ type FullGrandpaBlockImport =
 /// The transaction pool type defintion.
 pub type TransactionPool = sc_transaction_pool::FullPool<Block, FullClient>;
 
-pub fn frontier_database_dir(config: &Configuration) -> std::path::PathBuf {
+pub fn frontier_database_dir(config: &Configuration, path: &str) -> std::path::PathBuf {
     let config_dir = config
         .base_path
         .as_ref()
@@ -76,18 +81,109 @@ pub fn frontier_database_dir(config: &Configuration) -> std::path::PathBuf {
             BasePath::from_project("", "", &crate::cli::Cli::executable_name())
                 .config_dir(config.chain_spec.id())
         });
-    config_dir.join("frontier").join("db")
+    config_dir.join("frontier").join(path)
 }
 
 pub fn open_frontier_backend(config: &Configuration) -> Result<Arc<fc_db::Backend<Block>>, String> {
     Ok(Arc::new(fc_db::Backend::<Block>::new(
         &fc_db::DatabaseSettings {
-            source: fc_db::DatabaseSettingsSrc::RocksDb {
-                path: frontier_database_dir(&config),
-                cache_size: 0,
+            source: match config.database {
+                DatabaseSource::RocksDb { .. } => DatabaseSource::RocksDb {
+                    path: frontier_database_dir(config, "db"),
+                    cache_size: 0,
+                },
+                DatabaseSource::ParityDb { .. } => DatabaseSource::ParityDb {
+                    path: frontier_database_dir(config, "paritydb"),
+                },
+                DatabaseSource::Auto { .. } => DatabaseSource::Auto {
+                    rocksdb_path: frontier_database_dir(config, "db"),
+                    paritydb_path: frontier_database_dir(config, "paritydb"),
+                    cache_size: 0,
+                },
+                _ => {
+                    return Err("Supported db sources: `rocksdb` | `paritydb` | `auto`".to_string())
+                }
             },
         },
     )?))
+}
+
+/// Fetch the nonce of the given `account` from the chain state.
+///
+/// Note: Should only be used for tests.
+pub fn fetch_nonce(client: &FullClient, account: sp_core::sr25519::Pair) -> u32 {
+    let best_hash = client.chain_info().best_hash;
+    client
+        .runtime_api()
+        .account_nonce(
+            &sp_runtime::generic::BlockId::Hash(best_hash),
+            account.public().into(),
+        )
+        .expect("Fetching account nonce works; qed")
+}
+
+/// Create a transaction using the given `call`.
+///
+/// The transaction will be signed by `sender`. If `nonce` is `None` it will be fetched from the
+/// state of the best block.
+///
+/// Note: Should only be used for tests.
+pub fn create_extrinsic(
+    client: &FullClient,
+    sender: sp_core::sr25519::Pair,
+    function: impl Into<node_runtime::Call>,
+    nonce: Option<u32>,
+) -> node_runtime::UncheckedExtrinsic {
+    let function = function.into();
+    let genesis_hash = client
+        .block_hash(0)
+        .ok()
+        .flatten()
+        .expect("Genesis block exists; qed");
+    let best_hash = client.chain_info().best_hash;
+    let best_block = client.chain_info().best_number;
+    let nonce = nonce.unwrap_or_else(|| fetch_nonce(client, sender.clone()));
+
+    let period = node_runtime::BlockHashCount::get()
+        .checked_next_power_of_two()
+        .map(|c| c / 2)
+        .unwrap_or(2) as u64;
+    let extra: node_runtime::SignedExtra = (
+        frame_system::CheckNonZeroSender::<node_runtime::Runtime>::new(),
+        frame_system::CheckSpecVersion::<node_runtime::Runtime>::new(),
+        frame_system::CheckTxVersion::<node_runtime::Runtime>::new(),
+        frame_system::CheckGenesis::<node_runtime::Runtime>::new(),
+        frame_system::CheckEra::<node_runtime::Runtime>::from(sp_runtime::generic::Era::mortal(
+            period,
+            best_block.saturated_into(),
+        )),
+        frame_system::CheckNonce::<node_runtime::Runtime>::from(nonce),
+        frame_system::CheckWeight::<node_runtime::Runtime>::new(),
+        pallet_transaction_payment::ChargeTransactionPayment::<node_runtime::Runtime>::from(0),
+    );
+
+    let raw_payload = node_runtime::SignedPayload::from_raw(
+        function.clone(),
+        extra.clone(),
+        (
+            (),
+            node_runtime::VERSION.spec_version,
+            node_runtime::VERSION.transaction_version,
+            genesis_hash,
+            best_hash,
+            (),
+            (),
+            (),
+        ),
+    );
+    let signature = raw_payload.using_encoded(|e| sender.sign(e));
+
+    node_runtime::UncheckedExtrinsic::new_signed(
+        function.clone(),
+        sp_runtime::AccountId32::from(sender.public()).into(),
+        node_runtime::Signature::Sr25519(signature.clone()),
+        extra.clone(),
+    )
 }
 
 /// Creates a new partial node.
@@ -200,7 +296,7 @@ pub fn new_partial(
             let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
             let slot =
-                sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_duration(
+                sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
                     *timestamp,
                     slot_duration,
                 );
@@ -331,11 +427,12 @@ pub fn new_full_base(
     let overrides = node_rpc::overrides_handle(client.clone());
     let fee_history_limit = cli.run.fee_history_limit;
 
-    let block_data_cache = Arc::new(fc_rpc::EthBlockDataCache::new(
+    let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
         task_manager.spawn_handle(),
         overrides.clone(),
         50,
         50,
+        prometheus_registry.clone(),
     ));
 
     let (rpc_extensions_builder, rpc_setup) = {
@@ -365,6 +462,7 @@ pub fn new_full_base(
         let overrides = overrides.clone();
         let fee_history_cache = fee_history_cache.clone();
         let max_past_logs = cli.run.max_past_logs;
+        let fee_history_cache_limit: FeeHistoryCacheLimit = cli.run.fee_history_limit;
 
         let rpc_extensions_builder = move |deny_unsafe, subscription_executor| {
             let deps = node_rpc::FullDeps {
@@ -392,8 +490,8 @@ pub fn new_full_base(
                 filter_pool: filter_pool.clone(),
                 backend: frontier_backend.clone(),
                 max_past_logs,
-                fee_history_limit,
                 fee_history_cache: fee_history_cache.clone(),
+                fee_history_cache_limit,
                 overrides: overrides.clone(),
                 block_data_cache: block_data_cache.clone(),
             };
@@ -428,6 +526,8 @@ pub fn new_full_base(
             client.clone(),
             backend.clone(),
             frontier_backend.clone(),
+            3,
+            0,
             SyncStrategy::Normal,
         )
         .for_each(|()| futures::future::ready(())),
@@ -502,7 +602,7 @@ pub fn new_full_base(
                     let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
                     let slot =
-                        sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_duration(
+                        sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
                             *timestamp,
                             slot_duration,
                         );
@@ -758,7 +858,10 @@ mod tests {
                         .epoch_changes()
                         .shared_data()
                         .epoch_data(&epoch_descriptor, |slot| {
-                            sc_consensus_babe::Epoch::genesis(&babe_link.config(), slot)
+                            sc_consensus_babe::Epoch::genesis(
+                                babe_link.config().genesis_config(),
+                                slot,
+                            )
                         })
                         .unwrap();
 

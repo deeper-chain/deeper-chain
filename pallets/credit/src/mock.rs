@@ -15,7 +15,7 @@
 
 use super::*;
 use crate as pallet_credit;
-use frame_support::traits::{ConstU128, ConstU32};
+use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
 use frame_support::{
     pallet_prelude::GenesisBuild,
     parameter_types,
@@ -199,6 +199,7 @@ impl pallet_uniques::Config for Test {
     type KeyLimit = ConstU32<50>;
     type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<u64>>;
 }
 
 impl pallet_credit::Config for Test {

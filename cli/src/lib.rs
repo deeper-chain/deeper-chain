@@ -29,6 +29,7 @@ pub mod chain_spec;
 pub mod service;
 mod cli;
 mod command;
+mod command_helper;
 
 pub use cli::*;
 pub use command::*;
