@@ -4427,6 +4427,7 @@ dependencies = [
  "pallet-evm",
  "pallet-evm-precompile-blake2",
  "pallet-evm-precompile-bn128",
+ "pallet-evm-precompile-credit",
  "pallet-evm-precompile-curve25519",
  "pallet-evm-precompile-dispatch",
  "pallet-evm-precompile-ed25519",
@@ -5207,6 +5208,20 @@ dependencies = [
  "fp-evm",
  "sp-core",
  "substrate-bn",
+]
+
+[[package]]
+name = "pallet-evm-precompile-credit"
+version = "2.0.0-dev"
+dependencies = [
+ "arrayref",
+ "fp-evm",
+ "frame-support",
+ "pallet-credit",
+ "pallet-evm",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
 ]
 
 [[package]]

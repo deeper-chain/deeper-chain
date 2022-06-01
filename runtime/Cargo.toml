@@ -110,6 +110,7 @@ pallet-evm-precompile-dispatch = { default-features = false, git = "https://gith
 pallet-evm-precompile-curve25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
 pallet-evm-precompile-ed25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
 pallet-base-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+pallet-evm-precompile-credit = { default-features = false, path = "../pallets/precompile-credit"}
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19"}
