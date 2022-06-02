@@ -31,21 +31,51 @@ use frame_support::{
 };
 use pallet_credit::CreditInterface;
 use pallet_evm::{AddressMapping, GasWeightMapping};
-
 use pallet_credit::Call as CreditCall;
 
 use sp_core::{H160, H256, U256};
-
-use alloc::borrow::ToOwned;
-use alloc::vec;
-use alloc::vec::Vec;
+use alloc::{vec,vec::Vec,borrow::ToOwned};
 use arrayref::array_ref;
 
 const BASIC_LEN: usize = 4 + 32;
 
+// from moonbeam
+/// Represents modifiers a Solidity function can be annotated with.
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum FunctionModifier {
+	/// Function that doesn't modify the state.
+	View,
+	/// Function that modifies the state but refuse receiving funds.
+	/// Correspond to a Solidity function with no modifiers.
+	NonPayable,
+	/// Function that modifies the state and accept funds.
+	Payable,
+}
+
+fn check_function_modifier(
+    context: &Context,
+    is_static: bool,
+    modifier: FunctionModifier,
+) ->  Result<(),PrecompileFailure> {
+    if is_static && modifier != FunctionModifier::View {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("can't call non-static function in static context".into()),
+        });
+    }
+
+    if modifier != FunctionModifier::Payable && context.apparent_value > U256::zero() {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("function is not payable".into()),
+        });
+    }
+
+    Ok(())
+}
+
 pub struct CreditDispatch<Runtime> {
     _marker: PhantomData<Runtime>,
 }
+
 
 impl<Runtime> Precompile for CreditDispatch<Runtime>
 where
@@ -58,9 +88,10 @@ where
         input: &[u8],
         target_gas: Option<u64>,
         context: &Context,
-        _is_static: bool,
+        is_static: bool,
     ) -> PrecompileResult {
         /*
+		selecter:
         0x5915ad98: add_credit_score
         0xa62184b3: slash_credit_score
         0x87135d7d: get_credit_score
@@ -73,9 +104,9 @@ where
         }
         let real_type = u32::from_be_bytes(array_ref!(input, 0, 4).to_owned());
         match real_type {
-            0x87135d7d => Self::get_credit_score(input, context),
-            0x5915ad98 => Self::add_credit_score(input, context),
-            0xa62184b3 => Self::slash_credit_score(input, context),
+            0x87135d7d => Self::get_credit_score(input, context,is_static),
+            0x5915ad98 => Self::add_credit_score(input, context,is_static),
+            0xa62184b3 => Self::slash_credit_score(input, context,is_static),
             _ => Err(PrecompileFailure::Error {
                 exit_status: ExitError::InvalidCode,
             }),
@@ -90,7 +121,9 @@ where
     <Runtime::Call as Dispatchable>::Origin: From<Option<Runtime::AccountId>>,
     Runtime::Call: From<CreditCall<Runtime>>,
 {
-    pub fn get_credit_score(input: &[u8], context: &Context) -> PrecompileResult {
+    pub fn get_credit_score(input: &[u8], context: &Context, is_static:bool) -> PrecompileResult {
+		Self::check_input_len(input, BASIC_LEN)?;
+        check_function_modifier(context,is_static, FunctionModifier::View)?;
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let origin = Runtime::AddressMapping::into_account_id(account);
         let score = pallet_credit::Pallet::<Runtime>::get_credit_score(&origin);
@@ -100,18 +133,15 @@ where
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: 21000,
+            cost: 2000,
             output,
             logs: Default::default(),
         })
     }
 
-    pub fn add_credit_score(input: &[u8], context: &Context) -> PrecompileResult {
-        if input.len() < BASIC_LEN + 32 {
-            return Err(PrecompileFailure::Error {
-                exit_status: ExitError::Other("input len not enough".into()),
-            });
-        }
+    pub fn add_credit_score(input: &[u8], context: &Context, is_static:bool) -> PrecompileResult {
+		Self::check_input_len(input, BASIC_LEN + 32)?;
+        check_function_modifier(context,is_static, FunctionModifier::NonPayable)?;
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
         let origin = Runtime::AddressMapping::into_account_id(account);
@@ -120,18 +150,16 @@ where
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: 21000,
+            cost: 2000,
             output: Default::default(),
             logs: Default::default(),
         })
     }
 
-    pub fn slash_credit_score(input: &[u8], context: &Context) -> PrecompileResult {
-        if input.len() < BASIC_LEN + 32 {
-            return Err(PrecompileFailure::Error {
-                exit_status: ExitError::Other("input len not enough".into()),
-            });
-        }
+    pub fn slash_credit_score(input: &[u8], context: &Context, is_static:bool) -> PrecompileResult {
+       
+		Self::check_input_len(input, BASIC_LEN + 32)?;
+        check_function_modifier(context,is_static, FunctionModifier::NonPayable)?;
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
         let origin = Runtime::AddressMapping::into_account_id(account);
@@ -140,9 +168,18 @@ where
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: 21000,
+            cost: 2000,
             output: Default::default(),
             logs: Default::default(),
         })
     }
+
+	fn check_input_len(input: &[u8],base_len :usize) -> Result<(),PrecompileFailure> {
+		if input.len() < base_len {
+            return Err(PrecompileFailure::Error {
+                exit_status: ExitError::Other("input len not enough".into()),
+            });
+        }
+		Ok(())
+	}
 }
