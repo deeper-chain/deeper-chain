@@ -102,6 +102,7 @@ pub mod pallet {
         ReachSingleMaximumLimit,
         ReleaseDayZero,
         BurnedDprTooLow,
+        ReleaseBalanceZero,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -353,6 +354,14 @@ pub mod pallet {
                 return Err(Error::<T>::ReleaseDayZero.into());
             }
 
+            if basic_info.total_balance.is_zero() {
+                Self::deposit_event(Event::UnstakingResult(
+                    account,
+                    "release balance is zero".to_string(),
+                ));
+                return Err(Error::<T>::ReleaseBalanceZero.into());
+            }
+
             let start_day = (basic_info.start_release_moment / MILLISECS_PER_DAY) as u32;
             let balance_per_day = basic_info.total_balance / remainder_release_days.into();
             let single_max_limit = Self::single_max_limit();
@@ -452,6 +461,12 @@ pub mod pallet {
 
                     let released_balance = data.balance_per_day
                         * (cur_day.saturating_sub(data.last_release_day).into());
+
+                    // It happens when setting release start day greater than current day
+                    if released_balance.is_zero() {
+                        next_key = Self::next_account_release_key(&next_key);
+                        continue;
+                    }
                     if released_balance > Self::single_max_limit() {
                         Self::deposit_event(Event::<T>::SingleReleaseTooMuch(
                             data.basic_info.account,

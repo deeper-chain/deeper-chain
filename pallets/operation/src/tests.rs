@@ -189,13 +189,17 @@ fn set_staking_release_info() {
             1000,
             2000
         ));
+        // start day is day 0
         let info1 = ReleaseInfo::<Test>::new(3, 2, 0, 2000);
         let info2 = ReleaseInfo::<Test>::new(4, 2, 0, 2000);
+        // start day is day 2
+        let info3 = ReleaseInfo::<Test>::new(5, 1, 1000 * 3600 * 24 * 2 + 1, 1000);
         assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
         assert_eq!(Balances::free_balance(&3), 0);
 
         assert_ok!(Operation::unstaking_release(Origin::signed(1), info2));
         assert_ok!(Operation::unstaking_release(Origin::signed(1), info1));
+        assert_ok!(Operation::unstaking_release(Origin::signed(1), info3));
 
         run_to_block(BLOCKS_PER_DAY + 2);
         assert_eq!(Balances::free_balance(&3), 1000);
@@ -207,10 +211,12 @@ fn set_staking_release_info() {
         run_to_block(BLOCKS_PER_DAY * 2 + 3);
         assert_eq!(Balances::free_balance(&3), 2000);
         assert_eq!(Balances::free_balance(&4), 2000);
+        assert_eq!(Balances::free_balance(&5), 0);
 
         run_to_block(BLOCKS_PER_DAY * 3 + 3);
         assert_eq!(Operation::accounts_release_info(&3).is_none(), true);
         assert_eq!(Operation::accounts_release_info(&4).is_none(), true);
+        assert_eq!(Balances::free_balance(&5), 1000);
     });
 }
 
