@@ -38,7 +38,7 @@ use crate::cli::Cli;
 use fc_consensus::FrontierBlockImport;
 use fc_db::DatabaseSource;
 use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
-use fc_rpc::EthTask;
+use fc_rpc::{EthTask, OverrideHandle};
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
 pub use node_runtime::{self, opaque::Block};
 use sc_service::BasePath;
@@ -210,7 +210,7 @@ pub fn new_partial(
             Option<FilterPool>,
             Arc<fc_db::Backend<Block>>,
             Option<Telemetry>,
-            FeeHistoryCache,
+            (FeeHistoryCache, FeeHistoryCacheLimit),
         ),
     >,
     ServiceError,
@@ -258,10 +258,10 @@ pub fn new_partial(
         client.clone(),
     );
 
+    let frontier_backend = open_frontier_backend(config)?;
     let filter_pool: Option<FilterPool> = Some(Arc::new(Mutex::new(BTreeMap::new())));
     let fee_history_cache: FeeHistoryCache = Arc::new(Mutex::new(BTreeMap::new()));
-
-    let frontier_backend = open_frontier_backend(config)?;
+    let fee_history_cache_limit: FeeHistoryCacheLimit = cli.run.fee_history_limit;
 
     let (grandpa_block_import, grandpa_link) = grandpa::block_import(
         client.clone(),
@@ -285,6 +285,22 @@ pub fn new_partial(
 
     let slot_duration = babe_link.config().slot_duration();
     let target_gas_price = cli.run.target_gas_price;
+    let create_inherent_data_providers = move |_, ()| async move {
+        let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+        let slot =
+            sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+                *timestamp,
+                slot_duration,
+            );
+
+        let uncles =
+            sp_authorship::InherentDataProvider::<<Block as BlockT>::Header>::check_inherents();
+
+        let dynamic_fee = fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
+
+        Ok((timestamp, slot, uncles, dynamic_fee))
+    };
 
     let import_queue = sc_consensus_babe::import_queue(
         babe_link.clone(),
@@ -292,23 +308,7 @@ pub fn new_partial(
         Some(Box::new(justification_import)),
         client.clone(),
         select_chain.clone(),
-        move |_, ()| async move {
-            let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
-
-            let slot =
-                sp_consensus_babe::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-                    *timestamp,
-                    slot_duration,
-                );
-
-            let uncles =
-                sp_authorship::InherentDataProvider::<<Block as BlockT>::Header>::check_inherents();
-
-            let dynamic_fee =
-                pallet_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
-
-            Ok((timestamp, slot, uncles, dynamic_fee))
-        },
+        create_inherent_data_providers,
         &task_manager.spawn_essential_handle(),
         config.prometheus_registry(),
         sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
@@ -330,7 +330,7 @@ pub fn new_partial(
             filter_pool,
             frontier_backend,
             telemetry,
-            fee_history_cache,
+            (fee_history_cache, fee_history_cache_limit),
         ),
     })
 }
@@ -368,7 +368,14 @@ pub fn new_full_base(
         keystore_container,
         select_chain,
         transaction_pool,
-        other: (import_setup, filter_pool, frontier_backend, mut telemetry, fee_history_cache),
+        other:
+            (
+                import_setup,
+                filter_pool,
+                frontier_backend,
+                mut telemetry,
+                (fee_history_cache, fee_history_cache_limit),
+            ),
     } = new_partial(&config, cli)?;
 
     let auth_disc_publish_non_global_ips = config.network.allow_non_globals_in_dht;
@@ -425,7 +432,6 @@ pub fn new_full_base(
     let subscription_task_executor =
         sc_rpc::SubscriptionTaskExecutor::new(task_manager.spawn_handle());
     let overrides = node_rpc::overrides_handle(client.clone());
-    let fee_history_limit = cli.run.fee_history_limit;
 
     let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
         task_manager.spawn_handle(),
@@ -462,7 +468,6 @@ pub fn new_full_base(
         let overrides = overrides.clone();
         let fee_history_cache = fee_history_cache.clone();
         let max_past_logs = cli.run.max_past_logs;
-        let fee_history_cache_limit: FeeHistoryCacheLimit = cli.run.fee_history_limit;
 
         let rpc_extensions_builder = move |deny_unsafe, subscription_executor| {
             let deps = node_rpc::FullDeps {
@@ -517,49 +522,15 @@ pub fn new_full_base(
         telemetry: telemetry.as_mut(),
     })?;
 
-    task_manager.spawn_essential_handle().spawn(
-        "frontier-mapping-sync-worker",
-        Some("frontier-mapping-sync"),
-        MappingSyncWorker::new(
-            client.import_notification_stream(),
-            Duration::new(6, 0),
-            client.clone(),
-            backend.clone(),
-            frontier_backend.clone(),
-            3,
-            0,
-            SyncStrategy::Normal,
-        )
-        .for_each(|()| futures::future::ready(())),
-    );
-
-    // Spawn Frontier EthFilterApi maintenance task.
-    if let Some(filter_pool) = filter_pool {
-        // Each filter is allowed to stay in the pool for 100 blocks.
-        const FILTER_RETAIN_THRESHOLD: u64 = 100;
-        task_manager.spawn_essential_handle().spawn(
-            "frontier-filter-pool",
-            Some("frontier-filter-pool"),
-            EthTask::filter_pool_task(Arc::clone(&client), filter_pool, FILTER_RETAIN_THRESHOLD),
-        );
-    }
-
-    // Spawn Frontier FeeHistory cache maintenance task.
-    task_manager.spawn_essential_handle().spawn(
-        "frontier-fee-history",
-        Some("frontier-fee-history"),
-        EthTask::fee_history_task(
-            Arc::clone(&client),
-            Arc::clone(&overrides),
-            fee_history_cache,
-            fee_history_limit,
-        ),
-    );
-
-    task_manager.spawn_essential_handle().spawn(
-        "frontier-schema-cache-task",
-        Some("frontier-schema-cache"),
-        EthTask::ethereum_schema_cache_task(Arc::clone(&client), Arc::clone(&frontier_backend)),
+    spawn_frontier_tasks(
+        &task_manager,
+        client.clone(),
+        backend,
+        frontier_backend,
+        filter_pool,
+        overrides,
+        fee_history_cache,
+        fee_history_cache_limit,
     );
 
     let (block_import, grandpa_link, babe_link) = import_setup;
@@ -614,7 +585,7 @@ pub fn new_full_base(
                         )?;
 
                     let dynamic_fee =
-                        pallet_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
+                        fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
 
                     Ok((timestamp, slot, uncles, storage_proof, dynamic_fee))
                 }
@@ -722,6 +693,62 @@ pub fn new_full_base(
         network,
         transaction_pool,
     })
+}
+
+fn spawn_frontier_tasks(
+    task_manager: &TaskManager,
+    client: Arc<FullClient>,
+    backend: Arc<FullBackend>,
+    frontier_backend: Arc<fc_db::Backend<Block>>,
+    filter_pool: Option<FilterPool>,
+    overrides: Arc<OverrideHandle<Block>>,
+    fee_history_cache: FeeHistoryCache,
+    fee_history_cache_limit: FeeHistoryCacheLimit,
+) {
+    task_manager.spawn_essential_handle().spawn(
+        "frontier-mapping-sync-worker",
+        None,
+        MappingSyncWorker::new(
+            client.import_notification_stream(),
+            Duration::new(6, 0),
+            client.clone(),
+            backend,
+            frontier_backend.clone(),
+            3,
+            0,
+            SyncStrategy::Normal,
+        )
+        .for_each(|()| future::ready(())),
+    );
+
+    // Spawn Frontier EthFilterApi maintenance task.
+    if let Some(filter_pool) = filter_pool {
+        // Each filter is allowed to stay in the pool for 100 blocks.
+        const FILTER_RETAIN_THRESHOLD: u64 = 100;
+        task_manager.spawn_essential_handle().spawn(
+            "frontier-filter-pool",
+            None,
+            EthTask::filter_pool_task(client.clone(), filter_pool, FILTER_RETAIN_THRESHOLD),
+        );
+    }
+
+    // Spawn Frontier FeeHistory cache maintenance task.
+    task_manager.spawn_essential_handle().spawn(
+        "frontier-fee-history",
+        None,
+        EthTask::fee_history_task(
+            client.clone(),
+            overrides,
+            fee_history_cache,
+            fee_history_cache_limit,
+        ),
+    );
+
+    task_manager.spawn_essential_handle().spawn(
+        "frontier-schema-cache-task",
+        None,
+        EthTask::ethereum_schema_cache_task(client, frontier_backend),
+    );
 }
 
 /// Builds a new service for a full client.
