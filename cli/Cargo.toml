@@ -64,7 +64,10 @@ sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 
 # frontier primitives
 fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
+fp-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
+fp-evm = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
 fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
+fp-storage = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
@@ -111,12 +114,6 @@ pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-deeper-node = { version = "3.0.0", path = "../pallets/deeper-node" }
 pallet-credit = {version = "3.0.0", default-features = false, path = "../pallets/credit"}
 pallet-micropayment = {version = "3.0.0", default-features = false, path = "../pallets/micropayment"}
-
-# frontier frame dependencies
-pallet-evm = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-pallet-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-pallet-base-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
 
 # node-specific dependencies
 node-runtime = { version = "2.0.0", path = "../runtime" }
