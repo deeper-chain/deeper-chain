@@ -95,6 +95,7 @@ pub mod pallet {
         BurnForEZC(T::AccountId, BalanceOf<T>, H160),
         UnstakingResult(T::AccountId, String),
         StartWithdrawEZC(T::AccountId, H160),
+        WithdrawEZC(T::AccountId, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -438,6 +439,21 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
             Self::deposit_event(Event::<T>::StartWithdrawEZC(sender, eth_address));
+            Ok(().into())
+        }
+
+        // TODO: use real weight, benchmark
+        // withdraw ezc to DPR
+        #[pallet::weight(T::OPWeightInfo::withdraw_ezc())]
+        pub fn withdraw_ezc(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+            dpr: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            // TODO: ensure origin in whitelist
+            ensure_signed(origin)?;
+            T::Currency::deposit_creating(&target, dpr);
+            Self::deposit_event(Event::<T>::WithdrawEZC(target, dpr));
             Ok(().into())
         }
     }
