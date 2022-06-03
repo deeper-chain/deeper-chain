@@ -76,7 +76,9 @@ pub use pallet_micropayment;
 use fp_rpc::{TransactionStatusV2 as TransactionStatus, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
-use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, PairedAddressMapping, Runner};
+use pallet_evm::{
+    Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, PairedAddressMapping, Runner,
+};
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -202,6 +204,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 2 seconds of compute with a 5 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
+const WEIGHT_PER_GAS: u64 = 20_000;
 
 parameter_types! {
     pub const BlockHashCount: BlockNumber = 2400;
@@ -1269,15 +1272,25 @@ impl OnUnbalanced<NegativeImbalance> for EvmDealWithFees {
     }
 }
 
+pub struct FixedGasWeightMapping;
+impl GasWeightMapping for FixedGasWeightMapping {
+    fn gas_to_weight(gas: u64) -> Weight {
+        gas.saturating_mul(WEIGHT_PER_GAS)
+    }
+    fn weight_to_gas(weight: Weight) -> u64 {
+        weight.wrapping_div(WEIGHT_PER_GAS)
+    }
+}
+
 parameter_types! {
     pub const ChainId: u64 = 518;
-    pub BlockGasLimit: U256 = U256::from(u32::max_value());
+    pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);
     pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
 
 impl pallet_evm::Config for Runtime {
     type FeeCalculator = BaseFee;
-    type GasWeightMapping = ();
+    type GasWeightMapping = FixedGasWeightMapping;
     type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
     type AddressMapping = PairedAddressMapping<Runtime>;
     type Currency = Balances;

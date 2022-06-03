@@ -32,7 +32,7 @@
 
 use fc_rpc::{
     EthBlockDataCacheTask, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
-    SchemaV2Override, SchemaV3Override, StorageOverride,
+    SchemaV2Override, SchemaV3Override, SchemaV4Override, StorageOverride,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
 use fp_storage::EthereumStorageSchema;
@@ -146,8 +146,9 @@ where
     C: ProvideRuntimeApi<Block> + StorageProvider<Block, BE> + AuxStore,
     C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
     C: Send + Sync + 'static,
-    C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
-    C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
+    C::Api: sp_api::ApiExt<Block>
+        + fp_rpc::EthereumRuntimeRPCApi<Block>
+        + fp_rpc::ConvertTransactionRuntimeApi<Block>,
     BE: Backend<Block> + 'static,
     BE::State: StateBackend<BlakeTwo256>,
 {
@@ -167,10 +168,15 @@ where
         Box::new(SchemaV3Override::new(client.clone()))
             as Box<dyn StorageOverride<_> + Send + Sync>,
     );
+    overrides_map.insert(
+        EthereumStorageSchema::V4,
+        Box::new(SchemaV4Override::new(client.clone()))
+            as Box<dyn StorageOverride<_> + Send + Sync>,
+    );
 
     Arc::new(OverrideHandle {
         schemas: overrides_map,
-        fallback: Box::new(RuntimeApiStorageOverride::new(client.clone())),
+        fallback: Box::new(RuntimeApiStorageOverride::new(client)),
     })
 }
 
@@ -341,7 +347,7 @@ where
         overrides,
     )));
 
-    io.extend_with(TxPoolApi::to_delegate(TxPool::new(client.clone(), graph)));
+    io.extend_with(TxPoolApi::to_delegate(TxPool::new(client, graph)));
 
     Ok(io)
 }
