@@ -53,7 +53,7 @@ pub mod pallet {
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
-        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
+        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Saturating, Zero},
         RuntimeDebug,
     };
 
@@ -530,11 +530,7 @@ pub mod pallet {
         fn is_single_max_limit(pay_amount: BalanceOf<T>) -> bool {
             if Self::single_max_limit() >= pay_amount {
                 let cur_daily_release = Self::total_daily_release(Self::saved_day());
-                if Self::daily_max_limit() >= cur_daily_release + pay_amount {
-                    true
-                } else {
-                    false
-                }
+                Self::daily_max_limit() >= cur_daily_release.saturating_add(pay_amount)
             } else {
                 false
             }
