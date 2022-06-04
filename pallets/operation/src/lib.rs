@@ -53,7 +53,7 @@ pub mod pallet {
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
-        traits::{StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Saturating, Zero},
+        traits::{Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
         RuntimeDebug,
     };
 
