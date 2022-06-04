@@ -30,6 +30,11 @@ pub use weights::WeightInfo;
 
 pub type EraIndex = u32;
 
+pub trait OperationInterface<AccountId, Balance> {
+    fn is_payment_address(account_id: AccountId) -> bool;
+    fn is_single_max_limit(pay_amount: Balance) -> bool;
+}
+
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -513,6 +518,25 @@ pub mod pallet {
             AccountReleaseLastKey::<T>::put(next_key);
             for account in to_be_removed {
                 AccountsReleaseInfo::<T>::remove(account);
+            }
+        }
+    }
+
+    impl<T: Config> OperationInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
+        fn is_payment_address(user: T::AccountId) -> bool {
+            Self::release_payment_address() == Some(user)
+        }
+
+        fn is_single_max_limit(pay_amount: BalanceOf<T>) -> bool {
+            if Self::single_max_limit() >= pay_amount {
+                let cur_daily_release = Self::total_daily_release(Self::saved_day());
+                if Self::daily_max_limit() >= cur_daily_release + pay_amount {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
             }
         }
     }
