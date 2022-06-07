@@ -1006,9 +1006,12 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::staking_delegate())]
         pub fn staking_delegate(origin: OriginFor<T>, dst_level: u8) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let credit_balances = T::CreditInterface::get_credit_balance();
+            let credit_balances = T::CreditInterface::get_credit_balance(&who);
+            let len = credit_balances.len();
+
+            ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
             ensure!(
-                usize::from(dst_level) < credit_balances.len(),
+                usize::from(dst_level) < len,
                 Error::<T>::TargetLevelNotCorrect
             );
 
@@ -1038,7 +1041,8 @@ pub mod pallet {
                 *balance = balance.saturating_add(need_balance)
             });
             T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
-            Self::delegate_any(who)?;
+            Self::delegate_any(who.clone())?;
+            Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level));
             Ok(())
         }
 
@@ -1993,6 +1997,8 @@ pub mod pallet {
         IncreaseMiningReward(u128),
         /// Set validator whitelist list
         SetValidatorWhitelist(Vec<T::AccountId>),
+        /// On-chain staking, including Genesis and Basic users
+        StakingDelegate(T::AccountId, u8),
     }
 
     /// Error for the staking module.
@@ -2050,10 +2056,8 @@ pub mod pallet {
         TargetLevelLow,
         /// target credit level greater than all level
         TargetLevelNotCorrect,
-        /// Non-authorized accounts
-        UnauthorizedAccounts,
-        /// Single payment DPR exceeds the maximum limit for authorized accounts
-        PaymentsExceedingLimits,
+        /// not allow update credit level
+        NotAllowUpdateCrdit,
     }
 }
 

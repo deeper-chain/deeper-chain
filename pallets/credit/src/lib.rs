@@ -211,7 +211,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
     fn update_credit_by_burn_nft(who: AccountId, add_credit: u64) -> DispatchResult;
     fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
-    fn get_credit_balance() -> Vec<Balance>;
+    fn get_credit_balance(account_id: &AccountId) -> Vec<Balance>;
     fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
     fn add_or_update_credit(account_id: AccountId, credit_score: u64);
     fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
@@ -252,7 +252,7 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn init_delegator_history(_account_id: &AccountId, _era: u32) -> bool {
         false
     }
-    fn get_credit_balance() -> Vec<Balance> {
+    fn get_credit_balance(_account_id: &AccountId) -> Vec<Balance> {
         Vec::new()
     }
     fn get_credit_gap(_dst_lv: u8, _cur_lv: u8) -> u64 {
@@ -407,15 +407,35 @@ pub mod pallet {
     #[pallet::type_value]
     pub fn CreditDefaultBalance<T: Config>() -> Vec<BalanceOf<T>> {
         vec![
-            UniqueSaturatedFrom::unique_saturated_from(1000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(5000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(10000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(20000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(30000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(50000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(60000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(80000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(100000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(1_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(30_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(50_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(60_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(80_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR),
+        ]
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn genesis_credit_balances)]
+    pub type GenesisCreditBalances<T: Config> =
+        StorageValue<_, Vec<BalanceOf<T>>, ValueQuery, GenesisDefaultBalance<T>>;
+
+    #[pallet::type_value]
+    pub fn GenesisDefaultBalance<T: Config>() -> Vec<BalanceOf<T>> {
+        vec![
+            UniqueSaturatedFrom::unique_saturated_from(1_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(46_800 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(76_800 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(138_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(218_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(288_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(368_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(468_000 * DPR),
         ]
     }
 
@@ -1128,8 +1148,16 @@ pub mod pallet {
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
-        fn get_credit_balance() -> Vec<BalanceOf<T>> {
-            Self::credit_balances()
+        fn get_credit_balance(account: &T::AccountId) -> Vec<BalanceOf<T>> {
+            let credit_data = Self::user_credit(account);
+            match credit_data {
+                None => Self::credit_balances(),
+                Some(data) => match data.campaign_id {
+                    0 | 1 => Self::genesis_credit_balances(),
+                    2 | 4 => Self::credit_balances(),
+                    _ => Vec::new(),
+                },
+            }
         }
 
         fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64 {
