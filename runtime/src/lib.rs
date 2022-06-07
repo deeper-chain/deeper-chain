@@ -1282,8 +1282,16 @@ impl GasWeightMapping for FixedGasWeightMapping {
     }
 }
 
+#[cfg(feature = "testnet")]
 parameter_types! {
-    pub const ChainId: u64 = 518;
+pub const ChainId: u64 = 518518;
+}
+#[cfg(not(feature = "testnet"))]
+parameter_types! {
+pub const ChainId: u64 = 518;
+}
+
+parameter_types! {
     pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);
     pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
