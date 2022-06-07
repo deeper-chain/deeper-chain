@@ -180,15 +180,28 @@ fn difference_compensation() {
             poc_reward: 20,
         };
 
-        // If you are a non-root user, the call will fail
+        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1001));
+        assert_ok!(Operation::set_release_limit_parameter(
+            Origin::root(),
+            20,
+            100
+        ));
+
+        // If you are a non-authorized user, the call will fail
         assert_noop!(
             Staking::difference_compensation(Origin::signed(1002), 1, 0, 20),
-            BadOrigin
+            Error::<Test>::UnauthorizedAccounts
         );
-        assert_eq!(Staking::reward(&1), Some(reward_data_before));
+        assert_eq!(Staking::reward(&1), Some(reward_data_before.clone()));
 
-        // If you are the root user, the call should succeed
-        assert_ok!(Staking::difference_compensation(Origin::root(), 1, 0, 20));
+        // If you are the authorized user, the call should succeed
+
+        assert_ok!(Staking::difference_compensation(
+            Origin::signed(1001),
+            1,
+            0,
+            20
+        ));
         assert_eq!(Staking::reward(&1), Some(reward_data_after));
     });
 }

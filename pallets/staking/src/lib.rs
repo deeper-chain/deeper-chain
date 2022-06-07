@@ -53,6 +53,7 @@ use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, p
 pub use pallet::*;
 use pallet_credit::CreditInterface;
 use pallet_deeper_node::NodeInterface;
+use pallet_operation::OperationInterface;
 use pallet_session::historical;
 use sp_runtime::{
     traits::{
@@ -586,6 +587,9 @@ pub mod pallet {
 
         /// CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
+
+        /// OperationInterface of operation pallet
+        type OperationInterface: OperationInterface<Self::AccountId, BalanceOf<Self>>;
 
         /// NodeInterface of deeper-node pallet
         type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
@@ -1844,7 +1848,11 @@ pub mod pallet {
             referee_reward: BalanceOf<T>,
             poc_reward: BalanceOf<T>,
         ) -> DispatchResult {
-            ensure_root(origin)?;
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::OperationInterface::is_payment_address(who),
+                Error::<T>::UnauthorizedAccounts
+            );
             let remainder_mining_reward = T::NumberToCurrency::convert(
                 Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
             );
@@ -1875,6 +1883,10 @@ pub mod pallet {
                 Reward::<T>::insert(&delegator, reward_data);
             }
             let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
+            ensure!(
+                T::OperationInterface::is_single_max_limit(reward),
+                Error::<T>::PaymentsExceedingLimits
+            );
             let imbalance = T::Currency::deposit_creating(&delegator, reward);
             RemainderMiningReward::<T>::put(
                 TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(reward))
@@ -2044,6 +2056,10 @@ pub mod pallet {
         TargetLevelLow,
         /// target credit level greater than all level
         TargetLevelNotCorrect,
+        /// Non-authorized accounts
+        UnauthorizedAccounts,
+        /// Single payment DPR exceeds the maximum limit for authorized accounts
+        PaymentsExceedingLimits,
         /// not allow update credit level
         NotAllowUpdateCrdit,
     }

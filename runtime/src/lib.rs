@@ -574,6 +574,7 @@ impl pallet_staking::Config for Runtime {
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditInterface = Credit;
+    type OperationInterface = Operation;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type UnixTime = Timestamp;

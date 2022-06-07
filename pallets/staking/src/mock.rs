@@ -103,6 +103,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Operation: pallet_operation::{Pallet, Call, Storage, Event<T>},
         Staking: staking::{Pallet, Call, Config<T>, Storage, Event<T>},
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -276,6 +277,20 @@ impl pallet_credit::Config for Test {
 }
 
 parameter_types! {
+    pub const MinimumBurnedDPR: Balance = 50;
+}
+
+impl pallet_operation::Config for Test {
+    type MaxMember = MaxLocks;
+    type Event = Event;
+    type Currency = Balances;
+    type BurnedTo = ();
+    type OPWeightInfo = ();
+    type MinimumBurnedDPR = MinimumBurnedDPR;
+    type CreditInterface = Credit;
+}
+
+parameter_types! {
     pub const UncleGenerations: u64 = 0;
     pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(25);
 }
@@ -365,6 +380,7 @@ impl Config for Test {
     type Call = Call;
     type WeightInfo = ();
     type CreditInterface = Credit;
+    type OperationInterface = Operation;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type NumberToCurrency = NumberCurrencyConverter;
