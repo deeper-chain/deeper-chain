@@ -2056,6 +2056,10 @@ pub mod pallet {
         TargetLevelLow,
         /// target credit level greater than all level
         TargetLevelNotCorrect,
+        /// Non-authorized accounts
+        UnauthorizedAccounts,
+        /// Single payment DPR exceeds the maximum limit for authorized accounts
+        PaymentsExceedingLimits,
         /// not allow update credit level
         NotAllowUpdateCrdit,
     }
