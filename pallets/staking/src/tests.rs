@@ -2990,7 +2990,7 @@ fn staking_delegate() {
             ));
             assert_eq!(Balances::free_balance(&51), 2000);
             assert_ok!(Staking::staking_delegate(Origin::signed(51), 1));
-            let credit_balances = Credit::get_credit_balance();
+            let credit_balances = Credit::get_credit_balance(&51);
             let pay = credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay);
             assert_eq!(Credit::user_credit(&51).unwrap().credit, 100);
