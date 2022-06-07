@@ -1985,7 +1985,7 @@ pub mod pallet {
         IncreaseMiningReward(u128),
         /// Set validator whitelist list
         SetValidatorWhitelist(Vec<T::AccountId>),
-        /// Set validator whitelist list
+        /// On-chain staking, including Genesis and Basic users
         StakingDelegate(T::AccountId, u8),
     }
 
