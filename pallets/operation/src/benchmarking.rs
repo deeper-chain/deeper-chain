@@ -96,12 +96,12 @@ benchmarks! {
 
     set_device_system_time {
         let admin: T::AccountId = account("a", 0, SEED);
-    }: set_device_system_time(RawOrigin::Signed(admin), 1654678525000)
+    }: set_device_system_time(RawOrigin::Signed(admin.clone()), 1654678525000)
     verify {
         assert_eq!(DeviceSystemTime::<T>::get(&admin, 10), 1654678525000);
     }
 
-    set_staking_release_info {
+    unstaking_release {
         let existential_deposit = T::Currency::minimum_balance();
         let admin: T::AccountId = account("a", 0, SEED);
         <ReleasePaymentAddress<T>>::put(admin.clone());
@@ -110,17 +110,9 @@ benchmarks! {
         <SingleMaxLimit<T>>::put(single_limit);
         <DailyMaxLimit<T>>::put(daily_limit);
 
-        let mut v = Vec::new();
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
-        v.push(rinfo);
-        for i in 0..3 {
-            let account: T::AccountId = account("b", i, USER_SEED);
-            let rinfo= ReleaseInfo::<T>::new(account,1,0,existential_deposit * 10u32.into());
-            v.push(rinfo);
-        }
-
-    }: set_staking_release_info(RawOrigin::Signed(admin), v)
+    }: unstaking_release(RawOrigin::Signed(admin), rinfo)
     verify {
         assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
     }
