@@ -451,7 +451,7 @@ pub mod pallet {
             dpr: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             // TODO: ensure origin in whitelist
-            ensure_signed(origin)?;
+            ensure_root(origin)?;
             T::Currency::deposit_creating(&target, dpr);
             Self::deposit_event(Event::<T>::WithdrawEZC(target, dpr));
             Ok(().into())

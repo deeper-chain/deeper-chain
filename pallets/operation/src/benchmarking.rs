@@ -94,30 +94,6 @@ benchmarks! {
         assert_eq!(DailyMaxLimit::<T>::get(),daily_limit);
     }
 
-    set_staking_release_info {
-        let existential_deposit = T::Currency::minimum_balance();
-        let admin: T::AccountId = account("a", 0, SEED);
-        <ReleasePaymentAddress<T>>::put(admin.clone());
-        let single_limit = existential_deposit * 10u32.into();
-        let daily_limit = existential_deposit * 1000u32.into();
-        <SingleMaxLimit<T>>::put(single_limit);
-        <DailyMaxLimit<T>>::put(daily_limit);
-
-        let mut v = Vec::new();
-        let checked_account: T::AccountId = account("a", 100, USER_SEED);
-        let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
-        v.push(rinfo);
-        for i in 0..3 {
-            let account: T::AccountId = account("b", i, USER_SEED);
-            let rinfo= ReleaseInfo::<T>::new(account,1,0,existential_deposit * 10u32.into());
-            v.push(rinfo);
-        }
-
-    }: set_staking_release_info(RawOrigin::Signed(admin), v)
-    verify {
-        assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
-    }
-
     burn_for_ezc {
         let existential_deposit = T::Currency::minimum_balance();
         let user: T::AccountId = account("user", 0, SEED);
@@ -125,6 +101,22 @@ benchmarks! {
     }: burn_for_ezc(RawOrigin::Signed(user.clone()), existential_deposit, H160::zero())
     verify {
         assert_eq!(T::Currency::free_balance(&user),existential_deposit);
+    }
+
+    start_withdraw_ezc {
+        let existential_deposit = T::Currency::minimum_balance();
+        let user: T::AccountId = account("user", 0, SEED);
+        let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+    }: start_withdraw_ezc(RawOrigin::Signed(user.clone()), H160::zero())
+    verify {
+    }
+
+    withdraw_ezc {
+        let account: T::AccountId = account("b", 1, USER_SEED);
+        let existential_deposit = T::Currency::minimum_balance();
+        let dpr = existential_deposit * 10u32.into();
+    }: withdraw_ezc(RawOrigin::Root, account.clone(), dpr)
+    verify {
     }
 
     impl_benchmark_test_suite!(Op, crate::tests::new_test_ext(), crate::tests::Test);
