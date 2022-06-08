@@ -425,6 +425,7 @@ pub mod pallet {
             )?;
             let balance = burned.peek();
             T::BurnedTo::on_unbalanced(burned);
+            T::CreditInterface::burn_record(balance);
             Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
             Ok(().into())
         }
