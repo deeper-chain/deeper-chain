@@ -103,19 +103,19 @@ benchmarks! {
         assert_eq!(T::Currency::free_balance(&user),existential_deposit);
     }
 
-    start_withdraw_ezc {
+    get_npow_reward {
         let existential_deposit = T::Currency::minimum_balance();
         let user: T::AccountId = account("user", 0, SEED);
         let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
-    }: start_withdraw_ezc(RawOrigin::Signed(user.clone()), H160::zero())
+    }: get_npow_reward(RawOrigin::Signed(user.clone()), H160::zero())
     verify {
     }
 
-    withdraw_ezc {
+    npow_mint {
         let account: T::AccountId = account("b", 1, USER_SEED);
         let existential_deposit = T::Currency::minimum_balance();
         let dpr = existential_deposit * 10u32.into();
-    }: withdraw_ezc(RawOrigin::Root, account.clone(), dpr)
+    }: npow_mint(RawOrigin::Root, account.clone(), dpr)
     verify {
     }
 

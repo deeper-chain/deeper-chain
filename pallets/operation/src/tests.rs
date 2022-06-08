@@ -25,7 +25,7 @@ use sp_runtime::{
 };
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
-use frame_support::{assert_ok, parameter_types, weights::Weight};
+use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -230,19 +230,38 @@ fn burn_for_ezc() {
 }
 
 #[test]
-fn start_withdraw_ezc() {
+fn get_npow_reward() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        assert_ok!(Operation::start_withdraw_ezc(
-            Origin::signed(1),
-            H160::zero()
-        ));
+        assert_ok!(Operation::get_npow_reward(Origin::signed(1), H160::zero()));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::StartWithdrawEZC(1, H160::zero()))
+            crate::tests::Event::from(crate::Event::GetNpowReward(1, H160::zero()))
+        );
+    });
+}
+
+#[test]
+fn npow_mint() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        NpowMintAddress::<Test>::put(1);
+        assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 100));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::NpowMint(2, 100))
+        );
+        assert_eq!(Balances::free_balance(&2), 101);
+
+        assert_err!(
+            Operation::npow_mint(Origin::signed(3), 2, 100),
+            Error::<Test>::UnauthorizedAccounts
         );
     });
 }
