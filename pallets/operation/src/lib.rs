@@ -65,6 +65,7 @@ pub mod pallet {
     >>::NegativeImbalance;
 
     pub const MILLISECS_PER_DAY: u64 = 1000 * 3600 * 24;
+    pub const SYSTEM_TIME_PERIOD: u32 = 15;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -205,6 +206,11 @@ pub mod pallet {
     pub type AccountsReleaseInfo<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, CurrentRelease<T>, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn device_system_time)]
+    pub type DeviceSystemTime<T: Config> =
+        StorageDoubleMap<_, Identity, T::AccountId, Identity, u32, u64, ValueQuery>;
+
     /// delegators last key
     #[pallet::storage]
     #[pallet::getter(fn account_release_last_key)]
@@ -322,6 +328,20 @@ pub mod pallet {
 
             <SingleMaxLimit<T>>::put(single_max_limit);
             <DailyMaxLimit<T>>::put(daily_max_limit);
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::set_release_limit_parameter())]
+        pub fn set_device_system_time(
+            origin: OriginFor<T>,
+            system_time: u64,
+        ) -> DispatchResultWithPostInfo {
+            let device_account = ensure_signed(origin)?;
+            let cur_day = Self::saved_day();
+
+            <DeviceSystemTime<T>>::insert(&device_account, cur_day, system_time);
+            <DeviceSystemTime<T>>::remove(&device_account, cur_day - SYSTEM_TIME_PERIOD);
 
             Ok(().into())
         }

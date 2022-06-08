@@ -94,6 +94,13 @@ benchmarks! {
         assert_eq!(DailyMaxLimit::<T>::get(),daily_limit);
     }
 
+    set_device_system_time {
+        let admin: T::AccountId = account("a", 0, SEED);
+    }: set_device_system_time(RawOrigin::Signed(admin), 1654678525000)
+    verify {
+        assert_eq!(DeviceSystemTime::<T>::get(&admin, 10), 1654678525000);
+    }
+
     set_staking_release_info {
         let existential_deposit = T::Currency::minimum_balance();
         let admin: T::AccountId = account("a", 0, SEED);
