@@ -472,6 +472,12 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_user_privileges::Config for Runtime {
+    type Event = Event;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type WeightInfo = pallet_user_privileges::weights::SubstrateWeight<Runtime>;
+}
+
 impl pallet_operation::Config for Runtime {
     type MaxMember = MaxLocks;
     type Event = Event;
@@ -1419,6 +1425,7 @@ construct_runtime!(
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent} = 83,
 
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
+        UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
     }
 );
 
@@ -2027,6 +2034,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_preimage, Preimage);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_operation, Operation);
+            list_benchmark!(list, extra, pallet_user_privileges, UserPrivileges);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -2094,6 +2102,8 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_preimage, Preimage);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_operation, Operation);
+            add_benchmark!(params, batches, pallet_user_privileges, UserPrivileges);
+
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

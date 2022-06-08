@@ -94,6 +94,7 @@ pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../p
 pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
 pallet-operation = { version = "3.0.0", default-features = false, path = "../pallets/operation" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
+pallet-user-privileges = { version = "4.0.0", default-features = false, path = "../pallets/user-privileges" }
 
 # frontier frame dependencies
 libsecp256k1 = { version = "0.6", default-features = false, optional = true }
@@ -187,6 +188,7 @@ std = [
 	"pallet-deeper-node/std",
 	"pallet-credit-accumulation/std",
 	"pallet-operation/std",
+	"pallet-user-privileges/std",
 	"pallet-uniques/std",
 	"fp-rpc/std",
 	"fp-self-contained/std",
@@ -234,6 +236,7 @@ runtime-benchmarks = [
 	"pallet-micropayment/runtime-benchmarks",
 	"pallet-credit-accumulation/runtime-benchmarks",
 	"pallet-operation/runtime-benchmarks",
+	"pallet-user-privileges/runtime-benchmarks",
 	"frame-system-benchmarking",
 	"hex-literal",
 	"pallet-ethereum/runtime-benchmarks",
