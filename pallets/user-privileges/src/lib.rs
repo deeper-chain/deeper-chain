@@ -30,6 +30,7 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::storage::migration::get_storage_value;
     use frame_support::{ensure, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
@@ -96,6 +97,11 @@ pub mod pallet {
         }
     }
 
+    #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+    pub enum Releases {
+        V1_0_0,
+    }
+
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -123,9 +129,9 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// not privilege flag
-        NotPrivilegeFlag,
-        /// not has right
-        NotHasRight,
+        NotExistPrivilege,
+        /// not has right to do
+        NoPermission,
     }
 
     #[pallet::storage]
@@ -138,9 +144,42 @@ pub mod pallet {
     pub(super) type EvmAddressPrivileges<T: Config> =
         StorageMap<_, Twox64Concat, H160, Privileges, OptionQuery>;
 
+    #[pallet::storage]
+    pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
+
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
+            use frame_support::traits::ConstU32;
+            use frame_support::WeakBoundedVec;
+
+            if StorageVersion::<T>::get().is_none() {
+                let lockers = get_storage_value::<WeakBoundedVec<T::AccountId, ConstU32<50>>>(
+                    b"Operation",
+                    b"LockMemberWhiteList",
+                    &[],
+                );
+                if let Some(lockers) = lockers {
+                    let lockers = lockers.into_inner();
+                    for locker in lockers {
+                        UserPrivileges::<T>::insert(
+                            locker,
+                            Privileges(Privilege::LockerMember.into()),
+                        );
+                    }
+                }
+                let setter =
+                    get_storage_value::<T::AccountId>(b"Operation", b"ReleasePaymentAddress", &[]);
+                if let Some(setter) = setter {
+                    UserPrivileges::<T>::insert(
+                        setter,
+                        Privileges(Privilege::ReleaseSetter.into()),
+                    );
+                }
+
+                StorageVersion::<T>::put(Releases::V1_0_0);
+                return T::DbWeight::get().reads_writes(1, 1);
+            }
             0
         }
     }
@@ -180,7 +219,7 @@ pub mod pallet {
 
             let old_priv = Self::user_privileges(&who);
             if old_priv.is_none() {
-                return Err(Error::<T>::NotHasRight.into());
+                return Err(Error::<T>::NotExistPrivilege.into());
             }
             let mut new_priv = old_priv.unwrap();
             new_priv.0.remove(privilege);
@@ -196,9 +235,7 @@ pub mod pallet {
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
             let who = T::Lookup::lookup(who)?;
-
             UserPrivileges::<T>::remove(&who);
-
             Self::deposit_event(Event::UserPrivilegeClear(who));
             Ok(().into())
         }
@@ -212,7 +249,7 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(
                 Self::has_privilege(&sender, Privilege::EvmAddressSetter),
-                Error::<T>::NotHasRight
+                Error::<T>::NoPermission
             );
             let old_priv = Self::evm_address_privileges(&who);
             let new_priv = {
@@ -221,9 +258,7 @@ pub mod pallet {
                     None => privilege.into(),
                 }
             };
-
             EvmAddressPrivileges::<T>::insert(&who, Privileges(new_priv));
-
             Self::deposit_event(Event::EvmPrivilegeSet(who, privilege));
             Ok(().into())
         }
@@ -237,12 +272,11 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(
                 Self::has_privilege(&sender, Privilege::EvmAddressSetter),
-                Error::<T>::NotHasRight
+                Error::<T>::NoPermission
             );
             let old_priv = Self::evm_address_privileges(&who);
-
             if old_priv.is_none() {
-                return Err(Error::<T>::NotHasRight.into());
+                return Err(Error::<T>::NotExistPrivilege.into());
             }
             let mut new_priv = old_priv.unwrap();
             new_priv.0.remove(privilege);
@@ -257,11 +291,9 @@ pub mod pallet {
             let sender = ensure_signed(origin)?;
             ensure!(
                 Self::has_privilege(&sender, Privilege::EvmAddressSetter),
-                Error::<T>::NotHasRight
+                Error::<T>::NoPermission
             );
-
             EvmAddressPrivileges::<T>::remove(&who);
-
             Self::deposit_event(Event::EvmPrivilegeClear(who));
             Ok(().into())
         }
