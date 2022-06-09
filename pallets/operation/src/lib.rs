@@ -51,6 +51,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
     use pallet_credit::{CreditInterface, DPR};
+    use pallet_evm::NpowAddressMapping;
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
@@ -77,6 +78,7 @@ pub mod pallet {
         type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
+        type NpowAddressMapping: NpowAddressMapping<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -112,6 +114,7 @@ pub mod pallet {
         BurnedDprTooLow,
         ReleaseBalanceZero,
         UnauthorizedAccounts,
+        NpowRewardAddressNotFound,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -439,13 +442,15 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::OPWeightInfo::get_npow_reward())]
-        pub fn get_npow_reward(
-            origin: OriginFor<T>,
-            eth_address: H160,
-        ) -> DispatchResultWithPostInfo {
+        pub fn get_npow_reward(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            Self::deposit_event(Event::<T>::GetNpowReward(sender, eth_address));
-            Ok(().into())
+            match T::NpowAddressMapping::deeper_to_evm(sender.clone()) {
+                Some(evm_address) => {
+                    Self::deposit_event(Event::<T>::GetNpowReward(sender, evm_address));
+                    Ok(().into())
+                }
+                None => Err(Error::<T>::NpowRewardAddressNotFound)?,
+            }
         }
 
         #[pallet::weight(T::OPWeightInfo::npow_mint())]
