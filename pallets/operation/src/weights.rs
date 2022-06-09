@@ -53,6 +53,8 @@ pub trait WeightInfo {
     fn set_release_limit_parameter() -> Weight;
     fn set_staking_release_info() -> Weight;
     fn burn_for_ezc() -> Weight;
+    fn get_npow_reward() -> Weight;
+    fn npow_mint() -> Weight;
 }
 
 /// Weights for pallet_operation using the Substrate node and recommended hardware.
@@ -87,6 +89,18 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+
+    fn get_npow_reward() -> Weight {
+        (41_810_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+
+    fn npow_mint() -> Weight {
+        (41_810_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
 }
 
 // For backwards compatibility and tests
@@ -117,6 +131,18 @@ impl WeightInfo for () {
     }
 
     fn burn_for_ezc() -> Weight {
+        (41_810_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+
+    fn get_npow_reward() -> Weight {
+        (41_810_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+
+    fn npow_mint() -> Weight {
         (41_810_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))

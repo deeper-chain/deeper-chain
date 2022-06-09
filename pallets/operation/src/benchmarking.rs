@@ -127,5 +127,21 @@ benchmarks! {
         assert_eq!(T::Currency::free_balance(&user),existential_deposit);
     }
 
+    get_npow_reward {
+        let existential_deposit = T::Currency::minimum_balance();
+        let user: T::AccountId = account("user", 0, SEED);
+        let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+    }: get_npow_reward(RawOrigin::Signed(user.clone()), H160::zero())
+    verify {
+    }
+
+    npow_mint {
+        let account: T::AccountId = account("b", 1, USER_SEED);
+        let existential_deposit = T::Currency::minimum_balance();
+        let dpr = existential_deposit * 10u32.into();
+    }: npow_mint(RawOrigin::Root, account.clone(), dpr)
+    verify {
+    }
+
     impl_benchmark_test_suite!(Op, crate::tests::new_test_ext(), crate::tests::Test);
 }

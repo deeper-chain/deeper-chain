@@ -32,6 +32,7 @@ pub type EraIndex = u32;
 
 pub trait OperationInterface<AccountId, Balance> {
     fn is_payment_address(account_id: AccountId) -> bool;
+    fn is_npow_mint_address(account_id: AccountId) -> bool;
     fn is_single_max_limit(pay_amount: Balance) -> bool;
 }
 
@@ -94,6 +95,8 @@ pub mod pallet {
         SingleReleaseTooMuch(T::AccountId, BalanceOf<T>),
         BurnForEZC(T::AccountId, BalanceOf<T>, H160),
         UnstakingResult(T::AccountId, String),
+        GetNpowReward(T::AccountId, H160),
+        NpowMint(T::AccountId, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -108,6 +111,7 @@ pub mod pallet {
         ReleaseDayZero,
         BurnedDprTooLow,
         ReleaseBalanceZero,
+        UnauthorizedAccounts,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -194,6 +198,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn release_payment_address)]
     pub type ReleasePaymentAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn npow_mint_address)]
+    pub type NpowMintAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn total_daily_release)]
@@ -428,6 +436,32 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
             Ok(().into())
         }
+
+        #[pallet::weight(T::OPWeightInfo::get_npow_reward())]
+        pub fn get_npow_reward(
+            origin: OriginFor<T>,
+            eth_address: H160,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            Self::deposit_event(Event::<T>::GetNpowReward(sender, eth_address));
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::npow_mint())]
+        pub fn npow_mint(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+            dpr: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                Self::is_npow_mint_address(who),
+                Error::<T>::UnauthorizedAccounts
+            );
+            T::Currency::deposit_creating(&target, dpr);
+            Self::deposit_event(Event::<T>::NpowMint(target, dpr));
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -525,6 +559,10 @@ pub mod pallet {
     impl<T: Config> OperationInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
         fn is_payment_address(user: T::AccountId) -> bool {
             Self::release_payment_address() == Some(user)
+        }
+
+        fn is_npow_mint_address(user: T::AccountId) -> bool {
+            Self::npow_mint_address() == Some(user)
         }
 
         fn is_single_max_limit(pay_amount: BalanceOf<T>) -> bool {

@@ -25,7 +25,7 @@ use sp_runtime::{
 };
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
-use frame_support::{assert_ok, parameter_types, weights::Weight};
+use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -42,7 +42,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Operation: pallet_operation::{Pallet, Call, Event<T>},
+        Operation: pallet_operation::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -226,5 +226,42 @@ fn burn_for_ezc() {
         assert_eq!(Balances::free_balance(&1), 98);
         assert_ok!(Operation::burn_for_ezc(Origin::signed(1), 48, H160::zero()));
         assert_eq!(Balances::free_balance(&1), 50);
+    });
+}
+
+#[test]
+fn get_npow_reward() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        assert_ok!(Operation::get_npow_reward(Origin::signed(1), H160::zero()));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::GetNpowReward(1, H160::zero()))
+        );
+    });
+}
+
+#[test]
+fn npow_mint() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        NpowMintAddress::<Test>::put(1);
+        assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 100));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::NpowMint(2, 100))
+        );
+        assert_eq!(Balances::free_balance(&2), 101);
+
+        assert_err!(
+            Operation::npow_mint(Origin::signed(3), 2, 100),
+            Error::<Test>::UnauthorizedAccounts
+        );
     });
 }
