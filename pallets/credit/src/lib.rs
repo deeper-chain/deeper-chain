@@ -783,6 +783,7 @@ pub mod pallet {
             T::BurnedTo::on_unbalanced(burned);
             Self::_update_credit(&sender, target_credit);
             Self::update_credit_history(&sender, Self::get_current_era());
+            Self::burn_record(amount);
             Self::deposit_event(Event::<T>::BurnForAddCredit(sender.clone(), credit_score));
 
             Ok(().into())
