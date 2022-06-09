@@ -216,9 +216,14 @@ pub trait CreditInterface<AccountId, Balance> {
     fn add_or_update_credit(account_id: AccountId, credit_score: u64);
     fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
     fn do_unstaking_slash_credit(user: &AccountId) -> DispatchResult;
+    fn burn_record(burn_amount: Balance) -> bool;
 }
 
 impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
+    fn burn_record(_burn_amount: Balance) -> bool {
+        false
+    }
+
     fn get_credit_score(_account_id: &AccountId) -> Option<u64> {
         None
     }
@@ -347,6 +352,15 @@ pub mod pallet {
     #[pallet::getter(fn user_credit_history)]
     pub type UserCreditHistory<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, Vec<(EraIndex, CreditData)>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn total_daily_burn_dpr)]
+    pub type TotalDailyBurnDPR<T: Config> =
+        StorageMap<_, Blake2_128Concat, u32, BalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn total_burn_dpr)]
+    pub(crate) type TotalBurnDPR<T> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn credit_settings)]
@@ -769,6 +783,7 @@ pub mod pallet {
             T::BurnedTo::on_unbalanced(burned);
             Self::_update_credit(&sender, target_credit);
             Self::update_credit_history(&sender, Self::get_current_era());
+            Self::burn_record(amount);
             Self::deposit_event(Event::<T>::BurnForAddCredit(sender.clone(), credit_score));
 
             Ok(().into())
@@ -1148,6 +1163,20 @@ pub mod pallet {
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
+        fn burn_record(burn_amount: BalanceOf<T>) -> bool {
+            let cur_era = Self::get_current_era();
+
+            let mut total_burn_dpr = Self::total_burn_dpr();
+            let mut total_daily_burn_dpr = Self::total_daily_burn_dpr(cur_era);
+
+            total_daily_burn_dpr = total_daily_burn_dpr.saturating_add(burn_amount);
+            total_burn_dpr = total_burn_dpr.saturating_add(burn_amount);
+            TotalBurnDPR::<T>::put(total_burn_dpr);
+            TotalDailyBurnDPR::<T>::insert(cur_era, total_daily_burn_dpr);
+
+            return true;
+        }
+
         fn get_credit_balance(account: &T::AccountId) -> Vec<BalanceOf<T>> {
             let credit_data = Self::user_credit(account);
             match credit_data {
