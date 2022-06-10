@@ -156,7 +156,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 19,
+    spec_version: 20,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 9,
@@ -471,6 +471,12 @@ impl pallet_balances::Config for Runtime {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_user_privileges::Config for Runtime {
+    type Event = Event;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type WeightInfo = pallet_user_privileges::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_operation::Config for Runtime {
@@ -1421,6 +1427,7 @@ construct_runtime!(
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent} = 83,
 
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
+        UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
     }
 );
 
@@ -2029,6 +2036,7 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_preimage, Preimage);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
             list_benchmark!(list, extra, pallet_operation, Operation);
+            list_benchmark!(list, extra, pallet_user_privileges, UserPrivileges);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -2096,6 +2104,8 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_preimage, Preimage);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);
             add_benchmark!(params, batches, pallet_operation, Operation);
+            add_benchmark!(params, batches, pallet_user_privileges, UserPrivileges);
+
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

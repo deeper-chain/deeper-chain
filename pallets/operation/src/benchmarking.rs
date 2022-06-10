@@ -94,7 +94,7 @@ benchmarks! {
         assert_eq!(DailyMaxLimit::<T>::get(),daily_limit);
     }
 
-    set_staking_release_info {
+    unstaking_release {
         let existential_deposit = T::Currency::minimum_balance();
         let admin: T::AccountId = account("a", 0, SEED);
         <ReleasePaymentAddress<T>>::put(admin.clone());
@@ -103,17 +103,10 @@ benchmarks! {
         <SingleMaxLimit<T>>::put(single_limit);
         <DailyMaxLimit<T>>::put(daily_limit);
 
-        let mut v = Vec::new();
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
-        v.push(rinfo);
-        for i in 0..3 {
-            let account: T::AccountId = account("b", i, USER_SEED);
-            let rinfo= ReleaseInfo::<T>::new(account,1,0,existential_deposit * 10u32.into());
-            v.push(rinfo);
-        }
 
-    }: set_staking_release_info(RawOrigin::Signed(admin), v)
+    }: _(RawOrigin::Signed(admin), rinfo)
     verify {
         assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
     }
