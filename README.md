@@ -56,12 +56,12 @@ cargo build --release --features runtime-benchmarks
 ```
 2. Run shell command to update weights.rs
 ```
-./target/release/deeper-chain benchmark  \
+./target/release/deeper-chain benchmark pallet \
 --chain=dev \
 --steps=50 \
 --repeat=20 \
 --pallet=pallet_staking \
---extrinsic=* \
+--extrinsic='*' \
 --execution=wasm \
 --wasm-execution=compiled \
 --heap-pages=4096 \
