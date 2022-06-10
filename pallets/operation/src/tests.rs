@@ -26,6 +26,7 @@ use sp_runtime::{
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
 use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
+use pallet_evm::NpowAddressMapping;
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -123,6 +124,7 @@ impl pallet_operation::Config for Test {
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
+    type NpowAddressMapping = U128NpowAddressMapping;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -229,11 +231,31 @@ fn burn_for_ezc() {
     });
 }
 
+pub struct U128NpowAddressMapping;
+
+impl NpowAddressMapping<u128> for U128NpowAddressMapping {
+    fn evm_to_deeper(_address: H160) -> Option<u128> {
+        None
+    }
+
+    fn deeper_to_evm(address: u128) -> Option<H160> {
+        if address == 1 {
+            return Some(H160::zero());
+        }
+        None
+    }
+}
+
 #[test]
 fn get_npow_reward() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        assert_ok!(Operation::get_npow_reward(Origin::signed(1), H160::zero()));
+        assert_err!(
+            Operation::get_npow_reward(Origin::signed(2)),
+            Error::<Test>::NpowRewardAddressNotFound
+        );
+
+        assert_ok!(Operation::get_npow_reward(Origin::signed(1)));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()

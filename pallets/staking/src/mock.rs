@@ -288,6 +288,7 @@ impl pallet_operation::Config for Test {
     type OPWeightInfo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
+    type NpowAddressMapping = ();
 }
 
 parameter_types! {
