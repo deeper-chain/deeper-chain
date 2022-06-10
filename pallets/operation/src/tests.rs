@@ -25,7 +25,8 @@ use sp_runtime::{
 };
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
-use frame_support::{assert_ok, parameter_types, weights::Weight};
+use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
+use pallet_evm::NpowAddressMapping;
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -42,7 +43,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Operation: pallet_operation::{Pallet, Call, Event<T>},
+        Operation: pallet_operation::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -123,6 +124,7 @@ impl pallet_operation::Config for Test {
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
+    type NpowAddressMapping = U128NpowAddressMapping;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -226,5 +228,62 @@ fn burn_for_ezc() {
         assert_eq!(Balances::free_balance(&1), 98);
         assert_ok!(Operation::burn_for_ezc(Origin::signed(1), 48, H160::zero()));
         assert_eq!(Balances::free_balance(&1), 50);
+    });
+}
+
+pub struct U128NpowAddressMapping;
+
+impl NpowAddressMapping<u128> for U128NpowAddressMapping {
+    fn evm_to_deeper(_address: H160) -> Option<u128> {
+        None
+    }
+
+    fn deeper_to_evm(address: u128) -> Option<H160> {
+        if address == 1 {
+            return Some(H160::zero());
+        }
+        None
+    }
+}
+
+#[test]
+fn get_npow_reward() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        assert_err!(
+            Operation::get_npow_reward(Origin::signed(2)),
+            Error::<Test>::NpowRewardAddressNotFound
+        );
+
+        assert_ok!(Operation::get_npow_reward(Origin::signed(1)));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::GetNpowReward(1, H160::zero()))
+        );
+    });
+}
+
+#[test]
+fn npow_mint() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        NpowMintAddress::<Test>::put(1);
+        assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 100));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::NpowMint(2, 100))
+        );
+        assert_eq!(Balances::free_balance(&2), 101);
+
+        assert_err!(
+            Operation::npow_mint(Origin::signed(3), 2, 100),
+            Error::<Test>::UnauthorizedAccounts
+        );
     });
 }

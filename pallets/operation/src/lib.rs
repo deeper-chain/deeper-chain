@@ -32,6 +32,7 @@ pub type EraIndex = u32;
 
 pub trait OperationInterface<AccountId, Balance> {
     fn is_payment_address(account_id: AccountId) -> bool;
+    fn is_npow_mint_address(account_id: AccountId) -> bool;
     fn is_single_max_limit(pay_amount: Balance) -> bool;
 }
 
@@ -50,6 +51,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
     use pallet_credit::{CreditInterface, DPR};
+    use pallet_evm::NpowAddressMapping;
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
@@ -76,6 +78,7 @@ pub mod pallet {
         type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
+        type NpowAddressMapping: NpowAddressMapping<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -94,6 +97,8 @@ pub mod pallet {
         SingleReleaseTooMuch(T::AccountId, BalanceOf<T>),
         BurnForEZC(T::AccountId, BalanceOf<T>, H160),
         UnstakingResult(T::AccountId, String),
+        GetNpowReward(T::AccountId, H160),
+        NpowMint(T::AccountId, BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -108,6 +113,8 @@ pub mod pallet {
         ReleaseDayZero,
         BurnedDprTooLow,
         ReleaseBalanceZero,
+        UnauthorizedAccounts,
+        NpowRewardAddressNotFound,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -194,6 +201,10 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn release_payment_address)]
     pub type ReleasePaymentAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn npow_mint_address)]
+    pub type NpowMintAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn total_daily_release)]
@@ -425,7 +436,36 @@ pub mod pallet {
             )?;
             let balance = burned.peek();
             T::BurnedTo::on_unbalanced(burned);
+            T::CreditInterface::burn_record(balance);
             Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::get_npow_reward())]
+        pub fn get_npow_reward(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            match T::NpowAddressMapping::deeper_to_evm(sender.clone()) {
+                Some(evm_address) => {
+                    Self::deposit_event(Event::<T>::GetNpowReward(sender, evm_address));
+                    Ok(().into())
+                }
+                None => Err(Error::<T>::NpowRewardAddressNotFound)?,
+            }
+        }
+
+        #[pallet::weight(T::OPWeightInfo::npow_mint())]
+        pub fn npow_mint(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+            dpr: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                Self::is_npow_mint_address(who),
+                Error::<T>::UnauthorizedAccounts
+            );
+            T::Currency::deposit_creating(&target, dpr);
+            Self::deposit_event(Event::<T>::NpowMint(target, dpr));
             Ok(().into())
         }
     }
@@ -525,6 +565,10 @@ pub mod pallet {
     impl<T: Config> OperationInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
         fn is_payment_address(user: T::AccountId) -> bool {
             Self::release_payment_address() == Some(user)
+        }
+
+        fn is_npow_mint_address(user: T::AccountId) -> bool {
+            Self::npow_mint_address() == Some(user)
         }
 
         fn is_single_max_limit(pay_amount: BalanceOf<T>) -> bool {

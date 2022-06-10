@@ -105,6 +105,7 @@ benchmarks! {
 
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
+        feature/Device_system_time_deposit
     }: unstaking_release(RawOrigin::Signed(admin), rinfo)
     verify {
         assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
@@ -117,6 +118,22 @@ benchmarks! {
     }: burn_for_ezc(RawOrigin::Signed(user.clone()), existential_deposit, H160::zero())
     verify {
         assert_eq!(T::Currency::free_balance(&user),existential_deposit);
+    }
+
+    get_npow_reward {
+        let existential_deposit = T::Currency::minimum_balance();
+        let user: T::AccountId = account("user", 0, SEED);
+        let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+    }: get_npow_reward(RawOrigin::Signed(user.clone()), H160::zero())
+    verify {
+    }
+
+    npow_mint {
+        let account: T::AccountId = account("b", 1, USER_SEED);
+        let existential_deposit = T::Currency::minimum_balance();
+        let dpr = existential_deposit * 10u32.into();
+    }: npow_mint(RawOrigin::Root, account.clone(), dpr)
+    verify {
     }
 
     impl_benchmark_test_suite!(Op, crate::tests::new_test_ext(), crate::tests::Test);

@@ -63,11 +63,11 @@ sp-authorship = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 
 # frontier primitives
-fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fp-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fp-evm = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fp-storage = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
+fp-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fp-dynamic-fee = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fp-evm = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fp-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fp-storage = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
@@ -92,11 +92,11 @@ sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", branch 
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 
 # frontier client dependencies
-fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fc-db = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
-fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
+fc-consensus = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fc-rpc = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fc-rpc-core = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fc-db = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
+fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
 
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
