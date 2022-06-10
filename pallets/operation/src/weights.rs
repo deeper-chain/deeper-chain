@@ -51,7 +51,7 @@ pub trait WeightInfo {
     fn set_reserve_members() -> Weight;
     fn set_release_owner_address() -> Weight;
     fn set_release_limit_parameter() -> Weight;
-    fn set_staking_release_info() -> Weight;
+    fn unstaking_release() -> Weight;
     fn burn_for_ezc() -> Weight;
     fn get_npow_reward() -> Weight;
     fn npow_mint() -> Weight;
@@ -79,7 +79,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn set_release_limit_parameter() -> Weight {
         (2_154_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
-    fn set_staking_release_info() -> Weight {
+    fn unstaking_release() -> Weight {
         (16_301_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
@@ -124,7 +124,7 @@ impl WeightInfo for () {
     fn set_release_limit_parameter() -> Weight {
         (2_154_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
-    fn set_staking_release_info() -> Weight {
+    fn unstaking_release() -> Weight {
         (16_301_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))

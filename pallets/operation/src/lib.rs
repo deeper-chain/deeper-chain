@@ -337,7 +337,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::OPWeightInfo::set_staking_release_info())]
+        #[pallet::weight(T::OPWeightInfo::unstaking_release())]
         #[transactional]
         pub fn unstaking_release(
             origin: OriginFor<T>,
@@ -401,7 +401,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::OPWeightInfo::set_staking_release_info())]
+        #[pallet::weight(T::OPWeightInfo::unstaking_release())]
         pub fn remove_staking_release_info(
             origin: OriginFor<T>,
             release_accounts: Vec<T::AccountId>,

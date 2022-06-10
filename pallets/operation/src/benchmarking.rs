@@ -105,8 +105,7 @@ benchmarks! {
 
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
-
-    }: _(RawOrigin::Signed(admin), rinfo)
+    }: unstaking_release(RawOrigin::Signed(admin), rinfo)
     verify {
         assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
     }
@@ -124,7 +123,7 @@ benchmarks! {
         let existential_deposit = T::Currency::minimum_balance();
         let user: T::AccountId = account("user", 0, SEED);
         let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
-    }: get_npow_reward(RawOrigin::Signed(user.clone()), H160::zero())
+    }: get_npow_reward(RawOrigin::Signed(user.clone()))
     verify {
     }
 

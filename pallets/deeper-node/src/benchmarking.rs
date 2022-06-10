@@ -105,6 +105,13 @@ benchmarks! {
     verify {
 
     }
+
+    set_device_system_time {
+        let admin: T::AccountId = account("a", 0, SEED);
+    }: set_device_system_time(RawOrigin::Signed(admin.clone()), 1654678525000)
+    verify {
+        assert_eq!(DeviceSystemUpTime::<T>::get(&admin), 1654678525000);
+    }
 }
 
 #[cfg(test)]
