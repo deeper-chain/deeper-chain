@@ -105,7 +105,6 @@ benchmarks! {
 
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
-        feature/Device_system_time_deposit
     }: unstaking_release(RawOrigin::Signed(admin), rinfo)
     verify {
         assert_eq!(AccountsReleaseInfo::<T>::contains_key(&checked_account),true);
