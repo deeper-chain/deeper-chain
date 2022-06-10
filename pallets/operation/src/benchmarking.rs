@@ -123,7 +123,7 @@ benchmarks! {
         let existential_deposit = T::Currency::minimum_balance();
         let user: T::AccountId = account("user", 0, SEED);
         let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
-    }: get_npow_reward(RawOrigin::Signed(user.clone()), H160::zero())
+    }: get_npow_reward(RawOrigin::Signed(user.clone()))
     verify {
     }
 
