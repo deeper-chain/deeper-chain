@@ -19,63 +19,65 @@
 
 extern crate alloc;
 
+mod util;
+
 use codec::Decode;
 use core::marker::PhantomData;
 use fp_evm::{
     Context, ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileOutput,
     PrecompileResult,
 };
-use frame_support::{
-    dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
-    weights::{DispatchClass, Pays},
-};
-use pallet_credit::CreditInterface;
-use pallet_evm::{AddressMapping, GasWeightMapping};
+use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
 use pallet_credit::Call as CreditCall;
+use pallet_credit::CreditInterface;
+use pallet_evm::AddressMapping;
 
-use sp_core::{H160, H256, U256};
-use alloc::{vec,vec::Vec,borrow::ToOwned};
+use crate::util::{Gasometer, RuntimeHelper};
+use alloc::{borrow::ToOwned, vec};
 use arrayref::array_ref;
+use sp_core::{H160, U256};
 
 const BASIC_LEN: usize = 4 + 32;
+const SELECTOR_GET_CREDIT_SCORE: u32 = 0x87135d7d;
+const SELECTOR_ADD_CREDIT_SCORE: u32 = 0x5915ad98;
+const SELECTOR_SLASH_CREDIT_SCORE: u32 = 0xa62184b3;
 
 // from moonbeam
 /// Represents modifiers a Solidity function can be annotated with.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum FunctionModifier {
-	/// Function that doesn't modify the state.
-	View,
-	/// Function that modifies the state but refuse receiving funds.
-	/// Correspond to a Solidity function with no modifiers.
-	NonPayable,
-	/// Function that modifies the state and accept funds.
-	Payable,
+    /// Function that doesn't modify the state.
+    View,
+    /// Function that modifies the state but refuse receiving funds.
+    /// Correspond to a Solidity function with no modifiers.
+    NonPayable,
+    /// Function that modifies the state and accept funds.
+    Payable,
 }
 
-fn check_function_modifier(
-    context: &Context,
-    is_static: bool,
-    modifier: FunctionModifier,
-) ->  Result<(),PrecompileFailure> {
-    if is_static && modifier != FunctionModifier::View {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("can't call non-static function in static context".into()),
-        });
-    }
+// fn check_function_modifier(
+//     context: &Context,
+//     is_static: bool,
+//     modifier: FunctionModifier,
+// ) ->  Result<(),PrecompileFailure> {
+//     if is_static && modifier != FunctionModifier::View {
+//         return Err(PrecompileFailure::Error {
+//             exit_status: ExitError::Other("can't call non-static function in static context".into()),
+//         });
+//     }
 
-    if modifier != FunctionModifier::Payable && context.apparent_value > U256::zero() {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("function is not payable".into()),
-        });
-    }
+//     if modifier != FunctionModifier::Payable && context.apparent_value > U256::zero() {
+//         return Err(PrecompileFailure::Error {
+//             exit_status: ExitError::Other("function is not payable".into()),
+//         });
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 pub struct CreditDispatch<Runtime> {
     _marker: PhantomData<Runtime>,
 }
-
 
 impl<Runtime> Precompile for CreditDispatch<Runtime>
 where
@@ -91,7 +93,7 @@ where
         is_static: bool,
     ) -> PrecompileResult {
         /*
-		selecter:
+        selector:
         0x5915ad98: add_credit_score
         0xa62184b3: slash_credit_score
         0x87135d7d: get_credit_score
@@ -102,11 +104,20 @@ where
                 exit_status: ExitError::Other("input len not enough".into()),
             });
         }
+        let mut gasometer = Gasometer::new(target_gas);
+        let gasometer = &mut gasometer;
+
         let real_type = u32::from_be_bytes(array_ref!(input, 0, 4).to_owned());
         match real_type {
-            0x87135d7d => Self::get_credit_score(input, context,is_static),
-            0x5915ad98 => Self::add_credit_score(input, context,is_static),
-            0xa62184b3 => Self::slash_credit_score(input, context,is_static),
+            SELECTOR_GET_CREDIT_SCORE => {
+                Self::get_credit_score(input, context, is_static, gasometer)
+            }
+            SELECTOR_ADD_CREDIT_SCORE => {
+                Self::add_credit_score(input, context, is_static, gasometer)
+            }
+            SELECTOR_SLASH_CREDIT_SCORE => {
+                Self::slash_credit_score(input, context, is_static, gasometer)
+            }
             _ => Err(PrecompileFailure::Error {
                 exit_status: ExitError::InvalidCode,
             }),
@@ -121,65 +132,96 @@ where
     <Runtime::Call as Dispatchable>::Origin: From<Option<Runtime::AccountId>>,
     Runtime::Call: From<CreditCall<Runtime>>,
 {
-    pub fn get_credit_score(input: &[u8], context: &Context, is_static:bool) -> PrecompileResult {
-		Self::check_input_len(input, BASIC_LEN)?;
-        check_function_modifier(context,is_static, FunctionModifier::View)?;
+    pub fn get_credit_score(
+        input: &[u8],
+        context: &Context,
+        is_static: bool,
+        gasometer: &mut Gasometer,
+    ) -> PrecompileResult {
+        Self::check_input_len(input, BASIC_LEN)?;
+
+        gasometer.check_function_modifier(context, is_static, util::FunctionModifier::View)?;
+
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let origin = Runtime::AddressMapping::into_account_id(account);
         let score = pallet_credit::Pallet::<Runtime>::get_credit_score(&origin);
         let score = U256::from(score.unwrap_or(0));
         let mut output = vec![0; 32];
         score.to_big_endian(&mut output);
+        gasometer.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost() * 2)?;
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: 2000,
+            cost: gasometer.used_gas(),
             output,
             logs: Default::default(),
         })
     }
 
-    pub fn add_credit_score(input: &[u8], context: &Context, is_static:bool) -> PrecompileResult {
-		Self::check_input_len(input, BASIC_LEN + 32)?;
-        check_function_modifier(context,is_static, FunctionModifier::NonPayable)?;
+    pub fn add_credit_score(
+        input: &[u8],
+        context: &Context,
+        is_static: bool,
+        gasometer: &mut Gasometer,
+    ) -> PrecompileResult {
+        Self::check_input_len(input, BASIC_LEN + 32)?;
+        gasometer.check_function_modifier(
+            context,
+            is_static,
+            util::FunctionModifier::NonPayable,
+        )?;
+
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
         let origin = Runtime::AddressMapping::into_account_id(account);
 
         pallet_credit::Pallet::<Runtime>::add_or_update_credit(origin, score);
 
+        let weight = RuntimeHelper::<Runtime>::db_read_gas_cost() * 2
+            + RuntimeHelper::<Runtime>::db_write_gas_cost();
+        gasometer.record_cost(weight)?;
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: 2000,
+            cost: gasometer.used_gas(),
             output: Default::default(),
             logs: Default::default(),
         })
     }
 
-    pub fn slash_credit_score(input: &[u8], context: &Context, is_static:bool) -> PrecompileResult {
-       
-		Self::check_input_len(input, BASIC_LEN + 32)?;
-        check_function_modifier(context,is_static, FunctionModifier::NonPayable)?;
+    pub fn slash_credit_score(
+        input: &[u8],
+        context: &Context,
+        is_static: bool,
+        gasometer: &mut Gasometer,
+    ) -> PrecompileResult {
+        Self::check_input_len(input, BASIC_LEN + 32)?;
+        gasometer.check_function_modifier(
+            context,
+            is_static,
+            util::FunctionModifier::NonPayable,
+        )?;
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
         let origin = Runtime::AddressMapping::into_account_id(account);
 
-        pallet_credit::Pallet::<Runtime>::slash_credit(&origin, Some(score));
+        let weight = pallet_credit::Pallet::<Runtime>::slash_credit(&origin, Some(score));
+
+        gasometer.record_cost(weight)?;
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: 2000,
+            cost: gasometer.used_gas(),
             output: Default::default(),
             logs: Default::default(),
         })
     }
 
-	fn check_input_len(input: &[u8],base_len :usize) -> Result<(),PrecompileFailure> {
-		if input.len() < base_len {
+    fn check_input_len(input: &[u8], base_len: usize) -> Result<(), PrecompileFailure> {
+        if input.len() < base_len {
             return Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other("input len not enough".into()),
             });
         }
-		Ok(())
-	}
+        Ok(())
+    }
 }

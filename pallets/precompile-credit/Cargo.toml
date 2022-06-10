@@ -15,7 +15,8 @@ frame-support = { branch = "polkadot-v0.9.19", default-features = false, git = "
 pallet-evm = {default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
 fp-evm = {default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "frontier_sync" }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-
+sp-std = { branch = "polkadot-v0.9.19", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 pallet-credit = { version = "3.0.0", path="../credit", default-features = false }
 arrayref = "0.3.6"
 
@@ -29,4 +30,5 @@ std = [
 	"fp-evm/std",
 	"codec/std",
 	"pallet-credit/std",
+	"sp-std/std",
 ]
