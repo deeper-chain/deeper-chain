@@ -140,6 +140,11 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn device_system_time)]
+    pub type DeviceSystemUpTime<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery>;
+
+    #[pallet::storage]
     #[pallet::getter(fn servers_by_region)]
     pub(super) type ServersByRegion<T: Config> =
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
@@ -198,6 +203,8 @@ pub mod pallet {
         ServerRegionRemoved(T::AccountId, CountryRegion),
 
         ImOnline(T::AccountId, T::BlockNumber),
+
+        SystemUpTime(T::AccountId, u64),
     }
 
     // Errors inform users that something went wrong.
@@ -341,6 +348,17 @@ pub mod pallet {
                 DevicesOnboard::<T>::mutate(|devices| devices.push(sender.clone()));
             }
             Self::deposit_event(Event::ImOnline(sender, current_block));
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::WeightInfo::set_device_system_time())]
+        pub fn set_device_system_time(
+            origin: OriginFor<T>,
+            system_time: u64,
+        ) -> DispatchResultWithPostInfo {
+            let device_account = ensure_signed(origin)?;
+            <DeviceSystemUpTime<T>>::insert(&device_account, system_time);
+            Self::deposit_event(Event::SystemUpTime(device_account, system_time));
             Ok(().into())
         }
     }
