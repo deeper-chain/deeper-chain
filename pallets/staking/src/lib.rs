@@ -2814,17 +2814,25 @@ impl<T: Config> pallet::Pallet<T> {
     /// Should returned balance and should slashed credit
     fn calculate_added_credit(account: &T::AccountId, lv: u8, balance: BalanceOf<T>) -> u64 {
         use sp_runtime::traits::UniqueSaturatedFrom;
-
         const DPR: u128 = 1_000_000_000_000_000_000;
-        let gennesis_1_balance: BalanceOf<T> =
-            UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR);
+        let basic_credit_balances = vec![
+            UniqueSaturatedFrom::unique_saturated_from(1_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(30_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(50_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(60_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(80_000 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR),
+        ];
         let credit_balances = T::CreditInterface::get_credit_balance(account);
         if lv == 0 || balance.is_zero() || credit_balances.is_empty() {
             return 0;
         }
 
         // if not genesis user, ignore
-        if credit_balances[1] != gennesis_1_balance {
+        if credit_balances[1] == basic_credit_balances[1] {
             return 0;
         }
 
@@ -2832,7 +2840,7 @@ impl<T: Config> pallet::Pallet<T> {
         let mut score = 0;
         let mut remaining_balance = balance;
         while remaining_balance > 0u32.into() && lv > 0 {
-            let gap = credit_balances[lv] - credit_balances[lv - 1];
+            let gap = basic_credit_balances[lv] - basic_credit_balances[lv - 1];
             // only hanppend when user increase credit level between two staking delegating
             // so just add 100 credit and return
             if remaining_balance < gap {
