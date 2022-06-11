@@ -561,11 +561,12 @@ enum Releases {
     V3_0_0,
     V4_0_0,
     V5_0_0,
+    V6_0_0,
 }
 
 impl Default for Releases {
     fn default() -> Self {
-        Releases::V5_0_0
+        Releases::V6_0_0
     }
 }
 
@@ -917,7 +918,7 @@ pub mod pallet {
     /// Storage version of the pallet.
     ///
     /// This is set to v5.0.0 for new networks.
-    // StorageVersion build(|_: &GenesisConfig<T>| Releases::V5_0_0): Releases;
+    // StorageVersion build(|_: &GenesisConfig<T>| Releases::V6_0_0): Releases;
     #[pallet::storage]
     pub(crate) type StorageVersion<T: Config> = StorageValue<_, Releases, ValueQuery>;
 
@@ -1907,10 +1908,36 @@ pub mod pallet {
         fn on_runtime_upgrade() -> frame_support::weights::Weight {
             if StorageVersion::<T>::get() == Releases::V4_0_0 {
                 StorageVersion::<T>::put(Releases::V5_0_0);
-                migrations::migrate_to_blockable::<T>()
-            } else {
-                0
+                return migrations::migrate_to_blockable::<T>();
+            } else if StorageVersion::<T>::get() == Releases::V5_0_0 {
+                StorageVersion::<T>::put(Releases::V6_0_0);
+                let mut to_be_removed = Vec::new();
+                for (account, balance) in DelegatorBalances::<T>::iter() {
+                    let score = T::CreditInterface::get_credit_score(&account);
+                    if score.is_none() {
+                        continue;
+                    }
+                    let lv = T::CreditInterface::get_credit_level(score.unwrap()).into();
+
+                    let slash_score = Self::calculate_added_credit(&account, lv, balance);
+                    if slash_score == 0 {
+                        continue;
+                    }
+                    let _ = T::Currency::transfer(
+                        &Self::account_id(),
+                        &account,
+                        balance,
+                        ExistenceRequirement::AllowDeath,
+                    );
+                    T::CreditInterface::slash_credit(&account, Some(slash_score));
+                    to_be_removed.push(account);
+                }
+
+                for account in to_be_removed {
+                    DelegatorBalances::<T>::remove(account);
+                }
             }
+            0
         }
 
         fn on_initialize(now: T::BlockNumber) -> Weight {
@@ -2781,6 +2808,41 @@ impl<T: Config> pallet::Pallet<T> {
 
     fn get_delegator_data(next_key: &Vec<u8>) -> Option<DelegatorData<T::AccountId>> {
         frame_support::storage::unhashed::get::<DelegatorData<T::AccountId>>(next_key)
+    }
+
+    /// return values:
+    /// Should returned balance and should slashed credit
+    fn calculate_added_credit(account: &T::AccountId, lv: u8, balance: BalanceOf<T>) -> u64 {
+        use sp_runtime::traits::UniqueSaturatedFrom;
+
+        const DPR: u128 = 1_000_000_000_000_000_000;
+        let gennesis_1_balance: BalanceOf<T> =
+            UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR);
+        let credit_balances = T::CreditInterface::get_credit_balance(account);
+        if lv == 0 || balance.is_zero() || credit_balances.is_empty() {
+            return 0;
+        }
+
+        // if not genesis user, ignore
+        if credit_balances[1] != gennesis_1_balance {
+            return 0;
+        }
+
+        let mut lv = lv as usize;
+        let mut score = 0;
+        let mut remaining_balance = balance;
+        while remaining_balance > 0u32.into() && lv > 0 {
+            let gap = credit_balances[lv] - credit_balances[lv - 1];
+            // only hanppend when user increase credit level between two staking delegating
+            // so just add 100 credit and return
+            if remaining_balance < gap {
+                return score + 100;
+            }
+            remaining_balance -= gap;
+            score += 100;
+            lv -= 1;
+        }
+        return score;
     }
 }
 
