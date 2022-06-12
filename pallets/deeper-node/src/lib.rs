@@ -140,9 +140,9 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn device_system_time)]
-    pub type DeviceSystemUpTime<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery>;
+    #[pallet::getter(fn device_traffic_time)]
+    pub type DeviceTrafficTime<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, (u64, u32), ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn servers_by_region)]
@@ -204,7 +204,7 @@ pub mod pallet {
 
         ImOnline(T::AccountId, T::BlockNumber),
 
-        SystemUpTime(T::AccountId, u64),
+        DeviceTrafficTime(T::AccountId, u64, u32),
     }
 
     // Errors inform users that something went wrong.
@@ -351,14 +351,19 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::set_device_system_time())]
-        pub fn set_device_system_time(
+        #[pallet::weight(T::WeightInfo::report_traffic_time())]
+        pub fn report_traffic_time(
             origin: OriginFor<T>,
-            system_time: u64,
+            sharing_traffic: u64,
+            system_time: u32,
         ) -> DispatchResultWithPostInfo {
             let device_account = ensure_signed(origin)?;
-            <DeviceSystemUpTime<T>>::insert(&device_account, system_time);
-            Self::deposit_event(Event::SystemUpTime(device_account, system_time));
+            <DeviceTrafficTime<T>>::insert(&device_account, (sharing_traffic, system_time));
+            Self::deposit_event(Event::DeviceTrafficTime(
+                device_account,
+                sharing_traffic,
+                system_time,
+            ));
             Ok(().into())
         }
     }
