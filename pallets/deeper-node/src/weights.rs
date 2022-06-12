@@ -53,7 +53,7 @@ pub trait WeightInfo {
     fn update_server() -> Weight;
     fn unregister_server() -> Weight;
     fn im_online() -> Weight;
-    fn report_traffic_time() -> Weight;
+    fn report_credit_proof() -> Weight;
 }
 
 /// Weights for pallet_deeper_node using the Substrate node and recommended hardware.
@@ -89,7 +89,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
-    fn report_traffic_time() -> Weight {
+    fn report_credit_proof() -> Weight {
         (9_000_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
@@ -126,7 +126,7 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
-    fn report_traffic_time() -> Weight {
+    fn report_credit_proof() -> Weight {
         (9_000_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
