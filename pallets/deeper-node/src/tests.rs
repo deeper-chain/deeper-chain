@@ -204,16 +204,17 @@ fn im_online() {
 }
 
 #[test]
-fn report_traffic_time() {
+fn report_credit_proof() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::report_traffic_time(
+        assert_ok!(DeeperNode::report_credit_proof(
             Origin::signed(1),
+            1655007560,
             1073741824000000,
             4294967295
         ));
         assert_eq!(
-            DeeperNode::device_traffic_time(1),
-            (1073741824000000, 4294967295)
+            DeeperNode::device_credit_proof(1),
+            (1655007560, 1073741824000000, 4294967295)
         );
     });
 }

@@ -106,11 +106,11 @@ benchmarks! {
 
     }
 
-    report_traffic_time {
+    report_credit_proof {
         let admin: T::AccountId = account("a", 0, SEED);
-    }: report_traffic_time(RawOrigin::Signed(admin.clone()), 1073741824000000, 4294967295)
+    }: report_credit_proof(RawOrigin::Signed(admin.clone()), 1655007560, 1073741824000000, 4294967295)
     verify {
-        assert_eq!(DeviceTrafficTime::<T>::get(&admin), (1073741824000000, 4294967295));
+        assert_eq!(DeviceCreditProof::<T>::get(&admin), (1655007560, 1073741824000000, 4294967295));
     }
 }
 
