@@ -106,11 +106,11 @@ benchmarks! {
 
     }
 
-    set_device_system_time {
+    report_traffic_time {
         let admin: T::AccountId = account("a", 0, SEED);
-    }: set_device_system_time(RawOrigin::Signed(admin.clone()), 1654678525000)
+    }: report_traffic_time(RawOrigin::Signed(admin.clone()), 1073741824000000, 4294967295)
     verify {
-        assert_eq!(DeviceSystemUpTime::<T>::get(&admin), 1654678525000);
+        assert_eq!(DeviceTrafficTime::<T>::get(&admin), (1073741824000000, 4294967295));
     }
 }
 

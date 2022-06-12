@@ -204,13 +204,17 @@ fn im_online() {
 }
 
 #[test]
-fn set_device_system_time() {
+fn report_traffic_time() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::set_device_system_time(
+        assert_ok!(DeeperNode::report_traffic_time(
             Origin::signed(1),
-            1654678525000
+            1073741824000000,
+            4294967295
         ));
-        assert_eq!(DeeperNode::device_system_time(1), 1654678525000);
+        assert_eq!(
+            DeeperNode::device_traffic_time(1),
+            (1073741824000000, 4294967295)
+        );
     });
 }
 
