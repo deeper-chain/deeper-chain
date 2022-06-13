@@ -80,6 +80,7 @@ use pallet_evm::{
     Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, PairedAddressMapping,
     PairedNpowAddressMapping, Runner,
 };
+use pallet_user_privileges::DefaultPrivilegeHandler;
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -489,6 +490,7 @@ impl pallet_operation::Config for Runtime {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type NpowAddressMapping = PairedNpowAddressMapping<Runtime>;
+    type UserPrivilegeInterface = DefaultPrivilegeHandler<Runtime>;
 }
 
 parameter_types! {

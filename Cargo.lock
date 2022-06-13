@@ -5494,6 +5494,7 @@ dependencies = [
  "pallet-credit",
  "pallet-evm",
  "pallet-timestamp",
+ "pallet-user-privileges",
  "parity-scale-codec",
  "scale-info",
  "serde",

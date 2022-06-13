@@ -32,7 +32,6 @@ pub type EraIndex = u32;
 
 pub trait OperationInterface<AccountId, Balance> {
     fn is_payment_address(account_id: AccountId) -> bool;
-    fn is_npow_mint_address(account_id: AccountId) -> bool;
     fn is_single_max_limit(pay_amount: Balance) -> bool;
 }
 
@@ -52,6 +51,7 @@ pub mod pallet {
     use frame_system::{self, ensure_signed};
     use pallet_credit::{CreditInterface, DPR};
     use pallet_evm::NpowAddressMapping;
+    use pallet_user_privileges::{Privilege, UserPrivilegeInterface};
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
@@ -79,6 +79,7 @@ pub mod pallet {
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
         type NpowAddressMapping: NpowAddressMapping<Self::AccountId>;
+        type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -201,10 +202,6 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn release_payment_address)]
     pub type ReleasePaymentAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn npow_mint_address)]
-    pub type NpowMintAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn total_daily_release)]
@@ -461,7 +458,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(
-                Self::is_npow_mint_address(who),
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::NpowMint),
                 Error::<T>::UnauthorizedAccounts
             );
             T::Currency::deposit_creating(&target, dpr);
@@ -565,10 +562,6 @@ pub mod pallet {
     impl<T: Config> OperationInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
         fn is_payment_address(user: T::AccountId) -> bool {
             Self::release_payment_address() == Some(user)
-        }
-
-        fn is_npow_mint_address(user: T::AccountId) -> bool {
-            Self::npow_mint_address() == Some(user)
         }
 
         fn is_single_max_limit(pay_amount: BalanceOf<T>) -> bool {
