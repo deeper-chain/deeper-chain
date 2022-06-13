@@ -82,6 +82,7 @@ impl pallet_user_privileges::Config for Test {
     type Event = Event;
     type ForceOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
+    type UserPrivilegeInterface = DefaultPrivilegeHandler<Self>;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {

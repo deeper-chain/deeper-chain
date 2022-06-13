@@ -41,7 +41,7 @@ pub mod pallet {
     pub use sp_core::H160;
     use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 
-    pub trait UserPrivilegeInterface<Account, Privilege> {
+    pub trait UserPrivilegeInterface<Account> {
         fn has_privilege(user: &Account, p: Privilege) -> bool;
         fn has_evm_privilege(user: &H160, p: Privilege) -> bool;
     }
@@ -107,6 +107,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type ForceOrigin: EnsureOrigin<Self::Origin>;
         type WeightInfo: WeightInfo;
+        type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -248,7 +249,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
-                Self::has_privilege(&sender, Privilege::EvmAddressSetter),
+                T::UserPrivilegeInterface::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
             let old_priv = Self::evm_address_privileges(&who);
@@ -271,7 +272,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
-                Self::has_privilege(&sender, Privilege::EvmAddressSetter),
+                T::UserPrivilegeInterface::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
             let old_priv = Self::evm_address_privileges(&who);
@@ -290,7 +291,7 @@ pub mod pallet {
         pub fn clear_evm_privilege(origin: OriginFor<T>, who: H160) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
-                Self::has_privilege(&sender, Privilege::EvmAddressSetter),
+                T::UserPrivilegeInterface::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
             EvmAddressPrivileges::<T>::remove(&who);
@@ -299,9 +300,11 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> UserPrivilegeInterface<T::AccountId, Privilege> for Pallet<T> {
+    pub struct DefaultPrivilegeHandler<T>(sp_std::marker::PhantomData<T>);
+
+    impl<T: Config> UserPrivilegeInterface<T::AccountId> for DefaultPrivilegeHandler<T> {
         fn has_privilege(user: &T::AccountId, p: Privilege) -> bool {
-            let privs = Self::user_privileges(user);
+            let privs = UserPrivileges::<T>::get(user);
             match privs {
                 None => false,
                 Some(privs) => privs.0.contains(p),
@@ -309,11 +312,21 @@ pub mod pallet {
         }
 
         fn has_evm_privilege(user: &H160, p: Privilege) -> bool {
-            let privs = Self::evm_address_privileges(user);
+            let privs = EvmAddressPrivileges::<T>::get(user);
             match privs {
                 None => false,
                 Some(privs) => privs.0.contains(p),
             }
+        }
+    }
+
+    impl<T: Config> UserPrivilegeInterface<T::AccountId> for Pallet<T> {
+        fn has_privilege(user: &T::AccountId, p: Privilege) -> bool {
+            T::UserPrivilegeInterface::has_privilege(user, p)
+        }
+
+        fn has_evm_privilege(user: &H160, p: Privilege) -> bool {
+            T::UserPrivilegeInterface::has_evm_privilege(user, p)
         }
     }
 }

@@ -477,6 +477,7 @@ impl pallet_user_privileges::Config for Runtime {
     type Event = Event;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>;
     type WeightInfo = pallet_user_privileges::weights::SubstrateWeight<Runtime>;
+    type UserPrivilegeInterface = pallet_user_privileges::DefaultPrivilegeHandler<Runtime>;
 }
 
 impl pallet_operation::Config for Runtime {
