@@ -25,13 +25,14 @@
 #[cfg(test)]
 mod mock;
 
+#[cfg(test)]
+mod tests;
+
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
 pub mod slashing;
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod testing_utils;
-#[cfg(test)]
-mod tests;
 pub mod weights;
 
 use codec::{Decode, Encode, HasCompact};
@@ -1913,7 +1914,7 @@ pub mod pallet {
                 StorageVersion::<T>::put(Releases::V6_0_0);
                 let mut to_be_removed = Vec::new();
                 for (account, balance) in DelegatorBalances::<T>::iter() {
-                    let (slash_score, extra_balance) = Self::calculate_added_credit(&account);
+                    let (slash_score, extra_balance) = Self::calc_extra_balance_credit(&account);
                     if slash_score == 0 {
                         continue;
                     }
@@ -2805,8 +2806,8 @@ impl<T: Config> pallet::Pallet<T> {
     }
 
     /// return values:
-    /// Should returned balance and should slashed credit
-    fn calculate_added_credit(account: &T::AccountId) -> (u64, BalanceOf<T>) {
+    /// tobe slashed credit and tobe slashed balance
+    fn calc_extra_balance_credit(account: &T::AccountId) -> (u64, BalanceOf<T>) {
         use sp_runtime::traits::UniqueSaturatedFrom;
         const DPR: u128 = 1_000_000_000_000_000_000;
         const FROM_ERA: u32 = 271;
@@ -2837,8 +2838,9 @@ impl<T: Config> pallet::Pallet<T> {
         if history.is_empty() || (history[0].1.campaign_id != 0 && history[0].1.campaign_id != 1) {
             return (0, 0u32.into());
         }
+
         let rewards = {
-            if history[0].1.campaign_id != 0 {
+            if history[0].1.campaign_id == 0 {
                 campaign0_reward
             } else {
                 campaign1_reward
@@ -2847,7 +2849,7 @@ impl<T: Config> pallet::Pallet<T> {
         let cur_era = T::CreditInterface::get_current_era();
         let len = history.len();
         let mut basic_credit = 0;
-        let mut basic_index = 0;
+        let mut slash_credit = 0;
         let mut extra_reward: BalanceOf<T> = 0u32.into();
         let mut caclulated_era = 0;
         let mut last_level: u8 = 0;
@@ -2855,19 +2857,21 @@ impl<T: Config> pallet::Pallet<T> {
         let mut is_first_staking = true;
         let mut last_credit = 0;
 
-        for i in 1..len {
+        for i in 0..len {
             let (era, credit_data) = &history[i];
             if *era <= FROM_ERA {
                 // get the credit before staking delegate
                 basic_credit = credit_data.credit;
                 last_credit = basic_credit;
-                basic_index = i;
                 continue;
             }
             // basic_level and basic_credit,here is const
             basic_level = T::CreditInterface::get_credit_level(basic_credit).into();
 
-            if credit_data.credit - last_credit >= 100 {
+            let diff = credit_data.credit.saturating_sub(last_credit);
+            // not 100,since just when staking delegate success ,slashing offline credit
+            if diff >= 99 {
+                slash_credit += diff;
                 // before first staking_delegate,the reward is legal
                 if is_first_staking {
                     is_first_staking = false;
@@ -2881,7 +2885,6 @@ impl<T: Config> pallet::Pallet<T> {
 
             last_credit = credit_data.credit;
         }
-
         // not happens,just for case
         if last_level <= basic_level {
             return (0, 0u32.into());
@@ -2889,9 +2892,7 @@ impl<T: Config> pallet::Pallet<T> {
 
         extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
             * ((cur_era - caclulated_era).into());
-        let slash_credit = (history[len - 1].1.credit - history[basic_index].1.credit) / 100;
-
-        (slash_credit * 100, extra_reward)
+        (slash_credit, extra_reward)
     }
 }
 
