@@ -2834,7 +2834,7 @@ impl<T: Config> pallet::Pallet<T> {
             UniqueSaturatedFrom::unique_saturated_from(102575 * DPR / 100),
         ];
         let history = T::CreditInterface::get_credit_history(account);
-        if history.is_empty() || history[0].1.campaign_id != 0 || history[0].1.campaign_id != 1 {
+        if history.is_empty() || (history[0].1.campaign_id != 0 && history[0].1.campaign_id != 1) {
             return (0, 0u32.into());
         }
         let rewards = {
