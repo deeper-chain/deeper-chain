@@ -217,6 +217,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
     fn do_unstaking_slash_credit(user: &AccountId) -> DispatchResult;
     fn burn_record(burn_amount: Balance) -> bool;
+    fn get_credit_history(account_id: &AccountId) -> Vec<(EraIndex, CreditData)>;
 }
 
 impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
@@ -269,6 +270,9 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     }
     fn do_unstaking_slash_credit(_user: &AccountId) -> DispatchResult {
         Ok(()).into()
+    }
+    fn get_credit_history(_account_id: &AccountId) -> Vec<(EraIndex, CreditData)> {
+        Vec::new()
     }
 }
 
@@ -1525,14 +1529,6 @@ pub mod pallet {
 
         fn do_unstaking_slash_credit(user: &T::AccountId) -> DispatchResult {
             let user_clone = user.clone();
-            // if !Self::is_first_campaign_end(user).unwrap_or(false) {
-            //     Self::deposit_event(Event::UnstakingResult(
-            //         user_clone,
-            //         "first campaign not end".to_string(),
-            //     ));
-            //     return Err(Error::<T>::FirstCampaignNotEnd.into());
-            // }
-
             let staking_score = Self::user_staking_credit(user);
             if staking_score.is_none() {
                 Self::deposit_event(Event::UnstakingResult(
@@ -1560,6 +1556,10 @@ pub mod pallet {
             Self::update_credit_history(&user, Self::get_current_era());
 
             Ok(())
+        }
+
+        fn get_credit_history(account_id: &T::AccountId) -> Vec<(EraIndex, CreditData)> {
+            Self::user_credit_history(account_id)
         }
     }
 

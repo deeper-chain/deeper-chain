@@ -1913,20 +1913,14 @@ pub mod pallet {
                 StorageVersion::<T>::put(Releases::V6_0_0);
                 let mut to_be_removed = Vec::new();
                 for (account, balance) in DelegatorBalances::<T>::iter() {
-                    let score = T::CreditInterface::get_credit_score(&account);
-                    if score.is_none() {
-                        continue;
-                    }
-                    let lv = T::CreditInterface::get_credit_level(score.unwrap()).into();
-
-                    let slash_score = Self::calculate_added_credit(&account, lv, balance);
+                    let (slash_score, extra_balance) = Self::calculate_added_credit(&account);
                     if slash_score == 0 {
                         continue;
                     }
                     let _ = T::Currency::transfer(
                         &Self::account_id(),
                         &account,
-                        balance,
+                        balance.saturating_sub(extra_balance),
                         ExistenceRequirement::AllowDeath,
                     );
                     T::CreditInterface::slash_credit(&account, Some(slash_score));
@@ -2812,45 +2806,92 @@ impl<T: Config> pallet::Pallet<T> {
 
     /// return values:
     /// Should returned balance and should slashed credit
-    fn calculate_added_credit(account: &T::AccountId, lv: u8, balance: BalanceOf<T>) -> u64 {
+    fn calculate_added_credit(account: &T::AccountId) -> (u64, BalanceOf<T>) {
         use sp_runtime::traits::UniqueSaturatedFrom;
         const DPR: u128 = 1_000_000_000_000_000_000;
-        let basic_credit_balances = vec![
-            UniqueSaturatedFrom::unique_saturated_from(1_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(30_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(50_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(60_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(80_000 * DPR),
-            UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR),
+        const FROM_ERA: u32 = 271;
+
+        let campaign0_reward: Vec<BalanceOf<T>> = vec![
+            0u32.into(),
+            UniqueSaturatedFrom::unique_saturated_from(2137 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(6026 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(11152 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(22307 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(39419 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(58389 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(82674 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(115400 * DPR / 100),
         ];
-        let credit_balances = T::CreditInterface::get_credit_balance(account);
-        if lv == 0 || balance.is_zero() || credit_balances.is_empty() {
-            return 0;
+        let campaign1_reward: Vec<BalanceOf<T>> = vec![
+            0u32.into(),
+            UniqueSaturatedFrom::unique_saturated_from(2137 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(5642 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(10521 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(21173 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(37030 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(54444 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(75616 * DPR / 100),
+            UniqueSaturatedFrom::unique_saturated_from(102575 * DPR / 100),
+        ];
+        let history = T::CreditInterface::get_credit_history(account);
+        if history.is_empty() || history[0].1.campaign_id != 0 || history[0].1.campaign_id != 1 {
+            return (0, 0u32.into());
         }
-
-        // if not genesis user, ignore
-        if credit_balances[1] == basic_credit_balances[1] {
-            return 0;
-        }
-
-        let mut lv = lv as usize;
-        let mut score = 0;
-        let mut remaining_balance = balance;
-        while remaining_balance > 0u32.into() && lv > 0 {
-            let gap = basic_credit_balances[lv] - basic_credit_balances[lv - 1];
-            // only hanppend when user increase credit level between two staking delegating
-            // so just add 100 credit and return
-            if remaining_balance < gap {
-                return score + 100;
+        let rewards = {
+            if history[0].1.campaign_id != 0 {
+                campaign0_reward
+            } else {
+                campaign1_reward
             }
-            remaining_balance -= gap;
-            score += 100;
-            lv -= 1;
+        };
+        let cur_era = T::CreditInterface::get_current_era();
+        let len = history.len();
+        let mut basic_credit = 0;
+        let mut basic_index = 0;
+        let mut extra_reward: BalanceOf<T> = 0u32.into();
+        let mut caclulated_era = 0;
+        let mut last_level: u8 = 0;
+        let mut basic_level: u8 = 0;
+        let mut is_first_staking = true;
+        let mut last_credit = 0;
+
+        for i in 1..len {
+            let (era, credit_data) = &history[i];
+            if *era <= FROM_ERA {
+                // get the credit before staking delegate
+                basic_credit = credit_data.credit;
+                last_credit = basic_credit;
+                basic_index = i;
+                continue;
+            }
+            // basic_level and basic_credit,here is const
+            basic_level = T::CreditInterface::get_credit_level(basic_credit).into();
+
+            if credit_data.credit - last_credit >= 100 {
+                // before first staking_delegate,the reward is legal
+                if is_first_staking {
+                    is_first_staking = false;
+                } else {
+                    extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
+                        * ((era - caclulated_era).into());
+                }
+                caclulated_era = *era;
+                last_level = T::CreditInterface::get_credit_level(credit_data.credit).into();
+            }
+
+            last_credit = credit_data.credit;
         }
-        return score;
+
+        // not happens,just for case
+        if last_level <= basic_level {
+            return (0, 0u32.into());
+        }
+
+        extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
+            * ((cur_era - caclulated_era).into());
+        let slash_credit = (history[len - 1].1.credit - history[basic_index].1.credit) / 100;
+
+        (slash_credit * 100, extra_reward)
     }
 }
 
