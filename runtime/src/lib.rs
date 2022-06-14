@@ -488,6 +488,7 @@ impl pallet_operation::Config for Runtime {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type NpowAddressMapping = PairedNpowAddressMapping<Runtime>;
+    type UserPrivilegeInterface = UserPrivileges;
 }
 
 parameter_types! {

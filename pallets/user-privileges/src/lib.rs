@@ -41,7 +41,7 @@ pub mod pallet {
     pub use sp_core::H160;
     use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 
-    pub trait UserPrivilegeInterface<Account, Privilege> {
+    pub trait UserPrivilegeInterface<Account> {
         fn has_privilege(user: &Account, p: Privilege) -> bool;
         fn has_evm_privilege(user: &H160, p: Privilege) -> bool;
     }
@@ -54,6 +54,7 @@ pub mod pallet {
         ReleaseSetter = 1 << 1,
         EvmAddressSetter = 1 << 2,
         EvmCreditOperation = 1 << 3,
+        NpowMint = 1 << 4,
     }
 
     /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
@@ -299,7 +300,7 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> UserPrivilegeInterface<T::AccountId, Privilege> for Pallet<T> {
+    impl<T: Config> UserPrivilegeInterface<T::AccountId> for Pallet<T> {
         fn has_privilege(user: &T::AccountId, p: Privilege) -> bool {
             let privs = Self::user_privileges(user);
             match privs {
@@ -314,6 +315,16 @@ pub mod pallet {
                 None => false,
                 Some(privs) => privs.0.contains(p),
             }
+        }
+    }
+
+    impl<Account> UserPrivilegeInterface<Account> for () {
+        fn has_privilege(_user: &Account, _p: Privilege) -> bool {
+            true
+        }
+
+        fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
+            true
         }
     }
 }

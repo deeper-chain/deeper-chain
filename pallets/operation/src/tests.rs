@@ -27,6 +27,7 @@ use sp_runtime::{
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
 use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
 use pallet_evm::NpowAddressMapping;
+use pallet_user_privileges::{Privilege, UserPrivilegeInterface};
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -124,7 +125,8 @@ impl pallet_operation::Config for Test {
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
-    type NpowAddressMapping = U128NpowAddressMapping;
+    type NpowAddressMapping = U128FakeNpowAddressMapping;
+    type UserPrivilegeInterface = U128FakeUserPrivilege;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -231,9 +233,9 @@ fn burn_for_ezc() {
     });
 }
 
-pub struct U128NpowAddressMapping;
+pub struct U128FakeNpowAddressMapping;
 
-impl NpowAddressMapping<u128> for U128NpowAddressMapping {
+impl NpowAddressMapping<u128> for U128FakeNpowAddressMapping {
     fn evm_to_deeper(_address: H160) -> Option<u128> {
         None
     }
@@ -243,6 +245,21 @@ impl NpowAddressMapping<u128> for U128NpowAddressMapping {
             return Some(H160::zero());
         }
         None
+    }
+}
+
+pub struct U128FakeUserPrivilege;
+
+impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
+    fn has_privilege(user: &u128, _p: Privilege) -> bool {
+        if user == &1 {
+            return true;
+        }
+        false
+    }
+
+    fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
+        true
     }
 }
 
@@ -270,7 +287,6 @@ fn get_npow_reward() {
 fn npow_mint() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        NpowMintAddress::<Test>::put(1);
         assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 100));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
