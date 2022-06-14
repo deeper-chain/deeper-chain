@@ -3143,7 +3143,7 @@ fn upgrade_for_slash_reward() {
 
             run_to_block(BLOCKS_PER_ERA * 271);
 
-            // before user ding stake delegate
+            // before user doing stake delegate
             let credit_data = pallet_credit::CreditData::new(0, 205);
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),
@@ -3236,6 +3236,8 @@ fn upgrade_for_slash_reward() {
             // 1039419_1705713783906280 + one day level8 reward=1154
             assert_eq!(Balances::free_balance(&61), 11548164088578989503480);
 
+            run_to_block(BLOCKS_PER_ERA * 275);
+
             Staking::on_runtime_upgrade();
             // will be 205,but be slashed by 1 when node offline
             assert_eq!(Credit::get_credit_score(&51).unwrap(), 204);
@@ -3243,7 +3245,7 @@ fn upgrade_for_slash_reward() {
             assert_eq!(Balances::free_balance(&51), 80120516901295750426040);
             // not bug for credit is not equel 204
             assert_eq!(Credit::get_credit_score(&61).unwrap(), 205);
-            // this balance shoule be 100_000* DPR + 3 days of level2 reward=60.26*2
+            // this balance shoule be 100_000* DPR + 2 days of level2 reward=60.26*2
             assert_eq!(Balances::free_balance(&61), 100120494088578989503480);
         });
 }

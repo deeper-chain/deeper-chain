@@ -2890,8 +2890,9 @@ impl<T: Config> pallet::Pallet<T> {
             return (0, 0u32.into());
         }
 
+        // use cur_era-1 ,because maybe current era's reward not pay
         extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
-            * ((cur_era - caclulated_era).into());
+            * (((cur_era - 1).saturating_sub(caclulated_era)).into());
         (slash_credit, extra_reward)
     }
 }
