@@ -90,7 +90,7 @@ pub mod pallet {
         fn type_info() -> Type {
             Type::builder()
                 .path(Path::new("BitFlags", module_path!()))
-                .type_params(sp_std::vec![TypeParameter::new(
+                .type_params(vec![TypeParameter::new(
                     "T",
                     Some(meta_type::<Privilege>()),
                 )])
@@ -302,7 +302,7 @@ pub mod pallet {
 
     impl<T: Config> UserPrivilegeInterface<T::AccountId> for Pallet<T> {
         fn has_privilege(user: &T::AccountId, p: Privilege) -> bool {
-            let privs = UserPrivileges::<T>::get(user);
+            let privs = Self::user_privileges(user);
             match privs {
                 None => false,
                 Some(privs) => privs.0.contains(p),
@@ -310,7 +310,7 @@ pub mod pallet {
         }
 
         fn has_evm_privilege(user: &H160, p: Privilege) -> bool {
-            let privs = EvmAddressPrivileges::<T>::get(user);
+            let privs = Self::evm_address_privileges(user);
             match privs {
                 None => false,
                 Some(privs) => privs.0.contains(p),
