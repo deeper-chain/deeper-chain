@@ -289,6 +289,7 @@ impl pallet_operation::Config for Test {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type NpowAddressMapping = ();
+    type UserPrivilegeInterface = ();
 }
 
 parameter_types! {

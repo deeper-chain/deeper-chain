@@ -80,7 +80,6 @@ use pallet_evm::{
     Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, PairedAddressMapping,
     PairedNpowAddressMapping, Runner,
 };
-use pallet_user_privileges::DefaultPrivilegeHandler;
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -478,7 +477,6 @@ impl pallet_user_privileges::Config for Runtime {
     type Event = Event;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>;
     type WeightInfo = pallet_user_privileges::weights::SubstrateWeight<Runtime>;
-    type UserPrivilegeInterface = pallet_user_privileges::DefaultPrivilegeHandler<Runtime>;
 }
 
 impl pallet_operation::Config for Runtime {
@@ -490,7 +488,7 @@ impl pallet_operation::Config for Runtime {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type NpowAddressMapping = PairedNpowAddressMapping<Runtime>;
-    type UserPrivilegeInterface = DefaultPrivilegeHandler<Runtime>;
+    type UserPrivilegeInterface = UserPrivileges;
 }
 
 parameter_types! {

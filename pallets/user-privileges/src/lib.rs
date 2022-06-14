@@ -108,7 +108,6 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type ForceOrigin: EnsureOrigin<Self::Origin>;
         type WeightInfo: WeightInfo;
-        type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -250,7 +249,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
-                T::UserPrivilegeInterface::has_privilege(&sender, Privilege::EvmAddressSetter),
+                Self::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
             let old_priv = Self::evm_address_privileges(&who);
@@ -273,7 +272,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
-                T::UserPrivilegeInterface::has_privilege(&sender, Privilege::EvmAddressSetter),
+                Self::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
             let old_priv = Self::evm_address_privileges(&who);
@@ -292,7 +291,7 @@ pub mod pallet {
         pub fn clear_evm_privilege(origin: OriginFor<T>, who: H160) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
-                T::UserPrivilegeInterface::has_privilege(&sender, Privilege::EvmAddressSetter),
+                Self::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
             EvmAddressPrivileges::<T>::remove(&who);
@@ -301,9 +300,7 @@ pub mod pallet {
         }
     }
 
-    pub struct DefaultPrivilegeHandler<T>(sp_std::marker::PhantomData<T>);
-
-    impl<T: Config> UserPrivilegeInterface<T::AccountId> for DefaultPrivilegeHandler<T> {
+    impl<T: Config> UserPrivilegeInterface<T::AccountId> for Pallet<T> {
         fn has_privilege(user: &T::AccountId, p: Privilege) -> bool {
             let privs = UserPrivileges::<T>::get(user);
             match privs {
@@ -321,13 +318,13 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> UserPrivilegeInterface<T::AccountId> for Pallet<T> {
-        fn has_privilege(user: &T::AccountId, p: Privilege) -> bool {
-            T::UserPrivilegeInterface::has_privilege(user, p)
+    impl<Account> UserPrivilegeInterface<Account> for () {
+        fn has_privilege(_user: &Account, _p: Privilege) -> bool {
+            true
         }
 
-        fn has_evm_privilege(user: &H160, p: Privilege) -> bool {
-            T::UserPrivilegeInterface::has_evm_privilege(user, p)
+        fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
+            true
         }
     }
 }
