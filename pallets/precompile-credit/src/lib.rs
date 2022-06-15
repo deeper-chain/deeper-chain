@@ -55,26 +55,6 @@ pub enum FunctionModifier {
     Payable,
 }
 
-// fn check_function_modifier(
-//     context: &Context,
-//     is_static: bool,
-//     modifier: FunctionModifier,
-// ) ->  Result<(),PrecompileFailure> {
-//     if is_static && modifier != FunctionModifier::View {
-//         return Err(PrecompileFailure::Error {
-//             exit_status: ExitError::Other("can't call non-static function in static context".into()),
-//         });
-//     }
-
-//     if modifier != FunctionModifier::Payable && context.apparent_value > U256::zero() {
-//         return Err(PrecompileFailure::Error {
-//             exit_status: ExitError::Other("function is not payable".into()),
-//         });
-//     }
-
-//     Ok(())
-// }
-
 pub struct CreditDispatch<Runtime> {
     _marker: PhantomData<Runtime>,
 }
@@ -144,6 +124,7 @@ where
 
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let origin = Runtime::AddressMapping::into_account_id(account);
+
         let score = pallet_credit::Pallet::<Runtime>::get_credit_score(&origin);
         let score = U256::from(score.unwrap_or(0));
         let mut output = vec![0; 32];
@@ -164,18 +145,7 @@ where
         is_static: bool,
         gasometer: &mut Gasometer,
     ) -> PrecompileResult {
-        Self::check_input_len(input, BASIC_LEN + 32)?;
-        gasometer.check_function_modifier(
-            context,
-            is_static,
-            util::FunctionModifier::NonPayable,
-        )?;
-
-        let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
-        let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
-        let origin = Runtime::AddressMapping::into_account_id(account);
-
-        pallet_credit::Pallet::<Runtime>::add_or_update_credit(origin, score);
+        Self::do_update_credit(input, context, is_static, gasometer, true)?;
 
         let weight = RuntimeHelper::<Runtime>::db_read_gas_cost() * 2
             + RuntimeHelper::<Runtime>::db_write_gas_cost();
@@ -194,6 +164,26 @@ where
         is_static: bool,
         gasometer: &mut Gasometer,
     ) -> PrecompileResult {
+        Self::do_update_credit(input, context, is_static, gasometer, false)?;
+        let weight = RuntimeHelper::<Runtime>::db_read_gas_cost() * 4
+            + RuntimeHelper::<Runtime>::db_write_gas_cost() * 2;
+        gasometer.record_cost(weight)?;
+
+        Ok(PrecompileOutput {
+            exit_status: ExitSucceed::Returned,
+            cost: gasometer.used_gas(),
+            output: Default::default(),
+            logs: Default::default(),
+        })
+    }
+
+    fn do_update_credit(
+        input: &[u8],
+        context: &Context,
+        is_static: bool,
+        gasometer: &mut Gasometer,
+        add_flag: bool,
+    ) -> Result<(), PrecompileFailure> {
         Self::check_input_len(input, BASIC_LEN + 32)?;
         gasometer.check_function_modifier(
             context,
@@ -204,16 +194,13 @@ where
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
         let origin = Runtime::AddressMapping::into_account_id(account);
 
-        let weight = pallet_credit::Pallet::<Runtime>::slash_credit(&origin, Some(score));
-
-        gasometer.record_cost(weight)?;
-
-        Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            cost: gasometer.used_gas(),
-            output: Default::default(),
-            logs: Default::default(),
-        })
+        pallet_credit::Pallet::<Runtime>::evm_update_credit(
+            &context.caller,
+            &origin,
+            score,
+            add_flag,
+        );
+        Ok(())
     }
 
     fn check_input_len(input: &[u8], base_len: usize) -> Result<(), PrecompileFailure> {

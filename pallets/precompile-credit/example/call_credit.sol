@@ -10,7 +10,7 @@ interface Credit {
 
 contract deeper {
     address private constant DISPATCH =
-        0x000000000000000000000000000000000000000A;
+        0x0000000000000000000000000000000000000406;
     event score(uint256 indexed);
 
     function toUint256(bytes memory _bytes)
@@ -27,7 +27,7 @@ contract deeper {
         (bool success, bytes memory x) = DISPATCH.call(
             abi.encodeWithSignature("get_credit_score(address)", query_address)
         );
-        require(success, "operation ok");
+        require(success, "get_credit_score not ok");
 
         uint256 y = toUint256(x);
         emit score(y);
@@ -43,7 +43,7 @@ contract deeper {
                 num
             )
         );
-        require(success, "operation ok");
+        require(success, "add_credit_score not ok");
     }
 
     function slash_credit_score(address query_address, uint256 num) public {
@@ -54,6 +54,6 @@ contract deeper {
                 num
             )
         );
-        require(success, "operation ok");
+        require(success, "slash_credit_score not ok");
     }
 }

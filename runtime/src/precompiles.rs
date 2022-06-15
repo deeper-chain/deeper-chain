@@ -54,10 +54,6 @@ where
             a if a == hash(7) => Some(Bn128Mul::execute(input, target_gas, context, is_static)),
             a if a == hash(8) => Some(Bn128Pairing::execute(input, target_gas, context, is_static)),
             a if a == hash(9) => Some(Blake2F::execute(input, target_gas, context, is_static)),
-            a if a == hash(9) => Some(Blake2F::execute(input, target_gas, context, is_static)),
-            a if a == hash(10) => Some(CreditDispatch::<R>::execute(
-                input, target_gas, context, is_static,
-            )),
 
             // Non-Frontier specific nor Ethereum precompiles :
             a if a == hash(1024) => {
@@ -76,6 +72,9 @@ where
                 input, target_gas, context, is_static,
             )),
             a if a == hash(1029) => Some(Ed25519Verify::execute(
+                input, target_gas, context, is_static,
+            )),
+            a if a == hash(1030) => Some(CreditDispatch::<R>::execute(
                 input, target_gas, context, is_static,
             )),
             _ => None,
