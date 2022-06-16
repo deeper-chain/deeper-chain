@@ -25,7 +25,7 @@ use frame_support::{
 use frame_system::RawOrigin;
 use mock::*;
 use pallet_balances::Error as BalancesError;
-use pallet_credit::{CreditInterface, CreditLevel};
+use pallet_credit::{CreditInterface, CreditLevel, CreditSetting, DPR};
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
 use sp_std::convert::TryFrom;
@@ -3028,5 +3028,224 @@ fn staking_delegate() {
 
             assert_eq!(Staking::delegators(&51).delegator, 51);
             assert_eq!(Staking::delegators(&51).delegating, true);
+        });
+}
+
+#[test]
+fn upgrade_for_slash_reward() {
+    ExtBuilder::default()
+        .validator_pool(true)
+        .build_and_execute(|| {
+            let credit_settings = vec![
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Zero,
+                    staking_balance: 0,
+                    base_apy: Percent::from_percent(0),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 0,
+                    reward_per_referee: 0,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::One,
+                    staking_balance: 20_000 * DPR,
+                    base_apy: Percent::from_percent(39),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 1,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Two,
+                    staking_balance: 46_800 * DPR,
+                    base_apy: Percent::from_percent(47),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 2,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Three,
+                    staking_balance: 76_800 * DPR,
+                    base_apy: Percent::from_percent(53),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 3,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Four,
+                    staking_balance: 138_000 * DPR,
+                    base_apy: Percent::from_percent(59),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 7,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Five,
+                    staking_balance: 218_000 * DPR,
+                    base_apy: Percent::from_percent(66),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 12,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Six,
+                    staking_balance: 288_000 * DPR,
+                    base_apy: Percent::from_percent(74),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 18,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Seven,
+                    staking_balance: 368_000 * DPR,
+                    base_apy: Percent::from_percent(82),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 25,
+                    reward_per_referee: 0 * DPR,
+                },
+                CreditSetting {
+                    campaign_id: 0,
+                    credit_level: CreditLevel::Eight,
+                    staking_balance: 468_000 * DPR,
+                    base_apy: Percent::from_percent(90),
+                    bonus_apy: Percent::from_percent(0),
+                    max_rank_with_bonus: 0u32,
+                    tax_rate: Percent::from_percent(0),
+                    max_referees_with_rewards: 34,
+                    reward_per_referee: 0 * DPR,
+                },
+            ];
+            for setting in credit_settings {
+                assert_ok!(Credit::update_credit_setting(Origin::root(), setting));
+            }
+
+            run_to_block(BLOCKS_PER_ERA * 271);
+
+            // before user doing stake delegate
+            let credit_data = pallet_credit::CreditData::new(0, 205);
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                51,
+                credit_data.clone()
+            ));
+            assert_ok!(Staking::delegate_any(51));
+
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                61,
+                credit_data
+            ));
+            assert_ok!(Staking::delegate_any(61));
+
+            run_to_block(BLOCKS_PER_ERA * 272 + 3);
+
+            Balances::make_free_balance_be(&51, 80_000 * DPR);
+            Balances::make_free_balance_be(&61, 100_000 * DPR);
+
+            // mock, to get wrong credit balances
+            let wrong_credit_data = pallet_credit::CreditData::new(4, 205);
+
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                51,
+                wrong_credit_data.clone()
+            ));
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                61,
+                wrong_credit_data.clone()
+            ));
+            // use wrong credit balance to staking delegate
+            assert_ok!(Staking::staking_delegate(Origin::signed(51), 4));
+            assert_ok!(Staking::staking_delegate(Origin::signed(61), 5));
+            assert_eq!(Balances::free_balance(&51), 60_000 * DPR);
+            assert_eq!(Balances::free_balance(&61), 60_000 * DPR);
+            // staking delegate success
+            assert_eq!(Credit::get_credit_score(&51).unwrap(), 405);
+            assert_eq!(Credit::get_credit_score(&61).unwrap(), 505);
+
+            let credit_data = pallet_credit::CreditData::new(0, 405);
+            //modify creditdat to  correct credit data
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                51,
+                credit_data
+            ));
+
+            let credit_data = pallet_credit::CreditData::new(0, 505);
+            //modify creditdat to  correct credit data
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                61,
+                credit_data
+            ));
+
+            run_to_block(BLOCKS_PER_ERA * 273 + 3);
+            // 60_000* DPR + one day level4 reward 223.07
+            assert_eq!(Balances::free_balance(&51), 60223068450647875213020);
+            // 60_000* DPR + one day level5 reward 394.19
+            assert_eq!(Balances::free_balance(&61), 60394191705713783906280);
+
+            assert_eq!(Credit::get_credit_score(&51).unwrap(), 404);
+            assert_eq!(Credit::get_credit_score(&61).unwrap(), 504);
+            let wrong_credit_data = pallet_credit::CreditData::new(4, 504);
+
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                61,
+                wrong_credit_data
+            ));
+            // use wrong credit balance to staking delegate
+            assert_ok!(Staking::staking_delegate(Origin::signed(61), 8));
+            assert_eq!(Credit::get_credit_score(&61).unwrap(), 804);
+
+            let credit_data = pallet_credit::CreditData::new(0, 804);
+            //modify creditdat to  correct credit data
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                61,
+                credit_data
+            ));
+
+            assert_eq!(Balances::free_balance(&61), 10394191705713783906280);
+
+            run_to_block(BLOCKS_PER_ERA * 274 + 3);
+            assert_eq!(Balances::free_balance(&51), 60446136901295750426040);
+            // 1039419_1705713783906280 + one day level8 reward=1154
+            assert_eq!(Balances::free_balance(&61), 11548164088578989503480);
+
+            run_to_block(BLOCKS_PER_ERA * 275);
+
+            Staking::on_runtime_upgrade();
+            // will be 205,but be slashed by 1 when node offline
+            assert_eq!(Credit::get_credit_score(&51).unwrap(), 204);
+            // this balance shoule be 80_000* DPR + 2 days of level2 reward=60.26*2
+            assert_eq!(Balances::free_balance(&51), 80120516901295750426040);
+            // not bug for credit is not equel 204
+            assert_eq!(Credit::get_credit_score(&61).unwrap(), 205);
+            // this balance shoule be 100_000* DPR + 2 days of level2 reward=60.26*2
+            assert_eq!(Balances::free_balance(&61), 100120494088578989503480);
         });
 }
