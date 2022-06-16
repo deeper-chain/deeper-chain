@@ -64,3 +64,15 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
+
+/// Interface for verify device signature
+pub trait VerifySignatureInterface<AccountId> {
+    /// verify device signature
+    fn verify_atomos_signature(nonce: u64, signature: &[u8], sender: AccountId) -> bool;
+}
+
+impl<AccountId> VerifySignatureInterface<AccountId> for () {
+    fn verify_atomos_signature(_nonce: u64, _signature: &[u8], _sender: AccountId) -> bool {
+        true
+    }
+}
