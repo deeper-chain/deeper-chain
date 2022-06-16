@@ -46,6 +46,7 @@ pub mod pallet {
     use frame_support::traits::Currency;
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
+    use node_primitives::VerifySignatureInterface;
     use pallet_credit::CreditInterface;
     use pallet_micropayment::AccountCreator;
     use sp_core::crypto::UncheckedFrom;
@@ -144,7 +145,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         pub fn verify_atomos_signature(
             nonce: u64,
-            signature: &Vec<u8>,
+            signature: &[u8],
             sender: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let mut pk = [0u8; 32];
@@ -170,6 +171,12 @@ pub mod pallet {
             ensure!(verified, Error::<T>::InvalidSignature);
 
             Ok(().into())
+        }
+    }
+
+    impl<T: Config> VerifySignatureInterface<T::AccountId> for Pallet<T> {
+        fn verify_atomos_signature(nonce: u64, signature: &[u8], sender: T::AccountId) -> bool {
+            Self::verify_atomos_signature(nonce, signature, sender.clone()).is_ok()
         }
     }
 }
