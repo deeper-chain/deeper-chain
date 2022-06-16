@@ -55,6 +55,8 @@ pub mod pallet {
         EvmAddressSetter = 1 << 2,
         EvmCreditOperation = 1 << 3,
         NpowMint = 1 << 4,
+        CreditAdmin = 1 << 5,
+        TipPayer = 1 << 6,
     }
 
     /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
@@ -101,6 +103,7 @@ pub mod pallet {
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
     pub enum Releases {
         V1_0_0,
+        V2_0_0,
     }
 
     #[pallet::config]
@@ -154,7 +157,8 @@ pub mod pallet {
             use frame_support::traits::ConstU32;
             use frame_support::WeakBoundedVec;
 
-            if StorageVersion::<T>::get().is_none() {
+            let version = StorageVersion::<T>::get();
+            if version.is_none() {
                 let lockers = get_storage_value::<WeakBoundedVec<T::AccountId, ConstU32<50>>>(
                     b"Operation",
                     b"LockMemberWhiteList",
@@ -180,6 +184,22 @@ pub mod pallet {
 
                 StorageVersion::<T>::put(Releases::V1_0_0);
                 return T::DbWeight::get().reads_writes(1, 1);
+            } else if version == Some(Releases::V1_0_0) {
+                let tip_payer =
+                    get_storage_value::<T::AccountId>(b"Tips", b"TipPaymentAddress", &[]);
+                if let Some(tip_payer) = tip_payer {
+                    UserPrivileges::<T>::insert(tip_payer, Privileges(Privilege::TipPayer.into()));
+                }
+                let credit_admin =
+                    get_storage_value::<T::AccountId>(b"Credit", b"CreditAdmin", &[]);
+                if let Some(credit_admin) = credit_admin {
+                    UserPrivileges::<T>::insert(
+                        credit_admin,
+                        Privileges(Privilege::CreditAdmin.into()),
+                    );
+                }
+                StorageVersion::<T>::put(Releases::V2_0_0);
+                return T::DbWeight::get().reads_writes(2, 2);
             }
             0
         }
