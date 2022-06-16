@@ -282,6 +282,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use pallet_deeper_node::NodeInterface;
     use scale_info::prelude::string::{String, ToString};
+    use sp_core::H160;
     use sp_runtime::{
         traits::{Saturating, UniqueSaturatedFrom, Zero},
         Perbill,
@@ -926,6 +927,28 @@ pub mod pallet {
             Self::credit_admin() == Some(user)
         }
 
+        // todo: check _caller's right in next pr
+        pub fn evm_update_credit(_caller: &H160, user: &T::AccountId, score: u64, add_flag: bool) {
+            if add_flag {
+                let credit_data = {
+                    match UserCredit::<T>::get(user) {
+                        Some(mut credit_data) => {
+                            let new_score = credit_data.credit.saturating_add(score);
+                            credit_data.update(new_score);
+                            credit_data
+                        }
+                        None => {
+                            let default_id = Self::default_campaign_id();
+                            CreditData::new(default_id, score)
+                        }
+                    }
+                };
+                Self::do_add_credit(user.clone(), credit_data);
+            } else {
+                Self::slash_credit(user, Some(score));
+            }
+        }
+
         pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             let eras = T::NodeInterface::get_eras_offline(&account_id);
@@ -1197,7 +1220,7 @@ pub mod pallet {
             let credit_data = {
                 match UserCredit::<T>::get(account_id.clone()) {
                     Some(mut credit_data) => {
-                        let new_score = credit_data.credit + credit_gap;
+                        let new_score = credit_data.credit.saturating_add(credit_gap);
                         credit_data.update(new_score);
                         credit_data
                     }
@@ -1525,14 +1548,6 @@ pub mod pallet {
 
         fn do_unstaking_slash_credit(user: &T::AccountId) -> DispatchResult {
             let user_clone = user.clone();
-            // if !Self::is_first_campaign_end(user).unwrap_or(false) {
-            //     Self::deposit_event(Event::UnstakingResult(
-            //         user_clone,
-            //         "first campaign not end".to_string(),
-            //     ));
-            //     return Err(Error::<T>::FirstCampaignNotEnd.into());
-            // }
-
             let staking_score = Self::user_staking_credit(user);
             if staking_score.is_none() {
                 Self::deposit_event(Event::UnstakingResult(

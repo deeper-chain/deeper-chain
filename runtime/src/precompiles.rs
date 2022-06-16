@@ -8,6 +8,7 @@ use pallet_evm_precompile_simple::{ECRecover, ECRecoverPublicKey, Identity, Ripe
 
 use pallet_evm_precompile_blake2::Blake2F;
 use pallet_evm_precompile_bn128::{Bn128Add, Bn128Mul, Bn128Pairing};
+use pallet_evm_precompile_credit::CreditDispatch;
 use pallet_evm_precompile_curve25519::{Curve25519Add, Curve25519ScalarMul};
 use pallet_evm_precompile_dispatch::Dispatch;
 use pallet_evm_precompile_ed25519::Ed25519Verify;
@@ -22,7 +23,7 @@ where
         Self(Default::default())
     }
     pub fn used_addresses() -> sp_std::vec::Vec<H160> {
-        sp_std::vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1024, 1025, 1026, 1027, 1028, 1029]
+        sp_std::vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1024, 1025, 1026, 1027, 1028, 1029]
             .into_iter()
             .map(hash)
             .collect()
@@ -30,8 +31,9 @@ where
 }
 impl<R> PrecompileSet for FrontierPrecompiles<R>
 where
+    CreditDispatch<R>: Precompile,
     Dispatch<R>: Precompile,
-    R: pallet_evm::Config,
+    R: pallet_credit::Config + pallet_evm::Config,
 {
     fn execute(
         &self,
@@ -52,6 +54,7 @@ where
             a if a == hash(7) => Some(Bn128Mul::execute(input, target_gas, context, is_static)),
             a if a == hash(8) => Some(Bn128Pairing::execute(input, target_gas, context, is_static)),
             a if a == hash(9) => Some(Blake2F::execute(input, target_gas, context, is_static)),
+
             // Non-Frontier specific nor Ethereum precompiles :
             a if a == hash(1024) => {
                 Some(Sha3FIPS256::execute(input, target_gas, context, is_static))
@@ -69,6 +72,9 @@ where
                 input, target_gas, context, is_static,
             )),
             a if a == hash(1029) => Some(Ed25519Verify::execute(
+                input, target_gas, context, is_static,
+            )),
+            a if a == hash(1030) => Some(CreditDispatch::<R>::execute(
                 input, target_gas, context, is_static,
             )),
             _ => None,
