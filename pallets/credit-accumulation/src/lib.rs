@@ -175,8 +175,8 @@ pub mod pallet {
     }
 
     impl<T: Config> VerifySignatureInterface<T::AccountId> for Pallet<T> {
-        fn verify_atomos_signature(nonce: u64, signature: &[u8], sender: T::AccountId) -> bool {
-            Self::verify_atomos_signature(nonce, signature, sender.clone()).is_ok()
+        fn verify_atomos_signature(nonce: u64, signature: Vec<u8>, sender: T::AccountId) -> bool {
+            Self::verify_atomos_signature(nonce, &signature, sender.clone()).is_ok()
         }
     }
 }

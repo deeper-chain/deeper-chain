@@ -51,11 +51,13 @@ use frame_support::{
     PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
+use node_primitives::VerifySignatureInterface;
 pub use pallet::*;
 use pallet_credit::CreditInterface;
 use pallet_deeper_node::NodeInterface;
 use pallet_operation::OperationInterface;
 use pallet_session::historical;
+use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{
         AccountIdConversion, AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable,
@@ -76,8 +78,6 @@ use sp_std::{
     convert::From, convert::TryInto, prelude::*,
 };
 pub use weights::WeightInfo;
-
-use scale_info::TypeInfo;
 
 const STAKING_ID: LockIdentifier = *b"staking ";
 pub const MAX_UNLOCKING_CHUNKS: usize = 32;
@@ -643,6 +643,8 @@ pub mod pallet {
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
+        /// verify dev signature
+        type VerifySignatureInterface: VerifySignatureInterface<Self::AccountId>;
     }
 
     #[pallet::type_value]
@@ -1006,46 +1008,19 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::staking_delegate())]
-        pub fn staking_delegate(origin: OriginFor<T>, dst_level: u8) -> DispatchResult {
+        pub fn staking_delegate(
+            origin: OriginFor<T>,
+            nonce: u64,
+            signature: Vec<u8>,
+            dst_level: u8,
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            let credit_balances = T::CreditInterface::get_credit_balance(&who);
-            let len = credit_balances.len();
 
-            ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
-            ensure!(
-                usize::from(dst_level) < len,
-                Error::<T>::TargetLevelNotCorrect
-            );
-
-            let credit_score = T::CreditInterface::get_credit_score(&who);
-            let (need_balance, score_gap) = {
-                if let Some(credit_score) = credit_score {
-                    let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
-                    ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
-                    let need_balance = credit_balances[dst_level as usize]
-                        .saturating_sub(credit_balances[cur_level as usize]);
-                    let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
-                    (need_balance, score_gap)
-                } else {
-                    let need_balance = credit_balances[dst_level as usize];
-                    let score_gap = T::CreditInterface::get_credit_gap(dst_level, 0);
-                    (need_balance, score_gap)
-                }
-            };
-
-            T::Currency::transfer(
-                &who,
-                &Self::account_id(),
-                need_balance,
-                ExistenceRequirement::KeepAlive,
-            )?;
-            DelegatorBalances::<T>::mutate(&who, |balance| {
-                *balance = balance.saturating_add(need_balance)
-            });
-            T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
-            Self::delegate_any(who.clone())?;
-            Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level));
-            Ok(())
+            if !T::VerifySignatureInterface::verify_atomos_signature(nonce, signature, who.clone())
+            {
+                Err(Error::<T>::SignatureVerifyFailed)?
+            }
+            Self::do_staking_delegate(who, dst_level)
         }
 
         /// Take the origin account as a stash and lock up `value` of its balance. `controller` will
@@ -2084,6 +2059,8 @@ pub mod pallet {
         PaymentsExceedingLimits,
         /// not allow update credit level
         NotAllowUpdateCrdit,
+        /// fail for verify signature
+        SignatureVerifyFailed,
     }
 }
 
@@ -2894,6 +2871,47 @@ impl<T: Config> pallet::Pallet<T> {
         extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
             * (((cur_era - 1).saturating_sub(caclulated_era)).into());
         (slash_credit, extra_reward)
+    }
+
+    fn do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
+        let credit_balances = T::CreditInterface::get_credit_balance(&who);
+        let len = credit_balances.len();
+
+        ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
+        ensure!(
+            usize::from(dst_level) < len,
+            Error::<T>::TargetLevelNotCorrect
+        );
+
+        let credit_score = T::CreditInterface::get_credit_score(&who);
+        let (need_balance, score_gap) = {
+            if let Some(credit_score) = credit_score {
+                let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
+                ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
+                let need_balance = credit_balances[dst_level as usize]
+                    .saturating_sub(credit_balances[cur_level as usize]);
+                let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
+                (need_balance, score_gap)
+            } else {
+                let need_balance = credit_balances[dst_level as usize];
+                let score_gap = T::CreditInterface::get_credit_gap(dst_level, 0);
+                (need_balance, score_gap)
+            }
+        };
+
+        T::Currency::transfer(
+            &who,
+            &Self::account_id(),
+            need_balance,
+            ExistenceRequirement::KeepAlive,
+        )?;
+        DelegatorBalances::<T>::mutate(&who, |balance| {
+            *balance = balance.saturating_add(need_balance)
+        });
+        T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
+        Self::delegate_any(who.clone())?;
+        Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level));
+        Ok(())
     }
 }
 

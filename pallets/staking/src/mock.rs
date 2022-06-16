@@ -388,6 +388,7 @@ impl Config for Test {
     type NumberToCurrency = NumberCurrencyConverter;
     type TotalMiningReward = MiningReward;
     type ExistentialDeposit = ExistentialDeposit;
+    type VerifySignatureInterface = ();
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test

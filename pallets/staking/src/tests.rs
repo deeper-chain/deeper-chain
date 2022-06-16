@@ -3002,7 +3002,7 @@ fn staking_delegate() {
                 ]
             ));
             assert_eq!(Balances::free_balance(&51), 2000);
-            assert_ok!(Staking::staking_delegate(Origin::signed(51), 1));
+            assert_ok!(Staking::do_staking_delegate(51, 1));
             let credit_balances = Credit::get_credit_balance(&51);
             let pay = credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay);
@@ -3017,7 +3017,7 @@ fn staking_delegate() {
             );
             assert_eq!(Credit::user_credit(&51).unwrap().reward_eras, 10 * 365);
 
-            assert_ok!(Staking::staking_delegate(Origin::signed(51), 3));
+            assert_ok!(Staking::do_staking_delegate(51, 3));
             let sec_pay = credit_balances[3] - credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay - sec_pay);
             assert_eq!(Credit::user_credit(&51).unwrap().credit, 300);
@@ -3178,8 +3178,8 @@ fn upgrade_for_slash_reward() {
                 wrong_credit_data.clone()
             ));
             // use wrong credit balance to staking delegate
-            assert_ok!(Staking::staking_delegate(Origin::signed(51), 4));
-            assert_ok!(Staking::staking_delegate(Origin::signed(61), 5));
+            assert_ok!(Staking::do_staking_delegate(51, 4));
+            assert_ok!(Staking::do_staking_delegate(61, 5));
             assert_eq!(Balances::free_balance(&51), 60_000 * DPR);
             assert_eq!(Balances::free_balance(&61), 60_000 * DPR);
             // staking delegate success
@@ -3218,7 +3218,7 @@ fn upgrade_for_slash_reward() {
                 wrong_credit_data
             ));
             // use wrong credit balance to staking delegate
-            assert_ok!(Staking::staking_delegate(Origin::signed(61), 8));
+            assert_ok!(Staking::do_staking_delegate(61, 8));
             assert_eq!(Credit::get_credit_score(&61).unwrap(), 804);
 
             let credit_data = pallet_credit::CreditData::new(0, 804);
