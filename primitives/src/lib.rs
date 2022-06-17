@@ -20,6 +20,7 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use scale_info::prelude::vec::Vec;
 use sp_runtime::{
     generic,
     traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -64,3 +65,15 @@ pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
+
+/// Interface for verify device signature
+pub trait VerifySignatureInterface<AccountId> {
+    /// verify device signature
+    fn verify_atomos_signature(nonce: u64, signature: Vec<u8>, sender: AccountId) -> bool;
+}
+
+impl<AccountId> VerifySignatureInterface<AccountId> for () {
+    fn verify_atomos_signature(_nonce: u64, _signature: Vec<u8>, _sender: AccountId) -> bool {
+        true
+    }
+}

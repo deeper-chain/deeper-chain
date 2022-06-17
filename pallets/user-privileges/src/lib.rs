@@ -90,7 +90,7 @@ pub mod pallet {
         fn type_info() -> Type {
             Type::builder()
                 .path(Path::new("BitFlags", module_path!()))
-                .type_params(vec![TypeParameter::new(
+                .type_params(sp_std::vec![TypeParameter::new(
                     "T",
                     Some(meta_type::<Privilege>()),
                 )])
