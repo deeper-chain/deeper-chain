@@ -208,6 +208,8 @@ fn report_credit_proof() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::report_credit_proof(
             Origin::signed(1),
+            0,
+            Vec::new(),
             1655007560,
             1073741824000000,
             4294967295

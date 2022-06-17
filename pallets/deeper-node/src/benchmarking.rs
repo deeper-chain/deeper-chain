@@ -108,7 +108,8 @@ benchmarks! {
 
     report_credit_proof {
         let admin: T::AccountId = account("a", 0, SEED);
-    }: report_credit_proof(RawOrigin::Signed(admin.clone()), 1655007560, 1073741824000000, 4294967295)
+    }: report_credit_proof(RawOrigin::Signed(admin.clone()),0,
+    Vec::new(), 1655007560, 1073741824000000, 4294967295)
     verify {
         assert_eq!(DeviceCreditProof::<T>::get(&admin), (1655007560, 1073741824000000, 4294967295));
     }
