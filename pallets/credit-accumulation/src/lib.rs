@@ -88,8 +88,8 @@ pub mod pallet {
     pub(super) type AtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
 
     #[pallet::storage]
-    #[pallet::getter(fn temp_atmos_accountid)]
-    pub(super) type TempAtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
+    #[pallet::getter(fn tmp_atmos_accountid)]
+    pub(super) type TmpAtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
 
     #[pallet::event]
     //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
@@ -109,7 +109,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            let tmp_accout_id = Self::temp_atmos_accountid();
+            let tmp_accout_id = Self::tmp_atmos_accountid();
             if tmp_accout_id.is_some() {
                 return T::DbWeight::get().reads_writes(1, 0);
             }
@@ -117,7 +117,7 @@ pub mod pallet {
             if old_account_id.is_none() {
                 return T::DbWeight::get().reads_writes(2, 0);
             }
-            TempAtmosAccountid::<T>::put(old_account_id.unwrap());
+            TmpAtmosAccountid::<T>::put(old_account_id.unwrap());
             T::DbWeight::get().reads_writes(2, 1)
         }
     }
@@ -157,6 +157,16 @@ pub mod pallet {
             <AtmosAccountid<T>>::put(pubkey);
             Ok(().into())
         }
+
+        #[pallet::weight(T::WeightInfo::set_atmos_pubkey())]
+        pub fn set_atmos_tmp_pubkey(
+            origin: OriginFor<T>,
+            pubkey: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            <TmpAtmosAccountid<T>>::put(pubkey);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -168,7 +178,7 @@ pub mod pallet {
             let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
                 .expect("infinite input; qed");
             let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account.clone());
-            let tmp_atomos_accountid = Self::temp_atmos_accountid().unwrap_or(zero_account);
+            let tmp_atomos_accountid = Self::tmp_atmos_accountid().unwrap_or(zero_account);
             match Self::do_verify(nonce, signature, sender.clone(), atomos_accountid) {
                 Err(_) => Self::do_verify(nonce, signature, sender, tmp_atomos_accountid),
                 Ok(_) => Ok(().into()),

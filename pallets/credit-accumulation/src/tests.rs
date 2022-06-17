@@ -211,10 +211,15 @@ fn verify_atomos_signature() {
     new_test_ext().execute_with(|| {
         assert_ok!(CreditAccumulation::set_atmos_pubkey(
             RawOrigin::Root.into(),
+            charlie(),
+        ));
+        assert_ok!(CreditAccumulation::set_atmos_tmp_pubkey(
+            RawOrigin::Root.into(),
             bob(),
         ));
+
         let nonce: u64 = 1;
-        let atomos_accountid = CreditAccumulation::atmos_accountid().unwrap();
+        let atomos_accountid = CreditAccumulation::tmp_atmos_accountid().unwrap();
         let mut pk = [0u8; 32];
         pk.copy_from_slice(&atomos_accountid.encode());
         let pub_key = sp_core::sr25519::Public::from_raw(pk);
