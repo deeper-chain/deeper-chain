@@ -190,6 +190,7 @@ impl pallet_deeper_node::Config for Test {
     type BlocksPerEra = BlocksPerEra;
     type MaxIpLength = MaxIpLength;
     type WeightInfo = ();
+    type VerifySignatureInterface = ();
 }
 
 pub struct TestAccountCreator;

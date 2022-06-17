@@ -87,6 +87,10 @@ pub mod pallet {
     #[pallet::getter(fn atmos_accountid)]
     pub(super) type AtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn temp_atmos_accountid)]
+    pub(super) type TempAtmosAccountid<T: Config> = StorageValue<_, T::AccountId>;
+
     #[pallet::event]
     //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -103,7 +107,20 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_runtime_upgrade() -> frame_support::weights::Weight {
+            let tmp_accout_id = Self::temp_atmos_accountid();
+            if tmp_accout_id.is_some() {
+                return T::DbWeight::get().reads_writes(1, 0);
+            }
+            let old_account_id = Self::atmos_accountid();
+            if old_account_id.is_none() {
+                return T::DbWeight::get().reads_writes(2, 0);
+            }
+            TempAtmosAccountid::<T>::put(old_account_id.unwrap());
+            T::DbWeight::get().reads_writes(2, 1)
+        }
+    }
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
@@ -148,15 +165,27 @@ pub mod pallet {
             signature: &[u8],
             sender: T::AccountId,
         ) -> DispatchResultWithPostInfo {
-            let mut pk = [0u8; 32];
             let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
                 .expect("infinite input; qed");
-            let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account);
+            let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account.clone());
+            let tmp_atomos_accountid = Self::temp_atmos_accountid().unwrap_or(zero_account);
+            match Self::do_verify(nonce, signature, sender.clone(), atomos_accountid) {
+                Err(_) => Self::do_verify(nonce, signature, sender, tmp_atomos_accountid),
+                Ok(_) => Ok(().into()),
+            }
+        }
+
+        fn do_verify(
+            nonce: u64,
+            signature: &[u8],
+            sender: T::AccountId,
+            atomos_accountid: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let mut pk = [0u8; 32];
             pk.copy_from_slice(&atomos_accountid.encode());
+
             let pub_key = sr25519::Public::from_raw(pk);
-
             let sig = sr25519::Signature::from_slice(&signature);
-
             let mut data = Vec::new();
             data.extend_from_slice(&atomos_accountid.encode());
             data.extend_from_slice(&nonce.to_be_bytes());
@@ -169,7 +198,6 @@ pub mod pallet {
                 &pub_key,
             );
             ensure!(verified, Error::<T>::InvalidSignature);
-
             Ok(().into())
         }
     }
