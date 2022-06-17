@@ -204,13 +204,20 @@ fn im_online() {
 }
 
 #[test]
-fn set_device_system_time() {
+fn report_credit_proof() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::set_device_system_time(
+        assert_ok!(DeeperNode::report_credit_proof(
             Origin::signed(1),
-            1654678525000
+            0,
+            Vec::new(),
+            1655007560,
+            1073741824000000,
+            4294967295
         ));
-        assert_eq!(DeeperNode::device_system_time(1), 1654678525000);
+        assert_eq!(
+            DeeperNode::device_credit_proof(1),
+            (1655007560, 1073741824000000, 4294967295)
+        );
     });
 }
 

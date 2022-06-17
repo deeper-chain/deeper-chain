@@ -1203,6 +1203,7 @@ impl pallet_deeper_node::Config for Runtime {
     type BlocksPerEra = BlocksPerEra;
     type MaxIpLength = MaxIpLength;
     type WeightInfo = pallet_deeper_node::weights::SubstrateWeight<Runtime>;
+    type VerifySignatureInterface = CreditAccumulation;
 }
 
 parameter_types! {

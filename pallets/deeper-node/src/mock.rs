@@ -30,6 +30,7 @@ use node_primitives::{Balance, BlockNumber, Moment};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type AccountId = u64;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -60,7 +61,7 @@ impl system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -112,6 +113,7 @@ impl pallet_deeper_node::Config for Test {
     type BlocksPerEra = BlocksPerEra;
     type MaxIpLength = MaxIpLength;
     type WeightInfo = ();
+    type VerifySignatureInterface = ();
 }
 
 // Build genesis storage according to the mock runtime.

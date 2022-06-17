@@ -106,11 +106,12 @@ benchmarks! {
 
     }
 
-    set_device_system_time {
+    report_credit_proof {
         let admin: T::AccountId = account("a", 0, SEED);
-    }: set_device_system_time(RawOrigin::Signed(admin.clone()), 1654678525000)
+    }: report_credit_proof(RawOrigin::Signed(admin.clone()),0,
+    Vec::new(), 1655007560, 1073741824000000, 4294967295)
     verify {
-        assert_eq!(DeviceSystemUpTime::<T>::get(&admin), 1654678525000);
+        assert_eq!(DeviceCreditProof::<T>::get(&admin), (1655007560, 1073741824000000, 4294967295));
     }
 }
 

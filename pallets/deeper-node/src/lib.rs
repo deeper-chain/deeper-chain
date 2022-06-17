@@ -90,6 +90,7 @@ pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
+    use node_primitives::VerifySignatureInterface;
     use sp_std::convert::TryInto;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
@@ -105,6 +106,7 @@ pub mod pallet {
         type MaxIpLength: Get<usize>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+        type VerifySignatureInterface: VerifySignatureInterface<Self::AccountId>;
     }
 
     type BalanceOf<T> =
@@ -140,9 +142,9 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, CountryRegion, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn device_system_time)]
-    pub type DeviceSystemUpTime<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, u64, ValueQuery>;
+    #[pallet::getter(fn device_credit_proof)]
+    pub type DeviceCreditProof<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, (u32, u64, u32), ValueQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn servers_by_region)]
@@ -204,7 +206,7 @@ pub mod pallet {
 
         ImOnline(T::AccountId, T::BlockNumber),
 
-        SystemUpTime(T::AccountId, u64),
+        DeviceCreditProof(T::AccountId, u32, u64, u32),
     }
 
     // Errors inform users that something went wrong.
@@ -226,6 +228,8 @@ pub mod pallet {
         DurationOverflow,
         /// region map is not initialized
         InvalidRegionMap,
+        /// signature verify failed
+        SignatureVerifyFailed,
     }
 
     #[pallet::hooks]
@@ -351,14 +355,35 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::set_device_system_time())]
-        pub fn set_device_system_time(
+        #[pallet::weight(T::WeightInfo::report_credit_proof())]
+        pub fn report_credit_proof(
             origin: OriginFor<T>,
-            system_time: u64,
+            nonce: u64,
+            signature: Vec<u8>,
+            timestamp: u32,
+            daily_sharing_traffic: u64,
+            daily_uptime: u32,
         ) -> DispatchResultWithPostInfo {
             let device_account = ensure_signed(origin)?;
-            <DeviceSystemUpTime<T>>::insert(&device_account, system_time);
-            Self::deposit_event(Event::SystemUpTime(device_account, system_time));
+            ensure!(
+                T::VerifySignatureInterface::verify_atomos_signature(
+                    nonce,
+                    signature,
+                    device_account.clone()
+                ),
+                Error::<T>::SignatureVerifyFailed
+            );
+
+            <DeviceCreditProof<T>>::insert(
+                &device_account,
+                (timestamp, daily_sharing_traffic, daily_uptime),
+            );
+            Self::deposit_event(Event::DeviceCreditProof(
+                device_account,
+                timestamp,
+                daily_sharing_traffic,
+                daily_uptime,
+            ));
             Ok(().into())
         }
     }
