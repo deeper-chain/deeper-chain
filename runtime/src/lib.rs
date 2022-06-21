@@ -93,11 +93,9 @@ pub use pallet_staking::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-type AccountPublic = <Signature as Verify>::Signer;
 use sp_io::crypto::sr25519_generate;
-use sp_runtime::traits::{IdentifyAccount, Verify};
-use sp_runtime::MultiSigner;
-use sp_std::{borrow::ToOwned, vec::Vec};
+use sp_runtime::{MultiSigner,traits::Verify};
+use sp_std::vec::Vec;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
 pub mod impls;
@@ -1165,24 +1163,12 @@ pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
     sr25519_generate(0.into(), Some(seed)).into()
 }
 
-pub struct DefaultAccountCreator;
-
-impl pallet_micropayment::AccountCreator<AccountId> for DefaultAccountCreator {
-    fn create_account(s: &'static str) -> AccountId {
-        let seed = "//".to_owned() + &s;
-        let signer = create_sr25519_pubkey(seed.as_bytes().to_vec());
-        let account_id: AccountId = AccountPublic::from(signer).into_account();
-        account_id
-    }
-}
-
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
-    type AccountCreator = DefaultAccountCreator;
     type WeightInfo = pallet_micropayment::weights::SubstrateWeight<Runtime>;
     type NodeInterface = DeeperNode;
     type MicropaymentBurn = MicropaymentBurn;
@@ -1258,7 +1244,6 @@ impl pallet_credit_accumulation::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type CreditInterface = Credit;
-    type AccountCreator = DefaultAccountCreator;
     type WeightInfo = pallet_credit_accumulation::weights::SubstrateWeight<Runtime>;
 }
 

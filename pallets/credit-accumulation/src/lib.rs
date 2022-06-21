@@ -48,7 +48,6 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use node_primitives::VerifySignatureInterface;
     use pallet_credit::CreditInterface;
-    use pallet_micropayment::AccountCreator;
     use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
@@ -63,8 +62,6 @@ pub mod pallet {
         type Currency: Currency<Self::AccountId>;
         // CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
-        // Create Account trait for benchmarking
-        type AccountCreator: AccountCreator<Self::AccountId>;
         // Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
     }

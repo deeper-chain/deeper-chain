@@ -39,16 +39,15 @@ use sp_std::prelude::*;
 
 pub mod weights;
 
-/// This is for benchmarking and testing.
-/// Benchmarking requires AccountId32, while testing requires u64 as AccountId.
-pub trait AccountCreator<AccountId> {
-    fn create_account(string: &'static str) -> AccountId;
-}
+// /// This is for benchmarking and testing.
+// /// Benchmarking requires AccountId32, while testing requires u64 as AccountId.
+// pub trait AccountCreator<AccountId> {
+//     fn create_account(string: &'static str) -> AccountId;
+// }
 
 #[frame_support::pallet]
 pub mod pallet {
     use crate::weights::WeightInfo;
-    use crate::AccountCreator;
     use frame_support::codec::{Decode, Encode};
     use frame_support::traits::{
         tokens::currency::Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
@@ -79,8 +78,6 @@ pub mod pallet {
         // data traffic to DPR ratio
         #[pallet::constant]
         type DataPerDPR: Get<u64>;
-        // Create Account trait for benchmarking
-        type AccountCreator: AccountCreator<Self::AccountId>;
         // Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
         /// NodeInterface of deeper-node pallet

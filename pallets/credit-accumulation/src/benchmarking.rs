@@ -22,11 +22,19 @@ use frame_support::assert_ok;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use hex_literal::hex;
-use pallet_micropayment::AccountCreator;
+use testing_utils::{get_account_id_from_seed};
+use sp_runtime::traits::TrailingZeroInput;
+use sp_core::{Decode,sr25519,crypto::AccountId32};
+
+pub fn account_pk<AccountId: Decode>(name: &'static str) -> AccountId {
+	let entropy : AccountId32 = get_account_id_from_seed::<sr25519::Public>(name);
+	Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+		.expect("infinite length input; no invalid inputs for type; qed")
+}
 
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
-    let user = T::AccountCreator::create_account(string);
+    let user = account_pk::<T::AccountId>(string);
     let balance = T::Currency::minimum_balance() * balance_factor.into();
     T::Currency::make_free_balance_be(&user, balance);
     T::Currency::issue(balance);
