@@ -26,17 +26,16 @@ use frame_system::Pallet as System;
 use frame_system::RawOrigin;
 //use hex_literal::hex;
 use codec::Encode;
-use sp_core::{Decode,sr25519,crypto::AccountId32};
+use sp_core::{crypto::AccountId32, sr25519, Decode};
 use sp_io::crypto::sr25519_sign;
-use testing_utils::{get_account_id_from_seed};
 use sp_runtime::traits::TrailingZeroInput;
+use testing_utils::get_account_id_from_seed;
 
 pub fn account_pk<AccountId: Decode>(name: &'static str) -> AccountId {
-	let entropy : AccountId32 = get_account_id_from_seed::<sr25519::Public>(name);
-	Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-		.expect("infinite length input; no invalid inputs for type; qed")
+    let entropy: AccountId32 = get_account_id_from_seed::<sr25519::Public>(name);
+    Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+        .expect("infinite length input; no invalid inputs for type; qed")
 }
-
 
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {

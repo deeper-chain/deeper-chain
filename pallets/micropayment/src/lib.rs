@@ -39,12 +39,6 @@ use sp_std::prelude::*;
 
 pub mod weights;
 
-// /// This is for benchmarking and testing.
-// /// Benchmarking requires AccountId32, while testing requires u64 as AccountId.
-// pub trait AccountCreator<AccountId> {
-//     fn create_account(string: &'static str) -> AccountId;
-// }
-
 #[frame_support::pallet]
 pub mod pallet {
     use crate::weights::WeightInfo;

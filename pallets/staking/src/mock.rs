@@ -176,14 +176,6 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-pub struct TestAccountCreator;
-
-impl pallet_micropayment::AccountCreator<u64> for TestAccountCreator {
-    fn create_account(_string: &'static str) -> u64 {
-        0
-    }
-}
-
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
@@ -195,7 +187,6 @@ impl pallet_micropayment::Config for Test {
     type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
-    type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
     type NodeInterface = DeeperNode;
     type MicropaymentBurn = MicropaymentBurn;

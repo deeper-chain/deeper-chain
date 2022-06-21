@@ -93,8 +93,6 @@ pub use pallet_staking::StakerStatus;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
-use sp_io::crypto::sr25519_generate;
-use sp_runtime::{MultiSigner,traits::Verify};
 use sp_std::vec::Vec;
 
 /// Implementations of some helper traits passed into runtime modules as associated types.
@@ -1157,10 +1155,6 @@ parameter_types! {
     pub const SecsPerBlock: u32 = MILLISECS_PER_BLOCK as u32 / 1000;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
     pub const MicropaymentBurn: Percent = Percent::from_percent(10);
-}
-
-pub fn create_sr25519_pubkey(seed: Vec<u8>) -> MultiSigner {
-    sr25519_generate(0.into(), Some(seed)).into()
 }
 
 impl pallet_micropayment::Config for Runtime {
