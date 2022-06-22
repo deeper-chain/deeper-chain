@@ -47,7 +47,6 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-
     use node_primitives::{credit::CreditInterface, DPR};
     use pallet_evm::NpowAddressMapping;
     use pallet_user_privileges::{Privilege, UserPrivilegeInterface};
