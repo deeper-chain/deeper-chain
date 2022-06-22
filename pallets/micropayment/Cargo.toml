@@ -22,7 +22,6 @@ frame-system = {default-features = false, git = "https://github.com/paritytech/s
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false}
-pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false}
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
@@ -39,6 +38,7 @@ hex-literal = "0.3.1"
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 serde = { version = "1.0.101" }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false }
+pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 
 [features]
 default = ['std']

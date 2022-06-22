@@ -22,4 +22,3 @@ impl<AccountId, BlockNumber> NodeInterface<AccountId, BlockNumber> for () {
         0
     }
 }
-

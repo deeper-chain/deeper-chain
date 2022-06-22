@@ -1,9 +1,9 @@
+use crate::Vec;
 use codec::{Decode, Encode};
+use frame_support::weights::Weight;
 use scale_info::TypeInfo;
 use sp_runtime::DispatchResult;
-use frame_support::weights::Weight;
 use sp_runtime::Percent;
-use crate::Vec;
 
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};

@@ -48,11 +48,13 @@ use frame_support::dispatch::DispatchResult;
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::transactional;
+use node_primitives::credit::{
+    CampaignId, CreditData, CreditInterface, CreditLevel, CreditSetting, EraIndex,
+    CREDIT_CAP_ONE_ERAS, DEFAULT_REWARD_ERAS, OLD_REWARD_ERAS,
+};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
-use node_primitives::credit::{CreditInterface,CreditLevel,CampaignId,OLD_REWARD_ERAS,CreditData
-,CREDIT_CAP_ONE_ERAS,EraIndex, DEFAULT_REWARD_ERAS,CreditSetting};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -62,7 +64,8 @@ pub mod pallet {
     };
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, weights::Weight};
     use frame_system::pallet_prelude::*;
-use node_primitives::deeper_node::NodeInterface;
+    use node_primitives::deeper_node::NodeInterface;
+    use node_primitives::DPR;
     use scale_info::prelude::string::{String, ToString};
     use sp_core::H160;
     use sp_runtime::{
@@ -70,7 +73,6 @@ use node_primitives::deeper_node::NodeInterface;
         Perbill,
     };
     use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto};
-    use node_primitives::DPR;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]

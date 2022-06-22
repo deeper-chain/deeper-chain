@@ -1,6 +1,6 @@
 use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
-use scale_info::{build::Fields, meta_type, Path, Type, TypeInfo, TypeParameter,prelude::vec};
+use scale_info::{build::Fields, meta_type, prelude::vec, Path, Type, TypeInfo, TypeParameter};
 use sp_core::H160;
 
 pub trait UserPrivilegeInterface<Account> {

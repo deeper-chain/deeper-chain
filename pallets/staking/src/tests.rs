@@ -24,8 +24,11 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use mock::*;
+use node_primitives::{
+    credit::{CreditData, CreditInterface, CreditLevel, CreditSetting},
+    DPR,
+};
 use pallet_balances::Error as BalancesError;
-use node_primitives::{DPR,credit::{CreditData,CreditInterface, CreditLevel, CreditSetting}};
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
 use sp_std::convert::TryFrom;

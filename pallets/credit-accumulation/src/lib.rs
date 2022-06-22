@@ -46,8 +46,8 @@ pub mod pallet {
     use frame_support::traits::Currency;
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
+    use node_primitives::credit::CreditInterface;
     use node_primitives::VerifySignatureInterface;
-	use node_primitives::credit::CreditInterface;
     use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
