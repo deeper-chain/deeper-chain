@@ -74,8 +74,8 @@ use frame_support::{
 };
 
 pub use pallet::*;
-use pallet_credit::CreditInterface;
 pub use weights::WeightInfo;
+use node_primitives::credit::CreditInterface;
 
 pub type BalanceOf<T> = pallet_treasury::BalanceOf<T>;
 pub type NegativeImbalanceOf<T> = pallet_treasury::NegativeImbalanceOf<T>;

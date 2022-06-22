@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{mock::*, Error, NodeInterface};
+use crate::{mock::*, Error};
 use frame_support::{assert_ok, dispatch::DispatchErrorWithPostInfo};
+use node_primitives::deeper_node::NodeInterface;
 
 #[test]
 fn register_device() {

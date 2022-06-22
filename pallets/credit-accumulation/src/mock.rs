@@ -20,7 +20,7 @@ use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, OnFinali
 
 use frame_system as system;
 use node_primitives::{Balance, Moment};
-use pallet_credit::{CreditData, CreditLevel};
+use node_primitives::credit::{CreditData, CreditLevel};
 use sp_core::testing::SR25519;
 use sp_core::{crypto::AccountId32, H256};
 use sp_keystore::SyncCryptoStore;

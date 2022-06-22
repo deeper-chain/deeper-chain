@@ -22,7 +22,8 @@ use crate::*;
 use crate::{Config as StakingConfig, Pallet as Staking};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
-use pallet_credit::{Config as CreditConfig, CreditData, CreditLevel, Pallet as Credit};
+use node_primitives::credit::{CreditData, CreditLevel};
+use pallet_credit::{Config as CreditConfig,Pallet as Credit};
 use rand_chacha::{
     rand_core::{RngCore, SeedableRng},
     ChaChaRng,

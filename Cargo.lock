@@ -4324,10 +4324,13 @@ dependencies = [
 name = "node-primitives"
 version = "2.0.0"
 dependencies = [
+ "enumflags2",
+ "frame-support",
  "frame-system",
  "parity-scale-codec",
  "pretty_assertions",
  "scale-info",
+ "serde",
  "sp-application-crypto",
  "sp-core",
  "sp-runtime",
@@ -5218,6 +5221,7 @@ dependencies = [
  "fp-evm",
  "frame-support",
  "frame-system",
+ "node-primitives",
  "pallet-credit",
  "pallet-evm",
  "parity-scale-codec",

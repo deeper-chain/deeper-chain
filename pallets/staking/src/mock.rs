@@ -26,7 +26,7 @@ use frame_support::{
     weights::constants::RocksDbWeight,
 };
 use node_primitives::Moment;
-use pallet_credit::{CreditData, CreditLevel, CreditSetting};
+use node_primitives::credit::{CreditData, CreditLevel, CreditSetting};
 use sp_core::H256;
 use sp_io;
 use sp_runtime::{

@@ -52,8 +52,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use log::error;
-    use pallet_credit::CreditInterface;
-    use pallet_deeper_node::NodeInterface;
+    use node_primitives::{deeper_node::NodeInterface,credit::CreditInterface};
     use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;

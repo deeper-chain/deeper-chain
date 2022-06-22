@@ -26,7 +26,7 @@ use frame_support::{
     ensure,
     traits::{Currency, Imbalance, OnUnbalanced},
 };
-use pallet_credit::CreditInterface;
+use node_primitives::credit::CreditInterface;
 use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{Saturating, Zero},
