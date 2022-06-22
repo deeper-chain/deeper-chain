@@ -24,7 +24,7 @@ use frame_support::{
 };
 use frame_system as system;
 use node_primitives::{Balance, Moment};
-use sp_core::{crypto::AccountId32, sr25519, H256};
+use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -218,14 +218,6 @@ impl pallet_deeper_node::Config for Test {
     type VerifySignatureInterface = ();
 }
 
-pub struct TestAccountCreator;
-
-impl crate::AccountCreator<AccountId> for TestAccountCreator {
-    fn create_account(string: &'static str) -> AccountId {
-        get_account_id_from_seed::<sr25519::Public>(string)
-    }
-}
-
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
@@ -237,7 +229,6 @@ impl pallet_micropayment::Config for Test {
     type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
     type DataPerDPR = DataPerDPR;
-    type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
     type NodeInterface = DeeperNode;
     type MicropaymentBurn = MicropaymentBurn;

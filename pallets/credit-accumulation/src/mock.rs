@@ -21,9 +21,8 @@ use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, OnFinali
 use frame_system as system;
 use node_primitives::{Balance, Moment};
 use pallet_credit::{CreditData, CreditLevel};
-use pallet_micropayment::AccountCreator;
 use sp_core::testing::SR25519;
-use sp_core::{crypto::AccountId32, sr25519, H256};
+use sp_core::{crypto::AccountId32, H256};
 use sp_keystore::SyncCryptoStore;
 use sp_keystore::{testing::KeyStore, KeystoreExt};
 use sp_runtime::{
@@ -193,14 +192,6 @@ impl pallet_deeper_node::Config for Test {
     type VerifySignatureInterface = ();
 }
 
-pub struct TestAccountCreator;
-
-impl AccountCreator<AccountId> for TestAccountCreator {
-    fn create_account(string: &'static str) -> AccountId {
-        get_account_id_from_seed::<sr25519::Public>(string)
-    }
-}
-
 parameter_types! {
     pub const SecsPerBlock: u32 = 5u32;
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
@@ -209,7 +200,6 @@ impl pallet_credit_accumulation::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type CreditInterface = Credit;
-    type AccountCreator = TestAccountCreator;
     type WeightInfo = ();
 }
 
