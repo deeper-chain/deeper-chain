@@ -28,8 +28,6 @@ use scale_info::TypeInfo;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-pub type EraIndex = u32;
-
 pub trait OperationInterface<AccountId, Balance> {
     fn is_payment_address(account_id: AccountId) -> bool;
     fn is_single_max_limit(pay_amount: Balance) -> bool;
@@ -49,7 +47,8 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-    use pallet_credit::{CreditInterface, DPR};
+
+    use node_primitives::{credit::CreditInterface, DPR};
     use pallet_evm::NpowAddressMapping;
     use pallet_user_privileges::{Privilege, UserPrivilegeInterface};
     use scale_info::prelude::string::{String, ToString};

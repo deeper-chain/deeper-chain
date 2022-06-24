@@ -39,7 +39,7 @@ use node_primitives::Balance;
 use super::*;
 use crate::{self as pallet_tips, Event as TipEvent};
 use frame_system::RawOrigin;
-use pallet_credit::{CreditData, CreditLevel};
+use node_primitives::credit::{CreditData, CreditLevel};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

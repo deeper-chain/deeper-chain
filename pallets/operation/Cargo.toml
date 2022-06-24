@@ -22,7 +22,6 @@ sp-runtime = {default-features = false, git = "https://github.com/paritytech/sub
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 log = { version = "0.4.14", default-features = false }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
-pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 pallet-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "feature/add-npow" }
 pallet-user-privileges = { default-features = false, path = "../user-privileges" }
 
@@ -46,7 +45,6 @@ std = [
     'pallet-balances/std',
     'node-primitives/std',
     'pallet-timestamp/std',
-     'pallet-credit/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

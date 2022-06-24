@@ -17,8 +17,11 @@
 
 //! Low-level types used throughout the Substrate code.
 
-#![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
+
+pub mod credit;
+pub mod deeper_node;
+pub mod user_privileges;
 
 use scale_info::prelude::vec::Vec;
 use sp_runtime::{
@@ -27,6 +30,7 @@ use sp_runtime::{
     MultiSignature, OpaqueExtrinsic,
 };
 
+pub const DPR: u128 = 1_000_000_000_000_000_000;
 /// An index to a block.
 pub type BlockNumber = u32;
 

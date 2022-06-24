@@ -20,6 +20,7 @@
 
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
+use node_primitives::credit::{CreditData, CreditLevel, CreditSetting};
 use node_runtime::constants::currency::*;
 use node_runtime::Block;
 use node_runtime::{
@@ -28,7 +29,6 @@ use node_runtime::{
     ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
     StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 };
-use pallet_credit::{CreditData, CreditLevel, CreditSetting};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
 use sc_service::ChainType;

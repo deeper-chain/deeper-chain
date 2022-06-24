@@ -18,6 +18,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 sp-std = { branch = "polkadot-v0.9.19", default-features = false, git = "https://github.com/paritytech/substrate" }
 frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 pallet-credit = { version = "3.0.0", path="../credit", default-features = false }
+node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 arrayref = "0.3.6"
 
 [features]

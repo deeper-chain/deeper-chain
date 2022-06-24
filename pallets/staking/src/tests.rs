@@ -24,8 +24,11 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use mock::*;
+use node_primitives::{
+    credit::{CreditData, CreditInterface, CreditLevel, CreditSetting},
+    DPR,
+};
 use pallet_balances::Error as BalancesError;
-use pallet_credit::{CreditInterface, CreditLevel, CreditSetting, DPR};
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
 use sp_std::convert::TryFrom;
@@ -3144,7 +3147,7 @@ fn upgrade_for_slash_reward() {
             run_to_block(BLOCKS_PER_ERA * 271);
 
             // before user doing stake delegate
-            let credit_data = pallet_credit::CreditData::new(0, 205);
+            let credit_data = CreditData::new(0, 205);
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),
                 51,
@@ -3165,7 +3168,7 @@ fn upgrade_for_slash_reward() {
             Balances::make_free_balance_be(&61, 100_000 * DPR);
 
             // mock, to get wrong credit balances
-            let wrong_credit_data = pallet_credit::CreditData::new(4, 205);
+            let wrong_credit_data = CreditData::new(4, 205);
 
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),
@@ -3186,7 +3189,7 @@ fn upgrade_for_slash_reward() {
             assert_eq!(Credit::get_credit_score(&51).unwrap(), 405);
             assert_eq!(Credit::get_credit_score(&61).unwrap(), 505);
 
-            let credit_data = pallet_credit::CreditData::new(0, 405);
+            let credit_data = CreditData::new(0, 405);
             //modify creditdat to  correct credit data
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),
@@ -3194,7 +3197,7 @@ fn upgrade_for_slash_reward() {
                 credit_data
             ));
 
-            let credit_data = pallet_credit::CreditData::new(0, 505);
+            let credit_data = CreditData::new(0, 505);
             //modify creditdat to  correct credit data
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),
@@ -3210,7 +3213,7 @@ fn upgrade_for_slash_reward() {
 
             assert_eq!(Credit::get_credit_score(&51).unwrap(), 404);
             assert_eq!(Credit::get_credit_score(&61).unwrap(), 504);
-            let wrong_credit_data = pallet_credit::CreditData::new(4, 504);
+            let wrong_credit_data = CreditData::new(4, 504);
 
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),
@@ -3221,7 +3224,7 @@ fn upgrade_for_slash_reward() {
             assert_ok!(Staking::do_staking_delegate(61, 8));
             assert_eq!(Credit::get_credit_score(&61).unwrap(), 804);
 
-            let credit_data = pallet_credit::CreditData::new(0, 804);
+            let credit_data = CreditData::new(0, 804);
             //modify creditdat to  correct credit data
             assert_ok!(Credit::add_or_update_credit_data(
                 Origin::root(),

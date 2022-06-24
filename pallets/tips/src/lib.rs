@@ -73,8 +73,8 @@ use frame_support::{
     Parameter,
 };
 
+use node_primitives::credit::CreditInterface;
 pub use pallet::*;
-use pallet_credit::CreditInterface;
 pub use weights::WeightInfo;
 
 pub type BalanceOf<T> = pallet_treasury::BalanceOf<T>;

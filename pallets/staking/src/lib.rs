@@ -52,9 +52,8 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use node_primitives::VerifySignatureInterface;
+use node_primitives::{credit::CreditInterface, deeper_node::NodeInterface};
 pub use pallet::*;
-use pallet_credit::CreditInterface;
-use pallet_deeper_node::NodeInterface;
 use pallet_operation::OperationInterface;
 use pallet_session::historical;
 use scale_info::TypeInfo;
