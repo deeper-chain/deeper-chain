@@ -20,6 +20,7 @@ jobs:
           profile: minimal
           components: rustfmt, clippy
           target: wasm32-unknown-unknown
+          toolchain: stable
 
       - name: Cargo Fmt Check
         run: cargo fmt --all -- --check
