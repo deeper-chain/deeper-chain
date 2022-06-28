@@ -51,11 +51,11 @@ use frame_support::{
     PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
-use node_primitives::VerifySignatureInterface;
 use node_primitives::{
     credit::CreditInterface,
     deeper_node::NodeInterface,
     user_privileges::{Privilege, UserPrivilegeInterface},
+    OperationInterface, VerifySignatureInterface,
 };
 pub use pallet::*;
 use pallet_session::historical;
@@ -591,6 +591,8 @@ pub mod pallet {
 
         /// CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
+
+        type OperationInterface: OperationInterface<Self::AccountId, BalanceOf<Self>>;
 
         /// query user prvileges
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
@@ -1862,10 +1864,10 @@ pub mod pallet {
                 Reward::<T>::insert(&delegator, reward_data);
             }
             let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
-            // ensure!(
-            //     T::OperationInterface::is_single_max_limit(reward),
-            //     Error::<T>::PaymentsExceedingLimits
-            // );
+            ensure!(
+                T::OperationInterface::is_single_max_limit(reward),
+                Error::<T>::PaymentsExceedingLimits
+            );
             let imbalance = T::Currency::deposit_creating(&delegator, reward);
             RemainderMiningReward::<T>::put(
                 TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(reward))

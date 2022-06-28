@@ -602,6 +602,7 @@ impl pallet_staking::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
     type VerifySignatureInterface = CreditAccumulation;
+    type OperationInterface = Operation;
 }
 
 parameter_types! {

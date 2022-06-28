@@ -28,10 +28,6 @@ use scale_info::TypeInfo;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-pub trait OperationInterface<AccountId, Balance> {
-    fn is_single_max_limit(pay_amount: Balance) -> bool;
-}
-
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -48,7 +44,7 @@ pub mod pallet {
     use node_primitives::{
         credit::CreditInterface,
         user_privileges::{Privilege, UserPrivilegeInterface},
-        DPR,
+        OperationInterface, DPR,
     };
     use pallet_evm::NpowAddressMapping;
     use scale_info::prelude::string::{String, ToString};

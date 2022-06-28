@@ -389,6 +389,7 @@ impl Config for Test {
     type ExistentialDeposit = ExistentialDeposit;
     type VerifySignatureInterface = ();
     type UserPrivilegeInterface = UserPrivileges;
+    type OperationInterface = ();
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
