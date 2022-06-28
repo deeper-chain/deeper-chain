@@ -28,6 +28,7 @@ use frame_support::assert_ok;
 use frame_support::traits::ConstU32;
 use frame_support::{parameter_types, weights::Weight};
 use frame_system::EnsureRoot;
+use node_primitives::user_privileges::{Privilege, UserPrivilegeInterface};
 
 use super::*;
 use crate::{self as pallet_user_privileges};

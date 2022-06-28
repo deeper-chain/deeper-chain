@@ -52,9 +52,12 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use node_primitives::VerifySignatureInterface;
-use node_primitives::{credit::CreditInterface, deeper_node::NodeInterface};
+use node_primitives::{
+    credit::CreditInterface,
+    deeper_node::NodeInterface,
+    user_privileges::{Privilege, UserPrivilegeInterface},
+};
 pub use pallet::*;
-use pallet_operation::OperationInterface;
 use pallet_session::historical;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -589,8 +592,8 @@ pub mod pallet {
         /// CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
 
-        /// OperationInterface of operation pallet
-        type OperationInterface: OperationInterface<Self::AccountId, BalanceOf<Self>>;
+        /// query user prvileges
+        type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
 
         /// NodeInterface of deeper-node pallet
         type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
@@ -1826,7 +1829,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
-                T::OperationInterface::is_payment_address(who),
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::ReleaseSetter),
                 Error::<T>::UnauthorizedAccounts
             );
             let remainder_mining_reward = T::NumberToCurrency::convert(
@@ -1859,10 +1862,10 @@ pub mod pallet {
                 Reward::<T>::insert(&delegator, reward_data);
             }
             let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
-            ensure!(
-                T::OperationInterface::is_single_max_limit(reward),
-                Error::<T>::PaymentsExceedingLimits
-            );
+            // ensure!(
+            //     T::OperationInterface::is_single_max_limit(reward),
+            //     Error::<T>::PaymentsExceedingLimits
+            // );
             let imbalance = T::Currency::deposit_creating(&delegator, reward);
             RemainderMiningReward::<T>::put(
                 TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(reward))

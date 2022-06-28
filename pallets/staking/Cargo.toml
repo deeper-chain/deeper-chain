@@ -46,6 +46,7 @@ sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkad
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 pallet-credit = {version = '3.0.0', default-features =false, path = "../credit"}
+pallet-user-privileges = {version = '4.0.0', default-features =false, path = "../user-privileges"}
 rand_chacha = { version = "0.2" }
 parking_lot = "0.11.1"
 hex = "0.4"
@@ -72,6 +73,7 @@ std = [
 	"pallet-micropayment/std",
 	"pallet-uniques/std",
 	"pallet-credit/std",
+	"pallet-user-privileges/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

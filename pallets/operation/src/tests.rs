@@ -27,11 +27,13 @@ use sp_runtime::{
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
 use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
 use pallet_evm::NpowAddressMapping;
-use pallet_user_privileges::{Privilege, UserPrivilegeInterface};
 
 use super::*;
 use crate::{self as pallet_operation};
-use node_primitives::{BlockNumber, Moment};
+use node_primitives::{
+    user_privileges::{Privilege, UserPrivilegeInterface},
+    BlockNumber, Moment,
+};
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -155,19 +157,11 @@ pub fn run_to_block(n: u64) {
 #[test]
 fn set_lock_members_works() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Balances::set_balance(Origin::root(), 1, 1_000, 0));
-        assert_ok!(Operation::set_reserve_members(Origin::root(), vec!(2)));
-        assert_ok!(Operation::force_reserve_by_member(Some(2).into(), 1, 500));
-        assert_eq!(Balances::free_balance(&1), 500);
-        assert_ok!(Balances::force_unreserve(Origin::root(), 1, 500));
-        assert_eq!(Balances::free_balance(&1), 1000);
-    });
-}
-
-#[test]
-fn set_release_owner_address() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1));
+        assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
+        assert_ok!(Operation::force_reserve_by_member(Some(1).into(), 2, 500));
+        assert_eq!(Balances::free_balance(&2), 500);
+        assert_ok!(Balances::force_unreserve(Origin::root(), 2, 500));
+        assert_eq!(Balances::free_balance(&2), 1000);
     });
 }
 
@@ -187,7 +181,6 @@ fn set_release_limit_parameter() {
 #[test]
 fn set_staking_release_info() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1));
         assert_ok!(Operation::set_release_limit_parameter(
             Origin::root(),
             1000,

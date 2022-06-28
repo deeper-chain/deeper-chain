@@ -17,19 +17,23 @@ use super::*;
 use crate as pallet_credit;
 use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
 use frame_support::{
-    pallet_prelude::GenesisBuild,
+    pallet_prelude::*,
     parameter_types,
     traits::{OnFinalize, OnInitialize},
     PalletId,
 };
+
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Permill,
+    Percent, Permill,
 };
 
-use node_primitives::{Balance, BlockNumber, Moment};
+use node_primitives::{
+    credit::{CreditData, CreditLevel, CreditSetting},
+    Balance, BlockNumber, Moment,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -51,6 +55,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
         Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
+        UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -173,6 +178,12 @@ impl pallet_timestamp::Config for Test {
     type WeightInfo = ();
 }
 
+impl pallet_user_privileges::Config for Test {
+    type Event = Event;
+    type ForceOrigin = frame_system::EnsureRoot<u64>;
+    type WeightInfo = ();
+}
+
 const MILLICENTS: Balance = 10_000_000_000_000;
 const CENTS: Balance = 1_000 * MILLICENTS;
 const DOLLARS: Balance = 100 * CENTS;
@@ -216,6 +227,7 @@ impl pallet_credit::Config for Test {
     type SecsPerBlock = SecsPerBlock;
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = Treasury;
+    type UserPrivilegeInterface = UserPrivileges;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -597,9 +609,11 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
-        System::on_finalize(System::block_number());
+        <frame_system::Pallet<mock::Test> as OnFinalize<u64>>::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
-        System::on_initialize(System::block_number());
+        <frame_system::Pallet<mock::Test> as OnInitialize<u64>>::on_initialize(
+            System::block_number(),
+        );
         Timestamp::set_timestamp(System::block_number() * BLOCK_TIME + INIT_TIMESTAMP);
     }
 }

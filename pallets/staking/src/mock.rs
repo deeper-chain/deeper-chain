@@ -110,6 +110,7 @@ frame_support::construct_runtime!(
         Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
         Historical: pallet_session::historical::{Pallet, Storage},
         Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
+        UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -266,6 +267,7 @@ impl pallet_credit::Config for Test {
     type SecsPerBlock = SecsPerBlock;
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = ();
+    type UserPrivilegeInterface = UserPrivileges;
 }
 
 parameter_types! {
@@ -281,7 +283,13 @@ impl pallet_operation::Config for Test {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type NpowAddressMapping = ();
-    type UserPrivilegeInterface = ();
+    type UserPrivilegeInterface = UserPrivileges;
+}
+
+impl pallet_user_privileges::Config for Test {
+    type Event = Event;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -374,13 +382,13 @@ impl Config for Test {
     type Call = Call;
     type WeightInfo = ();
     type CreditInterface = Credit;
-    type OperationInterface = Operation;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type NumberToCurrency = NumberCurrencyConverter;
     type TotalMiningReward = MiningReward;
     type ExistentialDeposit = ExistentialDeposit;
     type VerifySignatureInterface = ();
+    type UserPrivilegeInterface = UserPrivileges;
 }
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test

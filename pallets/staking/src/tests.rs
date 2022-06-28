@@ -183,7 +183,12 @@ fn difference_compensation() {
             poc_reward: 20,
         };
 
-        assert_ok!(Operation::set_release_owner_address(Origin::root(), 1001));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1001,
+            Privilege::ReleaseSetter
+        ));
+
         assert_ok!(Operation::set_release_limit_parameter(
             Origin::root(),
             20,
@@ -2990,7 +2995,12 @@ fn staking_delegate() {
     ExtBuilder::default()
         .validator_pool(true)
         .build_and_execute(|| {
-            assert_ok!(Credit::set_credit_admin(Origin::root(), 51));
+            assert_ok!(UserPrivileges::set_user_privilege(
+                Origin::root(),
+                51,
+                Privilege::CreditAdmin
+            ));
+
             assert_ok!(Credit::set_credit_balances(
                 Origin::signed(51),
                 vec![
