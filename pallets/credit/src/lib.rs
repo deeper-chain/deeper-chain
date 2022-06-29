@@ -301,7 +301,6 @@ pub mod pallet {
         StakingCreditScore(T::AccountId, u64),
         SetAdmin(T::AccountId),
         UnstakingResult(T::AccountId, String),
-        CreditUpdated(T::AccountId, u64),
     }
 
     #[pallet::error]
@@ -982,7 +981,7 @@ pub mod pallet {
         fn do_add_credit_with_other_event(account_id: T::AccountId, credit_data: CreditData) {
             let credit = credit_data.credit;
             Self::do_add_credit(account_id.clone(), credit_data);
-            Self::deposit_event(Event::CreditUpdated(account_id, credit));
+            Self::deposit_event(Event::StakingCreditScore(account_id, credit));
         }
     }
 
