@@ -2,15 +2,26 @@ use codec::{Decode, Encode, EncodeLike, MaxEncodedLen};
 use enumflags2::{bitflags, BitFlags};
 use scale_info::{build::Fields, meta_type, prelude::vec, Path, Type, TypeInfo, TypeParameter};
 use sp_core::H160;
+use sp_runtime::RuntimeDebug;
 
 pub trait UserPrivilegeInterface<Account> {
     fn has_privilege(user: &Account, p: Privilege) -> bool;
     fn has_evm_privilege(user: &H160, p: Privilege) -> bool;
 }
 
+impl<Account> UserPrivilegeInterface<Account> for () {
+    fn has_privilege(_user: &Account, _p: Privilege) -> bool {
+        true
+    }
+
+    fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
+        true
+    }
+}
+
 #[bitflags]
 #[repr(u64)]
-#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, TypeInfo)]
+#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, TypeInfo, RuntimeDebug)]
 pub enum Privilege {
     LockerMember = 1 << 0,
     ReleaseSetter = 1 << 1,

@@ -28,11 +28,6 @@ use scale_info::TypeInfo;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-pub trait OperationInterface<AccountId, Balance> {
-    fn is_payment_address(account_id: AccountId) -> bool;
-    fn is_single_max_limit(pay_amount: Balance) -> bool;
-}
-
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
@@ -43,14 +38,15 @@ pub mod pallet {
     };
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, transactional,
-        WeakBoundedVec,
     };
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-
-    use node_primitives::{credit::CreditInterface, DPR};
+    use node_primitives::{
+        credit::CreditInterface,
+        user_privileges::{Privilege, UserPrivilegeInterface},
+        OperationInterface, DPR,
+    };
     use pallet_evm::NpowAddressMapping;
-    use pallet_user_privileges::{Privilege, UserPrivilegeInterface};
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
@@ -194,15 +190,6 @@ pub mod pallet {
         StorageValue<_, BalanceOf<T>, ValueQuery, DefaultSingleMax<T>>;
 
     #[pallet::storage]
-    #[pallet::getter(fn lock_member_whitelist)]
-    pub(super) type LockMemberWhiteList<T: Config> =
-        StorageValue<_, WeakBoundedVec<T::AccountId, T::MaxMember>, ValueQuery>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn release_payment_address)]
-    pub type ReleasePaymentAddress<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
-
-    #[pallet::storage]
     #[pallet::getter(fn total_daily_release)]
     pub type TotalDailyRelease<T: Config> =
         StorageMap<_, Blake2_128Concat, u32, BalanceOf<T>, ValueQuery>;
@@ -230,19 +217,6 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            if StorageVersion::<T>::get().is_none() {
-                frame_support::storage::migration::move_storage_from_pallet(
-                    b"LockMemberWhiteList",
-                    b"Balances",
-                    b"Operation",
-                );
-                StorageVersion::<T>::put(Releases::V1_0_0);
-                return T::DbWeight::get().reads_writes(1, 1);
-            }
-            0
-        }
-
         fn on_finalize(_: T::BlockNumber) {
             let saved_day = Self::saved_day();
             let cur_time: u64 = <pallet_timestamp::Pallet<T>>::get().unique_saturated_into();
@@ -273,24 +247,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::OPWeightInfo::set_reserve_members())]
-        pub fn set_reserve_members(
-            origin: OriginFor<T>,
-            whitelist: Vec<T::AccountId>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            let whitelist = WeakBoundedVec::<_, T::MaxMember>::force_from(
-                whitelist,
-                Some("Balances Update lock function whitelist"),
-            );
-
-            if whitelist.len() as u32 > T::MaxMember::get() {
-                log::warn!("Whitelist too large.");
-            }
-            <LockMemberWhiteList<T>>::put(whitelist);
-            Ok(().into())
-        }
-
         #[pallet::weight(T::OPWeightInfo::force_reserve_by_member())]
         pub fn force_reserve_by_member(
             origin: OriginFor<T>,
@@ -298,24 +254,10 @@ pub mod pallet {
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(
-                <LockMemberWhiteList<T>>::get().contains(&sender),
-                Error::<T>::NotLockMember
-            );
+            ensure!(Self::is_locker_member(&sender), Error::<T>::NotLockMember);
             let who = T::Lookup::lookup(who)?;
             <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
             Self::deposit_event(Event::Locked(sender, value));
-            Ok(().into())
-        }
-
-        #[pallet::weight(T::OPWeightInfo::set_release_owner_address())]
-        pub fn set_release_owner_address(
-            origin: OriginFor<T>,
-            owner: T::AccountId,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-
-            <ReleasePaymentAddress<T>>::put(owner.clone());
             Ok(().into())
         }
 
@@ -340,21 +282,15 @@ pub mod pallet {
             basic_info: ReleaseInfo<T>,
         ) -> DispatchResult {
             let setter = ensure_signed(origin)?;
-            let owner = Self::release_payment_address();
-            if owner.is_none() {
-                Self::deposit_event(Event::UnstakingResult(
-                    setter,
-                    "release owner not set".to_string(),
-                ));
-                return Err(Error::<T>::NotReleaseOwnerAddress.into());
-            }
-            if setter != owner.unwrap() {
+
+            if !Self::is_payment_address(&setter) {
                 Self::deposit_event(Event::UnstakingResult(
                     setter,
                     "not release owner".to_string(),
                 ));
                 return Err(Error::<T>::NotMatchOwner.into());
             }
+
             let account = basic_info.account.clone();
 
             let remainder_release_days = basic_info.total_release_days;
@@ -403,10 +339,7 @@ pub mod pallet {
             release_accounts: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             let setter = ensure_signed(origin)?;
-            let owner =
-                Self::release_payment_address().ok_or(Error::<T>::NotReleaseOwnerAddress)?;
-
-            ensure!(setter == owner, Error::<T>::NotMatchOwner);
+            ensure!(Self::is_payment_address(&setter), Error::<T>::NotMatchOwner);
             for account in release_accounts {
                 AccountsReleaseInfo::<T>::remove(&account);
             }
@@ -556,13 +489,17 @@ pub mod pallet {
                 AccountsReleaseInfo::<T>::remove(account);
             }
         }
+
+        fn is_locker_member(user: &T::AccountId) -> bool {
+            T::UserPrivilegeInterface::has_privilege(user, Privilege::LockerMember)
+        }
+
+        fn is_payment_address(user: &T::AccountId) -> bool {
+            T::UserPrivilegeInterface::has_privilege(user, Privilege::ReleaseSetter)
+        }
     }
 
     impl<T: Config> OperationInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
-        fn is_payment_address(user: T::AccountId) -> bool {
-            Self::release_payment_address() == Some(user)
-        }
-
         fn is_single_max_limit(pay_amount: BalanceOf<T>) -> bool {
             if Self::single_max_limit() >= pay_amount {
                 let cur_daily_release = Self::total_daily_release(Self::saved_day());

@@ -34,6 +34,7 @@ frame-benchmarking = { default-features = false, git = "https://github.com/parit
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 pallet-treasury = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
+pallet-user-privileges = { default-features = false, path = "../user-privileges" }
 
 [features]
 default = ['std']
@@ -52,6 +53,7 @@ std = [
 	'pallet-deeper-node/std',
 	'pallet-timestamp/std',
 	'pallet-treasury/std',
+	'pallet-user-privileges/std',
 	'log/std',
 	'serde'
 ]

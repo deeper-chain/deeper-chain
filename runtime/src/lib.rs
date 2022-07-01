@@ -579,7 +579,7 @@ impl pallet_staking::Config for Runtime {
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditInterface = Credit;
-    type OperationInterface = Operation;
+    type UserPrivilegeInterface = UserPrivileges;
     type NodeInterface = DeeperNode;
     type MaxDelegates = MaxDelegates;
     type UnixTime = Timestamp;
@@ -602,6 +602,7 @@ impl pallet_staking::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
     type VerifySignatureInterface = CreditAccumulation;
+    type OperationInterface = Operation;
 }
 
 parameter_types! {
@@ -1232,6 +1233,7 @@ impl pallet_credit::Config for Runtime {
     type UnixTime = Timestamp;
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = Treasury;
+    type UserPrivilegeInterface = UserPrivileges;
 }
 
 impl pallet_credit_accumulation::Config for Runtime {

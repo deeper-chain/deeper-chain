@@ -39,21 +39,7 @@ macro_rules! log {
 	};
 }
 
-use codec::alloc::vec;
-use codec::{Decode, Encode};
-use sp_runtime::traits::One;
-use sp_runtime::Percent;
-
 use frame_support::dispatch::DispatchResult;
-#[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
-use frame_support::transactional;
-use node_primitives::credit::{
-    CampaignId, CreditData, CreditInterface, CreditLevel, CreditSetting, EraIndex,
-    CREDIT_CAP_ONE_ERAS, DEFAULT_REWARD_ERAS, OLD_REWARD_ERAS,
-};
-use scale_info::TypeInfo;
-use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
 #[frame_support::pallet]
@@ -62,17 +48,29 @@ pub mod pallet {
     use frame_support::traits::{
         Currency, ExistenceRequirement, OnUnbalanced, UnixTime, WithdrawReasons,
     };
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, weights::Weight};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, transactional, weights::Weight,
+    };
     use frame_system::pallet_prelude::*;
-    use node_primitives::deeper_node::NodeInterface;
-    use node_primitives::DPR;
+    use node_primitives::credit::{
+        CampaignId, CreditData, CreditInterface, CreditLevel, CreditSetting, EraIndex,
+        CREDIT_CAP_ONE_ERAS, DEFAULT_REWARD_ERAS, OLD_REWARD_ERAS,
+    };
+    use node_primitives::{
+        deeper_node::NodeInterface,
+        user_privileges::{Privilege, UserPrivilegeInterface},
+        DPR,
+    };
     use scale_info::prelude::string::{String, ToString};
     use sp_core::H160;
     use sp_runtime::{
-        traits::{Saturating, UniqueSaturatedFrom, Zero},
-        Perbill,
+        traits::{One, Saturating, UniqueSaturatedFrom, Zero},
+        Perbill, Percent,
     };
-    use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto};
+    use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
+
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -101,6 +99,9 @@ pub mod pallet {
         type DPRPerCreditBurned: Get<BalanceOf<Self>>;
 
         type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
+
+        /// query user prvileges
+        type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
     }
 
     pub type BalanceOf<T> =
@@ -250,10 +251,6 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
-
-    #[pallet::storage]
-    #[pallet::getter(fn credit_admin)]
-    pub type CreditAdmin<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -513,6 +510,7 @@ pub mod pallet {
         }
 
         /// update credit data
+        /// To be deprecated when external_set_credit_data used
         #[pallet::weight(<T as pallet::Config>::WeightInfo::add_or_update_credit_data())]
         pub fn add_or_update_credit_data(
             origin: OriginFor<T>,
@@ -521,7 +519,7 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure_root(origin)?;
             Self::check_credit_data(&credit_data)?;
-            Self::do_add_credit(account_id, credit_data);
+            Self::do_add_credit_with_event(account_id, credit_data);
             Ok(())
         }
 
@@ -582,7 +580,7 @@ pub mod pallet {
             credit: u64,
         ) -> DispatchResultWithPostInfo {
             let admin = ensure_signed(origin)?;
-            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             MiningMachineClassCredit::<T>::insert(class_id, credit);
 
@@ -621,7 +619,7 @@ pub mod pallet {
             new_ids: Vec<CampaignId>,
         ) -> DispatchResultWithPostInfo {
             let admin = ensure_signed(origin)?;
-            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             ensure!(
                 old_ids.len() == new_ids.len(),
@@ -639,7 +637,7 @@ pub mod pallet {
             accounts: Vec<T::AccountId>,
         ) -> DispatchResultWithPostInfo {
             let admin = ensure_signed(origin)?;
-            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             for id in accounts {
                 NotSwitchAccounts::<T>::insert(id, true);
@@ -653,7 +651,7 @@ pub mod pallet {
             credit_balances: Vec<BalanceOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let admin = ensure_signed(origin)?;
-            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             CreditBalances::<T>::put(credit_balances);
             Ok(().into())
@@ -665,7 +663,7 @@ pub mod pallet {
             id: u16,
         ) -> DispatchResultWithPostInfo {
             let admin = ensure_signed(origin)?;
-            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             DefaultCampaignId::<T>::put(id);
             Ok(().into())
@@ -677,7 +675,7 @@ pub mod pallet {
             user_scores: Vec<(T::AccountId, u64)>,
         ) -> DispatchResult {
             let admin = ensure_signed(origin)?;
-            ensure!(Self::is_admin(admin), Error::<T>::NotAdmin);
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             for (user, score) in user_scores {
                 UserStakingCredit::<T>::insert(user, score);
@@ -688,7 +686,7 @@ pub mod pallet {
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
             let admin = ensure_signed(origin)?;
-            if !Self::is_admin(admin.clone()) {
+            if !Self::is_admin(&admin) {
                 Self::deposit_event(Event::UnstakingResult(
                     admin,
                     "not credit admin".to_string(),
@@ -698,18 +696,23 @@ pub mod pallet {
             Self::do_unstaking_slash_credit(&user)
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
-        pub fn set_credit_admin(origin: OriginFor<T>, admin: T::AccountId) -> DispatchResult {
-            ensure_root(origin)?;
-            CreditAdmin::<T>::put(admin.clone());
-            Self::deposit_event(Event::SetAdmin(admin));
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::add_or_update_credit_data())]
+        pub fn external_set_credit_data(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            credit_data: CreditData,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
+            Self::check_credit_data(&credit_data)?;
+            Self::do_add_credit_with_other_event(account_id, credit_data);
             Ok(())
         }
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn is_admin(user: T::AccountId) -> bool {
-            Self::credit_admin() == Some(user)
+        pub fn is_admin(user: &T::AccountId) -> bool {
+            T::UserPrivilegeInterface::has_privilege(&user, Privilege::CreditAdmin)
         }
 
         // todo: check _caller's right in next pr
@@ -728,7 +731,7 @@ pub mod pallet {
                         }
                     }
                 };
-                Self::do_add_credit(user.clone(), credit_data);
+                Self::do_add_credit_with_event(user.clone(), credit_data);
             } else {
                 Self::slash_credit(user, Some(score));
             }
@@ -966,7 +969,19 @@ pub mod pallet {
             } else {
                 UserCredit::<T>::insert(&account_id, credit_data.clone());
             }
-            Self::deposit_event(Event::CreditUpdateSuccess(account_id, credit_data.credit));
+        }
+
+        fn do_add_credit_with_event(account_id: T::AccountId, credit_data: CreditData) {
+            let credit = credit_data.credit;
+            Self::do_add_credit(account_id.clone(), credit_data);
+            Self::deposit_event(Event::CreditUpdateSuccess(account_id, credit));
+        }
+
+        // using diff event for statistics
+        fn do_add_credit_with_other_event(account_id: T::AccountId, credit_data: CreditData) {
+            let credit = credit_data.credit;
+            Self::do_add_credit(account_id.clone(), credit_data);
+            Self::deposit_event(Event::StakingCreditScore(account_id, credit));
         }
     }
 
@@ -1015,7 +1030,7 @@ pub mod pallet {
                     }
                 }
             };
-            Self::do_add_credit(account_id.clone(), credit_data);
+            Self::do_add_credit_with_event(account_id.clone(), credit_data);
 
             let staking_credit = Self::user_staking_credit(&account_id).unwrap_or(0);
             UserStakingCredit::<T>::insert(account_id, staking_credit + credit_gap);

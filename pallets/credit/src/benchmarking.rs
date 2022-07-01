@@ -18,13 +18,16 @@
 //! Staking pallet benchmarking.
 
 use super::*;
+use crate::Pallet as Credit;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
+use node_primitives::{
+    credit::{CreditData, CreditLevel, CreditSetting},
+    user_privileges::Privilege,
+};
 use sp_runtime::{traits::StaticLookup, Percent};
-
-use crate::Pallet as Credit;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
@@ -42,7 +45,7 @@ pub fn create_funded_user<T: Config>(
 }
 
 benchmarks! {
-    where_clause {where T::ClassId: From<u16>, T::InstanceId: From<u16>}
+    where_clause {where T::ClassId: From<u16>, T::InstanceId: From<u16>,T: pallet_user_privileges::Config}
 
     update_credit_setting {
         let credit_setting = CreditSetting::<BalanceOf<T>> {
@@ -118,7 +121,8 @@ benchmarks! {
         let class_id: T::ClassId = 0u16.into();
         let credit = 1;
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
-        CreditAdmin::<T>::put(user.clone());
+        let user_lookup = T::Lookup::unlookup(user.clone());
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
     }: update_nft_class_credit(RawOrigin::Signed(user), class_id, credit)
     verify {
         assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
@@ -128,9 +132,10 @@ benchmarks! {
         let class_id: T::ClassId =  0u16.into();
         let instance_id: T::InstanceId =  0u16.into();
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
-        CreditAdmin::<T>::put(user.clone());
+
         let user_lookup = T::Lookup::unlookup(user.clone());
         let signed_user = RawOrigin::Signed(user.clone());
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup.clone(),Privilege::CreditAdmin);
 
         assert_ok!(pallet_uniques::Pallet::<T>::force_create(
             RawOrigin::Root.into(),

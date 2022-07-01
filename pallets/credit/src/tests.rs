@@ -14,11 +14,14 @@
 // limitations under the License.
 
 #[cfg(test)]
-use super::{CreditData, CreditLevel, CreditSetting, UserCredit};
-use crate::{mock::*, CampaignIdSwitch, CreditInterface, Error, UserCreditHistory};
+use crate::{mock::*, CampaignIdSwitch, Error, UserCredit, UserCreditHistory};
 use frame_support::traits::Currency;
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::RawOrigin;
+use node_primitives::{
+    credit::{CreditData, CreditInterface, CreditLevel, CreditSetting},
+    user_privileges::Privilege,
+};
 use sp_runtime::traits::BadOrigin;
 use sp_runtime::Percent;
 
@@ -862,7 +865,11 @@ fn update_nft_class_credit() {
             Credit::update_nft_class_credit(Origin::signed(1), 0, 5),
             Error::<Test>::NotAdmin
         );
-        assert_ok!(Credit::set_credit_admin(Origin::root(), 3));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            3,
+            Privilege::CreditAdmin
+        ));
 
         assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
@@ -896,7 +903,11 @@ fn burn_nft() {
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
 
-        assert_ok!(Credit::set_credit_admin(Origin::root(), 3));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            3,
+            Privilege::CreditAdmin
+        ));
 
         assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
@@ -936,16 +947,16 @@ fn burn_nft() {
 #[test]
 fn unstaking_slash_credit() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Credit::set_credit_admin(Origin::root(), 1));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::CreditAdmin
+        ));
 
         assert_ok!(Credit::set_user_staking_credit(
             Origin::signed(1),
             vec!((3, 50))
         ));
-        // assert_eq!(
-        //     Credit::unstaking_slash_credit(Origin::signed(1), 3),
-        //     Err(DispatchError::from(Error::<Test>::FirstCampaignNotEnd))
-        // );
 
         let new_credit_data = CreditData {
             campaign_id: 0,

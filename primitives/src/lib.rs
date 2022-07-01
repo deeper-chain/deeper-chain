@@ -81,3 +81,13 @@ impl<AccountId> VerifySignatureInterface<AccountId> for () {
         true
     }
 }
+
+pub trait OperationInterface<AccountId, Balance> {
+    fn is_single_max_limit(pay_amount: Balance) -> bool;
+}
+
+impl<AccountId, Balance> OperationInterface<AccountId, Balance> for () {
+    fn is_single_max_limit(_pay_amount: Balance) -> bool {
+        true
+    }
+}

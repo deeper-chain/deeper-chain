@@ -189,6 +189,7 @@ impl pallet_credit::Config for Test {
     type SecsPerBlock = SecsPerBlock;
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = ();
+    type UserPrivilegeInterface = ();
 }
 
 parameter_types! {

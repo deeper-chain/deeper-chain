@@ -51,10 +51,13 @@ use frame_support::{
     PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
-use node_primitives::VerifySignatureInterface;
-use node_primitives::{credit::CreditInterface, deeper_node::NodeInterface};
+use node_primitives::{
+    credit::CreditInterface,
+    deeper_node::NodeInterface,
+    user_privileges::{Privilege, UserPrivilegeInterface},
+    OperationInterface, VerifySignatureInterface,
+};
 pub use pallet::*;
-use pallet_operation::OperationInterface;
 use pallet_session::historical;
 use scale_info::TypeInfo;
 use sp_runtime::{
@@ -589,8 +592,10 @@ pub mod pallet {
         /// CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
 
-        /// OperationInterface of operation pallet
         type OperationInterface: OperationInterface<Self::AccountId, BalanceOf<Self>>;
+
+        /// query user prvileges
+        type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
 
         /// NodeInterface of deeper-node pallet
         type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
@@ -1826,7 +1831,7 @@ pub mod pallet {
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
-                T::OperationInterface::is_payment_address(who),
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::ReleaseSetter),
                 Error::<T>::UnauthorizedAccounts
             );
             let remainder_mining_reward = T::NumberToCurrency::convert(
