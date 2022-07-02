@@ -20,14 +20,15 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-
 use frame_benchmarking::{account, benchmarks, Zero};
-use frame_support::traits::{Currency, LockableCurrency, WithdrawReasons};
+use frame_support::traits::{Currency, Get, LockableCurrency, WithdrawReasons};
 use frame_system::RawOrigin;
 use sp_runtime::traits::Saturating;
 use sp_runtime::traits::StaticLookup;
 
-use crate::Pallet as Op;
+use node_primitives::{credit::CreditInterface, user_privileges::Privilege};
+use pallet_user_privileges::Pallet as UserPrivileges;
+use scale_info::prelude::string::ToString;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
@@ -37,12 +38,13 @@ const ED_MULTIPLIER: u32 = 10;
 const FORCE_LOCK_ID: [u8; 8] = *b"abcdefgh";
 
 benchmarks! {
-    where_clause { where T: Config, T: pallet_balances::Config }
+    where_clause { where T: Config, T: pallet_balances::Config + pallet_user_privileges::Config }
     force_reserve_by_member {
         let existential_deposit = T::Currency::minimum_balance();
         let unlocker: T::AccountId = account("unlocker", 1, SEED);
+        let unlocker_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(unlocker.clone());
         let _ = T::Currency::make_free_balance_be(&unlocker, existential_deposit);
-        let  _ = Op::<T>::set_reserve_members(RawOrigin::Root.into(),vec!(unlocker.clone()));
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),unlocker_lookup,Privilege::LockerMember);
         let source: T::AccountId = account("locked", 0, SEED);
         let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
         // Give some multiple of the existential deposit + creation fee + transfer fee
@@ -66,24 +68,6 @@ benchmarks! {
         assert_eq!(T::Currency::free_balance(&source), balance);
     }
 
-    set_reserve_members {
-        let existential_deposit = T::Currency::minimum_balance();
-        let user_a: T::AccountId = account("a", 0, SEED);
-        let user_b: T::AccountId = account("b", 0, SEED);
-        let _ = T::Currency::make_free_balance_be(&user_a, existential_deposit);
-        let _ = T::Currency::make_free_balance_be(&user_b, existential_deposit);
-    }: set_reserve_members(RawOrigin::Root, vec!(user_a,user_b))
-    verify {
-        assert_eq!(Op::<T>::lock_member_whitelist().len(), 2);
-    }
-
-    set_release_owner_address {
-        let user: T::AccountId = account("user", 0, SEED);
-    }: set_release_owner_address(RawOrigin::Root, user.clone())
-    verify {
-        assert_eq!(ReleasePaymentAddress::<T>::get(),Some(user.clone()));
-    }
-
     set_release_limit_parameter {
         let existential_deposit = T::Currency::minimum_balance();
         let single_limit = existential_deposit * 10u32.into();
@@ -97,13 +81,15 @@ benchmarks! {
     unstaking_release {
         let existential_deposit = T::Currency::minimum_balance();
         let admin: T::AccountId = account("a", 0, SEED);
-        <ReleasePaymentAddress<T>>::put(admin.clone());
+        let admin_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(admin.clone());
+
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),admin_lookup,Privilege::ReleaseSetter);
         let single_limit = existential_deposit * 10u32.into();
         let daily_limit = existential_deposit * 1000u32.into();
         <SingleMaxLimit<T>>::put(single_limit);
         <DailyMaxLimit<T>>::put(daily_limit);
-
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
+        T::CreditInterface::add_or_update_credit(checked_account.clone(),99);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
     }: unstaking_release(RawOrigin::Signed(admin), rinfo)
     verify {
@@ -111,29 +97,60 @@ benchmarks! {
     }
 
     burn_for_ezc {
-        let existential_deposit = T::Currency::minimum_balance();
+        let existential_deposit = T::MinimumBurnedDPR::get();
         let user: T::AccountId = account("user", 0, SEED);
         let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
-    }: burn_for_ezc(RawOrigin::Signed(user.clone()), existential_deposit, H160::zero())
+    }: burn_for_ezc(RawOrigin::Signed(user.clone()), existential_deposit*1u32.into(), H160::zero())
     verify {
         assert_eq!(T::Currency::free_balance(&user),existential_deposit);
     }
 
-    get_npow_reward {
-        let existential_deposit = T::Currency::minimum_balance();
-        let user: T::AccountId = account("user", 0, SEED);
-        let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
-    }: get_npow_reward(RawOrigin::Signed(user.clone()))
-    verify {
-    }
+    // get_npow_reward {
+    //     let existential_deposit = T::Currency::minimum_balance();
+    //     let user: T::AccountId = account("user", 0, SEED);
+    //     let _ = T::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+    // }: _(RawOrigin::Signed(user.clone()))
+    // verify {
+    // }
 
     npow_mint {
         let account: T::AccountId = account("b", 1, USER_SEED);
+        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(account.clone());
+
         let existential_deposit = T::Currency::minimum_balance();
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::NpowMint);
         let dpr = existential_deposit * 10u32.into();
-    }: npow_mint(RawOrigin::Root, account.clone(), dpr)
+    }: npow_mint(RawOrigin::Signed(account.clone()), account.clone(), dpr)
     verify {
     }
 
-    impl_benchmark_test_suite!(Op, crate::tests::new_test_ext(), crate::tests::Test);
+    bridge_deeper_to_other {
+        let user1: T::AccountId = account("b", 1, USER_SEED);
+        let user2: T::AccountId = account("b", 2, USER_SEED);
+        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user1.clone());
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::BridgeAdmin);
+        BridgeFundAddreess::<T>::put(user1.clone());
+        let existential_deposit = T::Currency::minimum_balance();
+        let _ = T::Currency::make_free_balance_be(&user1, existential_deposit*2u32.into());
+        let _ = T::Currency::make_free_balance_be(&user2, existential_deposit*2u32.into());
+
+    }: bridge_deeper_to_other(RawOrigin::Signed(user1.clone()), H160::zero(),user2,existential_deposit,"test".to_string())
+    verify {
+    }
+
+    bridge_other_to_deeper {
+        let user1: T::AccountId = account("b", 1, USER_SEED);
+        let user2: T::AccountId = account("b", 2, USER_SEED);
+        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user1.clone());
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::BridgeAdmin);
+        BridgeFundAddreess::<T>::put(user1.clone());
+        let existential_deposit = T::Currency::minimum_balance();
+        let _ = T::Currency::make_free_balance_be(&user1, existential_deposit*2u32.into());
+        let _ = T::Currency::make_free_balance_be(&user2, existential_deposit*2u32.into());
+
+    }: bridge_other_to_deeper(RawOrigin::Signed(user1.clone()), user2,H160::zero(),existential_deposit,"test".to_string())
+    verify {
+    }
+
+    impl_benchmark_test_suite!(Operation, crate::tests::new_test_ext(), crate::tests::Test);
 }

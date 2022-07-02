@@ -55,6 +55,8 @@ pub trait WeightInfo {
     fn burn_for_ezc() -> Weight;
     fn get_npow_reward() -> Weight;
     fn npow_mint() -> Weight;
+    fn bridge_deeper_to_other() -> Weight;
+    fn bridge_other_to_deeper() -> Weight;
 }
 
 /// Weights for pallet_operation using the Substrate node and recommended hardware.
@@ -101,6 +103,16 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+    fn bridge_deeper_to_other() -> Weight {
+        (38_885_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
+    fn bridge_other_to_deeper() -> Weight {
+        (38_794_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(4 as Weight))
+            .saturating_add(T::DbWeight::get().writes(2 as Weight))
+    }
 }
 
 // For backwards compatibility and tests
@@ -146,5 +158,15 @@ impl WeightInfo for () {
         (41_810_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn bridge_deeper_to_other() -> Weight {
+        (38_885_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(4 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(2 as Weight))
+    }
+    fn bridge_other_to_deeper() -> Weight {
+        (38_794_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(4 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
 }

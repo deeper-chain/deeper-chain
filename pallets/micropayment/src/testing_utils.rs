@@ -14,7 +14,11 @@
 // limitations under the License.
 
 use node_primitives::Signature;
-use sp_core::{crypto::AccountId32, sr25519, Pair, Public};
+use scale_info::prelude::format;
+use sp_core::{
+    crypto::{AccountId32, Public},
+    sr25519, Pair,
+};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 type AccountId = AccountId32;

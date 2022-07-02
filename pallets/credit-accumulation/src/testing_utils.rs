@@ -48,6 +48,6 @@ pub fn charlie() -> AccountId {
     get_account_id_from_seed::<sr25519::Public>("Charlie")
 }
 
-pub fn dave() -> AccountId {
-    get_account_id_from_seed::<sr25519::Public>("Dave")
-}
+// pub fn dave() -> AccountId {
+//     get_account_id_from_seed::<sr25519::Public>("Dave")
+// }

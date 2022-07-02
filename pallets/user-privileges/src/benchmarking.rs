@@ -26,6 +26,7 @@ use crate::Pallet as UserPriv;
 use frame_benchmarking::{account, benchmarks};
 use frame_support::traits::EnsureOrigin;
 use frame_system::RawOrigin;
+use node_primitives::user_privileges::{Privilege, UserPrivilegeInterface};
 use sp_runtime::traits::StaticLookup;
 
 benchmarks! {

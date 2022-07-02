@@ -34,6 +34,7 @@ node-primitives = { version = '2.0.0', default-features = false, path = "../../p
 log = { default-features = false, version = "0.4.11" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", default-features = false}
 pallet-micropayment = {version = '3.0.0', default-features =false, path = "../micropayment"}
+pallet-credit = {version = '3.0.0', default-features =false, path = "../credit"}
 
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19", optional = true }
@@ -45,7 +46,6 @@ sp-storage = {git = "https://github.com/paritytech/substrate", branch = "polkado
 sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.19" }
-pallet-credit = {version = '3.0.0', default-features =false, path = "../credit"}
 pallet-user-privileges = {version = '4.0.0', default-features =false, path = "../user-privileges"}
 rand_chacha = { version = "0.2" }
 parking_lot = "0.11.1"

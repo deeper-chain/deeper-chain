@@ -1168,6 +1168,8 @@ impl pallet_micropayment::Config for Runtime {
     type NodeInterface = DeeperNode;
     type MicropaymentBurn = MicropaymentBurn;
     type Slash = Treasury;
+    #[cfg(feature = "runtime-benchmarks")]
+    type AccountCreator = ();
 }
 
 parameter_types! {
@@ -1241,6 +1243,8 @@ impl pallet_credit_accumulation::Config for Runtime {
     type Currency = Balances;
     type CreditInterface = Credit;
     type WeightInfo = pallet_credit_accumulation::weights::SubstrateWeight<Runtime>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type AccountCreator = ();
 }
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);

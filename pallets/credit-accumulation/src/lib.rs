@@ -30,10 +30,11 @@ mod mock;
 mod tests;
 
 #[cfg(test)]
-pub mod testing_utils;
+mod testing_utils;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
+
 #[cfg(any(feature = "runtime-benchmarks"))]
 use sp_std::prelude::*;
 
@@ -42,12 +43,13 @@ pub mod weights;
 #[frame_support::pallet]
 pub mod pallet {
     use crate::weights::WeightInfo;
-    use frame_support::codec::Encode;
-    use frame_support::traits::Currency;
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
+    use frame_support::{
+        codec::Encode, dispatch::DispatchResultWithPostInfo, pallet_prelude::*, traits::Currency,
+    };
     use frame_system::pallet_prelude::*;
-    use node_primitives::credit::CreditInterface;
-    use node_primitives::VerifySignatureInterface;
+    #[cfg(feature = "runtime-benchmarks")]
+    use node_primitives::AccountCreator;
+    use node_primitives::{credit::CreditInterface, VerifySignatureInterface};
     use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
     use sp_io::crypto::sr25519_verify;
@@ -64,6 +66,8 @@ pub mod pallet {
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
         // Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
+        #[cfg(feature = "runtime-benchmarks")]
+        type AccountCreator: AccountCreator<Self::AccountId>;
     }
 
     type BalanceOf<T> =

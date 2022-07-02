@@ -23,13 +23,23 @@ use frame_support::{
     PalletId,
 };
 use frame_system as system;
-use node_primitives::{Balance, Moment};
+use node_primitives::{AccountCreator, Balance, Moment, Signature};
 use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     Percent, Permill,
 };
+
+type AccountPublic = <Signature as Verify>::Signer;
+
+use sp_io::crypto::sr25519_generate;
+
+use sp_runtime::traits::{IdentifyAccount, Verify};
+
+use sp_runtime::MultiSigner;
+
+use sp_std::{borrow::ToOwned, vec::Vec};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -224,6 +234,19 @@ parameter_types! {
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
     pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
+
+pub struct DefaultAccountCreator;
+
+impl AccountCreator<AccountId> for DefaultAccountCreator {
+    fn create_account(s: &'static str) -> AccountId {
+        let seed = "//".to_owned() + &s;
+        let signer: MultiSigner = sr25519_generate(0.into(), Some(seed.as_bytes().to_vec())).into();
+
+        let account_id: AccountId = AccountPublic::from(signer).into_account();
+        account_id
+    }
+}
+
 impl pallet_micropayment::Config for Test {
     type Event = Event;
     type Currency = Balances;
@@ -234,6 +257,8 @@ impl pallet_micropayment::Config for Test {
     type NodeInterface = DeeperNode;
     type MicropaymentBurn = MicropaymentBurn;
     type Slash = Treasury;
+    #[cfg(feature = "runtime-benchmarks")]
+    type AccountCreator = DefaultAccountCreator;
 }
 
 // Build genesis storage according to the mock runtime.

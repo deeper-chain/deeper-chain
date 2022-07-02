@@ -32,8 +32,9 @@ mod tests;
 #[cfg(test)]
 pub mod testing_utils;
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-pub mod benchmarking;
+#[cfg(any(test, feature = "runtime-benchmarks"))]
+mod benchmarking;
+
 #[cfg(any(feature = "runtime-benchmarks"))]
 use sp_std::prelude::*;
 
@@ -59,6 +60,9 @@ pub mod pallet {
     use sp_runtime::Percent;
     use sp_std::prelude::Vec;
 
+    #[cfg(feature = "runtime-benchmarks")]
+    use node_primitives::AccountCreator;
+
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -79,6 +83,8 @@ pub mod pallet {
         type MicropaymentBurn: Get<Percent>;
 
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
+        #[cfg(feature = "runtime-benchmarks")]
+        type AccountCreator: AccountCreator<Self::AccountId>;
     }
 
     type BalanceOf<T> =

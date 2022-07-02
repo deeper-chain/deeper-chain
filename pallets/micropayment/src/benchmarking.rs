@@ -14,6 +14,9 @@
 // limitations under the License.
 
 //! Micropayment pallet benchmarking.
+//!
+
+#![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
 use crate::pallet::ChannelOf;
@@ -26,20 +29,30 @@ use frame_system::Pallet as System;
 use frame_system::RawOrigin;
 //use hex_literal::hex;
 use codec::Encode;
-use sp_core::{crypto::AccountId32, sr25519, Decode};
+use node_primitives::AccountCreator;
+use sp_core::sr25519;
 use sp_io::crypto::sr25519_sign;
-use sp_runtime::traits::TrailingZeroInput;
-use testing_utils::get_account_id_from_seed;
 
-pub fn account_pk<AccountId: Decode>(name: &'static str) -> AccountId {
-    let entropy: AccountId32 = get_account_id_from_seed::<sr25519::Public>(name);
-    Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-        .expect("infinite length input; no invalid inputs for type; qed")
-}
+//  use sp_core::sr25519::{Pair,Public};
+//  use sp_core::Pair as OtherPair;
+
+//use sp_keyring::Sr25519Keyring;
+
+// pub fn get_account_id_from_seed(seed: &str) -> AccountId32 {
+//     Pair::from_string(&format!("//{}", seed), None)
+//         .expect("static values are valid; qed")
+//         .public().into()
+// }
+
+// pub fn account_pk<AccountId: Decode>(name: &'static str) -> AccountId {
+//     let entropy: AccountId32 = get_account_id_from_seed(name);
+//     Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+//         .expect("infinite length input; no invalid inputs for type; qed")
+// }
 
 /// Grab a funded user with balance_factor DPR.
 pub fn create_funded_user<T: Config>(string: &'static str, balance_factor: u32) -> T::AccountId {
-    let user = account_pk::<T::AccountId>(string);
+    let user = T::AccountCreator::create_account(string);
     let balance = T::Currency::minimum_balance() * balance_factor.into();
     T::Currency::make_free_balance_be(&user, balance);
     T::Currency::issue(balance);
