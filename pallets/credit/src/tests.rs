@@ -307,10 +307,18 @@ fn slash_credit() {
                 current_credit_level: CreditLevel::One,
             },
         );
+        run_to_block(1);
         Credit::slash_credit(&1, None);
         assert_eq!(
             Credit::get_credit_score(&1).unwrap(),
             100 - CREDIT_ATTENUATION_STEP
+        );
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(1, 100 - CREDIT_ATTENUATION_STEP))
         );
     });
 }
@@ -958,6 +966,7 @@ fn unstaking_slash_credit() {
             vec!((3, 50))
         ));
 
+        run_to_block(1);
         let new_credit_data = CreditData {
             campaign_id: 0,
             credit: 100,
@@ -976,5 +985,12 @@ fn unstaking_slash_credit() {
         assert_ok!(Credit::unstaking_slash_credit(Origin::signed(1), 3));
         assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
         assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 4);
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(3, 50))
+        );
     });
 }
