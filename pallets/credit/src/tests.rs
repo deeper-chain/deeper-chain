@@ -318,7 +318,10 @@ fn slash_credit() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(1, 100 - CREDIT_ATTENUATION_STEP))
+            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(
+                1,
+                100 - CREDIT_ATTENUATION_STEP
+            ))
         );
     });
 }

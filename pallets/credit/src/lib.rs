@@ -1375,10 +1375,7 @@ pub mod pallet {
             // when unstaking,change campaign id to defalut campaign id
             let credit_data = CreditData::new(camp_id, new_score);
             UserCredit::<T>::insert(user, credit_data);
-            Self::deposit_event(Event::CreditUpdateSuccess(
-                user_clone,
-                new_score,
-            ));
+            Self::deposit_event(Event::CreditUpdateSuccess(user_clone, new_score));
             UserStakingCredit::<T>::remove(user);
             Self::update_credit_history(&user, Self::get_current_era());
 
