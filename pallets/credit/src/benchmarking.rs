@@ -19,7 +19,7 @@
 
 use super::*;
 use crate::Pallet as Credit;
-pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+pub use frame_benchmarking::{account, benchmarks, vec, whitelist_account, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;

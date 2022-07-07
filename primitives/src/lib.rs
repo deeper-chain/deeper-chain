@@ -23,10 +23,11 @@ pub mod credit;
 pub mod deeper_node;
 pub mod user_privileges;
 
+use codec::Decode;
 use scale_info::prelude::vec::Vec;
 use sp_runtime::{
     generic,
-    traits::{BlakeTwo256, IdentifyAccount, Verify},
+    traits::{BlakeTwo256, IdentifyAccount, TrailingZeroInput, Verify},
     MultiSignature, OpaqueExtrinsic,
 };
 
@@ -89,5 +90,14 @@ pub trait OperationInterface<AccountId, Balance> {
 impl<AccountId, Balance> OperationInterface<AccountId, Balance> for () {
     fn is_single_max_limit(_pay_amount: Balance) -> bool {
         true
+    }
+}
+
+pub trait AccountCreator<AccountId> {
+    fn create_account(string: &'static str) -> AccountId;
+}
+impl<AccountId: Decode> AccountCreator<AccountId> for () {
+    fn create_account(string: &'static str) -> AccountId {
+        Decode::decode(&mut TrailingZeroInput::new(string.as_bytes())).expect("input too long.")
     }
 }

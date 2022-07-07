@@ -20,8 +20,7 @@ pub use pallet::*;
 #[cfg(test)]
 mod tests;
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-pub mod benchmarking;
+mod benchmarking;
 
 pub mod weights;
 use scale_info::TypeInfo;
@@ -95,14 +94,13 @@ pub mod pallet {
         UnstakingResult(T::AccountId, String),
         GetNpowReward(T::AccountId, H160),
         NpowMint(T::AccountId, BalanceOf<T>),
+        BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
+        BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
     }
 
     // Errors inform users that something went wrong.
     #[pallet::error]
     pub enum Error<T> {
-        /// not in locker members
-        NotLockMember,
-        NotReleaseOwnerAddress,
         NotMatchOwner,
         ReachDailyMaximumLimit,
         ReachSingleMaximumLimit,
@@ -111,6 +109,7 @@ pub mod pallet {
         ReleaseBalanceZero,
         UnauthorizedAccounts,
         NpowRewardAddressNotFound,
+        FundPoolNotSet,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -213,7 +212,11 @@ pub mod pallet {
     pub(crate) type DayReleaseEnd<T> = StorageValue<_, bool, ValueQuery>;
 
     #[pallet::storage]
-    pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
+    #[pallet::getter(fn bridge_fund_address)]
+    pub(crate) type BridgeFundAddreess<T: Config> = StorageValue<_, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
+    pub(super) type StorageVersion<T> = StorageValue<_, Releases>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -254,7 +257,10 @@ pub mod pallet {
             #[pallet::compact] value: BalanceOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
-            ensure!(Self::is_locker_member(&sender), Error::<T>::NotLockMember);
+            ensure!(
+                Self::is_locker_member(&sender),
+                Error::<T>::UnauthorizedAccounts
+            );
             let who = T::Lookup::lookup(who)?;
             <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
             Self::deposit_event(Event::Locked(sender, value));
@@ -395,6 +401,72 @@ pub mod pallet {
             );
             T::Currency::deposit_creating(&target, dpr);
             Self::deposit_event(Event::<T>::NpowMint(target, dpr));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_fund_pool_address(
+            origin: OriginFor<T>,
+            funder: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BridgeAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            BridgeFundAddreess::<T>::put(funder);
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::bridge_deeper_to_other())]
+        pub fn bridge_deeper_to_other(
+            origin: OriginFor<T>,
+            to: H160,
+            from: T::AccountId,
+            amount: BalanceOf<T>,
+            tx: String,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BridgeAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            let funder = Self::bridge_fund_address();
+            ensure!(funder.is_some(), Error::<T>::FundPoolNotSet);
+
+            T::Currency::transfer(
+                &from,
+                &funder.unwrap(),
+                amount,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            Self::deposit_event(Event::<T>::BridgeDeeperToOther(to, from, amount, tx));
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::bridge_other_to_deeper())]
+        pub fn bridge_other_to_deeper(
+            origin: OriginFor<T>,
+            to: T::AccountId,
+            from: H160,
+            amount: BalanceOf<T>,
+            tx: String,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BridgeAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            let funder = Self::bridge_fund_address();
+            ensure!(funder.is_some(), Error::<T>::FundPoolNotSet);
+
+            T::Currency::transfer(
+                &funder.unwrap(),
+                &to,
+                amount,
+                ExistenceRequirement::KeepAlive,
+            )?;
+            Self::deposit_event(Event::<T>::BridgeOtherToDeeper(to, from, amount, tx));
             Ok(().into())
         }
     }

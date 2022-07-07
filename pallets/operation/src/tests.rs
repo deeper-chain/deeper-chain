@@ -119,11 +119,11 @@ parameter_types! {
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
 }
 
-impl pallet_operation::Config for Test {
+impl Config for Test {
     type Event = Event;
     type OPWeightInfo = ();
     type MaxMember = MaxMember;
-    type Currency = Balances;
+    type Currency = pallet_balances::Pallet<Self>;
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
@@ -294,5 +294,59 @@ fn npow_mint() {
             Operation::npow_mint(Origin::signed(3), 2, 100),
             Error::<Test>::UnauthorizedAccounts
         );
+    });
+}
+
+#[test]
+fn bridge_test() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
+        assert_ok!(Operation::set_fund_pool_address(Origin::signed(1), 2));
+
+        assert_eq!(Balances::free_balance(&3), 0);
+
+        assert_ok!(Operation::bridge_other_to_deeper(
+            Origin::signed(1),
+            3,
+            H160::zero(),
+            200,
+            "test".to_string()
+        ));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::BridgeOtherToDeeper(
+                3,
+                H160::zero(),
+                200,
+                "test".to_string()
+            ))
+        );
+
+        assert_eq!(Balances::free_balance(&3), 200);
+
+        assert_ok!(Operation::bridge_deeper_to_other(
+            Origin::signed(1),
+            H160::zero(),
+            3,
+            100,
+            "test".to_string()
+        ));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::BridgeDeeperToOther(
+                H160::zero(),
+                3,
+                100,
+                "test".to_string()
+            ))
+        );
+        assert_eq!(Balances::free_balance(&3), 100);
     });
 }

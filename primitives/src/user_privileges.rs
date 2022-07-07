@@ -30,6 +30,7 @@ pub enum Privilege {
     NpowMint = 1 << 4,
     CreditAdmin = 1 << 5,
     TipPayer = 1 << 6,
+    BridgeAdmin = 1 << 7,
 }
 
 /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
