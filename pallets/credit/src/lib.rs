@@ -711,12 +711,23 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        pub fn is_admin(user: &T::AccountId) -> bool {
+        fn is_admin(user: &T::AccountId) -> bool {
             T::UserPrivilegeInterface::has_privilege(&user, Privilege::CreditAdmin)
         }
 
-        // todo: check _caller's right in next pr
-        pub fn evm_update_credit(_caller: &H160, user: &T::AccountId, score: u64, add_flag: bool) {
+        fn is_evm_credit_operation_address(address: &H160) -> bool {
+            T::UserPrivilegeInterface::has_evm_privilege(&address, Privilege::EvmCreditOperation)
+        }
+
+        pub fn evm_update_credit(
+            caller: &H160,
+            user: &T::AccountId,
+            score: u64,
+            add_flag: bool,
+        ) -> bool {
+            if !Self::is_evm_credit_operation_address(&caller) {
+                return false;
+            }
             if add_flag {
                 let credit_data = {
                     match UserCredit::<T>::get(user) {
@@ -735,6 +746,7 @@ pub mod pallet {
             } else {
                 Self::slash_credit(user, Some(score));
             }
+            true
         }
 
         pub fn slash_offline_device_credit(account_id: &T::AccountId) -> Weight {
