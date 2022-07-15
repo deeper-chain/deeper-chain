@@ -22,7 +22,10 @@ use crate::Pallet as Staking;
 use testing_utils::*;
 
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+use frame_support::assert_ok;
 use frame_system::RawOrigin;
+use hex_literal::hex;
+use node_primitives::AccountCreator;
 use sp_runtime::traits::{One, TrailingZeroInput};
 use sp_runtime::PerThing;
 
@@ -54,7 +57,7 @@ fn add_slashing_spans<T: Config>(who: &T::AccountId, spans: u32) {
 const USER_SEED: u32 = 999666;
 
 benchmarks! {
-    where_clause { where T: Config, T: pallet_credit::Config }
+    where_clause { where T: Config, T: pallet_credit::Config + pallet_credit_accumulation::Config }
     bond {
         let stash = create_funded_user::<T>("stash", USER_SEED, 100);
         let controller = create_funded_user::<T>("controller", USER_SEED, 100);
@@ -140,10 +143,20 @@ benchmarks! {
     }
 
     staking_delegate {
-        let delegator = create_high_funded_user::<T>("aa",USER_SEED, 1000);
+        let delegator = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Alice");
+        high_funded_user::<T>(&delegator,1000);
+        let bob = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Bob");
+        assert_ok!(pallet_credit_accumulation::Pallet::<T>::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob,
+        ));
+
+        let nonce: u64 = 0;
+        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+
         let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
         whitelist_account!(delegator);
-    }: _(RawOrigin::Signed(delegator.clone()),0,vec!(), 2)
+    }: _(RawOrigin::Signed(delegator.clone()),0,signature.into(), 2)
     verify {
         assert!(Delegators::<T>::contains_key(delegator));
     }
