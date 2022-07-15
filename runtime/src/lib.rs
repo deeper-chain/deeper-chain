@@ -1158,6 +1158,32 @@ parameter_types! {
     pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+mod bench_mark_account {
+    use crate::{AccountId, Signature};
+    use node_primitives::AccountCreator;
+    use sp_io::crypto::sr25519_generate;
+    use sp_runtime::{
+        traits::{IdentifyAccount, Verify},
+        MultiSigner,
+    };
+    use sp_std::borrow::ToOwned;
+
+    type AccountPublic = <Signature as Verify>::Signer;
+
+    pub struct DefaultAccountCreator;
+
+    impl AccountCreator<AccountId> for DefaultAccountCreator {
+        fn create_account(s: &'static str) -> AccountId {
+            let seed = "//".to_owned() + &s;
+            let signer: MultiSigner =
+                sr25519_generate(0.into(), Some(seed.as_bytes().to_vec())).into();
+            let account_id: AccountId = AccountPublic::from(signer).into_account();
+            account_id
+        }
+    }
+}
+
 impl pallet_micropayment::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
@@ -1169,7 +1195,7 @@ impl pallet_micropayment::Config for Runtime {
     type MicropaymentBurn = MicropaymentBurn;
     type Slash = Treasury;
     #[cfg(feature = "runtime-benchmarks")]
-    type AccountCreator = ();
+    type AccountCreator = bench_mark_account::DefaultAccountCreator;
 }
 
 parameter_types! {
@@ -1244,7 +1270,7 @@ impl pallet_credit_accumulation::Config for Runtime {
     type CreditInterface = Credit;
     type WeightInfo = pallet_credit_accumulation::weights::SubstrateWeight<Runtime>;
     #[cfg(feature = "runtime-benchmarks")]
-    type AccountCreator = ();
+    type AccountCreator = bench_mark_account::DefaultAccountCreator;
 }
 
 pub struct FindAuthorTruncated<F>(PhantomData<F>);
