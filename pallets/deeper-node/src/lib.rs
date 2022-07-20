@@ -385,7 +385,7 @@ pub mod pallet {
         }
 
         // Mapped address, cannot get control of the mapped deper_address. Used only as a reward address
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,4))]
+		#[pallet::weight(T::WeightInfo::reward_mapping())]
 		pub fn reward_mapping(
 			origin: OriginFor<T>,
             nonce: u64,

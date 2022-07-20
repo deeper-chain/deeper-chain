@@ -23,6 +23,8 @@ pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use sp_std::vec;
+use hex_literal::hex;
+use core::str::FromStr;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
@@ -107,11 +109,23 @@ benchmarks! {
     }
 
     report_credit_proof {
-        let admin: T::AccountId = account("a", 0, SEED);
-    }: report_credit_proof(RawOrigin::Signed(admin.clone()),0,
-    Vec::new(), 1655007560, 1073741824000000, 4294967295)
+        let alice = create_funded_user::<T>("Alice", USER_SEED, 100);
+        let nonce: u64 = 0;
+        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+    }: report_credit_proof(RawOrigin::Signed(alice.clone()),nonce, signature.into(), 1655007560, 1073741824000000, 4294967295)
     verify {
-        assert_eq!(DeviceCreditProof::<T>::get(&admin), (1655007560, 1073741824000000, 4294967295));
+        assert_eq!(DeviceCreditProof::<T>::get(&alice), (1655007560, 1073741824000000, 4294967295));
+    }
+
+    reward_mapping {
+        let admin = create_funded_user::<T>("Alice", USER_SEED, 100);
+        let nonce: u64 = 0;
+        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+
+        let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+    }: reward_mapping(RawOrigin::Signed(admin.clone()), nonce, signature.into(), evm_address)
+    verify {
+        assert_eq!(RewardsAccountsDeepertoEVM::<T>::get(&admin), Some(evm_address));
     }
 }
 
