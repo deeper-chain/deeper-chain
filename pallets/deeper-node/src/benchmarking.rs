@@ -23,7 +23,6 @@ use core::str::FromStr;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::{assert_ok, traits::Currency};
 use frame_system::RawOrigin;
-use hex_literal::hex;
 use node_primitives::AccountCreator;
 use sp_std::vec;
 
@@ -122,16 +121,20 @@ benchmarks! {
     }: _(RawOrigin::Signed(admin.clone()),0,
     signature.into(), 1655007560, 1073741824000000, 4294967295)
     verify {
-        assert_eq!(DeviceCreditProof::<T>::get(&alice), (1655007560, 1073741824000000, 4294967295));
+        assert_eq!(DeviceCreditProof::<T>::get(&admin), (1655007560, 1073741824000000, 4294967295));
     }
 
     reward_mapping {
-        let admin = create_funded_user::<T>("Alice", USER_SEED, 100);
-        let nonce: u64 = 0;
-        let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+        let admin = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Alice");
+        let bob = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Bob");
+        assert_ok!(pallet_credit_accumulation::Pallet::<T>::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob,
+        ));
+        let signature: [u8; 64] = hex_literal::hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
 
         let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
-    }: reward_mapping(RawOrigin::Signed(admin.clone()), nonce, signature.into(), evm_address)
+    }: reward_mapping(RawOrigin::Signed(admin.clone()), 0, signature.into(), evm_address)
     verify {
         assert_eq!(RewardsAccountsDeepertoEVM::<T>::get(&admin), Some(evm_address));
     }
