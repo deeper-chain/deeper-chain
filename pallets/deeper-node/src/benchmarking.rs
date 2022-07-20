@@ -19,12 +19,12 @@
 
 use super::*;
 use crate::Pallet as DeeperNode;
+use core::str::FromStr;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
 use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use sp_std::vec;
 use hex_literal::hex;
-use core::str::FromStr;
+use sp_std::vec;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;

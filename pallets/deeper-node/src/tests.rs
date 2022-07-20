@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::{mock::*, Error};
-use frame_support::{assert_ok, assert_err, dispatch::DispatchErrorWithPostInfo};
+use frame_support::{assert_err, assert_ok, dispatch::DispatchErrorWithPostInfo};
 use node_primitives::deeper_node::NodeInterface;
 use sp_core::H160;
 use std::str::FromStr;
@@ -226,74 +226,70 @@ fn report_credit_proof() {
 
 #[test]
 fn reward_mapping() {
-	new_test_ext().execute_with(|| {
-		let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
-		assert_ok!(DeeperNode::reward_mapping(
-			Origin::signed(1),
+    new_test_ext().execute_with(|| {
+        let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+        assert_ok!(DeeperNode::reward_mapping(
+            Origin::signed(1),
             0,
             Vec::new(),
-			evm_address
-		));
-		assert_eq!(
-			DeeperNode::rewards_accounts_deeper_evm(&1),
-			Some(evm_address)
-		);
-	});
+            evm_address
+        ));
+        assert_eq!(
+            DeeperNode::rewards_accounts_deeper_evm(&1),
+            Some(evm_address)
+        );
+    });
 }
 
 #[test]
 fn reward_mapping_switch_evm_address() {
-	new_test_ext().execute_with(|| {
-		let evm_old_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
-		let evm_new_address = H160::from_str("1000000000000000000000000000000000000002").unwrap();
-		assert_ok!(DeeperNode::reward_mapping(
-			Origin::signed(1),
+    new_test_ext().execute_with(|| {
+        let evm_old_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+        let evm_new_address = H160::from_str("1000000000000000000000000000000000000002").unwrap();
+        assert_ok!(DeeperNode::reward_mapping(
+            Origin::signed(1),
             0,
             Vec::new(),
-			evm_old_address
-		));
-		assert_eq!(
-			DeeperNode::rewards_accounts_deeper_evm(1),
-			Some(evm_old_address)
-		);
+            evm_old_address
+        ));
+        assert_eq!(
+            DeeperNode::rewards_accounts_deeper_evm(1),
+            Some(evm_old_address)
+        );
 
-		assert_ok!(DeeperNode::reward_mapping(
-			Origin::signed(1),
+        assert_ok!(DeeperNode::reward_mapping(
+            Origin::signed(1),
             0,
             Vec::new(),
-			evm_new_address
-		));
-		assert_eq!(
-			DeeperNode::rewards_accounts_deeper_evm(&1),
-			Some(evm_new_address)
-		);
-	});
+            evm_new_address
+        ));
+        assert_eq!(
+            DeeperNode::rewards_accounts_deeper_evm(&1),
+            Some(evm_new_address)
+        );
+    });
 }
 
 #[test]
 fn reward_mapping_with_already_mapped_evm_address() {
-	new_test_ext().execute_with(|| {
-		let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
-		assert_ok!(DeeperNode::reward_mapping(
-			Origin::signed(1),
+    new_test_ext().execute_with(|| {
+        let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+        assert_ok!(DeeperNode::reward_mapping(
+            Origin::signed(1),
             0,
             Vec::new(),
-			evm_address
-		));
-		assert_eq!(
-			DeeperNode::rewards_accounts_deeper_evm(&1),
-			Some(evm_address)
-		);
+            evm_address
+        ));
+        assert_eq!(
+            DeeperNode::rewards_accounts_deeper_evm(&1),
+            Some(evm_address)
+        );
 
-		assert_err!(DeeperNode::reward_mapping(
-				Origin::signed(2),
-                0,
-                Vec::new(),
-				evm_address
-			),
-			Error::<Test>::EthAddressAlreadyMapped
-		);
-	});
+        assert_err!(
+            DeeperNode::reward_mapping(Origin::signed(2), 0, Vec::new(), evm_address),
+            Error::<Test>::EthAddressAlreadyMapped
+        );
+    });
 }
 
 #[test]

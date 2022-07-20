@@ -141,17 +141,17 @@ pub mod pallet {
     #[pallet::getter(fn devices_onboard)]
     pub(super) type DevicesOnboard<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
-    	/// Deeper Accounts Rewarded by NPoW(Evm_Address => Deeper_Address)
-	#[pallet::storage]
-	#[pallet::getter(fn rewards_accounts_evm_deeper)]
-	pub type RewardsAccountsEVMtoDeeper<T: Config> =
-		StorageMap<_, Blake2_128Concat, H160, T::AccountId, OptionQuery>;
+    /// Deeper Accounts Rewarded by NPoW(Evm_Address => Deeper_Address)
+    #[pallet::storage]
+    #[pallet::getter(fn rewards_accounts_evm_deeper)]
+    pub type RewardsAccountsEVMtoDeeper<T: Config> =
+        StorageMap<_, Blake2_128Concat, H160, T::AccountId, OptionQuery>;
 
-	/// Deeper Accounts Rewarded by NPoW(Deeper_Address => Evm_Address)
-	#[pallet::storage]
-	#[pallet::getter(fn rewards_accounts_deeper_evm)]
-	pub type RewardsAccountsDeepertoEVM<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, H160, OptionQuery>;
+    /// Deeper Accounts Rewarded by NPoW(Deeper_Address => Evm_Address)
+    #[pallet::storage]
+    #[pallet::getter(fn rewards_accounts_deeper_evm)]
+    pub type RewardsAccountsDeepertoEVM<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, H160, OptionQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -197,9 +197,9 @@ pub mod pallet {
         DeviceCreditProof(T::AccountId, u32, u64, u32),
 
         /// Bind worker eth_address to reward address
-		RewardsAccounts(T::AccountId, H160),
+        RewardsAccounts(T::AccountId, H160),
         /// Switch Bind worker eth_address to reward address
-		RewardsAccountsSwitch(T::AccountId, H160, H160),
+        RewardsAccountsSwitch(T::AccountId, H160, H160),
     }
 
     // Errors inform users that something went wrong.
@@ -224,9 +224,9 @@ pub mod pallet {
         /// signature verify failed
         SignatureVerifyFailed,
         /// ETH addresses are already bound
-		EthAddressAlreadyMapped,
+        EthAddressAlreadyMapped,
         /// No binding information
-		NotBound,
+        NotBound,
     }
 
     #[pallet::hooks]
@@ -385,14 +385,14 @@ pub mod pallet {
         }
 
         // Mapped address, cannot get control of the mapped deper_address. Used only as a reward address
-		#[pallet::weight(T::WeightInfo::reward_mapping())]
-		pub fn reward_mapping(
-			origin: OriginFor<T>,
+        #[pallet::weight(T::WeightInfo::reward_mapping())]
+        pub fn reward_mapping(
+            origin: OriginFor<T>,
             nonce: u64,
             signature: Vec<u8>,
-			eth_address: H160,
-		) -> DispatchResultWithPostInfo {
-			let deeper_address = ensure_signed(origin)?;
+            eth_address: H160,
+        ) -> DispatchResultWithPostInfo {
+            let deeper_address = ensure_signed(origin)?;
 
             ensure!(
                 T::VerifySignatureInterface::verify_atomos_signature(
@@ -403,34 +403,34 @@ pub mod pallet {
                 Error::<T>::SignatureVerifyFailed
             );
 
-			ensure!(
-				!RewardsAccountsEVMtoDeeper::<T>::contains_key(&eth_address),
-				Error::<T>::EthAddressAlreadyMapped
-			);
+            ensure!(
+                !RewardsAccountsEVMtoDeeper::<T>::contains_key(&eth_address),
+                Error::<T>::EthAddressAlreadyMapped
+            );
 
-			if RewardsAccountsDeepertoEVM::<T>::contains_key(&deeper_address) {
-				let evm_old_address = Self::rewards_accounts_deeper_evm(&deeper_address)
-					.ok_or(Error::<T>::NotBound)?;
-				if eth_address != evm_old_address {
-					RewardsAccountsEVMtoDeeper::<T>::remove(eth_address);
-					RewardsAccountsDeepertoEVM::<T>::remove(&deeper_address);
+            if RewardsAccountsDeepertoEVM::<T>::contains_key(&deeper_address) {
+                let evm_old_address = Self::rewards_accounts_deeper_evm(&deeper_address)
+                    .ok_or(Error::<T>::NotBound)?;
+                if eth_address != evm_old_address {
+                    RewardsAccountsEVMtoDeeper::<T>::remove(eth_address);
+                    RewardsAccountsDeepertoEVM::<T>::remove(&deeper_address);
 
-					RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
-					RewardsAccountsDeepertoEVM::<T>::insert(&deeper_address, eth_address);
-					Self::deposit_event(Event::RewardsAccountsSwitch(
-						deeper_address,
-						evm_old_address,
-						eth_address,
-					));
-				}
-			} else {
-				RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
-				RewardsAccountsDeepertoEVM::<T>::insert(&deeper_address, eth_address);
+                    RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
+                    RewardsAccountsDeepertoEVM::<T>::insert(&deeper_address, eth_address);
+                    Self::deposit_event(Event::RewardsAccountsSwitch(
+                        deeper_address,
+                        evm_old_address,
+                        eth_address,
+                    ));
+                }
+            } else {
+                RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
+                RewardsAccountsDeepertoEVM::<T>::insert(&deeper_address, eth_address);
 
-				Self::deposit_event(Event::RewardsAccounts(deeper_address, eth_address));
-			}
-			Ok(().into())
-		}
+                Self::deposit_event(Event::RewardsAccounts(deeper_address, eth_address));
+            }
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
