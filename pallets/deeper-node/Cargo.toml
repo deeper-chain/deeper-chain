@@ -21,11 +21,14 @@ sp-runtime = {default-features = false, git = "https://github.com/paritytech/sub
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", optional = true }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
+pallet-credit-accumulation = {default-features =false, path = "../credit-accumulation", optional = true}
+hex-literal = {version ="0.3.1", optional = true }
 
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
-
+pallet-credit-accumulation = {default-features =false, path = "../credit-accumulation"}
 
 [features]
 default = ['std']
@@ -43,4 +46,6 @@ std = [
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
+    "pallet-credit-accumulation",
+    "hex-literal",
 ]

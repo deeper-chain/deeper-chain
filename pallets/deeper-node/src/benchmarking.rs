@@ -19,9 +19,11 @@
 
 use super::*;
 use crate::Pallet as DeeperNode;
+use core::str::FromStr;
 pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
-use frame_support::traits::Currency;
+use frame_support::{assert_ok, traits::Currency};
 use frame_system::RawOrigin;
+use node_primitives::AccountCreator;
 use sp_std::vec;
 
 const SEED: u32 = 0;
@@ -41,6 +43,7 @@ pub fn create_funded_user<T: Config>(
 }
 
 benchmarks! {
+    where_clause { where T: Config, T: pallet_credit_accumulation::Config }
     register_device {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
@@ -107,11 +110,33 @@ benchmarks! {
     }
 
     report_credit_proof {
-        let admin: T::AccountId = account("a", 0, SEED);
-    }: report_credit_proof(RawOrigin::Signed(admin.clone()),0,
-    Vec::new(), 1655007560, 1073741824000000, 4294967295)
+        let admin = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Alice");
+        let bob = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Bob");
+        assert_ok!(pallet_credit_accumulation::Pallet::<T>::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob,
+        ));
+        let signature: [u8; 64] = hex_literal::hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+
+    }: _(RawOrigin::Signed(admin.clone()),0,
+    signature.into(), 1655007560, 1073741824000000, 4294967295)
     verify {
         assert_eq!(DeviceCreditProof::<T>::get(&admin), (1655007560, 1073741824000000, 4294967295));
+    }
+
+    reward_mapping {
+        let admin = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Alice");
+        let bob = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Bob");
+        assert_ok!(pallet_credit_accumulation::Pallet::<T>::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob,
+        ));
+        let signature: [u8; 64] = hex_literal::hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+
+        let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+    }: reward_mapping(RawOrigin::Signed(admin.clone()), 0, signature.into(), evm_address)
+    verify {
+        assert_eq!(RewardsAccountsDeepertoEVM::<T>::get(&admin), Some(evm_address));
     }
 }
 

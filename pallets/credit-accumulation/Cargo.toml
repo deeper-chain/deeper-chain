@@ -21,7 +21,6 @@ frame-system = {default-features = false, git = "https://github.com/paritytech/s
 pallet-timestamp = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives" }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false}
-pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false}
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../micropayment" }
 sp-core = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
@@ -37,6 +36,7 @@ frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch =
 pallet-credit = { default-features = false, path = "../credit", version = "3.0.0" }
 serde = { version = "1.0.101" }
 sp-keystore = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
+pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
 
 [features]
 default = ['std']
@@ -53,7 +53,6 @@ std = [
     'node-primitives/std',
 	'pallet-balances/std',
 	'pallet-credit/std',
-	'pallet-deeper-node/std',
 	'pallet-micropayment/std',
 	'pallet-uniques/std',
 	'log/std',
