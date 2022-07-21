@@ -5,7 +5,6 @@ members = [
 	"cli",
 	"primitives",
 	"rpc",
-	"rpc-client",
 	"runtime",
 	"testing",
 ]

@@ -111,8 +111,8 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
 
-    pub type ClassIdOf<T> = <T as pallet_uniques::Config>::ClassId;
-    pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::InstanceId;
+    pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
+    pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
     pub enum Releases {
