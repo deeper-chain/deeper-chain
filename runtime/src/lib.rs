@@ -77,8 +77,7 @@ use fp_rpc::{TransactionStatusV2 as TransactionStatus, TxPoolResponse};
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
 use pallet_evm::{
-    Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, PairedAddressMapping,
-    PairedNpowAddressMapping, Runner,
+    Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, PairedAddressMapping, Runner,
 };
 
 mod precompiles;
@@ -483,7 +482,7 @@ impl pallet_operation::Config for Runtime {
     type OPWeightInfo = pallet_operation::weights::SubstrateWeight<Runtime>;
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
-    type NpowAddressMapping = PairedNpowAddressMapping<Runtime>;
+    type NpowAddressMapping = EVM;
     type UserPrivilegeInterface = UserPrivileges;
 }
 
