@@ -156,5 +156,16 @@ benchmarks! {
     verify {
     }
 
+    set_dpr_price {
+        let user: T::AccountId = account("b", 1, USER_SEED);
+        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::CreditAdmin);
+
+        let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
+    }: _(RawOrigin::Signed(user),existential_deposit )
+    verify {
+        assert_eq!(DprPrice::<T>::get(),Some(existential_deposit));
+    }
+
     impl_benchmark_test_suite!(Operation, crate::tests::new_test_ext(), crate::tests::Test);
 }
