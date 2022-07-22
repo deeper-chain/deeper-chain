@@ -5714,6 +5714,7 @@ dependencies = [
  "pallet-credit",
  "pallet-credit-accumulation",
  "pallet-deeper-node",
+ "pallet-evm",
  "pallet-micropayment",
  "pallet-operation",
  "pallet-session",

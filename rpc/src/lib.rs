@@ -39,7 +39,6 @@ use fc_rpc::{
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
 use fc_rpc_core::TxPoolApiServer;
 use fp_storage::EthereumStorageSchema;
-use jsonrpc_pubsub::manager::SubscriptionManager;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::opaque::Block;
 use sc_client_api::{

@@ -27,6 +27,8 @@ use frame_support::{
 };
 use node_primitives::credit::{CreditData, CreditLevel, CreditSetting};
 use node_primitives::Moment;
+use pallet_evm::NpowAddressMapping;
+use sp_core::H160;
 use sp_core::H256;
 use sp_io;
 use sp_runtime::{
@@ -221,8 +223,8 @@ const MILLICENTS: Balance = 10_000_000_000_000;
 const CENTS: Balance = 1_000 * MILLICENTS;
 const DOLLARS: Balance = 100 * CENTS;
 parameter_types! {
-    pub const ClassDeposit: Balance = 100 * DOLLARS;
-    pub const InstanceDeposit: Balance = 1 * DOLLARS;
+    pub const CollectionDeposit: Balance = 100 * DOLLARS;
+    pub const ItemDeposit: Balance = 1 * DOLLARS;
     pub const KeyLimit: u32 = 32;
     pub const ValueLimit: u32 = 256;
     pub const StringLimit: u32 = 50;
@@ -230,12 +232,12 @@ parameter_types! {
 
 impl pallet_uniques::Config for Test {
     type Event = Event;
-    type ClassId = u32;
-    type InstanceId = u32;
+    type CollectionId = u32;
+    type ItemId = u32;
     type Currency = Balances;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>;
-    type ClassDeposit = ConstU128<2>;
-    type InstanceDeposit = ConstU128<1>;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
     type MetadataDepositBase = ConstU128<1>;
     type AttributeDepositBase = ConstU128<1>;
     type DepositPerByte = ConstU128<1>;
@@ -244,6 +246,7 @@ impl pallet_uniques::Config for Test {
     type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
     type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+    type Locker = ();
 }
 
 parameter_types! {
@@ -270,6 +273,21 @@ impl pallet_credit::Config for Test {
     type UserPrivilegeInterface = UserPrivileges;
 }
 
+pub struct U64FakeNpowAddressMapping;
+
+impl NpowAddressMapping<u64> for U64FakeNpowAddressMapping {
+    fn evm_to_deeper(_address: H160) -> Option<u64> {
+        None
+    }
+
+    fn deeper_to_evm(address: u64) -> Option<H160> {
+        if address == 1 {
+            return Some(H160::zero());
+        }
+        None
+    }
+}
+
 parameter_types! {
     pub const MinimumBurnedDPR: Balance = 50;
 }
@@ -282,7 +300,7 @@ impl pallet_operation::Config for Test {
     type OPWeightInfo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
-    type NpowAddressMapping = ();
+    type NpowAddressMapping = U64FakeNpowAddressMapping;
     type UserPrivilegeInterface = UserPrivileges;
 }
 
