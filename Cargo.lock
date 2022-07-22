@@ -4464,6 +4464,7 @@ dependencies = [
  "fp-storage",
  "jsonrpc-core",
  "jsonrpc-pubsub",
+ "jsonrpsee",
  "node-primitives",
  "node-runtime",
  "pallet-contracts-rpc",

@@ -515,7 +515,7 @@ pub fn new_full_base(
         client: client.clone(),
         keystore: keystore_container.sync_keystore(),
         network: network.clone(),
-        rpc_extensions_builder: Box::new(rpc_extensions_builder),
+        rpc_builder: Box::new(rpc_extensions_builder),
         transaction_pool: transaction_pool.clone(),
         task_manager: &mut task_manager,
         system_rpc_tx,

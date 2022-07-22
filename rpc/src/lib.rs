@@ -30,11 +30,14 @@
 
 #![warn(missing_docs)]
 
+use jsonrpsee::RpcModule;
+
 use fc_rpc::{
     EthBlockDataCacheTask, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
     SchemaV2Override, SchemaV3Override, SchemaV4Override, StorageOverride,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
+use fc_rpc_core::TxPoolApiServer;
 use fp_storage::EthereumStorageSchema;
 use jsonrpc_pubsub::manager::SubscriptionManager;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
@@ -44,16 +47,17 @@ use sc_client_api::{
     client::BlockchainEvents,
 };
 use sc_consensus_babe::{Config, Epoch};
-use sc_consensus_babe_rpc::BabeRpcHandler;
+
 use sc_consensus_epochs::SharedEpochChanges;
 use sc_finality_grandpa::{
     FinalityProofProvider, GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState,
 };
-use sc_finality_grandpa_rpc::GrandpaRpcHandler;
+
 use sc_network::NetworkService;
 use sc_rpc::SubscriptionTaskExecutor;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_service::TransactionPool;
+
 use sc_transaction_pool::{ChainApi, Pool};
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
@@ -180,14 +184,11 @@ where
     })
 }
 
-/// A IO handler that uses all Full RPC extensions.
-pub type IoHandler = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
-
 /// Instantiate all Full RPC extensions.
 pub fn create_full<C, P, SC, B, A>(
     deps: FullDeps<C, P, SC, B, A>,
     subscription_task_executor: SubscriptionTaskExecutor,
-) -> Result<jsonrpc_core::IoHandler<sc_rpc_api::Metadata>, Box<dyn std::error::Error + Send + Sync>>
+) -> Result<RpcModule<()>, Box<dyn std::error::Error + Send + Sync>>
 where
     C: ProvideRuntimeApi<Block>
         + HeaderBackend<Block>
@@ -213,14 +214,17 @@ where
     A: ChainApi<Block = Block> + 'static,
 {
     use fc_rpc::{
-        Eth, EthApi, EthDevSigner, EthFilter, EthFilterApi, EthPubSub, EthPubSubApi, EthSigner,
-        HexEncodedIdProvider, Net, NetApi, TxPool, TxPoolApi, Web3, Web3Api,
+        Eth, EthApiServer, EthDevSigner, EthFilter, EthFilterApiServer, EthPubSub,
+        EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, Web3, Web3ApiServer,
     };
-    use pallet_contracts_rpc::{Contracts, ContractsApi};
-    use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
-    use substrate_frame_rpc_system::{FullSystem, SystemApi};
+    use pallet_contracts_rpc::{Contracts, ContractsApiServer};
+    use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+    use sc_consensus_babe_rpc::{Babe, BabeApiServer};
+    use sc_finality_grandpa_rpc::{Grandpa, GrandpaApiServer};
+    use sc_sync_state_rpc::{SyncState, SyncStateApiServer};
+    use substrate_frame_rpc_system::{System, SystemApiServer};
 
-    let mut io = jsonrpc_core::IoHandler::default();
+    let mut io = RpcModule::new(());
     let FullDeps {
         client,
         pool,
@@ -255,99 +259,108 @@ where
         finality_provider,
     } = grandpa;
 
-    io.extend_with(SystemApi::to_delegate(FullSystem::new(
-        client.clone(),
-        pool.clone(),
-        deny_unsafe,
-    )));
+    io.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
     // Making synchronous calls in light client freezes the browser currently,
     // more context: https://github.com/paritytech/substrate/pull/3480
     // These RPCs should use an asynchronous caller instead.
-    io.extend_with(ContractsApi::to_delegate(Contracts::new(client.clone())));
-    io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
-        client.clone(),
-    )));
-    io.extend_with(sc_consensus_babe_rpc::BabeApi::to_delegate(
-        BabeRpcHandler::new(
-            client.clone(),
-            shared_epoch_changes.clone(),
-            keystore,
-            babe_config,
-            select_chain,
-            deny_unsafe,
-        ),
-    ));
-    io.extend_with(sc_finality_grandpa_rpc::GrandpaApi::to_delegate(
-        GrandpaRpcHandler::new(
-            shared_authority_set.clone(),
-            shared_voter_state,
-            justification_stream,
-            subscription_executor,
-            finality_provider,
-        ),
-    ));
+    io.merge(Contracts::new(client.clone()).into_rpc())?;
+    io.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
-    io.extend_with(sc_sync_state_rpc::SyncStateRpcApi::to_delegate(
-        sc_sync_state_rpc::SyncStateRpcHandler::new(
-            chain_spec,
-            client.clone(),
-            shared_authority_set,
-            shared_epoch_changes,
-        )?,
-    ));
+    // io.merge(
+    //     Babe::new(
+    //         client.clone(),
+    //         shared_epoch_changes.clone(),
+    //         keystore,
+    //         babe_config,
+    //         select_chain,
+    //         deny_unsafe,
+    //     )
+    //     .into_rpc(),
+    // )?;
+
+    // io.merge(
+    //     Grandpa::new(
+    //         shared_authority_set.clone(),
+    //         shared_voter_state,
+    //         justification_stream,
+    //         subscription_executor,
+    //         finality_provider,
+    //     )
+    //     .into_rpc(),
+    // )?;
+
+    // io.merge(
+    //     SyncState::new(
+    //         chain_spec,
+    //         client.clone(),
+    //         shared_authority_set,
+    //         shared_epoch_changes,
+    //     )
+    //     .into_rpc(),
+    // )?;
 
     let mut signers = Vec::new();
     if enable_dev_signer {
         signers.push(Box::new(EthDevSigner::new()) as Box<dyn EthSigner>);
     }
 
-    io.extend_with(EthApi::to_delegate(Eth::new(
-        client.clone(),
-        pool.clone(),
-        graph.clone(),
-        Some(node_runtime::TransactionConverter),
-        network.clone(),
-        signers,
-        overrides.clone(),
-        backend.clone(),
-        is_authority,
-        block_data_cache.clone(),
-        fee_history_cache,
-        fee_history_cache_limit,
-    )));
+    io.merge(
+        Eth::new(
+            client.clone(),
+            pool.clone(),
+            graph.clone(),
+            Some(node_runtime::TransactionConverter),
+            network.clone(),
+            signers,
+            overrides.clone(),
+            backend.clone(),
+            // Is authority.
+            is_authority,
+            block_data_cache.clone(),
+            fee_history_cache,
+            fee_history_cache_limit,
+        )
+        .into_rpc(),
+    )?;
 
     if let Some(filter_pool) = filter_pool {
-        io.extend_with(EthFilterApi::to_delegate(EthFilter::new(
-            client.clone(),
-            backend,
-            filter_pool.clone(),
-            500 as usize, // max stored filters
-            max_past_logs,
-            block_data_cache.clone(),
-        )));
+        io.merge(
+            EthFilter::new(
+                client.clone(),
+                backend,
+                filter_pool.clone(),
+                500_usize, // max stored filters
+                max_past_logs,
+                block_data_cache.clone(),
+            )
+            .into_rpc(),
+        )?;
     }
 
-    io.extend_with(NetApi::to_delegate(Net::new(
-        client.clone(),
-        network.clone(),
-        // Whether to format the `peer_count` response as Hex (default) or not.
-        true,
-    )));
+    io.merge(
+        Net::new(
+            client.clone(),
+            network.clone(),
+            // Whether to format the `peer_count` response as Hex (default) or not.
+            true,
+        )
+        .into_rpc(),
+    )?;
 
-    io.extend_with(Web3Api::to_delegate(Web3::new(client.clone())));
+    io.merge(Web3::new(client.clone()).into_rpc())?;
 
-    io.extend_with(EthPubSubApi::to_delegate(EthPubSub::new(
-        pool.clone(),
-        client.clone(),
-        network.clone(),
-        SubscriptionManager::<HexEncodedIdProvider>::with_id_provider(
-            HexEncodedIdProvider::default(),
-            Arc::new(subscription_task_executor),
-        ),
-        overrides,
-    )));
+    io.merge(
+        EthPubSub::new(
+            pool,
+            client.clone(),
+            network,
+            subscription_task_executor,
+            overrides,
+        )
+        .into_rpc(),
+    )?;
 
-    io.extend_with(TxPoolApi::to_delegate(TxPool::new(client, graph)));
+    io.merge(TxPool::new(client, graph).into_rpc())?;
 
     Ok(io)
 }
