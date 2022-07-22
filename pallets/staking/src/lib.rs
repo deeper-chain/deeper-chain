@@ -1881,6 +1881,13 @@ pub mod pallet {
 
             Ok(())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        pub fn set_minimum_validator_count(origin: OriginFor<T>, count: u32) -> DispatchResult {
+            ensure_root(origin)?;
+            MinimumValidatorCount::<T>::put(count);
+            Ok(())
+        }
     }
 
     #[pallet::hooks]
