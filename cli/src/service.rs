@@ -429,8 +429,7 @@ pub fn new_full_base(
     let prometheus_registry = config.prometheus_registry().cloned();
     let is_authority = config.role.is_authority();
     let enable_dev_signer = cli.run.enable_dev_signer;
-    let subscription_task_executor =
-        sc_rpc::SubscriptionTaskExecutor::new(task_manager.spawn_handle());
+    let subscription_task_executor = Arc::new(task_manager.spawn_handle());
     let overrides = node_rpc::overrides_handle(client.clone());
 
     let block_data_cache = Arc::new(fc_rpc::EthBlockDataCacheTask::new(
