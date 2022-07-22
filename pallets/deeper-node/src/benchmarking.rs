@@ -138,6 +138,16 @@ benchmarks! {
     verify {
         assert_eq!(RewardsAccountsDeepertoEVM::<T>::get(&admin), Some(evm_address));
     }
+
+    get_npow_reward {
+        let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
+        let user: T::AccountId = account("user", 0, SEED);
+        let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+
+        let _ = EvmPallet::<T>::reward_mapping(RawOrigin::Signed(user.clone()).into(),H160::zero());
+    }: _(RawOrigin::Signed(user))
+    verify {
+    }
 }
 
 #[cfg(test)]

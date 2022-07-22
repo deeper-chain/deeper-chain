@@ -107,16 +107,6 @@ benchmarks! {
         assert_eq!(<T as pallet::Config>::Currency::free_balance(&user),existential_deposit);
     }
 
-    get_npow_reward {
-        let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
-        let user: T::AccountId = account("user", 0, SEED);
-        let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
-
-        let _ = EvmPallet::<T>::reward_mapping(RawOrigin::Signed(user.clone()).into(),H160::zero());
-    }: _(RawOrigin::Signed(user))
-    verify {
-    }
-
     npow_mint {
         let account: T::AccountId = account("b", 1, USER_SEED);
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(account.clone());

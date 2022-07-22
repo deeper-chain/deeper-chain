@@ -5515,7 +5515,6 @@ dependencies = [
  "log",
  "node-primitives",
  "pallet-balances",
- "pallet-evm",
  "pallet-timestamp",
  "pallet-user-privileges",
  "parity-scale-codec",
