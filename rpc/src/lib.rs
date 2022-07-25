@@ -265,38 +265,38 @@ where
     io.merge(Contracts::new(client.clone()).into_rpc())?;
     io.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
-    // io.merge(
-    //     Babe::new(
-    //         client.clone(),
-    //         shared_epoch_changes.clone(),
-    //         keystore,
-    //         babe_config,
-    //         select_chain,
-    //         deny_unsafe,
-    //     )
-    //     .into_rpc(),
-    // )?;
+    io.merge(
+        Babe::new(
+            client.clone(),
+            shared_epoch_changes.clone(),
+            keystore,
+            babe_config,
+            select_chain,
+            deny_unsafe,
+        )
+        .into_rpc(),
+    )?;
 
-    // io.merge(
-    //     Grandpa::new(
-    //         shared_authority_set.clone(),
-    //         shared_voter_state,
-    //         justification_stream,
-    //         subscription_executor,
-    //         finality_provider,
-    //     )
-    //     .into_rpc(),
-    // )?;
+    io.merge(
+        Grandpa::new(
+            subscription_executor,
+            shared_authority_set.clone(),
+            shared_voter_state,
+            justification_stream,
+            finality_provider,
+        )
+        .into_rpc(),
+    )?;
 
-    // io.merge(
-    //     SyncState::new(
-    //         chain_spec,
-    //         client.clone(),
-    //         shared_authority_set,
-    //         shared_epoch_changes,
-    //     )
-    //     .into_rpc(),
-    // )?;
+    io.merge(
+        SyncState::new(
+            chain_spec,
+            client.clone(),
+            shared_authority_set,
+            shared_epoch_changes,
+        )?
+        .into_rpc(),
+    )?;
 
     let mut signers = Vec::new();
     if enable_dev_signer {
