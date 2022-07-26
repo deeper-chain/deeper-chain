@@ -1892,35 +1892,6 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            if StorageVersion::<T>::get() == Releases::V4_0_0 {
-                StorageVersion::<T>::put(Releases::V5_0_0);
-                return migrations::migrate_to_blockable::<T>();
-            } else if StorageVersion::<T>::get() == Releases::V5_0_0 {
-                StorageVersion::<T>::put(Releases::V6_0_0);
-                let mut to_be_removed = Vec::new();
-                for (account, balance) in DelegatorBalances::<T>::iter() {
-                    let (slash_score, extra_balance) = Self::calc_extra_balance_credit(&account);
-                    if slash_score == 0 {
-                        continue;
-                    }
-                    let _ = T::Currency::transfer(
-                        &Self::account_id(),
-                        &account,
-                        balance.saturating_sub(extra_balance),
-                        ExistenceRequirement::AllowDeath,
-                    );
-                    T::CreditInterface::slash_credit(&account, Some(slash_score));
-                    to_be_removed.push(account);
-                }
-
-                for account in to_be_removed {
-                    DelegatorBalances::<T>::remove(account);
-                }
-            }
-            0
-        }
-
         fn on_initialize(now: T::BlockNumber) -> Weight {
             // payout delegators only after the first era
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
@@ -2791,97 +2762,6 @@ impl<T: Config> pallet::Pallet<T> {
 
     fn get_delegator_data(next_key: &Vec<u8>) -> Option<DelegatorData<T::AccountId>> {
         frame_support::storage::unhashed::get::<DelegatorData<T::AccountId>>(next_key)
-    }
-
-    /// return values:
-    /// tobe slashed credit and tobe slashed balance
-    fn calc_extra_balance_credit(account: &T::AccountId) -> (u64, BalanceOf<T>) {
-        use sp_runtime::traits::UniqueSaturatedFrom;
-        const DPR: u128 = 1_000_000_000_000_000_000;
-        const FROM_ERA: u32 = 271;
-
-        let campaign0_reward: Vec<BalanceOf<T>> = vec![
-            0u32.into(),
-            UniqueSaturatedFrom::unique_saturated_from(2137 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(6026 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(11152 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(22307 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(39419 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(58389 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(82674 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(115400 * DPR / 100),
-        ];
-        let campaign1_reward: Vec<BalanceOf<T>> = vec![
-            0u32.into(),
-            UniqueSaturatedFrom::unique_saturated_from(2137 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(5642 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(10521 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(21173 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(37030 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(54444 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(75616 * DPR / 100),
-            UniqueSaturatedFrom::unique_saturated_from(102575 * DPR / 100),
-        ];
-        let history = T::CreditInterface::get_credit_history(account);
-        if history.is_empty() || (history[0].1.campaign_id != 0 && history[0].1.campaign_id != 1) {
-            return (0, 0u32.into());
-        }
-
-        let rewards = {
-            if history[0].1.campaign_id == 0 {
-                campaign0_reward
-            } else {
-                campaign1_reward
-            }
-        };
-        let cur_era = T::CreditInterface::get_current_era();
-        let len = history.len();
-        let mut basic_credit = 0;
-        let mut slash_credit = 0;
-        let mut extra_reward: BalanceOf<T> = 0u32.into();
-        let mut caclulated_era = 0;
-        let mut last_level: u8 = 0;
-        let mut basic_level: u8 = 0;
-        let mut is_first_staking = true;
-        let mut last_credit = 0;
-
-        for i in 0..len {
-            let (era, credit_data) = &history[i];
-            if *era <= FROM_ERA {
-                // get the credit before staking delegate
-                basic_credit = credit_data.credit;
-                last_credit = basic_credit;
-                continue;
-            }
-            // basic_level and basic_credit,here is const
-            basic_level = T::CreditInterface::get_credit_level(basic_credit).into();
-
-            let diff = credit_data.credit.saturating_sub(last_credit);
-            // not 100,since just when staking delegate success ,slashing offline credit
-            if diff >= 99 {
-                slash_credit += diff;
-                // before first staking_delegate,the reward is legal
-                if is_first_staking {
-                    is_first_staking = false;
-                } else {
-                    extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
-                        * ((era - caclulated_era).into());
-                }
-                caclulated_era = *era;
-                last_level = T::CreditInterface::get_credit_level(credit_data.credit).into();
-            }
-
-            last_credit = credit_data.credit;
-        }
-        // not happens,just for case
-        if last_level <= basic_level {
-            return (0, 0u32.into());
-        }
-
-        // use cur_era-1 ,because maybe current era's reward not pay
-        extra_reward += (rewards[last_level as usize] - rewards[basic_level as usize])
-            * (((cur_era - 1).saturating_sub(caclulated_era)).into());
-        (slash_credit, extra_reward)
     }
 
     fn do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
