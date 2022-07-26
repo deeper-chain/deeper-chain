@@ -1058,11 +1058,9 @@ pub mod pallet {
         }
 
         fn get_evm_credit_score(evm_user: &H160) -> Option<u64> {
-            T::NodeInterface::get_accounts_evm_deeper(evm_user)
-                .map(|account_id| {
-                    Self::user_credit(account_id).map(|credit_data| credit_data.credit)
-                })
-                .flatten()
+            T::NodeInterface::get_accounts_evm_deeper(evm_user).and_then(|account_id| {
+                Self::user_credit(account_id).map(|credit_data| credit_data.credit)
+            })
         }
 
         /// check if account_id's credit score is pass threshold
