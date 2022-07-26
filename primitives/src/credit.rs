@@ -2,8 +2,8 @@ use crate::Vec;
 use codec::{Decode, Encode};
 use frame_support::weights::Weight;
 use scale_info::TypeInfo;
-use sp_runtime::DispatchResult;
-use sp_runtime::Percent;
+use sp_core::H160;
+use sp_runtime::{DispatchResult, Percent};
 
 #[cfg(feature = "std")]
 use sp_runtime::{Deserialize, Serialize};
@@ -150,6 +150,7 @@ impl CreditLevel {
 
 pub trait CreditInterface<AccountId, Balance> {
     fn get_credit_score(account_id: &AccountId) -> Option<u64>;
+    fn get_evm_credit_score(account_id: &H160) -> Option<u64>;
     fn pass_threshold(account_id: &AccountId) -> bool;
     fn slash_credit(account_id: &AccountId, score: Option<u64>) -> Weight;
     fn get_credit_level(credit_score: u64) -> CreditLevel;
@@ -179,6 +180,9 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     }
 
     fn get_credit_score(_account_id: &AccountId) -> Option<u64> {
+        None
+    }
+    fn get_evm_credit_score(_account_id: &H160) -> Option<u64> {
         None
     }
     fn pass_threshold(_account_id: &AccountId) -> bool {
