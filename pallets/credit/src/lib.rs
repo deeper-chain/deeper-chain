@@ -721,30 +721,36 @@ pub mod pallet {
 
         pub fn evm_update_credit(
             caller: &H160,
-            user: &T::AccountId,
+            evm_user: &H160,
             score: u64,
             add_flag: bool,
         ) -> bool {
             if !Self::is_evm_credit_operation_address(&caller) {
                 return false;
             }
+            let user = T::NodeInterface::get_accounts_evm_deeper(evm_user);
+            if user.is_none() {
+                return false;
+            }
+            let user = user.unwrap();
+
             if add_flag {
                 let credit_data = {
-                    match UserCredit::<T>::get(user) {
+                    match UserCredit::<T>::get(&user) {
                         Some(mut credit_data) => {
                             let new_score = credit_data.credit.saturating_add(score);
                             credit_data.update(new_score);
                             credit_data
                         }
                         None => {
-                            let default_id = Self::default_campaign_id();
-                            CreditData::new(default_id, score)
+                            // do not init credit data, because entering the default campaign need some contition
+                            return false;
                         }
                     }
                 };
-                Self::do_add_credit_with_event(user.clone(), credit_data);
+                Self::do_add_credit_with_event(user, credit_data);
             } else {
-                Self::slash_credit(user, Some(score));
+                Self::slash_credit(&user, Some(score));
             }
             true
         }
@@ -1053,11 +1059,15 @@ pub mod pallet {
         }
 
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
-            if let Some(credit_data) = Self::user_credit(account_id) {
-                Some(credit_data.credit)
-            } else {
-                None
-            }
+            Self::user_credit(account_id).map(|credit_data| credit_data.credit)
+        }
+
+        fn get_evm_credit_score(evm_user: &H160) -> Option<u64> {
+            T::NodeInterface::get_accounts_evm_deeper(evm_user)
+                .map(|account_id| {
+                    Self::user_credit(account_id).map(|credit_data| credit_data.credit)
+                })
+                .flatten()
         }
 
         /// check if account_id's credit score is pass threshold
