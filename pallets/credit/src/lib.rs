@@ -117,6 +117,7 @@ pub mod pallet {
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
     pub enum Releases {
         V1_0_0,
+        V2_0_0,
     }
 
     #[pallet::pallet]
@@ -332,10 +333,10 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            if StorageVersion::<T>::get().is_none() {
+            if StorageVersion::<T>::get() == Some(Releases::V1_0_0) {
                 let new_campaign: Vec<CreditSetting<BalanceOf<T>>> = vec![
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Zero,
                         staking_balance: BalanceOf::<T>::zero(),
                         base_apy: Percent::from_percent(0),
@@ -346,7 +347,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::One,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
                         base_apy: Percent::from_percent(20),
@@ -357,7 +358,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Two,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR),
                         base_apy: Percent::from_percent(30),
@@ -368,7 +369,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Three,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR),
                         base_apy: Percent::from_percent(35),
@@ -379,7 +380,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Four,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(30_000 * DPR),
                         base_apy: Percent::from_percent(40),
@@ -390,7 +391,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Five,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(50_000 * DPR),
                         base_apy: Percent::from_percent(45),
@@ -401,7 +402,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Six,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(60_000 * DPR),
                         base_apy: Percent::from_percent(50),
@@ -412,7 +413,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Seven,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(80_000 * DPR),
                         base_apy: Percent::from_percent(55),
@@ -423,7 +424,7 @@ pub mod pallet {
                         reward_per_referee: BalanceOf::<T>::zero(),
                     },
                     CreditSetting {
-                        campaign_id: 4,
+                        campaign_id: 5,
                         credit_level: CreditLevel::Eight,
                         staking_balance: UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR),
                         base_apy: Percent::from_percent(60),
@@ -439,13 +440,8 @@ pub mod pallet {
                     Self::_update_credit_setting(setting);
                 }
 
-                CampaignIdSwitch::<T>::insert(0, 0);
-                CampaignIdSwitch::<T>::insert(1, 1);
-                CampaignIdSwitch::<T>::insert(2, 4);
-                CampaignIdSwitch::<T>::insert(3, 4);
-
-                StorageVersion::<T>::put(Releases::V1_0_0);
-                return T::DbWeight::get().reads_writes(1, 14);
+                StorageVersion::<T>::put(Releases::V2_0_0);
+                return T::DbWeight::get().reads_writes(1, 10);
             }
             0
         }
@@ -596,7 +592,6 @@ pub mod pallet {
             instance_id: InstanceIdOf<T>,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin.clone())?;
-
             ensure!(
                 MiningMachineClassCredit::<T>::contains_key(&class_id),
                 Error::<T>::MiningMachineClassCreditNoConfig
@@ -721,30 +716,36 @@ pub mod pallet {
 
         pub fn evm_update_credit(
             caller: &H160,
-            user: &T::AccountId,
+            evm_user: &H160,
             score: u64,
             add_flag: bool,
         ) -> bool {
             if !Self::is_evm_credit_operation_address(&caller) {
                 return false;
             }
+            let user = T::NodeInterface::get_accounts_evm_deeper(evm_user);
+            if user.is_none() {
+                return false;
+            }
+            let user = user.unwrap();
+
             if add_flag {
                 let credit_data = {
-                    match UserCredit::<T>::get(user) {
+                    match UserCredit::<T>::get(&user) {
                         Some(mut credit_data) => {
                             let new_score = credit_data.credit.saturating_add(score);
                             credit_data.update(new_score);
                             credit_data
                         }
                         None => {
-                            let default_id = Self::default_campaign_id();
-                            CreditData::new(default_id, score)
+                            // do not init credit data, because entering the default campaign need some contition
+                            return false;
                         }
                     }
                 };
-                Self::do_add_credit_with_event(user.clone(), credit_data);
+                Self::do_add_credit_with_event(user, credit_data);
             } else {
-                Self::slash_credit(user, Some(score));
+                Self::slash_credit(&user, Some(score));
             }
             true
         }
@@ -1053,11 +1054,15 @@ pub mod pallet {
         }
 
         fn get_credit_score(account_id: &T::AccountId) -> Option<u64> {
-            if let Some(credit_data) = Self::user_credit(account_id) {
-                Some(credit_data.credit)
-            } else {
-                None
-            }
+            Self::user_credit(account_id).map(|credit_data| credit_data.credit)
+        }
+
+        fn get_evm_credit_score(evm_user: &H160) -> Option<u64> {
+            T::NodeInterface::get_accounts_evm_deeper(evm_user)
+                .map(|account_id| {
+                    Self::user_credit(account_id).map(|credit_data| credit_data.credit)
+                })
+                .flatten()
         }
 
         /// check if account_id's credit score is pass threshold

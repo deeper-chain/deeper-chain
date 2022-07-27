@@ -21,6 +21,9 @@ extern crate alloc;
 
 mod util;
 
+use crate::util::{Gasometer, RuntimeHelper};
+use alloc::{borrow::ToOwned, vec};
+use arrayref::array_ref;
 use codec::Decode;
 use core::marker::PhantomData;
 use fp_evm::{
@@ -30,11 +33,6 @@ use fp_evm::{
 use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
 use node_primitives::credit::CreditInterface;
 use pallet_credit::Call as CreditCall;
-use pallet_evm::AddressMapping;
-
-use crate::util::{Gasometer, RuntimeHelper};
-use alloc::{borrow::ToOwned, vec};
-use arrayref::array_ref;
 use sp_core::{H160, U256};
 
 const BASIC_LEN: usize = 4 + 32;
@@ -112,9 +110,8 @@ where
         )?;
 
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
-        let origin = Runtime::AddressMapping::into_account_id(account);
 
-        let score = pallet_credit::Pallet::<Runtime>::get_credit_score(&origin);
+        let score = pallet_credit::Pallet::<Runtime>::get_evm_credit_score(&account);
         let score = U256::from(score.unwrap_or(0));
         let mut output = vec![0; 32];
         score.to_big_endian(&mut output);
@@ -168,11 +165,10 @@ where
 
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
-        let origin = Runtime::AddressMapping::into_account_id(account);
 
         pallet_credit::Pallet::<Runtime>::evm_update_credit(
             &(handle.context()).caller,
-            &origin,
+            &account,
             score,
             add_flag,
         );

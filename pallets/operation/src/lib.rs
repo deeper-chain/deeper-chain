@@ -50,7 +50,7 @@ pub mod pallet {
     pub use sp_core::H160;
     use sp_runtime::{
         traits::{Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
-        RuntimeDebug,
+        Percent, RuntimeDebug,
     };
 
     type BalanceOf<T> = <<T as pallet::Config>::Currency as Currency<
@@ -96,6 +96,7 @@ pub mod pallet {
         NpowMint(T::AccountId, BalanceOf<T>),
         BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
         BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
+        DPRPrice(BalanceOf<T>),
     }
 
     // Errors inform users that something went wrong.
@@ -110,6 +111,7 @@ pub mod pallet {
         UnauthorizedAccounts,
         NpowRewardAddressNotFound,
         FundPoolNotSet,
+        PriceDiffTooMuch,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -217,6 +219,14 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn dpr_price)]
+    pub(super) type DprPrice<T: Config> = StorageValue<_, BalanceOf<T>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn price_diff_rate)]
+    pub(super) type PriceDiffRate<T: Config> = StorageValue<_, Percent, OptionQuery>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -467,6 +477,51 @@ pub mod pallet {
                 ExistenceRequirement::KeepAlive,
             )?;
             Self::deposit_event(Event::<T>::BridgeOtherToDeeper(to, from, amount, tx));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_price_diff_rate(
+            origin: OriginFor<T>,
+            price_diff_rate: Percent,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            PriceDiffRate::<T>::put(price_diff_rate);
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::set_dpr_price())]
+        pub fn set_dpr_price(origin: OriginFor<T>, price: BalanceOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+
+            let rate = Self::price_diff_rate();
+            let old_price = Self::dpr_price();
+
+            match (rate, old_price) {
+                (Some(rate), Some(old_price)) => {
+                    let diff_limit = rate * old_price;
+                    let diff = {
+                        if price > old_price {
+                            price - old_price
+                        } else {
+                            old_price - price
+                        }
+                    };
+                    ensure!(diff <= diff_limit, Error::<T>::PriceDiffTooMuch);
+                }
+                _ => {}
+            }
+
+            DprPrice::<T>::put(price);
+            Self::deposit_event(Event::<T>::DPRPrice(price));
             Ok(().into())
         }
     }

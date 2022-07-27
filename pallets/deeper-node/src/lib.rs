@@ -156,14 +156,14 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub tmp: BalanceOf<T>,
+        pub reward_setting: Vec<(T::AccountId, H160)>,
     }
 
     #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             GenesisConfig {
-                tmp: Default::default(),
+                reward_setting: Default::default(),
             }
         }
     }
@@ -172,6 +172,10 @@ pub mod pallet {
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
             Pallet::<T>::setup_region_map();
+            for (account, evm) in self.reward_setting.clone().into_iter() {
+                RewardsAccountsEVMtoDeeper::<T>::insert(evm, account.clone());
+                RewardsAccountsDeepertoEVM::<T>::insert(account, evm);
+            }
         }
     }
 
@@ -413,9 +417,6 @@ pub mod pallet {
                 let evm_old_address = Self::rewards_accounts_deeper_evm(&deeper_address)
                     .ok_or(Error::<T>::NotBound)?;
                 if eth_address != evm_old_address {
-                    RewardsAccountsEVMtoDeeper::<T>::remove(eth_address);
-                    RewardsAccountsDeepertoEVM::<T>::remove(&deeper_address);
-
                     RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
                     RewardsAccountsDeepertoEVM::<T>::insert(&deeper_address, eth_address);
                     Self::deposit_event(Event::RewardsAccountsSwitch(
@@ -909,6 +910,14 @@ pub mod pallet {
             let current_block = <frame_system::Pallet<T>>::block_number();
             let eras = (current_block - block) / T::BlocksPerEra::get();
             TryInto::<u32>::try_into(eras).ok().unwrap()
+        }
+
+        fn get_accounts_deeper_evm(account_id: &T::AccountId) -> Option<H160> {
+            Self::rewards_accounts_deeper_evm(account_id)
+        }
+
+        fn get_accounts_evm_deeper(evm_address: &H160) -> Option<T::AccountId> {
+            Self::rewards_accounts_evm_deeper(evm_address)
         }
     }
 }
