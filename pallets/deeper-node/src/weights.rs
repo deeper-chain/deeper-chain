@@ -55,6 +55,7 @@ pub trait WeightInfo {
     fn im_online() -> Weight;
     fn report_credit_proof() -> Weight;
     fn reward_mapping() -> Weight;
+    fn get_npow_reward() -> Weight;
 }
 
 /// Weights for pallet_deeper_node using the Substrate node and recommended hardware.
@@ -98,6 +99,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
+    fn get_npow_reward() -> Weight {
+        (41_810_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
 }
 
 // For backwards compatibility and tests
@@ -139,5 +145,10 @@ impl WeightInfo for () {
         (56_000_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
+    }
+    fn get_npow_reward() -> Weight {
+        (41_810_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }
