@@ -507,8 +507,8 @@ impl ExtBuilder {
                         // some tests require delegators to survive one slash
                         credit: INITIAL_CREDIT + CREDIT_ATTENUATION_STEP,
                         initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
+                        rank_in_initial_credit_level: 0u32,
+                        number_of_referees: 0,
                         current_credit_level: CreditLevel::One,
                         reward_eras: 100,
                     },
@@ -553,7 +553,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 0u32,
                     tax_rate: Percent::from_percent(10),
                     max_referees_with_rewards: 1,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -564,7 +564,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 1200u32,
                     tax_rate: Percent::from_percent(10),
                     max_referees_with_rewards: 2,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -575,7 +575,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 1000u32,
                     tax_rate: Percent::from_percent(9),
                     max_referees_with_rewards: 3,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -586,7 +586,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 800u32,
                     tax_rate: Percent::from_percent(9),
                     max_referees_with_rewards: 7,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -597,7 +597,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 600u32,
                     tax_rate: Percent::from_percent(8),
                     max_referees_with_rewards: 12,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -608,7 +608,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 400u32,
                     tax_rate: Percent::from_percent(7),
                     max_referees_with_rewards: 18,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -619,7 +619,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 200u32,
                     tax_rate: Percent::from_percent(6),
                     max_referees_with_rewards: 25,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
                 CreditSetting {
                     campaign_id: 0,
@@ -630,7 +630,7 @@ impl ExtBuilder {
                     max_rank_with_bonus: 100u32,
                     tax_rate: Percent::from_percent(5),
                     max_referees_with_rewards: 34,
-                    reward_per_referee: 18 * DPR,
+                    reward_per_referee: 0,
                 },
             ],
             user_credit_data,

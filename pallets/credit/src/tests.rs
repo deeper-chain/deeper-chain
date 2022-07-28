@@ -195,10 +195,7 @@ fn add_or_update_credit_data_check_credit_history_and_reward() {
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(Credit::user_credit_history(3), vec![]);
         assert!(Credit::init_delegator_history(&3, 0));
-        assert_eq!(
-            Credit::get_reward(&3, 0, 0).0,
-            Some((0, 21369858941948251800))
-        );
+        assert_eq!(Credit::get_reward(&3, 0, 0).0, Some(21369858941948251800));
         let credit_historys = vec![(
             0,
             CreditData {
@@ -259,17 +256,11 @@ fn add_or_update_credit_data_check_credit_history_and_reward() {
 
         // era 2
         run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(
-            Credit::get_reward(&3, 1, 1).0,
-            Some((0, 223068450647875213020))
-        );
+        assert_eq!(Credit::get_reward(&3, 1, 1).0, Some(223068450647875213020));
 
         // era 3
         run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(
-            Credit::get_reward(&3, 2, 2).0,
-            Some((0, 223068450647875213020))
-        );
+        assert_eq!(Credit::get_reward(&3, 2, 2).0, Some(223068450647875213020));
     });
 }
 
@@ -381,52 +372,19 @@ fn get_reward_work() {
         assert!(Credit::init_delegator_history(&10, 0));
         assert!(Credit::init_delegator_history(&11, 0));
         run_to_block(BLOCKS_PER_ERA); // era 1
-        assert_eq!(
-            Credit::get_reward(&3, 0, 0).0,
-            Some((0, 21369858941948251800))
-        );
-        assert_eq!(
-            Credit::get_reward(&7, 0, 0).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&8, 0, 0).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&9, 0, 0).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&10, 0, 0).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&11, 0, 0).0,
-            Some((0, 56416427606743384752))
-        );
+        assert_eq!(Credit::get_reward(&3, 0, 0).0, Some(21369858941948251800));
+        assert_eq!(Credit::get_reward(&7, 0, 0).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&8, 0, 0).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&9, 0, 0).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&10, 0, 0).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&11, 0, 0).0, Some(56416427606743384752));
         run_to_block(BLOCKS_PER_ERA * 2); // era 2, credit expires at era 1
         assert_eq!(Credit::get_reward(&3, 1, 1).0, None);
-        assert_eq!(
-            Credit::get_reward(&7, 1, 1).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&8, 1, 1).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&9, 1, 1).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&10, 1, 1).0,
-            Some((0, 223068450647875213020))
-        );
-        assert_eq!(
-            Credit::get_reward(&11, 1, 1).0,
-            Some((0, 56416427606743384752))
-        );
+        assert_eq!(Credit::get_reward(&7, 1, 1).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&8, 1, 1).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&9, 1, 1).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&10, 1, 1).0, Some(223068450647875213020));
+        assert_eq!(Credit::get_reward(&11, 1, 1).0, Some(56416427606743384752));
     });
 }
 
@@ -436,10 +394,7 @@ fn get_reward_with_slash_credit_with_bonus() {
         assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
         assert!(Credit::init_delegator_history(&7, 0));
         run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(
-            Credit::get_reward(&7, 0, 0).0,
-            Some((0, 223068450647875213020))
-        );
+        assert_eq!(Credit::get_reward(&7, 0, 0).0, Some(223068450647875213020));
 
         Credit::slash_credit(&7, None);
         assert_eq!(
@@ -447,10 +402,7 @@ fn get_reward_with_slash_credit_with_bonus() {
             400 - CREDIT_ATTENUATION_STEP
         );
         run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(
-            Credit::get_reward(&7, 1, 1).0,
-            Some((0, 111517786970905338624))
-        );
+        assert_eq!(Credit::get_reward(&7, 1, 1).0, Some(111517786970905338624));
     });
 }
 
@@ -674,25 +626,16 @@ fn switch_campaign_duration() {
         assert!(Credit::init_delegator_history(&13, 1));
         // run_to_block, era=1
         run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(
-            Credit::get_reward(&13, 1, 1).0,
-            Some((0, 60263002216294070076))
-        );
+        assert_eq!(Credit::get_reward(&13, 1, 1).0, Some(60263002216294070076));
 
         run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(
-            Credit::get_reward(&13, 2, 2).0,
-            Some((0, 56416427606743384752))
-        );
+        assert_eq!(Credit::get_reward(&13, 2, 2).0, Some(56416427606743384752));
 
         assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 1);
         assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 3650);
 
         run_to_block(BLOCKS_PER_ERA * 4);
-        assert_eq!(
-            Credit::get_reward(&13, 3, 3).0,
-            Some((0, 56416427606743384752))
-        );
+        assert_eq!(Credit::get_reward(&13, 3, 3).0, Some(56416427606743384752));
     });
 }
 
@@ -706,16 +649,10 @@ fn switch_campaign_same_id() {
         assert!(Credit::init_delegator_history(&13, 1));
         // run_to_block, era=1
         run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(
-            Credit::get_reward(&13, 1, 1).0,
-            Some((0, 60263002216294070076))
-        );
+        assert_eq!(Credit::get_reward(&13, 1, 1).0, Some(60263002216294070076));
 
         run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(
-            Credit::get_reward(&13, 2, 2).0,
-            Some((0, 60263002216294070076))
-        );
+        assert_eq!(Credit::get_reward(&13, 2, 2).0, Some(60263002216294070076));
 
         assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 0);
         assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 1 + 180);

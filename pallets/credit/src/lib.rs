@@ -1109,7 +1109,7 @@ pub mod pallet {
             account_id: &T::AccountId,
             from: EraIndex,
             to: EraIndex,
-        ) -> (Option<(BalanceOf<T>, BalanceOf<T>)>, Weight) {
+        ) -> (Option<BalanceOf<T>>, Weight) {
             // silently ignore invalid inputs
             let cur_era = Self::get_current_era();
             if from > to || to >= cur_era {
@@ -1162,23 +1162,12 @@ pub mod pallet {
                 return (None, weight);
             }
 
-            let mut referee_reward = BalanceOf::<T>::zero();
             let mut poc_reward = BalanceOf::<T>::zero();
             for (credit_data, num_of_eras) in credit_map {
                 let initial_credit_level = credit_data.initial_credit_level;
                 let credit_setting =
                     Self::credit_settings(credit_data.campaign_id, initial_credit_level.clone());
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-                // referral reward
-                let number_of_referees =
-                    if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
-                        credit_data.number_of_referees
-                    } else {
-                        credit_setting.max_referees_with_rewards
-                    };
-                let daily_referee_reward = credit_setting
-                    .reward_per_referee
-                    .saturating_mul(number_of_referees.into());
 
                 // poc reward
                 let current_credit_level = credit_data.current_credit_level;
@@ -1209,36 +1198,10 @@ pub mod pallet {
                         base_daily_poc_reward
                     }
                 };
-                referee_reward = referee_reward
-                    .saturating_add(daily_referee_reward.saturating_mul(num_of_eras.into()));
                 poc_reward =
                     poc_reward.saturating_add(daily_poc_reward.saturating_mul(num_of_eras.into()));
             }
-            (Some((referee_reward, poc_reward)), weight)
-        }
-
-        fn get_top_referee_reward(account_id: &T::AccountId) -> (BalanceOf<T>, Weight) {
-            let mut weight = T::DbWeight::get().reads_writes(1, 0); // 1 db read for pass_threshold
-            if !Self::pass_threshold(account_id) {
-                // if not passing threshold
-                return (BalanceOf::<T>::zero(), weight);
-            }
-            let credit_data = Self::user_credit(account_id).unwrap(); // 1 db read
-            let credit_setting =
-                Self::credit_settings(credit_data.campaign_id, credit_data.initial_credit_level); // 1 db read
-            weight = weight.saturating_add(T::DbWeight::get().reads_writes(2, 0));
-            let number_of_referees =
-                if credit_data.number_of_referees <= credit_setting.max_referees_with_rewards {
-                    credit_data.number_of_referees
-                } else {
-                    credit_setting.max_referees_with_rewards
-                };
-            let daily_referee_reward = credit_setting
-                .reward_per_referee
-                .saturating_mul(number_of_referees.into());
-            let top_referee_reward =
-                daily_referee_reward.saturating_mul(credit_data.reward_eras.into());
-            (top_referee_reward, weight)
+            (Some(poc_reward), weight)
         }
 
         /// update credit score by traffic

@@ -158,8 +158,7 @@ pub trait CreditInterface<AccountId, Balance> {
         account_id: &AccountId,
         from: EraIndex,
         to: EraIndex,
-    ) -> (Option<(Balance, Balance)>, Weight);
-    fn get_top_referee_reward(account_id: &AccountId) -> (Balance, Weight);
+    ) -> (Option<Balance>, Weight);
     fn update_credit_by_traffic(server: AccountId);
     fn get_current_era() -> EraIndex;
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
@@ -198,11 +197,8 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
         _account_id: &AccountId,
         _from: EraIndex,
         _to: EraIndex,
-    ) -> (Option<(Balance, Balance)>, Weight) {
+    ) -> (Option<Balance>, Weight) {
         (None, 0)
-    }
-    fn get_top_referee_reward(_account_id: &AccountId) -> (Balance, Weight) {
-        (0u32.into(), 0)
     }
     fn update_credit_by_traffic(_server: AccountId) {}
     fn get_current_era() -> EraIndex {

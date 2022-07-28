@@ -1852,10 +1852,8 @@ pub mod pallet {
                     _ => (),
                 });
             } else {
-                let (total_referee_reward, _) =
-                    T::CreditInterface::get_top_referee_reward(&delegator);
                 let reward_data = RewardData::<BalanceOf<T>> {
-                    total_referee_reward,
+                    total_referee_reward: 0u32.into(),
                     received_referee_reward: referee_reward,
                     referee_reward: referee_reward,
                     received_pocr_reward: poc_reward,
@@ -2430,15 +2428,13 @@ impl<T: Config> pallet::Pallet<T> {
         let (rewards, get_reward_weight) =
             T::CreditInterface::get_reward(delegator, earliest_unrewarded_era, current_era - 1);
         weight = weight.saturating_add(get_reward_weight);
-        if let Some((referee_reward, poc_reward)) = rewards {
+        if let Some(poc_reward) = rewards {
             // update RewardData
             if Reward::<T>::contains_key(delegator) {
                 // 1 read
                 Reward::<T>::mutate(delegator, |data| match data {
                     // 1 write
                     Some(reward_data) => {
-                        reward_data.received_referee_reward += referee_reward;
-                        reward_data.referee_reward = referee_reward;
                         reward_data.received_pocr_reward += poc_reward;
                         reward_data.poc_reward = poc_reward;
                     }
@@ -2446,20 +2442,17 @@ impl<T: Config> pallet::Pallet<T> {
                 });
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
             } else {
-                let (total_referee_reward, get_top_referee_reward_weight) =
-                    T::CreditInterface::get_top_referee_reward(delegator);
-                weight = weight.saturating_add(get_top_referee_reward_weight);
                 let reward_data = RewardData::<BalanceOf<T>> {
-                    total_referee_reward,
-                    received_referee_reward: referee_reward,
-                    referee_reward: referee_reward,
+                    total_referee_reward: 0u32.into(),
+                    received_referee_reward: 0u32.into(),
+                    referee_reward: 0u32.into(),
                     received_pocr_reward: poc_reward,
                     poc_reward: poc_reward,
                 };
                 Reward::<T>::insert(delegator, reward_data); // 1 write
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             }
-            let reward = cmp::min(remainder_mining_reward, referee_reward + poc_reward);
+            let reward = cmp::min(remainder_mining_reward, poc_reward);
             let imbalance = T::Currency::deposit_creating(delegator, reward); // 1 write
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             Self::deposit_event(Event::<T>::DelegatorReward(
