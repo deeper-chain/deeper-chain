@@ -53,7 +53,6 @@ pub trait WeightInfo {
     fn set_release_limit_parameter() -> Weight;
     fn unstaking_release() -> Weight;
     fn burn_for_ezc() -> Weight;
-    fn get_npow_reward() -> Weight;
     fn npow_mint() -> Weight;
     fn bridge_deeper_to_other() -> Weight;
     fn bridge_other_to_deeper() -> Weight;
@@ -92,13 +91,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-
-    fn get_npow_reward() -> Weight {
-        (41_810_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-
     fn npow_mint() -> Weight {
         (41_810_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
@@ -153,13 +145,6 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-
-    fn get_npow_reward() -> Weight {
-        (41_810_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
-            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
-    }
-
     fn npow_mint() -> Weight {
         (41_810_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))

@@ -323,3 +323,29 @@ fn get_eras_offline() {
         assert_eq!(DeeperNode::get_eras_offline(&2), 3);
     });
 }
+
+#[test]
+fn get_npow_reward() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        assert_err!(
+            DeeperNode::get_npow_reward(Origin::signed(2)),
+            Error::<Test>::NpowRewardAddressNotFound
+        );
+
+        assert_ok!(DeeperNode::reward_mapping(
+            Origin::signed(1),
+            0,
+            Vec::new(),
+            H160::zero(),
+        ));
+        assert_ok!(DeeperNode::get_npow_reward(Origin::signed(1)));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::Event::from(crate::Event::GetNpowReward(1, H160::zero()))
+        );
+    });
+}

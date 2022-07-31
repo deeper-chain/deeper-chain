@@ -26,7 +26,6 @@ use sp_runtime::{
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
 use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
-use pallet_evm::NpowAddressMapping;
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -127,7 +126,6 @@ impl Config for Test {
     type BurnedTo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
-    type NpowAddressMapping = U128FakeNpowAddressMapping;
     type UserPrivilegeInterface = U128FakeUserPrivilege;
 }
 
@@ -226,21 +224,6 @@ fn burn_for_ezc() {
     });
 }
 
-pub struct U128FakeNpowAddressMapping;
-
-impl NpowAddressMapping<u128> for U128FakeNpowAddressMapping {
-    fn evm_to_deeper(_address: H160) -> Option<u128> {
-        None
-    }
-
-    fn deeper_to_evm(address: u128) -> Option<H160> {
-        if address == 1 {
-            return Some(H160::zero());
-        }
-        None
-    }
-}
-
 pub struct U128FakeUserPrivilege;
 
 impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
@@ -254,26 +237,6 @@ impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
     fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
         true
     }
-}
-
-#[test]
-fn get_npow_reward() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1);
-        assert_err!(
-            Operation::get_npow_reward(Origin::signed(2)),
-            Error::<Test>::NpowRewardAddressNotFound
-        );
-
-        assert_ok!(Operation::get_npow_reward(Origin::signed(1)));
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::Event::from(crate::Event::GetNpowReward(1, H160::zero()))
-        );
-    });
 }
 
 #[test]

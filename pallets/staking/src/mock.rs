@@ -27,7 +27,6 @@ use frame_support::{
 };
 use node_primitives::credit::{CreditData, CreditLevel, CreditSetting};
 use node_primitives::Moment;
-use pallet_evm::NpowAddressMapping;
 use sp_core::H160;
 use sp_core::H256;
 use sp_io;
@@ -273,21 +272,6 @@ impl pallet_credit::Config for Test {
     type UserPrivilegeInterface = UserPrivileges;
 }
 
-pub struct U64FakeNpowAddressMapping;
-
-impl NpowAddressMapping<u64> for U64FakeNpowAddressMapping {
-    fn evm_to_deeper(_address: H160) -> Option<u64> {
-        None
-    }
-
-    fn deeper_to_evm(address: u64) -> Option<H160> {
-        if address == 1 {
-            return Some(H160::zero());
-        }
-        None
-    }
-}
-
 parameter_types! {
     pub const MinimumBurnedDPR: Balance = 50;
 }
@@ -300,7 +284,6 @@ impl pallet_operation::Config for Test {
     type OPWeightInfo = ();
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
-    type NpowAddressMapping = U64FakeNpowAddressMapping;
     type UserPrivilegeInterface = UserPrivileges;
 }
 

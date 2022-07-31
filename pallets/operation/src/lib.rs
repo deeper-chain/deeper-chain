@@ -45,7 +45,6 @@ pub mod pallet {
         user_privileges::{Privilege, UserPrivilegeInterface},
         OperationInterface, DPR,
     };
-    use pallet_evm::NpowAddressMapping;
     use scale_info::prelude::string::{String, ToString};
     pub use sp_core::H160;
     use sp_runtime::{
@@ -72,7 +71,6 @@ pub mod pallet {
         type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
-        type NpowAddressMapping: NpowAddressMapping<Self::AccountId>;
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
     }
 
@@ -384,18 +382,6 @@ pub mod pallet {
             T::CreditInterface::burn_record(balance);
             Self::deposit_event(Event::<T>::BurnForEZC(sender, balance, benifity));
             Ok(().into())
-        }
-
-        #[pallet::weight(T::OPWeightInfo::get_npow_reward())]
-        pub fn get_npow_reward(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            match T::NpowAddressMapping::deeper_to_evm(sender.clone()) {
-                Some(evm_address) => {
-                    Self::deposit_event(Event::<T>::GetNpowReward(sender, evm_address));
-                    Ok(().into())
-                }
-                None => Err(Error::<T>::NpowRewardAddressNotFound)?,
-            }
         }
 
         #[pallet::weight(T::OPWeightInfo::npow_mint())]

@@ -205,6 +205,9 @@ pub mod pallet {
         RewardsAccounts(T::AccountId, H160),
         /// Switch Bind worker eth_address to reward address
         RewardsAccountsSwitch(T::AccountId, H160, H160),
+
+        /// send this event to let system mint dpr to user
+        GetNpowReward(T::AccountId, H160),
     }
 
     // Errors inform users that something went wrong.
@@ -232,6 +235,8 @@ pub mod pallet {
         EthAddressAlreadyMapped,
         /// No binding information
         NotBound,
+        /// no coresponding evm address
+        NpowRewardAddressNotFound,
     }
 
     #[pallet::hooks]
@@ -432,6 +437,18 @@ pub mod pallet {
                 Self::deposit_event(Event::RewardsAccounts(deeper_address, eth_address));
             }
             Ok(().into())
+        }
+
+        #[pallet::weight(T::WeightInfo::get_npow_reward())]
+        pub fn get_npow_reward(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            match Self::rewards_accounts_deeper_evm(&sender) {
+                Some(evm_address) => {
+                    Self::deposit_event(Event::<T>::GetNpowReward(sender, evm_address));
+                    Ok(().into())
+                }
+                None => Err(Error::<T>::NpowRewardAddressNotFound)?,
+            }
         }
     }
 
