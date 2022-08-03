@@ -3040,3 +3040,45 @@ fn staking_delegate() {
             assert_eq!(Staking::delegators(&51).delegating, true);
         });
 }
+
+#[test]
+fn rewards_to_referer() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .num_delegators(2)
+        .build_and_execute(|| {
+            // 1001 is the default delegator
+            assert_eq!(Staking::delegator_count() as u64, 1);
+            assert_eq!(Staking::active_delegator_count() as u64, 1);
+
+            assert_ok!(UserPrivileges::set_user_privilege(
+                Origin::root(),
+                1,
+                Privilege::CreditAdmin
+            ));
+
+            assert_ok!(Staking::set_user_referer(Origin::signed(1), 1001, 1002));
+            assert_eq!(Staking::user_referee_count(1002), 1);
+            run_to_block(BLOCKS_PER_ERA);
+            assert_eq!(
+                Staking::remainder_mining_reward().unwrap(),
+                TOTAL_MINING_REWARD
+            );
+
+            run_to_block(BLOCKS_PER_ERA + 1);
+            // 1001 is paid
+            assert_eq!(Balances::total_balance(&1001), 21369858941948251800);
+
+            assert_eq!(Balances::total_balance(&1002), 1068492947097412590);
+            let remainder = TOTAL_MINING_REWARD - 21369858941948251800 - 1068492947097412590;
+            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
+
+            assert_ok!(Staking::unset_user_referer(Origin::signed(1), 1001));
+            assert_eq!(Staking::user_referee_count(1002), 0);
+            run_to_block(BLOCKS_PER_ERA * 2 + 1);
+
+            assert_eq!(Balances::total_balance(&1001), 21369858941948251800 * 2);
+
+            assert_eq!(Balances::total_balance(&1002), 1068492947097412590);
+        });
+}
