@@ -934,6 +934,16 @@ pub mod pallet {
     pub(crate) type DelegatorBalances<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn user_referer)]
+    pub type UserReferer<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn user_referee_count)]
+    pub type UserRefereeCount<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, u32, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
@@ -1886,6 +1896,49 @@ pub mod pallet {
             MinimumValidatorCount::<T>::put(count);
             Ok(())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(2,2))]
+        pub fn set_user_referer(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            referer: T::AccountId,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            ensure!(account_id != referer, Error::<T>::SelfReferee);
+            ensure!(
+                Self::user_referer(&account_id).is_none(),
+                Error::<T>::RefereeAlready
+            );
+            UserReferer::<T>::insert(account_id, referer.clone());
+            UserRefereeCount::<T>::mutate(referer, |count| {
+                *count = count.saturating_add(1);
+            });
+            Ok(())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,2))]
+        pub fn unset_user_referer(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+
+            let referer = UserReferer::<T>::take(&account_id);
+            if let Some(referer) = referer {
+                UserRefereeCount::<T>::mutate(referer, |count| {
+                    *count = count.saturating_sub(1);
+                });
+            }
+            Ok(())
+        }
     }
 
     #[pallet::hooks]
@@ -1976,6 +2029,8 @@ pub mod pallet {
         SetValidatorWhitelist(Vec<T::AccountId>),
         /// On-chain staking, including Genesis and Basic users
         StakingDelegate(T::AccountId, u8),
+        /// The Referer  has been rewarded by this amount. \[account_id, amount\]
+        RefererReward(T::AccountId, BalanceOf<T>),
     }
 
     /// Error for the staking module.
@@ -2041,6 +2096,10 @@ pub mod pallet {
         NotAllowUpdateCrdit,
         /// fail for verify signature
         SignatureVerifyFailed,
+        /// already is referee
+        RefereeAlready,
+        /// refere self not allow
+        SelfReferee,
     }
 }
 
@@ -2068,6 +2127,18 @@ pub mod migrations {
 }
 
 impl<T: Config> pallet::Pallet<T> {
+    fn get_referel_bonus_rate(account_id: &T::AccountId) -> Option<Perbill> {
+        let number_of_referees = Self::user_referee_count(account_id);
+        match number_of_referees {
+            0 => None,
+            1..=20 => Some(Perbill::from_percent(5)),
+            21..=50 => Some(Perbill::from_percent(6)),
+            51..=100 => Some(Perbill::from_rational(75u32, 1000u32)),
+            101..=200 => Some(Perbill::from_percent(9)),
+            201.. => Some(Perbill::from_percent(12)),
+        }
+    }
+
     pub fn account_id() -> T::AccountId {
         T::PalletId::get().into_account()
     }
@@ -2393,6 +2464,14 @@ impl<T: Config> pallet::Pallet<T> {
             if remainder_mining_reward == Zero::zero() {
                 break;
             }
+            let (payout, payout_weight) =
+                Self::pay_referer(&delegator_data.delegator, payout, remainder_mining_reward);
+            weight = weight.saturating_add(payout_weight);
+            remainder_mining_reward = remainder_mining_reward.saturating_sub(payout);
+            if remainder_mining_reward == Zero::zero() {
+                break;
+            }
+
             last_key = next_key.clone();
             next_key = Self::next_delegators_key(&last_key); // 1 read
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
@@ -2469,6 +2548,56 @@ impl<T: Config> pallet::Pallet<T> {
         } else {
             Delegators::<T>::remove(delegator);
             DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
+        }
+
+        (payout, weight)
+    }
+
+    fn pay_referer(
+        delegator: &T::AccountId,
+        delegator_reward: BalanceOf<T>,
+        remainder_mining_reward: BalanceOf<T>,
+    ) -> (BalanceOf<T>, Weight) {
+        let referer = Self::user_referer(delegator);
+        let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        if referer.is_none() {
+            return (0u32.into(), weight);
+        }
+        let referer = referer.unwrap();
+        let rate = Self::get_referel_bonus_rate(&referer);
+        weight += T::DbWeight::get().reads_writes(1, 0);
+        if rate.is_none() {
+            return (0u32.into(), weight);
+        }
+        let payout = rate.unwrap() * delegator_reward;
+        let payout = cmp::min(remainder_mining_reward, payout);
+
+        let imbalance = T::Currency::deposit_creating(&referer, payout); // 1 write
+        weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+        Self::deposit_event(Event::<T>::RefererReward(referer.clone(), imbalance.peek()));
+
+        if Reward::<T>::contains_key(&referer) {
+            // 1 read
+            Reward::<T>::mutate(referer, |data| match data {
+                // 1 write
+                Some(reward_data) => {
+                    reward_data.total_referee_reward += payout;
+                    reward_data.received_referee_reward += payout;
+                    reward_data.referee_reward = payout;
+                }
+                _ => (),
+            });
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 1));
+        } else {
+            let reward_data = RewardData::<BalanceOf<T>> {
+                total_referee_reward: payout,
+                received_referee_reward: payout,
+                referee_reward: payout,
+                received_pocr_reward: 0u32.into(),
+                poc_reward: 0u32.into(),
+            };
+            Reward::<T>::insert(referer, reward_data); // 1 write
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
         }
 
         (payout, weight)
