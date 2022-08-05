@@ -257,11 +257,6 @@ impl Gasometer {
         }
     }
 
-    /// Get used gas.
-    pub fn used_gas(&self) -> u64 {
-        self.used_gas
-    }
-
     /// Record cost, and return error if it goes out of gas.
     pub fn record_cost(&mut self, cost: u64) -> EvmResult {
         self.used_gas = self
@@ -277,45 +272,6 @@ impl Gasometer {
             }),
             _ => Ok(()),
         }
-    }
-
-    /// Record cost of a log manually.
-    /// This can be useful to record log costs early when their content have static size.
-    pub fn record_log_costs_manual(&mut self, topics: usize, data_len: usize) -> EvmResult {
-        // Cost calculation is copied from EVM code that is not publicly exposed by the crates.
-        // https://github.com/rust-blockchain/evm/blob/master/gasometer/src/costs.rs#L148
-
-        const G_LOG: u64 = 375;
-        const G_LOGDATA: u64 = 8;
-        const G_LOGTOPIC: u64 = 375;
-
-        let topic_cost = G_LOGTOPIC
-            .checked_mul(topics as u64)
-            .ok_or(PrecompileFailure::Error {
-                exit_status: ExitError::OutOfGas,
-            })?;
-
-        let data_cost = G_LOGDATA
-            .checked_mul(data_len as u64)
-            .ok_or(PrecompileFailure::Error {
-                exit_status: ExitError::OutOfGas,
-            })?;
-
-        self.record_cost(G_LOG)?;
-        self.record_cost(topic_cost)?;
-        self.record_cost(data_cost)?;
-
-        Ok(())
-    }
-
-    /// Record cost of logs.
-    #[must_use]
-    pub fn record_log_costs(&mut self, logs: &[Log]) -> EvmResult {
-        for log in logs {
-            self.record_log_costs_manual(log.topics.len(), log.data.len())?;
-        }
-
-        Ok(())
     }
 
     /// Compute remaining gas.
@@ -343,7 +299,6 @@ impl Gasometer {
         PrecompileFailure::Revert {
             exit_status: ExitRevert::Reverted,
             output: output.as_ref().to_owned(),
-            cost: self.used_gas,
         }
     }
 

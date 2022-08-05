@@ -26,9 +26,9 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU128, Currency, EqualPrivilegeOnly, Everything, FindAuthor,
-        Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced,
-        U128CurrencyToVote,
+        AsEnsureOriginWithArg, ConstU128, ConstU32, Currency, EqualPrivilegeOnly, Everything,
+        FindAuthor, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing,
+        OnUnbalanced, U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -884,6 +884,9 @@ impl pallet_contracts::Config for Runtime {
     type DepositPerItem = DepositPerItem;
     type DepositPerByte = DepositPerByte;
     type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
+    type ContractAccessWeight = pallet_contracts::DefaultContractAccessWeight<RuntimeBlockWeights>;
+    type MaxCodeLen = ConstU32<{ 128 * 1024 }>;
+    type RelaxedMaxCodeLen = ConstU32<{ 256 * 1024 }>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1045,6 +1048,7 @@ parameter_types! {
 
 impl pallet_recovery::Config for Runtime {
     type Event = Event;
+    type WeightInfo = pallet_recovery::weights::SubstrateWeight<Runtime>;
     type Call = Call;
     type Currency = Balances;
     type ConfigDepositBase = ConfigDepositBase;
@@ -1101,7 +1105,7 @@ impl pallet_mmr::Config for Runtime {
     const INDEXING_PREFIX: &'static [u8] = b"mmr";
     type Hashing = <Runtime as frame_system::Config>::Hashing;
     type Hash = <Runtime as frame_system::Config>::Hash;
-    type LeafData = frame_system::Pallet<Self>;
+    type LeafData = pallet_mmr::ParentNumberAndHash<Self>;
     type OnNewRoot = ();
     type WeightInfo = ();
 }
@@ -1222,20 +1226,20 @@ parameter_types! {
 }
 
 parameter_types! {
-    pub const ClassDeposit: Balance = Balance::min_value();
-    pub const InstanceDeposit: Balance = Balance::min_value();
+    pub const CollectionDeposit: Balance = Balance::min_value();
+    pub const ItemDeposit: Balance = Balance::min_value();
     pub const KeyLimit: u32 = 32;
     pub const ValueLimit: u32 = 256;
 }
 
 impl pallet_uniques::Config for Runtime {
     type Event = Event;
-    type ClassId = u32;
-    type InstanceId = u32;
+    type CollectionId = u32;
+    type ItemId = u32;
     type Currency = Balances;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>;
-    type ClassDeposit = ClassDeposit;
-    type InstanceDeposit = InstanceDeposit;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
     type MetadataDepositBase = MetadataDepositBase;
     type AttributeDepositBase = MetadataDepositBase;
     type DepositPerByte = MetadataDepositPerByte;
@@ -1244,6 +1248,7 @@ impl pallet_uniques::Config for Runtime {
     type ValueLimit = ValueLimit;
     type WeightInfo = pallet_uniques::weights::SubstrateWeight<Runtime>;
     type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+    type Locker = ();
 }
 
 impl pallet_credit::Config for Runtime {
@@ -1546,9 +1551,11 @@ impl fp_self_contained::SelfContainedCall for Call {
     fn pre_dispatch_self_contained(
         &self,
         info: &Self::SignedInfo,
+        dispatch_info: &DispatchInfoOf<Call>,
+        len: usize,
     ) -> Option<Result<(), TransactionValidityError>> {
         match self {
-            Call::Ethereum(call) => call.pre_dispatch_self_contained(info),
+            Call::Ethereum(call) => call.pre_dispatch_self_contained(info, dispatch_info, len),
             _ => None,
         }
     }
@@ -1853,6 +1860,7 @@ impl_runtime_apis! {
             };
 
             let is_transactional = false;
+            let validate = true;
             <Runtime as pallet_evm::Config>::Runner::call(
                 from,
                 to,
@@ -1864,6 +1872,7 @@ impl_runtime_apis! {
                 nonce,
                 access_list.unwrap_or_default(),
                 is_transactional,
+                validate,
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
             ).map_err(|err| err.error.into())
         }
@@ -1888,6 +1897,7 @@ impl_runtime_apis! {
             };
 
             let is_transactional = false;
+            let validate = true;
             <Runtime as pallet_evm::Config>::Runner::create(
                 from,
                 data,
@@ -1898,6 +1908,7 @@ impl_runtime_apis! {
                 nonce,
                 access_list.unwrap_or_default(),
                 is_transactional,
+                validate,
                 config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
             ).map_err(|err| err.error.into())
         }
@@ -1964,31 +1975,65 @@ impl_runtime_apis! {
         Block,
         mmr::Hash,
     > for Runtime {
-      fn generate_proof(leaf_index: u64)
-        -> Result<(mmr::EncodableOpaqueLeaf, mmr::Proof<mmr::Hash>), mmr::Error>
-      {
-          Mmr::generate_proof(leaf_index)
-              .map(|(leaf, proof)| (mmr::EncodableOpaqueLeaf::from_leaf(&leaf), proof))
-      }
+        fn generate_proof(leaf_index: pallet_mmr::primitives::LeafIndex)
+            -> Result<(mmr::EncodableOpaqueLeaf, mmr::Proof<mmr::Hash>), mmr::Error>
+        {
+            Mmr::generate_batch_proof(vec![leaf_index]).and_then(|(leaves, proof)|
+                Ok((
+                    mmr::EncodableOpaqueLeaf::from_leaf(&leaves[0]),
+                    mmr::BatchProof::into_single_leaf_proof(proof)?
+                ))
+            )
+        }
 
-      fn verify_proof(leaf: mmr::EncodableOpaqueLeaf, proof: mmr::Proof<mmr::Hash>)
-        -> Result<(), mmr::Error>
-      {
-          let leaf: mmr::Leaf = leaf
-              .into_opaque_leaf()
-              .try_decode()
-              .ok_or(mmr::Error::Verify)?;
-          Mmr::verify_leaf(leaf, proof)
-      }
+        fn verify_proof(leaf: mmr::EncodableOpaqueLeaf, proof: mmr::Proof<mmr::Hash>)
+            -> Result<(), mmr::Error>
+        {
+            let leaf: mmr::Leaf = leaf
+                .into_opaque_leaf()
+                .try_decode()
+                .ok_or(mmr::Error::Verify)?;
+            Mmr::verify_leaves(vec![leaf], mmr::Proof::into_batch_proof(proof))
+        }
 
-      fn verify_proof_stateless(
-          root: mmr::Hash,
-          leaf: mmr::EncodableOpaqueLeaf,
-          proof: mmr::Proof<mmr::Hash>
-      ) -> Result<(), mmr::Error> {
-          let node = mmr::DataOrHash::Data(leaf.into_opaque_leaf());
-          pallet_mmr::verify_leaf_proof::<mmr::Hashing, _>(root, node, proof)
-      }
+        fn verify_proof_stateless(
+            root: mmr::Hash,
+            leaf: mmr::EncodableOpaqueLeaf,
+            proof: mmr::Proof<mmr::Hash>
+        ) -> Result<(), mmr::Error> {
+            let node = mmr::DataOrHash::Data(leaf.into_opaque_leaf());
+            pallet_mmr::verify_leaves_proof::<mmr::Hashing, _>(root, vec![node], mmr::Proof::into_batch_proof(proof))
+        }
+
+        fn mmr_root() -> Result<mmr::Hash, mmr::Error> {
+            Ok(Mmr::mmr_root())
+        }
+
+        fn generate_batch_proof(leaf_indices: Vec<pallet_mmr::primitives::LeafIndex>)
+            -> Result<(Vec<mmr::EncodableOpaqueLeaf>, mmr::BatchProof<mmr::Hash>), mmr::Error>
+        {
+            Mmr::generate_batch_proof(leaf_indices)
+                .map(|(leaves, proof)| (leaves.into_iter().map(|leaf| mmr::EncodableOpaqueLeaf::from_leaf(&leaf)).collect(), proof))
+        }
+
+        fn verify_batch_proof(leaves: Vec<mmr::EncodableOpaqueLeaf>, proof: mmr::BatchProof<mmr::Hash>)
+            -> Result<(), mmr::Error>
+        {
+            let leaves = leaves.into_iter().map(|leaf|
+                leaf.into_opaque_leaf()
+                .try_decode()
+                .ok_or(mmr::Error::Verify)).collect::<Result<Vec<mmr::Leaf>, mmr::Error>>()?;
+            Mmr::verify_leaves(leaves, proof)
+        }
+
+        fn verify_batch_proof_stateless(
+            root: mmr::Hash,
+            leaves: Vec<mmr::EncodableOpaqueLeaf>,
+            proof: mmr::BatchProof<mmr::Hash>
+        ) -> Result<(), mmr::Error> {
+            let nodes = leaves.into_iter().map(|leaf|mmr::DataOrHash::Data(leaf.into_opaque_leaf())).collect();
+            pallet_mmr::verify_leaves_proof::<mmr::Hashing, _>(root, nodes, proof)
+        }
     }
 
     impl sp_session::SessionKeys<Block> for Runtime {

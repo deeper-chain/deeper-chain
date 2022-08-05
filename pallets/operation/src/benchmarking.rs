@@ -30,8 +30,6 @@ use node_primitives::{credit::CreditInterface, user_privileges::Privilege};
 use pallet_user_privileges::Pallet as UserPrivileges;
 use scale_info::prelude::string::ToString;
 
-use pallet_evm::Pallet as EvmPallet;
-
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
 // existential deposit multiplier

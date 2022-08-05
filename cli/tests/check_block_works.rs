@@ -31,7 +31,7 @@ fn check_block_works() {
     common::run_dev_node_for_a_while(base_path.path());
 
     let status = Command::new(cargo_bin("deeper-chain"))
-        .args(&["check-block", "--dev", "--pruning", "archive", "-d"])
+        .args(&["check-block", "--dev", "-d"])
         .arg(base_path.path())
         .arg("1")
         .status()

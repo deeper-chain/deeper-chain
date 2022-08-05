@@ -27,7 +27,7 @@ use arrayref::array_ref;
 use codec::Decode;
 use core::marker::PhantomData;
 use fp_evm::{
-    Context, ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileOutput,
+    ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileHandle, PrecompileOutput,
     PrecompileResult,
 };
 use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
@@ -64,12 +64,7 @@ where
     <Runtime::Call as Dispatchable>::Origin: From<Option<Runtime::AccountId>>,
     Runtime::Call: From<CreditCall<Runtime>>,
 {
-    fn execute(
-        input: &[u8],
-        target_gas: Option<u64>,
-        context: &Context,
-        is_static: bool,
-    ) -> PrecompileResult {
+    fn execute(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         /*
         selector:
         0x5915ad98: add_credit_score
@@ -77,25 +72,17 @@ where
         0x87135d7d: get_credit_score
         */
 
+        let input = handle.input();
         if input.len() < BASIC_LEN {
             return Err(PrecompileFailure::Error {
                 exit_status: ExitError::Other("input len not enough".into()),
             });
         }
-        let mut gasometer = Gasometer::new(target_gas);
-        let gasometer = &mut gasometer;
-
         let real_type = u32::from_be_bytes(array_ref!(input, 0, 4).to_owned());
         match real_type {
-            SELECTOR_GET_CREDIT_SCORE => {
-                Self::get_credit_score(input, context, is_static, gasometer)
-            }
-            SELECTOR_ADD_CREDIT_SCORE => {
-                Self::add_credit_score(input, context, is_static, gasometer)
-            }
-            SELECTOR_SLASH_CREDIT_SCORE => {
-                Self::slash_credit_score(input, context, is_static, gasometer)
-            }
+            SELECTOR_GET_CREDIT_SCORE => Self::get_credit_score(handle),
+            SELECTOR_ADD_CREDIT_SCORE => Self::add_credit_score(handle),
+            SELECTOR_SLASH_CREDIT_SCORE => Self::slash_credit_score(handle),
             _ => Err(PrecompileFailure::Error {
                 exit_status: ExitError::InvalidCode,
             }),
@@ -110,15 +97,17 @@ where
     <Runtime::Call as Dispatchable>::Origin: From<Option<Runtime::AccountId>>,
     Runtime::Call: From<CreditCall<Runtime>>,
 {
-    pub fn get_credit_score(
-        input: &[u8],
-        context: &Context,
-        is_static: bool,
-        gasometer: &mut Gasometer,
-    ) -> PrecompileResult {
+    pub fn get_credit_score(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+        // Bound check
+        let input = handle.input();
         Self::check_input_len(input, BASIC_LEN)?;
 
-        gasometer.check_function_modifier(context, is_static, util::FunctionModifier::View)?;
+        let gasometer = Gasometer::new(None);
+        gasometer.check_function_modifier(
+            handle.context(),
+            handle.is_static(),
+            util::FunctionModifier::View,
+        )?;
 
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
 
@@ -126,72 +115,59 @@ where
         let score = U256::from(score.unwrap_or(0));
         let mut output = vec![0; 32];
         score.to_big_endian(&mut output);
-        gasometer.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost() * 2)?;
+        handle.record_cost(RuntimeHelper::<Runtime>::db_read_gas_cost() * 2)?;
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gasometer.used_gas(),
             output,
-            logs: Default::default(),
         })
     }
 
-    pub fn add_credit_score(
-        input: &[u8],
-        context: &Context,
-        is_static: bool,
-        gasometer: &mut Gasometer,
-    ) -> PrecompileResult {
-        Self::do_update_credit(input, context, is_static, gasometer, true)?;
+    pub fn add_credit_score(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+        Self::do_update_credit(handle, true)?;
 
         let weight = RuntimeHelper::<Runtime>::db_read_gas_cost() * 2
             + RuntimeHelper::<Runtime>::db_write_gas_cost();
-        gasometer.record_cost(weight)?;
+        handle.record_cost(weight)?;
+
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gasometer.used_gas(),
             output: Default::default(),
-            logs: Default::default(),
         })
     }
 
-    pub fn slash_credit_score(
-        input: &[u8],
-        context: &Context,
-        is_static: bool,
-        gasometer: &mut Gasometer,
-    ) -> PrecompileResult {
-        Self::do_update_credit(input, context, is_static, gasometer, false)?;
+    pub fn slash_credit_score(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+        Self::do_update_credit(handle, false)?;
         let weight = RuntimeHelper::<Runtime>::db_read_gas_cost() * 4
             + RuntimeHelper::<Runtime>::db_write_gas_cost() * 2;
-        gasometer.record_cost(weight)?;
+        handle.record_cost(weight)?;
 
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gasometer.used_gas(),
             output: Default::default(),
-            logs: Default::default(),
         })
     }
 
     fn do_update_credit(
-        input: &[u8],
-        context: &Context,
-        is_static: bool,
-        gasometer: &mut Gasometer,
+        handle: &mut impl PrecompileHandle,
         add_flag: bool,
     ) -> Result<(), PrecompileFailure> {
+        let input = handle.input();
+
         Self::check_input_len(input, BASIC_LEN + 32)?;
+
+        let gasometer = Gasometer::new(None);
         gasometer.check_function_modifier(
-            context,
-            is_static,
+            handle.context(),
+            handle.is_static(),
             util::FunctionModifier::NonPayable,
         )?;
+
         let account = H160::from(array_ref!(input, BASIC_LEN - 20, 20));
         let score = U256::from(array_ref!(input, BASIC_LEN, 32)).low_u64();
 
         pallet_credit::Pallet::<Runtime>::evm_update_credit(
-            &context.caller,
+            &(handle.context()).caller,
             &account,
             score,
             add_flag,

@@ -140,12 +140,19 @@ benchmarks! {
     }
 
     get_npow_reward {
+        let admin = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Alice");
+        let bob = <T as pallet_credit_accumulation::Config>::AccountCreator::create_account("Bob");
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
-        let user: T::AccountId = account("user", 0, SEED);
-        let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user, existential_deposit*2u32.into());
+        let _ = <T as pallet::Config>::Currency::make_free_balance_be(&admin, existential_deposit*2u32.into());
 
-        let _ = EvmPallet::<T>::reward_mapping(RawOrigin::Signed(user.clone()).into(),H160::zero());
-    }: _(RawOrigin::Signed(user))
+        assert_ok!(pallet_credit_accumulation::Pallet::<T>::set_atmos_pubkey(
+            RawOrigin::Root.into(),
+            bob,
+        ));
+        let signature: [u8; 64] = hex_literal::hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
+        let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
+        let _ = DeeperNode::<T>::reward_mapping(RawOrigin::Signed(admin.clone()).into(), 0, signature.into(), evm_address);
+    }: _(RawOrigin::Signed(admin))
     verify {
     }
 }

@@ -45,7 +45,7 @@ pub fn create_funded_user<T: Config>(
 }
 
 benchmarks! {
-    where_clause {where T::ClassId: From<u16>, T::InstanceId: From<u16>,T: pallet_user_privileges::Config}
+    where_clause {where T::CollectionId: From<u16>, T::ItemId: From<u16>,T: pallet_user_privileges::Config}
 
     update_credit_setting {
         let credit_setting = CreditSetting::<BalanceOf<T>> {
@@ -118,7 +118,7 @@ benchmarks! {
     }
 
     update_nft_class_credit {
-        let class_id: T::ClassId = 0u16.into();
+        let class_id: T::CollectionId = 0u16.into();
         let credit = 1;
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         let user_lookup = T::Lookup::unlookup(user.clone());
@@ -129,8 +129,8 @@ benchmarks! {
     }
 
     burn_nft {
-        let class_id: T::ClassId =  0u16.into();
-        let instance_id: T::InstanceId =  0u16.into();
+        let class_id: T::CollectionId =  0u16.into();
+        let instance_id: T::ItemId =  0u16.into();
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
 
         let user_lookup = T::Lookup::unlookup(user.clone());

@@ -2140,7 +2140,7 @@ impl<T: Config> pallet::Pallet<T> {
     }
 
     pub fn account_id() -> T::AccountId {
-        T::PalletId::get().into_account()
+        T::PalletId::get().into_account_truncating()
     }
 
     fn delegate_any(delegator: T::AccountId) -> DispatchResult {

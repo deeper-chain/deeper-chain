@@ -45,7 +45,7 @@ async fn temp_base_path_works() {
     );
 
     // Let it produce some blocks.
-    common::wait_n_finalized_blocks(3, 50).await.unwrap();
+    common::wait_n_finalized_blocks(3, 60).await.unwrap();
     assert!(
         child.try_wait().unwrap().is_none(),
         "the process should still be running"

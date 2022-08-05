@@ -23,7 +23,7 @@ use crate::{
     service::{frontier_database_dir, new_partial, ExecutorDispatch},
     Cli, Subcommand,
 };
-use frame_benchmarking_cli::BenchmarkCmd;
+use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 use node_runtime::{Block, RuntimeApi};
 use sc_cli::{ChainSpec, Result, RuntimeVersion, SubstrateCli};
 use sc_service::{DatabaseSource, PartialComponents};
@@ -131,6 +131,9 @@ pub fn run() -> Result<()> {
                                 inherent_benchmark_data()?,
                                 Arc::new(ext_builder),
                             )
+                        }
+                        BenchmarkCmd::Machine(cmd) => {
+                            cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone())
                         }
                     }
                 })

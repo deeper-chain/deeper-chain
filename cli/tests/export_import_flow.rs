@@ -91,7 +91,7 @@ impl<'a> ExportImportRevertExecutor<'a> {
                 "--binary",
                 "-d",
             ],
-            FormatOpt::Json => vec![&sub_command_str, "--dev", "--pruning", "archive", "-d"],
+            FormatOpt::Json => vec![&sub_command_str, "--dev", "-d"],
         };
 
         let tmp: TempDir;
@@ -184,7 +184,7 @@ impl<'a> ExportImportRevertExecutor<'a> {
     /// Runs the `revert` command.
     fn run_revert(&self) {
         let output = Command::new(cargo_bin("deeper-chain"))
-            .args(&["revert", "--dev", "--pruning", "archive", "-d"])
+            .args(&["revert", "--dev", "-d"])
             .arg(&self.base_path.path())
             .output()
             .unwrap();

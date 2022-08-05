@@ -221,8 +221,8 @@ const MILLICENTS: Balance = 10_000_000_000_000;
 const CENTS: Balance = 1_000 * MILLICENTS;
 const DOLLARS: Balance = 100 * CENTS;
 parameter_types! {
-    pub const ClassDeposit: Balance = 100 * DOLLARS;
-    pub const InstanceDeposit: Balance = 1 * DOLLARS;
+    pub const CollectionDeposit: Balance = 100 * DOLLARS;
+    pub const ItemDeposit: Balance = 1 * DOLLARS;
     pub const KeyLimit: u32 = 32;
     pub const ValueLimit: u32 = 256;
     pub const StringLimit: u32 = 50;
@@ -230,12 +230,12 @@ parameter_types! {
 
 impl pallet_uniques::Config for Test {
     type Event = Event;
-    type ClassId = u32;
-    type InstanceId = u32;
+    type CollectionId = u32;
+    type ItemId = u32;
     type Currency = Balances;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>;
-    type ClassDeposit = ConstU128<2>;
-    type InstanceDeposit = ConstU128<1>;
+    type CollectionDeposit = CollectionDeposit;
+    type ItemDeposit = ItemDeposit;
     type MetadataDepositBase = ConstU128<1>;
     type AttributeDepositBase = ConstU128<1>;
     type DepositPerByte = ConstU128<1>;
@@ -244,6 +244,7 @@ impl pallet_uniques::Config for Test {
     type ValueLimit = ConstU32<50>;
     type WeightInfo = ();
     type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+    type Locker = ();
 }
 
 parameter_types! {
