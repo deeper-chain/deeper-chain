@@ -61,40 +61,40 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn update_credit_setting() -> Weight {
-        (19_657_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
+        (12_688_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn add_or_update_credit_data() -> Weight {
-        (26_652_000 as Weight)
+        (17_815_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn burn_for_add_credit() -> Weight {
-        (90_026_000 as Weight)
+        (61_294_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn force_modify_credit_history() -> Weight {
-        (24_148_000 as Weight)
+        (15_923_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn update_nft_class_credit() -> Weight {
-        (22_163_000 as Weight)
+        (14_770_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn burn_nft() -> Weight {
-        (83_061_000 as Weight)
+        (57_653_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     fn set_switch_campaign() -> Weight {
-        (10_914_000 as Weight)
+        (7_484_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn set_not_switch_accounts() -> Weight {
-        (9_563_000 as Weight)
+        (6_173_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
@@ -103,40 +103,40 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn update_credit_setting() -> Weight {
-        (19_657_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
+        (12_688_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn add_or_update_credit_data() -> Weight {
-        (26_652_000 as Weight)
+        (17_815_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn burn_for_add_credit() -> Weight {
-        (90_026_000 as Weight)
+        (61_294_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn force_modify_credit_history() -> Weight {
-        (24_148_000 as Weight)
+        (15_923_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn update_nft_class_credit() -> Weight {
-        (22_163_000 as Weight)
+        (14_770_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn burn_nft() -> Weight {
-        (83_061_000 as Weight)
+        (57_653_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
     fn set_switch_campaign() -> Weight {
-        (10_914_000 as Weight)
+        (7_484_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn set_not_switch_accounts() -> Weight {
-        (9_563_000 as Weight)
+        (6_173_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }

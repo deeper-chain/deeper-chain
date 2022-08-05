@@ -62,56 +62,56 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn report_awesome(r: u32) -> Weight {
-        (44_436_000 as Weight) // Standard Error: 0
+        (30_981_000 as Weight) // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(r as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn retract_tip() -> Weight {
-        (40_933_000 as Weight)
+        (29_203_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn tip_new(r: u32, t: u32) -> Weight {
-        (28_945_000 as Weight) // Standard Error: 0
+        (19_945_000 as Weight) // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(r as Weight)) // Standard Error: 0
             .saturating_add((86_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn credit_tip_new(r: u32, t: u32) -> Weight {
-        (28_597_000 as Weight) // Standard Error: 0
+        (19_131_000 as Weight) // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(r as Weight)) // Standard Error: 0
-            .saturating_add((84_000 as Weight).saturating_mul(t as Weight))
+            .saturating_add((86_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn tip(t: u32) -> Weight {
-        (18_031_000 as Weight) // Standard Error: 0
-            .saturating_add((330_000 as Weight).saturating_mul(t as Weight))
+        (12_734_000 as Weight) // Standard Error: 0
+            .saturating_add((306_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn credit_tip(t: u32) -> Weight {
-        (17_855_000 as Weight) // Standard Error: 0
-            .saturating_add((318_000 as Weight).saturating_mul(t as Weight))
+        (12_447_000 as Weight) // Standard Error: 0
+            .saturating_add((295_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn close_tip(t: u32) -> Weight {
-        (71_725_000 as Weight) // Standard Error: 1_000
-            .saturating_add((243_000 as Weight).saturating_mul(t as Weight))
+        (51_132_000 as Weight) // Standard Error: 1_000
+            .saturating_add((203_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
     fn close_credit_tip(t: u32) -> Weight {
-        (40_542_000 as Weight) // Standard Error: 1_000
-            .saturating_add((253_000 as Weight).saturating_mul(t as Weight))
+        (27_373_000 as Weight) // Standard Error: 0
+            .saturating_add((210_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn slash_tip(t: u32) -> Weight {
-        (24_186_000 as Weight) // Standard Error: 0
+        (16_812_000 as Weight) // Standard Error: 0
             .saturating_add((13_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
@@ -121,56 +121,56 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn report_awesome(r: u32) -> Weight {
-        (44_436_000 as Weight) // Standard Error: 0
+        (30_981_000 as Weight) // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(r as Weight))
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn retract_tip() -> Weight {
-        (40_933_000 as Weight)
+        (29_203_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn tip_new(r: u32, t: u32) -> Weight {
-        (28_945_000 as Weight) // Standard Error: 0
+        (19_945_000 as Weight) // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(r as Weight)) // Standard Error: 0
             .saturating_add((86_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn credit_tip_new(r: u32, t: u32) -> Weight {
-        (28_597_000 as Weight) // Standard Error: 0
+        (19_131_000 as Weight) // Standard Error: 0
             .saturating_add((2_000 as Weight).saturating_mul(r as Weight)) // Standard Error: 0
-            .saturating_add((84_000 as Weight).saturating_mul(t as Weight))
+            .saturating_add((86_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn tip(t: u32) -> Weight {
-        (18_031_000 as Weight) // Standard Error: 0
-            .saturating_add((330_000 as Weight).saturating_mul(t as Weight))
+        (12_734_000 as Weight) // Standard Error: 0
+            .saturating_add((306_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn credit_tip(t: u32) -> Weight {
-        (17_855_000 as Weight) // Standard Error: 0
-            .saturating_add((318_000 as Weight).saturating_mul(t as Weight))
+        (12_447_000 as Weight) // Standard Error: 0
+            .saturating_add((295_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn close_tip(t: u32) -> Weight {
-        (71_725_000 as Weight) // Standard Error: 1_000
-            .saturating_add((243_000 as Weight).saturating_mul(t as Weight))
+        (51_132_000 as Weight) // Standard Error: 1_000
+            .saturating_add((203_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
     fn close_credit_tip(t: u32) -> Weight {
-        (40_542_000 as Weight) // Standard Error: 1_000
-            .saturating_add((253_000 as Weight).saturating_mul(t as Weight))
+        (27_373_000 as Weight) // Standard Error: 0
+            .saturating_add((210_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn slash_tip(t: u32) -> Weight {
-        (24_186_000 as Weight) // Standard Error: 0
+        (16_812_000 as Weight) // Standard Error: 0
             .saturating_add((13_000 as Weight).saturating_mul(t as Weight))
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))

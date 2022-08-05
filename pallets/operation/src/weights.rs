@@ -62,45 +62,45 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn force_reserve_by_member() -> Weight {
-        (36_636_000 as Weight)
+        (26_157_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn force_remove_lock() -> Weight {
-        (36_692_000 as Weight)
+        (25_417_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn set_release_limit_parameter() -> Weight {
-        (3_027_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
+        (1_870_000 as Weight).saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn unstaking_release() -> Weight {
-        (62_457_000 as Weight)
+        (43_540_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(6 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn burn_for_ezc() -> Weight {
-        (60_095_000 as Weight)
+        (41_285_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn npow_mint() -> Weight {
-        (48_810_000 as Weight)
+        (33_965_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn bridge_deeper_to_other() -> Weight {
-        (49_694_000 as Weight)
+        (35_279_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn bridge_other_to_deeper() -> Weight {
-        (49_480_000 as Weight)
+        (35_334_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
     fn set_dpr_price() -> Weight {
-        (23_713_000 as Weight)
+        (16_112_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
@@ -109,45 +109,45 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn force_reserve_by_member() -> Weight {
-        (36_636_000 as Weight)
+        (26_157_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn force_remove_lock() -> Weight {
-        (36_692_000 as Weight)
+        (25_417_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn set_release_limit_parameter() -> Weight {
-        (3_027_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
+        (1_870_000 as Weight).saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn unstaking_release() -> Weight {
-        (62_457_000 as Weight)
+        (43_540_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(6 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn burn_for_ezc() -> Weight {
-        (60_095_000 as Weight)
+        (41_285_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn npow_mint() -> Weight {
-        (48_810_000 as Weight)
+        (33_965_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn bridge_deeper_to_other() -> Weight {
-        (49_694_000 as Weight)
+        (35_279_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn bridge_other_to_deeper() -> Weight {
-        (49_480_000 as Weight)
+        (35_334_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
     }
     fn set_dpr_price() -> Weight {
-        (23_713_000 as Weight)
+        (16_112_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }

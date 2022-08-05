@@ -55,23 +55,23 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn add_credit_by_traffic() -> Weight {
-        (105_522_000 as Weight)
+        (88_843_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn set_atmos_pubkey() -> Weight {
-        (2_958_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        (1_872_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn add_credit_by_traffic() -> Weight {
-        (105_522_000 as Weight)
+        (88_843_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn set_atmos_pubkey() -> Weight {
-        (2_958_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        (1_872_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }

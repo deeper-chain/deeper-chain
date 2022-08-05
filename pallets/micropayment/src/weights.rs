@@ -58,27 +58,27 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn open_channel() -> Weight {
-        (56_803_000 as Weight)
+        (39_511_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn close_channel() -> Weight {
-        (90_420_000 as Weight)
+        (64_244_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn close_expired_channels() -> Weight {
-        (100_031_000 as Weight)
+        (71_999_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(5 as Weight))
             .saturating_add(T::DbWeight::get().writes(5 as Weight))
     }
     fn add_balance() -> Weight {
-        (54_130_000 as Weight)
+        (39_308_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(3 as Weight))
             .saturating_add(T::DbWeight::get().writes(3 as Weight))
     }
     fn claim_payment() -> Weight {
-        (159_271_000 as Weight)
+        (129_698_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(4 as Weight))
     }
@@ -87,27 +87,27 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn open_channel() -> Weight {
-        (56_803_000 as Weight)
+        (39_511_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn close_channel() -> Weight {
-        (90_420_000 as Weight)
+        (64_244_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn close_expired_channels() -> Weight {
-        (100_031_000 as Weight)
+        (71_999_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(5 as Weight))
             .saturating_add(RocksDbWeight::get().writes(5 as Weight))
     }
     fn add_balance() -> Weight {
-        (54_130_000 as Weight)
+        (39_308_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(3 as Weight))
             .saturating_add(RocksDbWeight::get().writes(3 as Weight))
     }
     fn claim_payment() -> Weight {
-        (159_271_000 as Weight)
+        (129_698_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(4 as Weight))
     }
