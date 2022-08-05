@@ -118,6 +118,7 @@ pub mod pallet {
     pub enum Releases {
         V1_0_0,
         V2_0_0,
+        V3_0_0,
     }
 
     #[pallet::pallet]
@@ -278,6 +279,7 @@ pub mod pallet {
             for uc in self.user_credit_data.clone().into_iter() {
                 <UserCredit<T>>::insert(uc.0, uc.1);
             }
+            StorageVersion::<T>::put(Releases::V3_0_0);
         }
     }
 
@@ -333,7 +335,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            if StorageVersion::<T>::get() == Some(Releases::V1_0_0) {
+            if StorageVersion::<T>::get() == Some(Releases::V2_0_0) {
                 let new_campaign: Vec<CreditSetting<BalanceOf<T>>> = vec![
                     CreditSetting {
                         campaign_id: 5,
@@ -349,7 +351,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::One,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(3_000 * DPR),
                         base_apy: Percent::from_percent(20),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -360,7 +362,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Two,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(10_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
                         base_apy: Percent::from_percent(30),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -371,7 +373,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Three,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(20_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(8_000 * DPR),
                         base_apy: Percent::from_percent(35),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -382,7 +384,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Four,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(30_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(12_000 * DPR),
                         base_apy: Percent::from_percent(40),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -393,7 +395,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Five,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(50_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(18_000 * DPR),
                         base_apy: Percent::from_percent(45),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -404,7 +406,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Six,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(60_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(24_000 * DPR),
                         base_apy: Percent::from_percent(50),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -415,7 +417,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Seven,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(80_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(32_000 * DPR),
                         base_apy: Percent::from_percent(55),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -426,7 +428,7 @@ pub mod pallet {
                     CreditSetting {
                         campaign_id: 5,
                         credit_level: CreditLevel::Eight,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR),
+                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(40_000 * DPR),
                         base_apy: Percent::from_percent(60),
                         bonus_apy: Percent::from_percent(0),
                         max_rank_with_bonus: 0u32,
@@ -440,7 +442,7 @@ pub mod pallet {
                     Self::_update_credit_setting(setting);
                 }
 
-                StorageVersion::<T>::put(Releases::V2_0_0);
+                StorageVersion::<T>::put(Releases::V3_0_0);
                 return T::DbWeight::get().reads_writes(1, 10);
             }
             0
