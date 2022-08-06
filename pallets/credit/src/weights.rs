@@ -52,6 +52,7 @@ pub trait WeightInfo {
     fn burn_for_add_credit() -> Weight;
     fn force_modify_credit_history() -> Weight;
     fn update_nft_class_credit() -> Weight;
+    fn update_sum_of_credit_nft_burn_history() -> Weight;
     fn burn_nft() -> Weight;
     fn set_switch_campaign() -> Weight;
     fn set_not_switch_accounts() -> Weight;
@@ -79,6 +80,11 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn update_nft_class_credit() -> Weight {
+        (14_770_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn update_sum_of_credit_nft_burn_history() -> Weight {
         (14_770_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -121,6 +127,11 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
     fn update_nft_class_credit() -> Weight {
+        (14_770_000 as Weight)
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+    fn update_sum_of_credit_nft_burn_history() -> Weight {
         (14_770_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(1 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))

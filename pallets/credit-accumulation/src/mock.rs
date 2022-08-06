@@ -162,6 +162,10 @@ impl pallet_uniques::Config for Test {
     type Locker = ();
 }
 
+parameter_types! {
+    pub const MaxBurnCreditPerAddress: u32 = 50;
+}
+
 impl pallet_credit::Config for Test {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
@@ -176,6 +180,7 @@ impl pallet_credit::Config for Test {
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = ();
     type UserPrivilegeInterface = ();
+    type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;
 }
 
 parameter_types! {

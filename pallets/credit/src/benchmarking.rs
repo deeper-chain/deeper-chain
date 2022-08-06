@@ -128,6 +128,18 @@ benchmarks! {
         assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
     }
 
+    update_sum_of_credit_nft_burn_history {
+        let class_id: T::CollectionId = 0u16.into();
+        let credit = 1;
+        let admin = create_funded_user::<T>("admin",USER_SEED, 1000);
+        let user = create_funded_user::<T>("user",USER_SEED, 1001);
+        let admin_lookup = T::Lookup::unlookup(admin.clone());
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),admin_lookup,Privilege::CreditAdmin);
+    }: update_sum_of_credit_nft_burn_history(RawOrigin::Signed(admin), user.clone(), credit)
+    verify {
+        assert_eq!(CreditFromBurnNft::<T>::get(user), credit);
+    }
+
     burn_nft {
         let class_id: T::CollectionId =  0u16.into();
         let instance_id: T::ItemId =  0u16.into();

@@ -215,6 +215,10 @@ impl pallet_uniques::Config for Test {
     type Locker = ();
 }
 
+parameter_types! {
+    pub const MaxBurnCreditPerAddress: u32 = 50;
+}
+
 impl pallet_credit::Config for Test {
     type Event = Event;
     type Currency = Balances;
@@ -229,6 +233,7 @@ impl pallet_credit::Config for Test {
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = Treasury;
     type UserPrivilegeInterface = UserPrivileges;
+    type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;
 }
 
 // Build genesis storage according to the mock runtime.
