@@ -828,6 +828,28 @@ fn update_nft_class_credit() {
 }
 
 #[test]
+fn update_sum_of_credit_nft_burn_history() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            Credit::update_sum_of_credit_nft_burn_history(Origin::signed(1), 0, 5),
+            Error::<Test>::NotAdmin
+        );
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            3,
+            Privilege::CreditAdmin
+        ));
+
+        assert_ok!(Credit::update_sum_of_credit_nft_burn_history(
+            Origin::signed(3),
+            0,
+            5
+        ));
+        assert_eq!(crate::CreditFromBurnNft::<Test>::get(0), 5);
+    });
+}
+
+#[test]
 fn burn_nft() {
     new_test_ext().execute_with(|| {
         assert_ok!(Uniques::force_create(Origin::root(), 0, 1, true));
@@ -857,10 +879,10 @@ fn burn_nft() {
             Privilege::CreditAdmin
         ));
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
-        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
-        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 1, 10));
-        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
+        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 50));
+        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 50);
+        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 1, 30));
+        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 30);
 
         let credit_data = CreditData {
             campaign_id: 0,
@@ -880,10 +902,12 @@ fn burn_nft() {
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 100);
 
         assert_ok!(Credit::burn_nft(Origin::signed(1), 0, 42));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 105);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 150);
 
-        assert_ok!(Credit::burn_nft(Origin::signed(1), 1, 42));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 115);
+        assert_noop!(
+            Credit::burn_nft(Origin::signed(1), 1, 42),
+            Error::<Test>::OutOfMaxBurnCreditPerAddress
+        );
 
         assert_noop!(
             Credit::burn_nft(Origin::signed(1), 2, 42),

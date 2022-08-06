@@ -102,6 +102,9 @@ pub mod pallet {
 
         /// query user prvileges
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
+
+        #[pallet::constant]
+        type MaxBurnCreditPerAddress: Get<u32>;
     }
 
     pub type BalanceOf<T> =
@@ -207,6 +210,11 @@ pub mod pallet {
     pub type CreditBalances<T: Config> =
         StorageValue<_, Vec<BalanceOf<T>>, ValueQuery, CreditDefaultBalance<T>>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn credit_from_burn_nft)]
+    pub type CreditFromBurnNft<T: Config> =
+        StorageMap<_, Twox64Concat, T::AccountId, u64, ValueQuery>;
+
     #[pallet::type_value]
     pub fn CreditDefaultBalance<T: Config>() -> Vec<BalanceOf<T>> {
         vec![
@@ -300,6 +308,7 @@ pub mod pallet {
         CreditHistoryUpdateFailed(T::AccountId, EraIndex),
         BurnForAddCredit(T::AccountId, u64),
         UpdateNftCredit(ClassIdOf<T>, u64),
+        UpdateSumOfCreditNftBurnHistory(T::AccountId, u64),
         BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
         StakingCreditScore(T::AccountId, u64),
         SetAdmin(T::AccountId),
@@ -330,6 +339,8 @@ pub mod pallet {
         NotAdmin,
         /// Staking credit score not set
         StakingCreditNotSet,
+        /// Out of max burn credit per address
+        OutOfMaxBurnCreditPerAddress,
     }
 
     #[pallet::hooks]
@@ -586,6 +597,21 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_sum_of_credit_nft_burn_history())]
+        pub fn update_sum_of_credit_nft_burn_history(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            credit: u64,
+        ) -> DispatchResultWithPostInfo {
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
+
+            CreditFromBurnNft::<T>::insert(account_id.clone(), credit);
+
+            Self::deposit_event(Event::UpdateSumOfCreditNftBurnHistory(account_id, credit));
+            Ok(().into())
+        }
+
         #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_nft())]
         #[transactional]
         pub fn burn_nft(
@@ -599,10 +625,19 @@ pub mod pallet {
                 Error::<T>::MiningMachineClassCreditNoConfig
             );
 
+            let credit_from_burn_nft = CreditFromBurnNft::<T>::get(&sender);
+            let credit = MiningMachineClassCredit::<T>::get(&class_id);
+
+            ensure!(
+                credit_from_burn_nft + credit <= T::MaxBurnCreditPerAddress::get().into(),
+                Error::<T>::OutOfMaxBurnCreditPerAddress
+            );
+
             pallet_uniques::Pallet::<T>::burn(origin, class_id, instance_id, None)?;
 
-            let credit = MiningMachineClassCredit::<T>::get(&class_id);
             Self::update_credit_by_burn_nft(sender.clone(), credit)?;
+
+            CreditFromBurnNft::<T>::insert(sender.clone(), credit_from_burn_nft + credit);
 
             Self::deposit_event(Event::BurnNft(sender, class_id, instance_id, credit));
 
