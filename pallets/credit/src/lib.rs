@@ -308,6 +308,7 @@ pub mod pallet {
         CreditHistoryUpdateFailed(T::AccountId, EraIndex),
         BurnForAddCredit(T::AccountId, u64),
         UpdateNftCredit(ClassIdOf<T>, u64),
+        UpdateSumOfCreditNftBurnHistory(T::AccountId, u64),
         BurnNft(T::AccountId, ClassIdOf<T>, InstanceIdOf<T>, u64),
         StakingCreditScore(T::AccountId, u64),
         SetAdmin(T::AccountId),
@@ -593,6 +594,21 @@ pub mod pallet {
             MiningMachineClassCredit::<T>::insert(class_id, credit);
 
             Self::deposit_event(Event::UpdateNftCredit(class_id, credit));
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::update_sum_of_credit_nft_burn_history())]
+        pub fn update_sum_of_credit_nft_burn_history(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            credit: u64,
+        ) -> DispatchResultWithPostInfo {
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
+
+            CreditFromBurnNft::<T>::insert(account_id.clone(), credit);
+
+            Self::deposit_event(Event::UpdateSumOfCreditNftBurnHistory(account_id, credit));
             Ok(().into())
         }
 
