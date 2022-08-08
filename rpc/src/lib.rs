@@ -34,10 +34,9 @@ use jsonrpsee::RpcModule;
 
 use fc_rpc::{
     EthBlockDataCacheTask, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
-    SchemaV2Override, SchemaV3Override, SchemaV4Override, StorageOverride,
+    SchemaV2Override, SchemaV3Override, StorageOverride,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
-use fc_rpc_core::TxPoolApiServer;
 use fp_storage::EthereumStorageSchema;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::opaque::Block;
@@ -171,11 +170,6 @@ where
         Box::new(SchemaV3Override::new(client.clone()))
             as Box<dyn StorageOverride<_> + Send + Sync>,
     );
-    overrides_map.insert(
-        EthereumStorageSchema::V4,
-        Box::new(SchemaV4Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
 
     Arc::new(OverrideHandle {
         schemas: overrides_map,
@@ -205,16 +199,16 @@ where
     C::Api: BlockBuilder<Block>,
     C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
     C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
-    C::Api: fp_rpc::TxPoolRuntimeRPCApi<Block>,
     P: TransactionPool<Block = Block> + 'static,
     SC: SelectChain<Block> + 'static,
     B: sc_client_api::Backend<Block> + Send + Sync + 'static,
     B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
+    P: TransactionPool<Block = Block> + 'static,
     A: ChainApi<Block = Block> + 'static,
 {
     use fc_rpc::{
         Eth, EthApiServer, EthDevSigner, EthFilter, EthFilterApiServer, EthPubSub,
-        EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, Web3, Web3ApiServer,
+        EthPubSubApiServer, EthSigner, Net, NetApiServer, Web3, Web3ApiServer,
     };
     use pallet_contracts_rpc::{Contracts, ContractsApiServer};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
@@ -359,7 +353,6 @@ where
         .into_rpc(),
     )?;
 
-    io.merge(TxPool::new(client, graph).into_rpc())?;
 
     Ok(io)
 }

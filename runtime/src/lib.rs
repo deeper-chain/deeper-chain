@@ -73,12 +73,10 @@ use static_assertions::const_assert;
 
 pub use pallet_micropayment;
 
-use fp_rpc::{TransactionStatusV2 as TransactionStatus, TxPoolResponse};
+use fp_rpc::TransactionStatus;
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
-use pallet_evm::{
-    Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, PairedAddressMapping, Runner,
-};
+use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, Runner, HashedAddressMapping, EnsureAddressTruncated};
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -810,6 +808,7 @@ impl pallet_treasury::Config for Runtime {
     type SpendFunds = Bounties;
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -1331,7 +1330,7 @@ impl pallet_evm::Config for Runtime {
     type FeeCalculator = BaseFee;
     type GasWeightMapping = FixedGasWeightMapping;
     type BlockHashMapping = pallet_ethereum::EthereumBlockHashMapping<Self>;
-    type AddressMapping = PairedAddressMapping<Runtime>;
+    type AddressMapping = HashedAddressMapping<BlakeTwo256>;
     type Currency = Balances;
     type Event = Event;
     type Runner = pallet_evm::runner::stack::Runner<Self>;
@@ -1341,6 +1340,8 @@ impl pallet_evm::Config for Runtime {
     type BlockGasLimit = BlockGasLimit;
     type OnChargeTransaction = EVMCurrencyAdapter<Balances, EvmDealWithFees>;
     type FindAuthor = FindAuthorTruncated<Babe>;
+    type CallOrigin = EnsureAddressTruncated;
+    type WithdrawOrigin = EnsureAddressTruncated;
 }
 
 impl pallet_ethereum::Config for Runtime {
@@ -1444,7 +1445,7 @@ construct_runtime!(
         CreditAccumulation: pallet_credit_accumulation::{Pallet, Call, Storage, Event<T>} = 62,
 
         Ethereum: pallet_ethereum::{Pallet, Call, Storage, Event, Config, Origin} = 80,
-        EVM: pallet_evm::{Pallet, Config<T>, Call, Storage, Event<T>} = 81,
+        EVM: pallet_evm::{Pallet, Config, Call, Storage, Event<T>} = 81,
         BaseFee: pallet_base_fee::{Pallet, Call, Storage, Config<T>, Event} = 82,
         DynamicFee: pallet_dynamic_fee::{Pallet, Call, Storage, Config, Inherent} = 83,
 
@@ -1787,30 +1788,6 @@ impl_runtime_apis! {
             key: [u8; 32],
         ) -> pallet_contracts_primitives::GetStorageResult {
             Contracts::get_storage(address, key)
-        }
-    }
-
-    impl fp_rpc::TxPoolRuntimeRPCApi<Block> for Runtime {
-        fn extrinsic_filter(
-            xts_ready: Vec<<Block as BlockT>::Extrinsic>,
-            xts_future: Vec<<Block as BlockT>::Extrinsic>,
-        ) -> TxPoolResponse {
-            TxPoolResponse {
-                ready: xts_ready
-                    .into_iter()
-                    .filter_map(|xt| match xt.0.function {
-                        Call::Ethereum(transact { transaction }) => Some(transaction),
-                        _ => None,
-                    })
-                    .collect(),
-                future: xts_future
-                    .into_iter()
-                    .filter_map(|xt| match xt.0.function {
-                        Call::Ethereum(transact { transaction }) => Some(transaction),
-                        _ => None,
-                    })
-                    .collect(),
-            }
         }
     }
 
