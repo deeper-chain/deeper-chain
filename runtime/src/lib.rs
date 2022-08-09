@@ -1251,6 +1251,10 @@ impl pallet_uniques::Config for Runtime {
     type Locker = ();
 }
 
+parameter_types! {
+    pub const MaxBurnCreditPerAddress: u32 = 50;
+}
+
 impl pallet_credit::Config for Runtime {
     type Event = Event;
     type BlocksPerEra = BlocksPerEra;
@@ -1265,6 +1269,7 @@ impl pallet_credit::Config for Runtime {
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = Treasury;
     type UserPrivilegeInterface = UserPrivileges;
+    type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;
 }
 
 impl pallet_credit_accumulation::Config for Runtime {

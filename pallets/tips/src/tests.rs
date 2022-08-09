@@ -198,6 +198,7 @@ parameter_types! {
     pub const BlocksPerEra: u64 =  17280;
     pub const SecsPerBlock: u32 = 5u32;
     pub const DPRPerCreditBurned: u64 = 100;
+    pub const MaxBurnCreditPerAddress: u32 = 50;
 }
 impl pallet_credit::Config for Test {
     type Event = Event;
@@ -213,6 +214,7 @@ impl pallet_credit::Config for Test {
     type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = ();
     type UserPrivilegeInterface = ();
+    type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;
 }
 parameter_types! {
     pub const MinimumPeriod: u64 = 5;
