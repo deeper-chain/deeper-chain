@@ -25,9 +25,11 @@ pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use hex_literal::hex;
-use node_primitives::AccountCreator;
-use sp_runtime::traits::{One, TrailingZeroInput};
-use sp_runtime::PerThing;
+use node_primitives::{credit::H160, user_privileges::Privilege, AccountCreator};
+use sp_runtime::{
+    traits::{One, TrailingZeroInput},
+    PerThing,
+};
 
 const SEED: u32 = 0;
 const MAX_SPANS: u32 = 100;
@@ -57,7 +59,7 @@ fn add_slashing_spans<T: Config>(who: &T::AccountId, spans: u32) {
 const USER_SEED: u32 = 999666;
 
 benchmarks! {
-    where_clause { where T: Config, T: pallet_credit::Config + pallet_credit_accumulation::Config }
+    where_clause { where T: Config, T: pallet_credit::Config + pallet_credit_accumulation::Config+ pallet_user_privileges::Config }
     bond {
         let stash = create_funded_user::<T>("stash", USER_SEED, 100);
         let controller = create_funded_user::<T>("controller", USER_SEED, 100);
@@ -157,6 +159,20 @@ benchmarks! {
         let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
         whitelist_account!(delegator);
     }: _(RawOrigin::Signed(delegator.clone()),0,signature.into(), 2)
+    verify {
+        assert!(Delegators::<T>::contains_key(delegator));
+    }
+
+    usdt_staking_delegate {
+        let user = create_funded_user::<T>("user", USER_SEED, 100);
+        let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
+        let amount = <T as Config>::Currency::minimum_balance() * 100u32.into();
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
+        let _ = pallet_credit::Pallet::<T>::set_dpr_price(RawOrigin::Signed(user.clone()).into(),100u32.into(),H160::zero());
+        let delegator = create_delegator::<T>(1, 100)?;
+        let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
+        whitelist_account!(delegator);
+    }: _(RawOrigin::Signed(user),delegator.clone(),amount)
     verify {
         assert!(Delegators::<T>::contains_key(delegator));
     }

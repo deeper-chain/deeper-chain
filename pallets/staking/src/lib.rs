@@ -53,7 +53,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use node_primitives::{
-    credit::CreditInterface,
+    credit::{CreditInterface, CreditLevel},
     deeper_node::NodeInterface,
     user_privileges::{Privilege, UserPrivilegeInterface},
     OperationInterface, VerifySignatureInterface,
@@ -1038,7 +1038,7 @@ pub mod pallet {
             Self::do_staking_delegate(who, dst_level)
         }
 
-        #[pallet::weight(T::WeightInfo::staking_delegate())]
+        #[pallet::weight(T::WeightInfo::usdt_staking_delegate())]
         #[transactional]
         pub fn usdt_staking_delegate(
             origin: OriginFor<T>,
@@ -2908,7 +2908,8 @@ impl<T: Config> pallet::Pallet<T> {
     }
 
     fn do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
-        let credit_balances = T::CreditInterface::get_credit_balance(&who);
+        let campaign_id = T::CreditInterface::get_default_dpr_campaign_id();
+        let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
 
         ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
@@ -2920,15 +2921,15 @@ impl<T: Config> pallet::Pallet<T> {
         let credit_score = T::CreditInterface::get_credit_score(&who);
         let (need_balance, score_gap) = {
             if let Some(credit_score) = credit_score {
-                let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
+                let cur_level = CreditLevel::get_credit_level(credit_score).into();
                 ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
                 let need_balance = credit_balances[dst_level as usize]
                     .saturating_sub(credit_balances[cur_level as usize]);
-                let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
+                let score_gap = CreditLevel::credit_level_gap(dst_level.into(), cur_level.into());
                 (need_balance, score_gap)
             } else {
                 let need_balance = credit_balances[dst_level as usize];
-                let score_gap = T::CreditInterface::get_credit_gap(dst_level, 0);
+                let score_gap = CreditLevel::credit_level_gap(dst_level.into(), 0u8.into());
                 (need_balance, score_gap)
             }
         };
@@ -2942,14 +2943,18 @@ impl<T: Config> pallet::Pallet<T> {
         DelegatorBalances::<T>::mutate(&who, |balance| {
             *balance = balance.saturating_add(need_balance)
         });
-        T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
-        Self::delegate_any(who.clone())?;
+        T::CreditInterface::add_or_update_credit(who.clone(), score_gap, Some(campaign_id));
+        // CreditLevel::zero can't delegate
+        if dst_level > 0 {
+            Self::delegate_any(who.clone())?;
+        }
         Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level));
         Ok(())
     }
 
     fn do_usdt_staking_delegate(who: T::AccountId, usdt_amount: BalanceOf<T>) -> DispatchResult {
-        let credit_balances = T::CreditInterface::get_credit_balance(&who);
+        let campaign_id = T::CreditInterface::get_default_usdt_campaign_id();
+        let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
 
         ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
@@ -2959,7 +2964,7 @@ impl<T: Config> pallet::Pallet<T> {
         let cur_level = {
             let credit_score = T::CreditInterface::get_credit_score(&who);
             if let Some(credit_score) = credit_score {
-                let cur_level: u8 = T::CreditInterface::get_credit_level(credit_score).into();
+                let cur_level: u8 = CreditLevel::get_credit_level(credit_score).into();
                 cur_level as usize
             } else {
                 ensure!(
@@ -2973,20 +2978,25 @@ impl<T: Config> pallet::Pallet<T> {
         let mut dst_level = cur_level;
         while dst_level < len - 1 {
             if credit_balances[dst_level + 1].saturating_sub(credit_balances[cur_level])
-                < remaining_usdt
+                <= remaining_usdt
             {
                 dst_level += 1;
             } else {
                 break;
             }
         }
-        let score_gap = T::CreditInterface::get_credit_gap(dst_level as u8, cur_level as u8);
-        T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
+
+        let score_gap =
+            CreditLevel::credit_level_gap((dst_level as u8).into(), (cur_level as u8).into());
+        T::CreditInterface::add_or_update_credit(who.clone(), score_gap, Some(campaign_id));
         ensure!(
             T::CreditInterface::set_staking_balance(&who, usdt_amount),
             Error::<T>::UsdtConvertError
         );
-        Self::delegate_any(who.clone())?;
+        // level::zero can't delegate
+        if dst_level > 0 {
+            Self::delegate_any(who.clone())?;
+        }
         Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level as u8));
         Ok(())
     }

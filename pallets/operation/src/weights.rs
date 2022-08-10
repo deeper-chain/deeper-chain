@@ -55,7 +55,6 @@ pub trait WeightInfo {
     fn npow_mint() -> Weight;
     fn bridge_deeper_to_other() -> Weight;
     fn bridge_other_to_deeper() -> Weight;
-    fn set_dpr_price() -> Weight;
 }
 
 /// Weights for pallet_operation using the Substrate node and recommended hardware.
@@ -99,11 +98,6 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(4 as Weight))
             .saturating_add(T::DbWeight::get().writes(2 as Weight))
     }
-    fn set_dpr_price() -> Weight {
-        (16_112_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(3 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
 }
 
 // For backwards compatibility and tests
@@ -145,10 +139,5 @@ impl WeightInfo for () {
         (35_334_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(4 as Weight))
             .saturating_add(RocksDbWeight::get().writes(2 as Weight))
-    }
-    fn set_dpr_price() -> Weight {
-        (16_112_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads(3 as Weight))
-            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
 }

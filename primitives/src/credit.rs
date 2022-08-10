@@ -2,7 +2,7 @@ use crate::Vec;
 use codec::{Decode, Encode};
 use frame_support::weights::Weight;
 use scale_info::TypeInfo;
-use sp_core::H160;
+pub use sp_core::H160;
 use sp_runtime::{DispatchResult, Percent};
 
 #[cfg(feature = "std")]
@@ -164,14 +164,15 @@ pub trait CreditInterface<AccountId, Balance> {
     fn update_credit_by_tip(who: AccountId, add_credit: u64);
     fn update_credit_by_burn_nft(who: AccountId, add_credit: u64) -> DispatchResult;
     fn init_delegator_history(account_id: &AccountId, era: u32) -> bool;
-    fn get_credit_balance(account_id: &AccountId) -> Vec<Balance>;
-    fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64;
-    fn add_or_update_credit(account_id: AccountId, credit_score: u64);
+    fn get_credit_balance(account_id: &AccountId, campaign_id: Option<u16>) -> Vec<Balance>;
+    fn add_or_update_credit(account_id: AccountId, credit_score: u64, campaign_id: Option<u16>);
     fn is_first_campaign_end(account_id: &AccountId) -> Option<bool>;
     fn do_unstaking_slash_credit(user: &AccountId) -> DispatchResult;
     fn burn_record(burn_amount: Balance) -> bool;
     fn get_credit_history(account_id: &AccountId) -> Vec<(EraIndex, CreditData)>;
     fn set_staking_balance(account_id: &AccountId, usdt_amount: Balance) -> bool;
+    fn get_default_dpr_campaign_id() -> u16;
+    fn get_default_usdt_campaign_id() -> u16;
 }
 
 impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
@@ -212,13 +213,11 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
     fn init_delegator_history(_account_id: &AccountId, _era: u32) -> bool {
         false
     }
-    fn get_credit_balance(_account_id: &AccountId) -> Vec<Balance> {
+    fn get_credit_balance(_account_id: &AccountId, _campaign_id: Option<u16>) -> Vec<Balance> {
         Vec::new()
     }
-    fn get_credit_gap(_dst_lv: u8, _cur_lv: u8) -> u64 {
-        0
+    fn add_or_update_credit(_account_id: AccountId, _credit_score: u64, _campaign_id: Option<u16>) {
     }
-    fn add_or_update_credit(_account_id: AccountId, _credit_score: u64) {}
     fn is_first_campaign_end(_account_id: &AccountId) -> Option<bool> {
         Some(true)
     }
@@ -231,5 +230,13 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
 
     fn set_staking_balance(_account_id: &AccountId, _usdt_amount: Balance) -> bool {
         true
+    }
+
+    fn get_default_dpr_campaign_id() -> u16 {
+        4u16
+    }
+
+    fn get_default_usdt_campaign_id() -> u16 {
+        5u16
     }
 }

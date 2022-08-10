@@ -24,7 +24,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use mock::*;
-use node_primitives::credit::{CreditInterface, CreditLevel};
+use node_primitives::credit::{CreditData, CreditInterface, CreditLevel, H160};
 use pallet_balances::Error as BalancesError;
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
@@ -3001,7 +3001,7 @@ fn staking_delegate() {
             assert_ok!(Credit::set_credit_balances(
                 Origin::signed(51),
                 vec![
-                    1u32.into(),
+                    0u32.into(),
                     10u32.into(),
                     100u32.into(),
                     1000u32.into(),
@@ -3011,9 +3011,25 @@ fn staking_delegate() {
                     10000000u32.into()
                 ]
             ));
+
+            let new_credit_data = CreditData {
+                campaign_id: 4,
+                credit: 0,
+                initial_credit_level: CreditLevel::Zero,
+                rank_in_initial_credit_level: 0u32,
+                number_of_referees: 0,
+                current_credit_level: CreditLevel::Zero,
+                reward_eras: 3650,
+            };
+            assert_ok!(Credit::add_or_update_credit_data(
+                Origin::root(),
+                51,
+                new_credit_data
+            ));
+
             assert_eq!(Balances::free_balance(&51), 2000);
             assert_ok!(Staking::do_staking_delegate(51, 1));
-            let credit_balances = Credit::get_credit_balance(&51);
+            let credit_balances = Credit::get_credit_balance(&51, Some(4));
             let pay = credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay);
             assert_eq!(Credit::user_credit(&51).unwrap().credit, 100);
@@ -3023,7 +3039,7 @@ fn staking_delegate() {
             );
             assert_eq!(
                 Credit::user_credit(&51).unwrap().initial_credit_level,
-                CreditLevel::One
+                CreditLevel::Zero
             );
             assert_eq!(Credit::user_credit(&51).unwrap().reward_eras, 10 * 365);
 
@@ -3080,5 +3096,43 @@ fn rewards_to_referer() {
             assert_eq!(Balances::total_balance(&1001), 21369858941948251800 * 2);
 
             assert_eq!(Balances::total_balance(&1002), 1068492947097412590);
+        });
+}
+
+#[test]
+fn staking_usdt_delegate() {
+    ExtBuilder::default()
+        .validator_pool(true)
+        .build_and_execute(|| {
+            assert_ok!(UserPrivileges::set_user_privilege(
+                Origin::root(),
+                1,
+                Privilege::CreditAdmin
+            ));
+
+            assert_ok!(Credit::set_dpr_price(Origin::signed(1), 25, H160::zero()));
+
+            assert_ok!(Credit::set_usdt_credit_balances(
+                Origin::signed(1),
+                vec![
+                    50_000u32.into(),
+                    75_000u32.into(),
+                    125_000u32.into(),
+                    200_000u32.into(),
+                    300_000u32.into(),
+                    450_000u32.into(),
+                    600_000u32.into(),
+                    800_000u32.into(),
+                    1000_000u32.into()
+                ]
+            ));
+
+            assert_ok!(Staking::usdt_staking_delegate(
+                Origin::signed(1),
+                1002,
+                75_000
+            ));
+
+            assert_eq!(Credit::user_credit(&1002).unwrap().credit, 100);
         });
 }

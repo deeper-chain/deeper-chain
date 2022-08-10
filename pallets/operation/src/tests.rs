@@ -21,7 +21,7 @@ use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill, Percent,
+    Perbill,
 };
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
@@ -311,40 +311,5 @@ fn bridge_test() {
             ))
         );
         assert_eq!(Balances::free_balance(&3), 100);
-    });
-}
-
-#[test]
-fn set_dpr_price_test() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1);
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
-
-        assert_ok!(Operation::set_dpr_price(
-            Origin::signed(1),
-            100,
-            H160::zero()
-        ));
-        assert_ok!(Operation::set_price_diff_rate(
-            Origin::signed(1),
-            Percent::from_percent(10)
-        ));
-        assert_err!(
-            Operation::set_dpr_price(Origin::signed(1), 111, H160::zero()),
-            Error::<Test>::PriceDiffTooMuch
-        );
-
-        assert_ok!(Operation::set_dpr_price(
-            Origin::signed(1),
-            110,
-            H160::zero()
-        ));
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::Event::from(crate::Event::DPRPrice(110, H160::zero()))
-        );
     });
 }
