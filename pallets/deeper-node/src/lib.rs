@@ -203,8 +203,6 @@ pub mod pallet {
 
         /// Bind worker eth_address to reward address
         RewardsAccounts(T::AccountId, H160),
-        /// Switch Bind worker eth_address to reward address
-        RewardsAccountsSwitch(T::AccountId, H160, H160),
 
         /// send this event to let system mint dpr to user
         GetNpowReward(T::AccountId, H160),
@@ -424,11 +422,7 @@ pub mod pallet {
                 if eth_address != evm_old_address {
                     RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
                     RewardsAccountsDeepertoEVM::<T>::insert(&deeper_address, eth_address);
-                    Self::deposit_event(Event::RewardsAccountsSwitch(
-                        deeper_address,
-                        evm_old_address,
-                        eth_address,
-                    ));
+                    Self::deposit_event(Event::RewardsAccounts(deeper_address, eth_address));
                 }
             } else {
                 RewardsAccountsEVMtoDeeper::<T>::insert(eth_address, &deeper_address);
