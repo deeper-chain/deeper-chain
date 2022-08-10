@@ -203,7 +203,6 @@ pub mod pallet {
 
         /// Bind worker eth_address to reward address
         RewardsAccounts(T::AccountId, H160),
-        
 
         /// send this event to let system mint dpr to user
         GetNpowReward(T::AccountId, H160),
