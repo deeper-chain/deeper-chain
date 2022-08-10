@@ -320,23 +320,31 @@ fn set_dpr_price_test() {
         run_to_block(1);
         assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
 
-        assert_ok!(Operation::set_dpr_price(Origin::signed(1), 100));
+        assert_ok!(Operation::set_dpr_price(
+            Origin::signed(1),
+            100,
+            H160::zero()
+        ));
         assert_ok!(Operation::set_price_diff_rate(
             Origin::signed(1),
             Percent::from_percent(10)
         ));
         assert_err!(
-            Operation::set_dpr_price(Origin::signed(1), 111),
+            Operation::set_dpr_price(Origin::signed(1), 111, H160::zero()),
             Error::<Test>::PriceDiffTooMuch
         );
 
-        assert_ok!(Operation::set_dpr_price(Origin::signed(1), 110));
+        assert_ok!(Operation::set_dpr_price(
+            Origin::signed(1),
+            110,
+            H160::zero()
+        ));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::DPRPrice(110))
+            crate::tests::Event::from(crate::Event::DPRPrice(110, H160::zero()))
         );
     });
 }

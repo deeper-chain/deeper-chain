@@ -150,7 +150,7 @@ benchmarks! {
         let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::CreditAdmin);
 
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
-    }: _(RawOrigin::Signed(user),existential_deposit )
+    }: _(RawOrigin::Signed(user), existential_deposit, H160::zero() )
     verify {
         assert_eq!(DprPrice::<T>::get(),Some(existential_deposit));
     }

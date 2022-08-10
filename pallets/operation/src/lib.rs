@@ -94,7 +94,7 @@ pub mod pallet {
         NpowMint(T::AccountId, BalanceOf<T>),
         BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
         BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
-        DPRPrice(BalanceOf<T>),
+        DPRPrice(BalanceOf<T>, H160),
     }
 
     // Errors inform users that something went wrong.
@@ -481,7 +481,11 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::OPWeightInfo::set_dpr_price())]
-        pub fn set_dpr_price(origin: OriginFor<T>, price: BalanceOf<T>) -> DispatchResult {
+        pub fn set_dpr_price(
+            origin: OriginFor<T>,
+            price: BalanceOf<T>,
+            worker: H160,
+        ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
@@ -507,7 +511,7 @@ pub mod pallet {
             }
 
             DprPrice::<T>::put(price);
-            Self::deposit_event(Event::<T>::DPRPrice(price));
+            Self::deposit_event(Event::<T>::DPRPrice(price, worker));
             Ok(().into())
         }
     }
