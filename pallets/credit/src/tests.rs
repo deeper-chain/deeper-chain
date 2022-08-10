@@ -958,3 +958,86 @@ fn unstaking_slash_credit() {
         );
     });
 }
+
+#[test]
+fn new_campaign_usdt_reward() {
+    new_test_ext().execute_with(|| {
+        let credit_setting = CreditSetting {
+            campaign_id: 5,
+            credit_level: CreditLevel::One,
+            staking_balance: 3_000,
+            base_apy: Percent::from_percent(20),
+            bonus_apy: Percent::from_percent(0),
+            max_rank_with_bonus: 0u32,
+            tax_rate: Percent::from_percent(0),
+            max_referees_with_rewards: 0,
+            reward_per_referee: 0,
+        };
+        assert_ok!(Credit::update_credit_setting(
+            RawOrigin::Root.into(),
+            credit_setting.clone()
+        ));
+        let credit_setting = CreditSetting {
+            campaign_id: 5,
+            credit_level: CreditLevel::Two,
+            staking_balance: 5_000,
+            base_apy: Percent::from_percent(30),
+            bonus_apy: Percent::from_percent(0),
+            max_rank_with_bonus: 0u32,
+            tax_rate: Percent::from_percent(0),
+            max_referees_with_rewards: 0,
+            reward_per_referee: 0,
+        };
+        assert_ok!(Credit::update_credit_setting(
+            RawOrigin::Root.into(),
+            credit_setting.clone()
+        ));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::CreditAdmin
+        ));
+
+        assert_ok!(Credit::set_dpr_price(Origin::signed(1),25_000_000_000_000_000));
+        Credit::set_staking_balance(&1000,75_000_000_000_000_000_000);
+    
+        let new_credit_data = CreditData {
+            campaign_id: 5,
+            credit: 102,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0u32,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 270,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            1000,
+            new_credit_data
+        ));
+        assert!(Credit::init_delegator_history(&1000, 1));
+        run_to_block(BLOCKS_PER_ERA*2);
+        assert_eq!(Credit::get_reward(&1000, 1, 1).0, Some(1643835616438356164));
+        let new_credit_data = CreditData {
+            campaign_id: 5,
+            credit: 202,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0u32,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Two,
+            reward_eras: 270,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            1000,
+            new_credit_data
+        ));
+        // add 50 usdt
+        Credit::set_staking_balance(&1000,50_000_000_000_000_000_000);
+
+        run_to_block(BLOCKS_PER_ERA*3);
+
+        assert_eq!(Credit::get_reward(&1000, 2, 2).0, Some(4109589041095890410));
+        
+    });
+}

@@ -44,6 +44,7 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, Get, Imbalance, IsSubType, LockIdentifier,
         LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
     },
+    transactional,
     weights::{
         constants::{WEIGHT_PER_MICROS, WEIGHT_PER_NANOS},
         Weight,
@@ -1037,6 +1038,21 @@ pub mod pallet {
             Self::do_staking_delegate(who, dst_level)
         }
 
+        #[pallet::weight(T::WeightInfo::staking_delegate())]
+        #[transactional]
+        pub fn usdt_staking_delegate(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            usdt_amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            Self::do_usdt_staking_delegate(account_id, usdt_amount)
+        }
+
         /// Take the origin account as a stash and lock up `value` of its balance. `controller` will
         /// be the account that controls it.
         ///
@@ -1909,14 +1925,17 @@ pub mod pallet {
                 Error::<T>::UnauthorizedAccounts
             );
             ensure!(account_id != referer, Error::<T>::SelfReferee);
-            ensure!(
-                Self::user_referer(&account_id).is_none(),
-                Error::<T>::RefereeAlready
-            );
+
+            let old_referer = UserReferer::<T>::take(&account_id);
             UserReferer::<T>::insert(account_id, referer.clone());
             UserRefereeCount::<T>::mutate(referer, |count| {
                 *count = count.saturating_add(1);
             });
+            if let Some(old_referer) = old_referer {
+                UserRefereeCount::<T>::mutate(old_referer, |count| {
+                    *count = count.saturating_sub(1);
+                });
+            }
             Ok(())
         }
 
@@ -2096,10 +2115,12 @@ pub mod pallet {
         NotAllowUpdateCrdit,
         /// fail for verify signature
         SignatureVerifyFailed,
-        /// already is referee
-        RefereeAlready,
         /// refere self not allow
         SelfReferee,
+        /// staking balance not enough to upgrade credit level
+        StakingBalanceNotEnough,
+        /// usdt convert to dpr error
+        UsdtConvertError,
     }
 }
 
@@ -2924,6 +2945,49 @@ impl<T: Config> pallet::Pallet<T> {
         T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
         Self::delegate_any(who.clone())?;
         Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level));
+        Ok(())
+    }
+
+    fn do_usdt_staking_delegate(who: T::AccountId, usdt_amount: BalanceOf<T>) -> DispatchResult {
+        let credit_balances = T::CreditInterface::get_credit_balance(&who);
+        let len = credit_balances.len();
+
+        ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
+
+        let mut remaining_usdt = usdt_amount;
+        // when credit score is none,level =0, otherwise real level = level + 1
+        let cur_level = {
+            let credit_score = T::CreditInterface::get_credit_score(&who);
+            if let Some(credit_score) = credit_score {
+                let cur_level: u8 = T::CreditInterface::get_credit_level(credit_score).into();
+                cur_level as usize
+            } else {
+                ensure!(
+                    remaining_usdt >= credit_balances[0],
+                    Error::<T>::StakingBalanceNotEnough
+                );
+                remaining_usdt -= credit_balances[0];
+                0usize
+            }
+        };
+        let mut dst_level = cur_level;
+        while dst_level < len - 1 {
+            if credit_balances[dst_level + 1].saturating_sub(credit_balances[cur_level])
+                < remaining_usdt
+            {
+                dst_level += 1;
+            } else {
+                break;
+            }
+        }
+        let score_gap = T::CreditInterface::get_credit_gap(dst_level as u8, cur_level as u8);
+        T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
+        ensure!(
+            T::CreditInterface::set_staking_balance(&who, usdt_amount),
+            Error::<T>::UsdtConvertError
+        );
+        Self::delegate_any(who.clone())?;
+        Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level as u8));
         Ok(())
     }
 }
