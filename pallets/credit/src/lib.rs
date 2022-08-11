@@ -291,7 +291,7 @@ pub mod pallet {
     #[pallet::getter(fn price_diff_rate)]
     pub(super) type PriceDiffRate<T: Config> = StorageValue<_, Percent, OptionQuery>;
 
-    /// tupule (BalanceOf<T>,BalanceOf<T>): first usdt amount, second
+    /// tupule (BalanceOf<T>,BalanceOf<T>): first usdt amount, second dpr amount when usdt staking
     #[pallet::storage]
     #[pallet::getter(fn user_staking_balance)]
     pub(super) type UserStakingBalance<T: Config> =
