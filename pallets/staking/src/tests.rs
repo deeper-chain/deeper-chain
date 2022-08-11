@@ -24,9 +24,12 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use mock::*;
-use node_primitives::credit::{CreditData, CreditInterface, CreditLevel, H160};
+use node_primitives::{
+    credit::{CreditData, CreditInterface, CreditLevel, CreditSetting, H160},
+    DPR,
+};
 use pallet_balances::Error as BalancesError;
-use sp_runtime::traits::BadOrigin;
+use sp_runtime::traits::{BadOrigin, UniqueSaturatedFrom};
 use sp_staking::offence::OffenceDetails;
 use sp_std::convert::TryFrom;
 use std::collections::HashMap;
@@ -3092,9 +3095,7 @@ fn rewards_to_referer() {
             assert_ok!(Staking::unset_user_referer(Origin::signed(1), 1001));
             assert_eq!(Staking::user_referee_count(1002), 0);
             run_to_block(BLOCKS_PER_ERA * 2 + 1);
-
             assert_eq!(Balances::total_balance(&1001), 21369858941948251800 * 2);
-
             assert_eq!(Balances::total_balance(&1002), 1068492947097412590);
         });
 }
@@ -3102,37 +3103,86 @@ fn rewards_to_referer() {
 #[test]
 fn staking_usdt_delegate() {
     ExtBuilder::default()
-        .validator_pool(true)
+        .session_per_era(6)
+        .num_delegators(1)
         .build_and_execute(|| {
             assert_ok!(UserPrivileges::set_user_privilege(
                 Origin::root(),
                 1,
                 Privilege::CreditAdmin
             ));
+            let credit_setting = CreditSetting {
+                campaign_id: 5,
+                credit_level: CreditLevel::One,
+                staking_balance: 3_000,
+                base_apy: Percent::from_percent(20),
+                bonus_apy: Percent::from_percent(0),
+                max_rank_with_bonus: 0u32,
+                tax_rate: Percent::from_percent(0),
+                max_referees_with_rewards: 0,
+                reward_per_referee: 0,
+            };
+            assert_ok!(Credit::update_credit_setting(
+                RawOrigin::Root.into(),
+                credit_setting.clone()
+            ));
+            let credit_setting = CreditSetting {
+                campaign_id: 5,
+                credit_level: CreditLevel::Two,
+                staking_balance: 5_000,
+                base_apy: Percent::from_percent(30),
+                bonus_apy: Percent::from_percent(0),
+                max_rank_with_bonus: 0u32,
+                tax_rate: Percent::from_percent(0),
+                max_referees_with_rewards: 0,
+                reward_per_referee: 0,
+            };
+            assert_ok!(Credit::update_credit_setting(
+                RawOrigin::Root.into(),
+                credit_setting.clone()
+            ));
 
-            assert_ok!(Credit::set_dpr_price(Origin::signed(1), 25, H160::zero()));
+            assert_ok!(Credit::set_dpr_price(
+                Origin::signed(1),
+                25_000_000_000_000_000,
+                H160::zero()
+            ));
 
             assert_ok!(Credit::set_usdt_credit_balances(
                 Origin::signed(1),
                 vec![
-                    50_000u32.into(),
-                    75_000u32.into(),
-                    125_000u32.into(),
-                    200_000u32.into(),
-                    300_000u32.into(),
-                    450_000u32.into(),
-                    600_000u32.into(),
-                    800_000u32.into(),
-                    1000_000u32.into()
+                    UniqueSaturatedFrom::unique_saturated_from(50 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(75 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(125 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(200 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(300 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(450 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(600 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(800 * DPR),
+                    UniqueSaturatedFrom::unique_saturated_from(1_000 * DPR),
                 ]
             ));
-
             assert_ok!(Staking::usdt_staking_delegate(
                 Origin::signed(1),
                 1002,
-                75_000
+                UniqueSaturatedFrom::unique_saturated_from(75 * DPR)
+            ));
+            assert_eq!(Credit::user_credit(&1002).unwrap().credit, 100);
+            run_to_block(BLOCKS_PER_ERA + 2);
+            assert_eq!(Balances::total_balance(&1002), 1643835616438356164);
+
+            // add 50 usdt
+            assert_ok!(Staking::usdt_staking_delegate(
+                Origin::signed(1),
+                1002,
+                UniqueSaturatedFrom::unique_saturated_from(50 * DPR)
             ));
 
-            assert_eq!(Credit::user_credit(&1002).unwrap().credit, 100);
+            run_to_block(BLOCKS_PER_ERA * 2 + 2);
+
+            assert_eq!(
+                Balances::total_balance(&1002),
+                1643835616438356164 + 4109589041095890410
+            );
         });
 }
