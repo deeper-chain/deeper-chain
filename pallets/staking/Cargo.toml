@@ -42,6 +42,7 @@ pallet-evm = { default-features = false, git = "https://github.com/deeper-chain/
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", optional = true }
 rand_chacha = { version = "0.2", default-features = false, optional = true }
 hex-literal = {version ="0.3.1", optional = true }
+pallet-user-privileges = {version = '4.0.0', default-features =false, path = "../user-privileges",optional = true}
 
 [dev-dependencies]
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24"  }
@@ -84,4 +85,5 @@ runtime-benchmarks = [
 	"frame-benchmarking",
 	"rand_chacha",
 	"hex-literal",
+	"pallet-user-privileges",
 ]

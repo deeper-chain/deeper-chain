@@ -89,7 +89,7 @@ benchmarks! {
         <SingleMaxLimit<T>>::put(single_limit);
         <DailyMaxLimit<T>>::put(daily_limit);
         let checked_account: T::AccountId = account("a", 100, USER_SEED);
-        T::CreditInterface::add_or_update_credit(checked_account.clone(),99);
+        T::CreditInterface::add_or_update_credit(checked_account.clone(),99,None);
         let rinfo= ReleaseInfo::<T>::new(checked_account.clone(),2,0,existential_deposit * 10u32.into());
     }: unstaking_release(RawOrigin::Signed(admin), rinfo)
     verify {
@@ -142,17 +142,6 @@ benchmarks! {
 
     }: bridge_other_to_deeper(RawOrigin::Signed(user1.clone()), user2,H160::zero(),existential_deposit,"test".to_string())
     verify {
-    }
-
-    set_dpr_price {
-        let user: T::AccountId = account("b", 1, USER_SEED);
-        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::CreditAdmin);
-
-        let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
-    }: _(RawOrigin::Signed(user), existential_deposit, H160::zero() )
-    verify {
-        assert_eq!(DprPrice::<T>::get(),Some(existential_deposit));
     }
 
     impl_benchmark_test_suite!(Operation, crate::tests::new_test_ext(), crate::tests::Test);

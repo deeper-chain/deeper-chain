@@ -27,6 +27,7 @@ mod tests;
 pub mod benchmarking;
 pub mod weights;
 pub(crate) const LOG_TARGET: &'static str = "credit";
+pub(crate) const USDT_CAMPAIGN_ID: u16 = 5;
 
 // syntactic sugar for logging.
 #[macro_export]
@@ -231,6 +232,26 @@ pub mod pallet {
     }
 
     #[pallet::storage]
+    #[pallet::getter(fn usdt_credit_balances)]
+    pub type UsdtCreditBalances<T: Config> =
+        StorageValue<_, Vec<BalanceOf<T>>, ValueQuery, UsdtCreditDefaultBalance<T>>;
+
+    #[pallet::type_value]
+    pub fn UsdtCreditDefaultBalance<T: Config>() -> Vec<BalanceOf<T>> {
+        vec![
+            UniqueSaturatedFrom::unique_saturated_from(50 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(75 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(125 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(200 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(300 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(450 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(600 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(800 * DPR),
+            UniqueSaturatedFrom::unique_saturated_from(1_000 * DPR),
+        ]
+    }
+
+    #[pallet::storage]
     #[pallet::getter(fn genesis_credit_balances)]
     pub type GenesisCreditBalances<T: Config> =
         StorageValue<_, Vec<BalanceOf<T>>, ValueQuery, GenesisDefaultBalance<T>>;
@@ -261,6 +282,29 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T: Config> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn dpr_price)]
+    pub(super) type DprPrice<T: Config> = StorageValue<_, BalanceOf<T>, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn price_diff_rate)]
+    pub(super) type PriceDiffRate<T: Config> = StorageValue<_, Percent, OptionQuery>;
+
+    /// tupule (BalanceOf<T>,BalanceOf<T>): first usdt amount, second dpr amount when usdt staking
+    #[pallet::storage]
+    #[pallet::getter(fn user_staking_balance)]
+    pub(super) type UserStakingBalance<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, (BalanceOf<T>, BalanceOf<T>), OptionQuery>;
+
+    #[pallet::type_value]
+    pub fn UsdtDefaultId() -> u16 {
+        5
+    }
+
+    #[pallet::storage]
+    #[pallet::getter(fn default_usdt_campaign_id)]
+    pub(crate) type DefaultUsdtCampaignId<T> = StorageValue<_, u16, ValueQuery, UsdtDefaultId>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -313,6 +357,7 @@ pub mod pallet {
         StakingCreditScore(T::AccountId, u64),
         SetAdmin(T::AccountId),
         UnstakingResult(T::AccountId, String),
+        DPRPrice(BalanceOf<T>, H160),
     }
 
     #[pallet::error]
@@ -333,14 +378,16 @@ pub mod pallet {
         MiningMachineClassCreditNoConfig,
         /// Campain id switch not match
         CampaignIdNotMatch,
-        // /// first campaign not end
-        // FirstCampaignNotEnd,
         /// Not Admin
         NotAdmin,
         /// Staking credit score not set
         StakingCreditNotSet,
         /// Out of max burn credit per address
         OutOfMaxBurnCreditPerAddress,
+        /// price diffs too much
+        PriceDiffTooMuch,
+        /// price is zero
+        PriceZero,
     }
 
     #[pallet::hooks]
@@ -677,7 +724,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_credit_balances(
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
@@ -686,6 +733,18 @@ pub mod pallet {
             ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
             CreditBalances::<T>::put(credit_balances);
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_usdt_credit_balances(
+            origin: OriginFor<T>,
+            credit_balances: Vec<BalanceOf<T>>,
+        ) -> DispatchResultWithPostInfo {
+            let admin = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
+
+            UsdtCreditBalances::<T>::put(credit_balances);
             Ok(().into())
         }
 
@@ -739,6 +798,50 @@ pub mod pallet {
             Self::check_credit_data(&credit_data)?;
             Self::do_add_credit_with_other_event(account_id, credit_data);
             Ok(())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_price_diff_rate(
+            origin: OriginFor<T>,
+            price_diff_rate: Percent,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+            PriceDiffRate::<T>::put(price_diff_rate);
+            Ok(().into())
+        }
+
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_dpr_price())]
+        pub fn set_dpr_price(
+            origin: OriginFor<T>,
+            price: BalanceOf<T>,
+            worker: H160,
+        ) -> DispatchResult {
+            ensure!(price != 0u32.into(), Error::<T>::PriceZero);
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+
+            let rate = Self::price_diff_rate();
+            let old_price = Self::dpr_price();
+
+            match (rate, old_price) {
+                (Some(rate), Some(old_price)) => {
+                    let diff_limit = rate * old_price;
+                    let diff = {
+                        if price > old_price {
+                            price - old_price
+                        } else {
+                            old_price - price
+                        }
+                    };
+                    ensure!(diff <= diff_limit, Error::<T>::PriceDiffTooMuch);
+                }
+                _ => {}
+            }
+
+            DprPrice::<T>::put(price);
+            Self::deposit_event(Event::<T>::DPRPrice(price, worker));
+            Ok(().into())
         }
     }
 
@@ -1033,6 +1136,69 @@ pub mod pallet {
             Self::do_add_credit(account_id.clone(), credit_data);
             Self::deposit_event(Event::StakingCreditScore(account_id, credit));
         }
+
+        fn calc_usdt_daily_poc_reward(
+            account_id: &T::AccountId,
+            credit_data: &CreditData,
+        ) -> (BalanceOf<T>, Weight) {
+            let mut weight = Weight::zero();
+            let staking_balance = Self::user_staking_balance(account_id);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+            if staking_balance.is_none() {
+                return (0u32.into(), weight);
+            }
+            let staking_usdt = staking_balance.unwrap().0;
+            let price = Self::dpr_price();
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+            if price.is_none() {
+                return (0u32.into(), weight);
+            }
+            let dpr_amount =
+                staking_usdt / price.unwrap() * UniqueSaturatedFrom::unique_saturated_from(DPR);
+
+            let current_credit_level = credit_data.current_credit_level;
+            let credit_setting =
+                Self::credit_settings(credit_data.campaign_id, current_credit_level);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
+            let daily_poc_reward = credit_setting.base_apy * dpr_amount / 365u32.into();
+            (daily_poc_reward, weight)
+        }
+
+        fn calc_normal_daily_poc_reward(credit_data: &CreditData) -> (BalanceOf<T>, Weight) {
+            let mut weight = Weight::zero();
+            let initial_credit_level = credit_data.initial_credit_level;
+            let credit_setting =
+                Self::credit_settings(credit_data.campaign_id, initial_credit_level);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
+            // poc reward
+            let current_credit_level = credit_data.current_credit_level;
+            let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
+                Self::daily_poc_reward(credit_data.campaign_id, current_credit_level);
+            weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+
+            let daily_poc_reward = if current_credit_level == initial_credit_level {
+                // level unchanged
+                if credit_data.rank_in_initial_credit_level <= credit_setting.max_rank_with_bonus {
+                    daily_poc_reward_with_bonus
+                } else {
+                    base_daily_poc_reward
+                }
+            } else {
+                // level changed
+                let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
+                    Self::daily_poc_reward(credit_data.campaign_id, initial_credit_level);
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
+                if credit_data.rank_in_initial_credit_level <= credit_setting.max_rank_with_bonus {
+                    base_daily_poc_reward
+                        + (initial_daily_poc_reward_with_bonus - initial_base_daily_poc_reward)
+                } else {
+                    base_daily_poc_reward
+                }
+            };
+            (daily_poc_reward, weight)
+        }
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
@@ -1050,23 +1216,28 @@ pub mod pallet {
             return true;
         }
 
-        fn get_credit_balance(account: &T::AccountId) -> Vec<BalanceOf<T>> {
+        fn get_credit_balance(
+            account: &T::AccountId,
+            campaign_id: Option<u16>,
+        ) -> Vec<BalanceOf<T>> {
             let credit_data = Self::user_credit(account);
-            match credit_data {
-                None => Self::credit_balances(),
-                Some(data) => match data.campaign_id {
+            let campaign_id = credit_data.map(|data| data.campaign_id).or(campaign_id);
+            match campaign_id {
+                None => Vec::new(),
+                Some(campaign_id) => match campaign_id {
                     0 | 1 => Self::genesis_credit_balances(),
                     2 | 4 => Self::credit_balances(),
+                    5 => Self::usdt_credit_balances(),
                     _ => Vec::new(),
                 },
             }
         }
 
-        fn get_credit_gap(dst_lv: u8, cur_lv: u8) -> u64 {
-            CreditLevel::credit_level_gap(dst_lv.into(), cur_lv.into())
-        }
-
-        fn add_or_update_credit(account_id: T::AccountId, credit_gap: u64) {
+        fn add_or_update_credit(
+            account_id: T::AccountId,
+            credit_gap: u64,
+            campaign_id: Option<u16>,
+        ) {
             let credit_data = {
                 match UserCredit::<T>::get(account_id.clone()) {
                     Some(mut credit_data) => {
@@ -1075,7 +1246,7 @@ pub mod pallet {
                         credit_data
                     }
                     None => {
-                        let default_id = Self::default_campaign_id();
+                        let default_id = campaign_id.unwrap_or(Self::default_campaign_id());
                         CreditData::new(default_id, credit_gap)
                     }
                 }
@@ -1201,40 +1372,14 @@ pub mod pallet {
 
             let mut poc_reward = BalanceOf::<T>::zero();
             for (credit_data, num_of_eras) in credit_map {
-                let initial_credit_level = credit_data.initial_credit_level;
-                let credit_setting =
-                    Self::credit_settings(credit_data.campaign_id, initial_credit_level.clone());
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-
-                // poc reward
-                let current_credit_level = credit_data.current_credit_level;
-                let (base_daily_poc_reward, daily_poc_reward_with_bonus) =
-                    Self::daily_poc_reward(credit_data.campaign_id, current_credit_level.clone());
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-
-                let daily_poc_reward = if current_credit_level == initial_credit_level {
-                    // level unchanged
-                    if credit_data.rank_in_initial_credit_level
-                        <= credit_setting.max_rank_with_bonus
-                    {
-                        daily_poc_reward_with_bonus
+                let (daily_poc_reward, added_weight) = {
+                    if credit_data.campaign_id == USDT_CAMPAIGN_ID {
+                        Self::calc_usdt_daily_poc_reward(account_id, &credit_data)
                     } else {
-                        base_daily_poc_reward
-                    }
-                } else {
-                    // level changed
-                    let (initial_base_daily_poc_reward, initial_daily_poc_reward_with_bonus) =
-                        Self::daily_poc_reward(credit_data.campaign_id, initial_credit_level);
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-                    if credit_data.rank_in_initial_credit_level
-                        <= credit_setting.max_rank_with_bonus
-                    {
-                        base_daily_poc_reward
-                            + (initial_daily_poc_reward_with_bonus - initial_base_daily_poc_reward)
-                    } else {
-                        base_daily_poc_reward
+                        Self::calc_normal_daily_poc_reward(&credit_data)
                     }
                 };
+                weight += added_weight;
                 poc_reward =
                     poc_reward.saturating_add(daily_poc_reward.saturating_mul(num_of_eras.into()));
             }
@@ -1399,6 +1544,33 @@ pub mod pallet {
 
         fn get_credit_history(account_id: &T::AccountId) -> Vec<(EraIndex, CreditData)> {
             Self::user_credit_history(account_id)
+        }
+
+        fn set_staking_balance(account_id: &T::AccountId, usdt_amount: BalanceOf<T>) -> bool {
+            match Self::dpr_price() {
+                Some(price) => {
+                    let dpr_amount = usdt_amount / price;
+                    UserStakingBalance::<T>::mutate(account_id, |balance| match balance {
+                        Some(balance) => {
+                            balance.0 += usdt_amount;
+                            balance.1 += dpr_amount;
+                        }
+                        _ => {
+                            *balance = Some((usdt_amount, dpr_amount));
+                        }
+                    });
+                    true
+                }
+                None => false,
+            }
+        }
+
+        fn get_default_dpr_campaign_id() -> u16 {
+            Self::default_campaign_id()
+        }
+
+        fn get_default_usdt_campaign_id() -> u16 {
+            Self::default_usdt_campaign_id()
         }
     }
 

@@ -44,6 +44,7 @@ use frame_support::{
         Currency, EnsureOrigin, ExistenceRequirement, Get, Imbalance, IsSubType, LockIdentifier,
         LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
     },
+    transactional,
     weights::{
         constants::{WEIGHT_PER_MICROS, WEIGHT_PER_NANOS},
         Weight,
@@ -52,7 +53,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
 use node_primitives::{
-    credit::CreditInterface,
+    credit::{CreditInterface, CreditLevel},
     deeper_node::NodeInterface,
     user_privileges::{Privilege, UserPrivilegeInterface},
     OperationInterface, VerifySignatureInterface,
@@ -1037,6 +1038,21 @@ pub mod pallet {
             Self::do_staking_delegate(who, dst_level)
         }
 
+        #[pallet::weight(T::WeightInfo::usdt_staking_delegate())]
+        #[transactional]
+        pub fn usdt_staking_delegate(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            usdt_amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            Self::do_usdt_staking_delegate(account_id, usdt_amount)
+        }
+
         /// Take the origin account as a stash and lock up `value` of its balance. `controller` will
         /// be the account that controls it.
         ///
@@ -1909,14 +1925,17 @@ pub mod pallet {
                 Error::<T>::UnauthorizedAccounts
             );
             ensure!(account_id != referer, Error::<T>::SelfReferee);
-            ensure!(
-                Self::user_referer(&account_id).is_none(),
-                Error::<T>::RefereeAlready
-            );
+
+            let old_referer = UserReferer::<T>::take(&account_id);
             UserReferer::<T>::insert(account_id, referer.clone());
             UserRefereeCount::<T>::mutate(referer, |count| {
                 *count = count.saturating_add(1);
             });
+            if let Some(old_referer) = old_referer {
+                UserRefereeCount::<T>::mutate(old_referer, |count| {
+                    *count = count.saturating_sub(1);
+                });
+            }
             Ok(())
         }
 
@@ -2096,10 +2115,12 @@ pub mod pallet {
         NotAllowUpdateCrdit,
         /// fail for verify signature
         SignatureVerifyFailed,
-        /// already is referee
-        RefereeAlready,
         /// refere self not allow
         SelfReferee,
+        /// staking balance not enough to upgrade credit level
+        StakingBalanceNotEnough,
+        /// usdt convert to dpr error
+        UsdtConvertError,
     }
 }
 
@@ -2887,7 +2908,8 @@ impl<T: Config> pallet::Pallet<T> {
     }
 
     fn do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
-        let credit_balances = T::CreditInterface::get_credit_balance(&who);
+        let campaign_id = T::CreditInterface::get_default_dpr_campaign_id();
+        let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
 
         ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
@@ -2899,15 +2921,15 @@ impl<T: Config> pallet::Pallet<T> {
         let credit_score = T::CreditInterface::get_credit_score(&who);
         let (need_balance, score_gap) = {
             if let Some(credit_score) = credit_score {
-                let cur_level = T::CreditInterface::get_credit_level(credit_score).into();
+                let cur_level = CreditLevel::get_credit_level(credit_score).into();
                 ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
                 let need_balance = credit_balances[dst_level as usize]
                     .saturating_sub(credit_balances[cur_level as usize]);
-                let score_gap = T::CreditInterface::get_credit_gap(dst_level, cur_level);
+                let score_gap = CreditLevel::credit_level_gap(dst_level.into(), cur_level.into());
                 (need_balance, score_gap)
             } else {
                 let need_balance = credit_balances[dst_level as usize];
-                let score_gap = T::CreditInterface::get_credit_gap(dst_level, 0);
+                let score_gap = CreditLevel::credit_level_gap(dst_level.into(), 0u8.into());
                 (need_balance, score_gap)
             }
         };
@@ -2921,9 +2943,61 @@ impl<T: Config> pallet::Pallet<T> {
         DelegatorBalances::<T>::mutate(&who, |balance| {
             *balance = balance.saturating_add(need_balance)
         });
-        T::CreditInterface::add_or_update_credit(who.clone(), score_gap);
-        Self::delegate_any(who.clone())?;
+        T::CreditInterface::add_or_update_credit(who.clone(), score_gap, Some(campaign_id));
+        // CreditLevel::zero can't delegate
+        if dst_level > 0 {
+            Self::delegate_any(who.clone())?;
+        }
         Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level));
+        Ok(())
+    }
+
+    fn do_usdt_staking_delegate(who: T::AccountId, usdt_amount: BalanceOf<T>) -> DispatchResult {
+        let campaign_id = T::CreditInterface::get_default_usdt_campaign_id();
+        let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
+        let len = credit_balances.len();
+
+        ensure!(len > 0, Error::<T>::NotAllowUpdateCrdit);
+
+        let mut remaining_usdt = usdt_amount;
+        // when credit score is none,level =0, otherwise real level = level + 1
+        let cur_level = {
+            let credit_score = T::CreditInterface::get_credit_score(&who);
+            if let Some(credit_score) = credit_score {
+                let cur_level: u8 = CreditLevel::get_credit_level(credit_score).into();
+                cur_level as usize
+            } else {
+                ensure!(
+                    remaining_usdt >= credit_balances[0],
+                    Error::<T>::StakingBalanceNotEnough
+                );
+                remaining_usdt -= credit_balances[0];
+                0usize
+            }
+        };
+        let mut dst_level = cur_level;
+        while dst_level < len - 1 {
+            if credit_balances[dst_level + 1].saturating_sub(credit_balances[cur_level])
+                <= remaining_usdt
+            {
+                dst_level += 1;
+            } else {
+                break;
+            }
+        }
+
+        let score_gap =
+            CreditLevel::credit_level_gap((dst_level as u8).into(), (cur_level as u8).into());
+        T::CreditInterface::add_or_update_credit(who.clone(), score_gap, Some(campaign_id));
+        ensure!(
+            T::CreditInterface::set_staking_balance(&who, usdt_amount),
+            Error::<T>::UsdtConvertError
+        );
+        // level::zero can't delegate
+        if dst_level > 0 {
+            Self::delegate_any(who.clone())?;
+        }
+        Self::deposit_event(Event::<T>::StakingDelegate(who, dst_level as u8));
         Ok(())
     }
 }
