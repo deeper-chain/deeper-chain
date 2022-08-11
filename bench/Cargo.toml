@@ -36,6 +36,7 @@ hex = "0.4.0"
 rand = { version = "0.7.2", features = ["small_rng"] }
 lazy_static = "1.4.0"
 parity-util-mem = { version = "0.11.0", default-features = false, features = ["primitive-types"] }
+parity-db = "0.3"
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.25" }
 futures = { version = "0.3.4", features = ["thread-pool"] }

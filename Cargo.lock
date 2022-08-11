@@ -4267,6 +4267,7 @@ dependencies = [
  "node-primitives",
  "node-runtime",
  "node-testing",
+ "parity-db",
  "parity-util-mem",
  "rand 0.7.3",
  "sc-basic-authorship",

@@ -76,7 +76,10 @@ pub use pallet_micropayment;
 use fp_rpc::TransactionStatus;
 use pallet_ethereum::{Call::transact, Transaction as EthereumTransaction};
 use pallet_evm::FeeCalculator;
-use pallet_evm::{Account as EVMAccount, EVMCurrencyAdapter, GasWeightMapping, Runner, HashedAddressMapping, EnsureAddressTruncated};
+use pallet_evm::{
+    Account as EVMAccount, EVMCurrencyAdapter, EnsureAddressTruncated, GasWeightMapping,
+    HashedAddressMapping, Runner,
+};
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
