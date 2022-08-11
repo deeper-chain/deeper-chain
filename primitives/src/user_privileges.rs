@@ -21,7 +21,7 @@ impl<Account> UserPrivilegeInterface<Account> for () {
 
 #[bitflags]
 #[repr(u64)]
-#[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, TypeInfo, RuntimeDebug)]
+#[derive(Clone, Copy, PartialEq, Eq, TypeInfo, RuntimeDebug)]
 pub enum Privilege {
     LockerMember = 1 << 0,
     ReleaseSetter = 1 << 1,
@@ -31,6 +31,33 @@ pub enum Privilege {
     CreditAdmin = 1 << 5,
     TipPayer = 1 << 6,
     BridgeAdmin = 1 << 7,
+    OracleWorker = 1 << 8,
+}
+
+impl MaxEncodedLen for Privilege {
+    fn max_encoded_len() -> usize {
+        u64::max_encoded_len()
+    }
+}
+
+impl Encode for Privilege {
+    fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+        <BitFlags<Privilege>>::from_flag(*self)
+            .bits()
+            .using_encoded(f)
+    }
+}
+
+impl EncodeLike for Privilege {}
+
+impl Decode for Privilege {
+    fn decode<I: codec::Input>(input: &mut I) -> Result<Self, codec::Error> {
+        let field = u64::decode(input)?;
+        let whole = <BitFlags<Privilege>>::from_bits(field as u64).map_err(|_| "invalid value")?;
+        whole
+            .exactly_one()
+            .ok_or(codec::Error::from("extract none"))
+    }
 }
 
 /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
