@@ -25,6 +25,7 @@ use frame_support::{
 use frame_system::RawOrigin;
 use mock::*;
 use node_primitives::credit::{CreditInterface, CreditLevel};
+use node_primitives::user_privileges::PrivilegeMapping;
 use pallet_balances::Error as BalancesError;
 use sp_runtime::traits::BadOrigin;
 use sp_staking::offence::OffenceDetails;
@@ -183,7 +184,7 @@ fn difference_compensation() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1001,
-            Privilege::ReleaseSetter
+            PrivilegeMapping::ReleaseSetter
         ));
 
         assert_ok!(Operation::set_release_limit_parameter(
@@ -2995,7 +2996,7 @@ fn staking_delegate() {
             assert_ok!(UserPrivileges::set_user_privilege(
                 Origin::root(),
                 51,
-                Privilege::CreditAdmin
+                PrivilegeMapping::CreditAdmin
             ));
 
             assert_ok!(Credit::set_credit_balances(
@@ -3054,7 +3055,7 @@ fn rewards_to_referer() {
             assert_ok!(UserPrivileges::set_user_privilege(
                 Origin::root(),
                 1,
-                Privilege::CreditAdmin
+                PrivilegeMapping::CreditAdmin
             ));
 
             assert_ok!(Staking::set_user_referer(Origin::signed(1), 1001, 1002));

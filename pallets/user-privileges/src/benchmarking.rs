@@ -26,7 +26,7 @@ use crate::Pallet as UserPriv;
 use frame_benchmarking::{account, benchmarks};
 use frame_support::traits::EnsureOrigin;
 use frame_system::RawOrigin;
-use node_primitives::user_privileges::{Privilege, UserPrivilegeInterface};
+use node_primitives::user_privileges::{Privilege, PrivilegeMapping, UserPrivilegeInterface};
 use sp_runtime::traits::StaticLookup;
 
 benchmarks! {
@@ -34,7 +34,7 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, 2);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let origin = T::ForceOrigin::successful_origin();
-    }: _<T::Origin>(origin, user_lookup, Privilege::LockerMember)
+    }: _<T::Origin>(origin, user_lookup, PrivilegeMapping::LockerMember)
     verify {
         assert_eq!(UserPriv::<T>::has_privilege(&user, Privilege::LockerMember),true);
     }
@@ -52,8 +52,8 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, 1);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let origin = T::ForceOrigin::successful_origin();
-        let _ = UserPriv::<T>::set_user_privilege(origin, user_lookup, Privilege::EvmAddressSetter);
-    }: _(RawOrigin::Signed(user), H160::from_low_u64_be(88), Privilege::LockerMember)
+        let _ = UserPriv::<T>::set_user_privilege(origin, user_lookup, PrivilegeMapping::EvmAddressSetter);
+    }: _(RawOrigin::Signed(user), H160::from_low_u64_be(88), PrivilegeMapping::LockerMember)
     verify {
         assert_eq!(UserPriv::<T>::has_evm_privilege(&H160::from_low_u64_be(88), Privilege::LockerMember),true);
     }
@@ -62,7 +62,7 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, 1);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let origin = T::ForceOrigin::successful_origin();
-        let _ = UserPriv::<T>::set_user_privilege(origin, user_lookup, Privilege::EvmAddressSetter);
+        let _ = UserPriv::<T>::set_user_privilege(origin, user_lookup, PrivilegeMapping::EvmAddressSetter);
     }: _(RawOrigin::Signed(user), H160::from_low_u64_be(88))
     verify {
         assert_eq!(UserPriv::<T>::has_evm_privilege(&H160::from_low_u64_be(88), Privilege::LockerMember),false);

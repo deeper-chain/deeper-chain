@@ -26,7 +26,7 @@ use frame_system::RawOrigin;
 use sp_runtime::traits::Saturating;
 use sp_runtime::traits::StaticLookup;
 
-use node_primitives::{credit::CreditInterface, user_privileges::Privilege};
+use node_primitives::{credit::CreditInterface, user_privileges::PrivilegeMapping};
 use pallet_user_privileges::Pallet as UserPrivileges;
 use scale_info::prelude::string::ToString;
 
@@ -44,7 +44,7 @@ benchmarks! {
         let unlocker: T::AccountId = account("unlocker", 1, SEED);
         let unlocker_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(unlocker.clone());
         let _ = <T as pallet::Config>::Currency::make_free_balance_be(&unlocker, existential_deposit);
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),unlocker_lookup,Privilege::LockerMember);
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),unlocker_lookup,PrivilegeMapping::LockerMember);
         let source: T::AccountId = account("locked", 0, SEED);
         let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
         // Give some multiple of the existential deposit + creation fee + transfer fee
@@ -83,7 +83,7 @@ benchmarks! {
         let admin: T::AccountId = account("a", 0, SEED);
         let admin_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(admin.clone());
 
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),admin_lookup,Privilege::ReleaseSetter);
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),admin_lookup,PrivilegeMapping::ReleaseSetter);
         let single_limit = existential_deposit * 10u32.into();
         let daily_limit = existential_deposit * 1000u32.into();
         <SingleMaxLimit<T>>::put(single_limit);
@@ -110,7 +110,7 @@ benchmarks! {
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(account.clone());
 
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::NpowMint);
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,PrivilegeMapping::NpowMint);
         let dpr = existential_deposit * 10u32.into();
     }: npow_mint(RawOrigin::Signed(account.clone()), account.clone(), dpr)
     verify {
@@ -120,7 +120,7 @@ benchmarks! {
         let user1: T::AccountId = account("b", 1, USER_SEED);
         let user2: T::AccountId = account("b", 2, USER_SEED);
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user1.clone());
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::BridgeAdmin);
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,PrivilegeMapping::BridgeAdmin);
         BridgeFundAddreess::<T>::put(user1.clone());
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
         let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user1, existential_deposit*2u32.into());
@@ -134,7 +134,7 @@ benchmarks! {
         let user1: T::AccountId = account("b", 1, USER_SEED);
         let user2: T::AccountId = account("b", 2, USER_SEED);
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user1.clone());
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::BridgeAdmin);
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,PrivilegeMapping::BridgeAdmin);
         BridgeFundAddreess::<T>::put(user1.clone());
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
         let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user1, existential_deposit*2u32.into());
@@ -147,7 +147,7 @@ benchmarks! {
     set_dpr_price {
         let user: T::AccountId = account("b", 1, USER_SEED);
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::CreditAdmin);
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,PrivilegeMapping::CreditAdmin);
 
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
     }: _(RawOrigin::Signed(user), existential_deposit, H160::zero() )

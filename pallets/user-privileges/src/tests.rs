@@ -28,7 +28,7 @@ use frame_support::assert_ok;
 use frame_support::traits::ConstU32;
 use frame_support::{parameter_types, weights::Weight};
 use frame_system::EnsureRoot;
-use node_primitives::user_privileges::{Privilege, UserPrivilegeInterface};
+use node_primitives::user_privileges::{Privilege, PrivilegeMapping, UserPrivilegeInterface};
 
 use super::*;
 use crate::{self as pallet_user_privileges};
@@ -98,12 +98,12 @@ fn op_user_privilege() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::LockerMember
+            PrivilegeMapping::LockerMember
         ));
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::ReleaseSetter
+            PrivilegeMapping::ReleaseSetter
         ));
         assert_eq!(
             UserPrivileges::has_privilege(&1, Privilege::ReleaseSetter),
@@ -116,7 +116,7 @@ fn op_user_privilege() {
         assert_ok!(UserPrivileges::unset_user_privilege(
             Origin::root(),
             1,
-            Privilege::ReleaseSetter
+            PrivilegeMapping::ReleaseSetter
         ));
         assert_eq!(
             UserPrivileges::has_privilege(&1, Privilege::ReleaseSetter),
@@ -131,18 +131,18 @@ fn op_user_privilege() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::EvmAddressSetter
+            PrivilegeMapping::EvmAddressSetter
         ));
 
         assert_ok!(UserPrivileges::set_evm_privilege(
             Origin::signed(1),
             H160::from_low_u64_be(88),
-            Privilege::EvmCreditOperation
+            PrivilegeMapping::EvmCreditOperation
         ));
         assert_ok!(UserPrivileges::set_evm_privilege(
             Origin::signed(1),
             H160::from_low_u64_be(88),
-            Privilege::ReleaseSetter
+            PrivilegeMapping::ReleaseSetter
         ));
         assert_eq!(
             UserPrivileges::has_evm_privilege(
@@ -159,7 +159,7 @@ fn op_user_privilege() {
         assert_ok!(UserPrivileges::unset_evm_privilege(
             Origin::signed(1),
             H160::from_low_u64_be(88),
-            Privilege::EvmCreditOperation
+            PrivilegeMapping::EvmCreditOperation
         ));
         assert_eq!(
             UserPrivileges::has_evm_privilege(
