@@ -202,7 +202,7 @@ benchmarks! {
        set_dpr_price {
         let user: T::AccountId = account("b", 1, USER_SEED);
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,PrivilegeMapping::CreditAdmin);
 
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
     }: _(RawOrigin::Signed(user),existential_deposit,H160::zero() )

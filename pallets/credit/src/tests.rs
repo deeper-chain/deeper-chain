@@ -996,7 +996,7 @@ fn new_campaign_usdt_reward() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::CreditAdmin
+            PrivilegeMapping::CreditAdmin
         ));
 
         assert_ok!(Credit::set_dpr_price(
@@ -1054,7 +1054,7 @@ fn set_dpr_price_test() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::CreditAdmin
+            PrivilegeMapping::CreditAdmin
         ));
         assert_ok!(Credit::set_dpr_price(Origin::signed(1), 100, H160::zero()));
         assert_ok!(Credit::set_price_diff_rate(

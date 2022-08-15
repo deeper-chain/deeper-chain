@@ -3110,7 +3110,7 @@ fn staking_usdt_delegate() {
             assert_ok!(UserPrivileges::set_user_privilege(
                 Origin::root(),
                 1,
-                Privilege::CreditAdmin
+                PrivilegeMapping::CreditAdmin
             ));
             let credit_setting = CreditSetting {
                 campaign_id: 5,
