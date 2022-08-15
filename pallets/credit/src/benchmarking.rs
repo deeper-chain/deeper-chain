@@ -25,7 +25,7 @@ use frame_support::traits::Currency;
 use frame_system::RawOrigin;
 use node_primitives::{
     credit::{CreditData, CreditLevel, CreditSetting},
-    user_privileges::Privilege,
+    user_privileges::PrivilegeMapping,
 };
 use sp_core::H160;
 use sp_runtime::{traits::StaticLookup, Percent};
@@ -123,7 +123,7 @@ benchmarks! {
         let credit = 1;
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         let user_lookup = T::Lookup::unlookup(user.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,PrivilegeMapping::CreditAdmin);
     }: update_nft_class_credit(RawOrigin::Signed(user), class_id, credit)
     verify {
         assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
@@ -135,7 +135,7 @@ benchmarks! {
         let admin = create_funded_user::<T>("admin",USER_SEED, 1000);
         let user = create_funded_user::<T>("user",USER_SEED, 1001);
         let admin_lookup = T::Lookup::unlookup(admin.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),admin_lookup,Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),admin_lookup,PrivilegeMapping::CreditAdmin);
     }: update_sum_of_credit_nft_burn_history(RawOrigin::Signed(admin), user.clone(), credit)
     verify {
         assert_eq!(CreditFromBurnNft::<T>::get(user), credit);
@@ -148,7 +148,7 @@ benchmarks! {
 
         let user_lookup = T::Lookup::unlookup(user.clone());
         let signed_user = RawOrigin::Signed(user.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup.clone(),Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup.clone(),PrivilegeMapping::CreditAdmin);
 
         assert_ok!(pallet_uniques::Pallet::<T>::force_create(
             RawOrigin::Root.into(),
@@ -183,7 +183,7 @@ benchmarks! {
     set_switch_campaign {
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         let user_lookup = T::Lookup::unlookup(user.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,PrivilegeMapping::CreditAdmin);
     }: _(RawOrigin::Signed(user), vec!(0,1,2), vec!(3,4,5))
     verify {
         assert_eq!(CampaignIdSwitch::<T>::get(&0), Some(3));
@@ -193,7 +193,7 @@ benchmarks! {
         let user1: T::AccountId = account("user1", USER_SEED, SEED);
         let user2: T::AccountId = account("user2", USER_SEED, SEED);
         let user_lookup = T::Lookup::unlookup(user1.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,PrivilegeMapping::CreditAdmin);
        }: _(RawOrigin::Signed(user1.clone()), vec!(user1.clone(),user2))
        verify {
            assert_eq!(NotSwitchAccounts::<T>::get(&user1), Some(true));

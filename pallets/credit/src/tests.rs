@@ -20,7 +20,7 @@ use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError}
 use frame_system::RawOrigin;
 use node_primitives::{
     credit::{CreditData, CreditInterface, CreditLevel, CreditSetting},
-    user_privileges::Privilege,
+    user_privileges::PrivilegeMapping,
 };
 use sp_core::H160;
 use sp_runtime::traits::BadOrigin;
@@ -817,7 +817,7 @@ fn update_nft_class_credit() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             3,
-            Privilege::CreditAdmin
+            PrivilegeMapping::CreditAdmin
         ));
 
         assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
@@ -838,7 +838,7 @@ fn update_sum_of_credit_nft_burn_history() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             3,
-            Privilege::CreditAdmin
+            PrivilegeMapping::CreditAdmin
         ));
 
         assert_ok!(Credit::update_sum_of_credit_nft_burn_history(
@@ -877,7 +877,7 @@ fn burn_nft() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             3,
-            Privilege::CreditAdmin
+            PrivilegeMapping::CreditAdmin
         ));
 
         assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 50));
@@ -923,7 +923,7 @@ fn unstaking_slash_credit() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::CreditAdmin
+            PrivilegeMapping::CreditAdmin
         ));
 
         assert_ok!(Credit::set_user_staking_credit(

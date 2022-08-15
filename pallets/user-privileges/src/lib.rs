@@ -36,7 +36,9 @@ pub mod pallet {
     use frame_support::{ensure, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
-    use node_primitives::user_privileges::{Privilege, Privileges, UserPrivilegeInterface};
+    use node_primitives::user_privileges::{
+        Privilege, PrivilegeMapping, Privileges, UserPrivilegeInterface,
+    };
     pub use sp_core::H160;
     use sp_runtime::{traits::StaticLookup, RuntimeDebug};
 
@@ -61,11 +63,11 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        UserPrivilegeSet(T::AccountId, Privilege),
-        UserPrivilegeUnSet(T::AccountId, Privilege),
+        UserPrivilegeSet(T::AccountId, PrivilegeMapping),
+        UserPrivilegeUnSet(T::AccountId, PrivilegeMapping),
         UserPrivilegeClear(T::AccountId),
-        EvmPrivilegeSet(H160, Privilege),
-        EvmPrivilegeUnSet(H160, Privilege),
+        EvmPrivilegeSet(H160, PrivilegeMapping),
+        EvmPrivilegeUnSet(H160, PrivilegeMapping),
         EvmPrivilegeClear(H160),
     }
 
@@ -151,11 +153,12 @@ pub mod pallet {
         pub fn set_user_privilege(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
-            privilege: Privilege,
+            privilege_mapping: PrivilegeMapping,
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
             let who = T::Lookup::lookup(who)?;
 
+            let privilege: Privilege = privilege_mapping.into();
             let old_priv = Self::user_privileges(&who);
             let new_priv = {
                 match old_priv {
@@ -165,7 +168,7 @@ pub mod pallet {
             };
 
             UserPrivileges::<T>::insert(&who, Privileges(new_priv));
-            Self::deposit_event(Event::UserPrivilegeSet(who, privilege));
+            Self::deposit_event(Event::UserPrivilegeSet(who, privilege_mapping));
             Ok(().into())
         }
 
@@ -173,7 +176,7 @@ pub mod pallet {
         pub fn unset_user_privilege(
             origin: OriginFor<T>,
             who: <T::Lookup as StaticLookup>::Source,
-            privilege: Privilege,
+            privilege: PrivilegeMapping,
         ) -> DispatchResult {
             T::ForceOrigin::ensure_origin(origin)?;
             let who = T::Lookup::lookup(who)?;
@@ -182,8 +185,9 @@ pub mod pallet {
             if old_priv.is_none() {
                 return Err(Error::<T>::NotExistPrivilege.into());
             }
+            let unset_privilege: Privilege = privilege.into();
             let mut new_priv = old_priv.unwrap();
-            new_priv.0.remove(privilege);
+            new_priv.0.remove(unset_privilege);
             UserPrivileges::<T>::insert(&who, new_priv);
             Self::deposit_event(Event::UserPrivilegeUnSet(who, privilege));
             Ok(().into())
@@ -205,13 +209,15 @@ pub mod pallet {
         pub fn set_evm_privilege(
             origin: OriginFor<T>,
             who: H160,
-            privilege: Privilege,
+            privilege: PrivilegeMapping,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
                 Self::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
+            let privilege: Privilege = privilege.into();
+
             let old_priv = Self::evm_address_privileges(&who);
             let new_priv = {
                 match old_priv {
@@ -220,7 +226,7 @@ pub mod pallet {
                 }
             };
             EvmAddressPrivileges::<T>::insert(&who, Privileges(new_priv));
-            Self::deposit_event(Event::EvmPrivilegeSet(who, privilege));
+            Self::deposit_event(Event::EvmPrivilegeSet(who, privilege.into()));
             Ok(().into())
         }
 
@@ -228,13 +234,14 @@ pub mod pallet {
         pub fn unset_evm_privilege(
             origin: OriginFor<T>,
             who: H160,
-            privilege: Privilege,
+            privilege_mapping: PrivilegeMapping,
         ) -> DispatchResult {
             let sender = ensure_signed(origin)?;
             ensure!(
                 Self::has_privilege(&sender, Privilege::EvmAddressSetter),
                 Error::<T>::NoPermission
             );
+            let privilege: Privilege = privilege_mapping.into();
             let old_priv = Self::evm_address_privileges(&who);
             if old_priv.is_none() {
                 return Err(Error::<T>::NotExistPrivilege.into());
@@ -243,7 +250,7 @@ pub mod pallet {
             new_priv.0.remove(privilege);
             EvmAddressPrivileges::<T>::insert(&who, new_priv);
 
-            Self::deposit_event(Event::EvmPrivilegeUnSet(who, privilege));
+            Self::deposit_event(Event::EvmPrivilegeUnSet(who, privilege_mapping));
             Ok(().into())
         }
 
