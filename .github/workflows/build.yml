@@ -46,3 +46,11 @@ jobs:
         run: |
           npm install
           npm run test
+
+      - name: Compile EZC contract
+        working-directory: ./integration-tests
+        run: npm run contract:compile
+
+      - name: Deploy EZC contract to chain
+        working-directory: ./integration-tests
+        run: npm run contract:deploy
