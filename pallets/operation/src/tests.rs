@@ -116,6 +116,7 @@ pub const BLOCKS_PER_DAY: Moment = 24 * 3600 / 5;
 parameter_types! {
     pub const MaxMember: u32 = 100;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
+    pub const NpowMintDayLimit: u64 = 100_000;
 }
 
 impl Config for Test {
@@ -127,6 +128,7 @@ impl Config for Test {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
     type UserPrivilegeInterface = U128FakeUserPrivilege;
+    type NpowMintDayLimit = NpowMintDayLimit;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -251,13 +253,21 @@ fn npow_mint() {
                 .event,
             crate::tests::Event::from(crate::Event::NpowMint(2, 100))
         );
-        assert_eq!(Balances::free_balance(&2), 101);
+        run_to_block(2);
+        assert!(Balances::free_balance(&2) > 100);
 
         assert_err!(
             Operation::npow_mint(Origin::signed(3), 2, 100),
             Error::<Test>::UnauthorizedAccounts
         );
+
+        run_to_block(3);
+        assert_err!(Operation::npow_mint(Origin::signed(1), 2, 100_001), Error::<Test>::NpowMintBeyoundDayLimit);
+        assert_err!(Operation::npow_mint(Origin::signed(1), 2, 99901), Error::<Test>::NpowMintBeyoundDayLimit);
+        assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 99900));
+        assert_err!(Operation::npow_mint(Origin::signed(1), 2, 1), Error::<Test>::NpowMintBeyoundDayLimit);
     });
+    
 }
 
 #[test]

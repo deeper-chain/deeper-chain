@@ -41,7 +41,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
     use node_primitives::{
-        credit::CreditInterface,
+        credit::{CreditInterface, EraIndex},
         user_privileges::{Privilege, UserPrivilegeInterface},
         OperationInterface, DPR,
     };
@@ -72,6 +72,7 @@ pub mod pallet {
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
+        type NpowMintDayLimit: Get<BalanceOf<Self>>;
     }
 
     #[pallet::pallet]
@@ -110,6 +111,7 @@ pub mod pallet {
         NpowRewardAddressNotFound,
         FundPoolNotSet,
         PriceDiffTooMuch,
+        NpowMintBeyoundDayLimit,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -217,6 +219,11 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn npow_day_minted_dpr)]
+    pub type NpowDayMintedDPR<T: Config> =
+        StorageMap<_, Blake2_128Concat, EraIndex, BalanceOf<T>, OptionQuery>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -387,6 +394,23 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::NpowMint),
                 Error::<T>::UnauthorizedAccounts
             );
+            ensure!(
+                dpr <= T::NpowMintDayLimit::get().into(),
+                Error::<T>::NpowMintBeyoundDayLimit
+            );
+            let era = T::CreditInterface::get_current_era();
+            match Self::npow_day_minted_dpr(era) {
+                Some(minted_dpr) => {
+                    ensure!(
+                        minted_dpr + dpr <= T::NpowMintDayLimit::get().into(),
+                        Error::<T>::NpowMintBeyoundDayLimit
+                    );
+                    NpowDayMintedDPR::<T>::insert(era, minted_dpr + dpr);
+                },
+                None => {
+                    NpowDayMintedDPR::<T>::insert(era, dpr);
+                }
+            }
             T::Currency::deposit_creating(&target, dpr);
             Self::deposit_event(Event::<T>::NpowMint(target, dpr));
             Ok(().into())
