@@ -123,6 +123,7 @@ pub mod pallet {
         V1_0_0,
         V2_0_0,
         V3_0_0,
+        V3_0_1,
     }
 
     #[pallet::pallet]
@@ -291,6 +292,10 @@ pub mod pallet {
     #[pallet::getter(fn price_diff_rate)]
     pub(super) type PriceDiffRate<T: Config> = StorageValue<_, Percent, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn oracle_credit_gap)]
+    pub(super) type OracleCreditGap<T: Config> = StorageValue<_, u64, OptionQuery>;
+
     /// tupule (BalanceOf<T>,BalanceOf<T>): first usdt amount, second dpr amount when usdt staking
     #[pallet::storage]
     #[pallet::getter(fn user_staking_balance)]
@@ -380,6 +385,8 @@ pub mod pallet {
         CampaignIdNotMatch,
         /// Not Admin
         NotAdmin,
+        /// No authority to execute
+        NotAuthority,
         /// Staking credit score not set
         StakingCreditNotSet,
         /// Out of max burn credit per address
@@ -393,114 +400,11 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            if StorageVersion::<T>::get() == Some(Releases::V2_0_0) {
-                let new_campaign: Vec<CreditSetting<BalanceOf<T>>> = vec![
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Zero,
-                        staking_balance: BalanceOf::<T>::zero(),
-                        base_apy: Percent::from_percent(0),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::One,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(3_000 * DPR),
-                        base_apy: Percent::from_percent(20),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Two,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
-                        base_apy: Percent::from_percent(30),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Three,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(8_000 * DPR),
-                        base_apy: Percent::from_percent(35),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Four,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(12_000 * DPR),
-                        base_apy: Percent::from_percent(40),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Five,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(18_000 * DPR),
-                        base_apy: Percent::from_percent(45),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Six,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(24_000 * DPR),
-                        base_apy: Percent::from_percent(50),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Seven,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(32_000 * DPR),
-                        base_apy: Percent::from_percent(55),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Eight,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(40_000 * DPR),
-                        base_apy: Percent::from_percent(60),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                ];
+            if StorageVersion::<T>::get() == Some(Releases::V3_0_0) {
+                OracleCreditGap::<T>::put(1);
+                PriceDiffRate::<T>::put(Percent::from_percent(20));
 
-                for setting in new_campaign {
-                    Self::_update_credit_setting(setting);
-                }
-
-                StorageVersion::<T>::put(Releases::V3_0_0);
+                StorageVersion::<T>::put(Releases::V3_0_1);
                 return T::DbWeight::get().reads_writes(1, 10);
             }
             0
@@ -811,6 +715,17 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_oracle_credit_gap(
+            origin: OriginFor<T>,
+            credit_gap: u64,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+            OracleCreditGap::<T>::put(credit_gap);
+            Ok(().into())
+        }
+
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_dpr_price())]
         pub fn set_dpr_price(
             origin: OriginFor<T>,
@@ -819,7 +734,8 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure!(price != 0u32.into(), Error::<T>::PriceZero);
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+            let credit_data = Self::user_credit(&who).unwrap();
+            ensure!(credit_data.credit > Self::oracle_credit_gap().unwrap(), Error::<T>::NotAuthority);
 
             let rate = Self::price_diff_rate();
             let old_price = Self::dpr_price();
