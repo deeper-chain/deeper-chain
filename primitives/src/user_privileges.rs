@@ -23,14 +23,24 @@ impl<Account> UserPrivilegeInterface<Account> for () {
 #[repr(u64)]
 #[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, TypeInfo, RuntimeDebug)]
 pub enum Privilege {
+    #[codec(index = 0)]
     LockerMember = 1 << 0,
+    #[codec(index = 1)]
     ReleaseSetter = 1 << 1,
+    #[codec(index = 2)]
     EvmAddressSetter = 1 << 2,
+    #[codec(index = 3)]
     EvmCreditOperation = 1 << 3,
+    #[codec(index = 4)]
     NpowMint = 1 << 4,
+    #[codec(index = 5)]
     CreditAdmin = 1 << 5,
+    #[codec(index = 6)]
     TipPayer = 1 << 6,
+    #[codec(index = 7)]
     BridgeAdmin = 1 << 7,
+    #[codec(index = 8)]
+    OracleWorker = 1 << 8,
 }
 
 /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
