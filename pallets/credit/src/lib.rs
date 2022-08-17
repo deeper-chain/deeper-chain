@@ -1218,18 +1218,28 @@ pub mod pallet {
 
         fn get_credit_balance(
             account: &T::AccountId,
-            campaign_id: Option<u16>,
+            require_id: Option<u16>,
         ) -> Vec<BalanceOf<T>> {
-            let credit_data = Self::user_credit(account);
-            let campaign_id = credit_data.map(|data| data.campaign_id).or(campaign_id);
+            let user_campaign_id = Self::user_credit(account).map(|data| data.campaign_id);
+
+            let campaign_id = match (user_campaign_id, require_id) {
+                (None, None) => u16::MAX,
+                (Some(campaign_id), Some(require_id)) => {
+                    if campaign_id == require_id {
+                        campaign_id
+                    } else {
+                        u16::MAX
+                    }
+                }
+                (Some(campaign_id), None) => campaign_id,
+                (None, Some(require_id)) => require_id,
+            };
+
             match campaign_id {
-                None => Vec::new(),
-                Some(campaign_id) => match campaign_id {
-                    0 | 1 => Self::genesis_credit_balances(),
-                    2 | 4 => Self::credit_balances(),
-                    5 => Self::usdt_credit_balances(),
-                    _ => Vec::new(),
-                },
+                0 | 1 => Self::genesis_credit_balances(),
+                2 | 4 => Self::credit_balances(),
+                5 => Self::usdt_credit_balances(),
+                _ => Vec::new(),
             }
         }
 
