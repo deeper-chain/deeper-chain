@@ -122,6 +122,7 @@ fn add_or_update_credit_data() {
             Credit::add_or_update_credit_data(Origin::signed(1), 2, credit_data.clone()),
             BadOrigin
         );
+        assert_eq!(Credit::get_credit_balance(&1, Some(5)), Vec::new());
 
         // update_credit_data works
         run_to_block(1);
