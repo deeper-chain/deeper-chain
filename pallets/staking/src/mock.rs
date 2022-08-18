@@ -275,7 +275,6 @@ impl pallet_credit::Config for Test {
 
 parameter_types! {
     pub const MinimumBurnedDPR: Balance = 50;
-    pub const NpowMintDayLimit: u64 = 100_000;
 }
 
 impl pallet_operation::Config for Test {
@@ -287,7 +286,6 @@ impl pallet_operation::Config for Test {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type UserPrivilegeInterface = UserPrivileges;
-    type NpowMintDayLimit = NpowMintDayLimit;
 }
 
 impl pallet_user_privileges::Config for Test {

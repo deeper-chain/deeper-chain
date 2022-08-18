@@ -116,7 +116,6 @@ pub const BLOCKS_PER_DAY: Moment = 24 * 3600 / 5;
 parameter_types! {
     pub const MaxMember: u32 = 100;
     pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
-    pub const NpowMintDayLimit: u64 = 100_000;
 }
 
 impl Config for Test {
@@ -128,7 +127,6 @@ impl Config for Test {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = ();
     type UserPrivilegeInterface = U128FakeUserPrivilege;
-    type NpowMintDayLimit = NpowMintDayLimit;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -245,6 +243,7 @@ impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
 fn npow_mint() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
+        assert_ok!(Operation::set_npow_mint_limit(Origin::root(), 100000));
         assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 100));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()

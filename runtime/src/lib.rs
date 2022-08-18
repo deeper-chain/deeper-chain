@@ -474,9 +474,6 @@ impl pallet_user_privileges::Config for Runtime {
     type WeightInfo = pallet_user_privileges::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-    pub const NpowMintDayLimit: Balance = 100_000 * DPR;
-}
 impl pallet_operation::Config for Runtime {
     type MaxMember = MaxLocks;
     type Event = Event;
@@ -486,7 +483,6 @@ impl pallet_operation::Config for Runtime {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type UserPrivilegeInterface = UserPrivileges;
-    type NpowMintDayLimit = NpowMintDayLimit;
 }
 
 parameter_types! {
