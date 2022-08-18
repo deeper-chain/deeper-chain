@@ -123,6 +123,10 @@ fn add_or_update_credit_data() {
             BadOrigin
         );
         assert_eq!(Credit::get_credit_balance(&1, Some(5)), Vec::new());
+        assert_eq!(
+            Credit::get_credit_balance(&1, Some(1)),
+            Credit::get_credit_balance(&1, Some(4))
+        );
 
         // update_credit_data works
         run_to_block(1);
