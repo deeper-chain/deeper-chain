@@ -262,12 +262,20 @@ fn npow_mint() {
         );
 
         run_to_block(3);
-        assert_err!(Operation::npow_mint(Origin::signed(1), 2, 100_001), Error::<Test>::NpowMintBeyoundDayLimit);
-        assert_err!(Operation::npow_mint(Origin::signed(1), 2, 99901), Error::<Test>::NpowMintBeyoundDayLimit);
+        assert_err!(
+            Operation::npow_mint(Origin::signed(1), 2, 100_001),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
+        assert_err!(
+            Operation::npow_mint(Origin::signed(1), 2, 99901),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
         assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 99900));
-        assert_err!(Operation::npow_mint(Origin::signed(1), 2, 1), Error::<Test>::NpowMintBeyoundDayLimit);
+        assert_err!(
+            Operation::npow_mint(Origin::signed(1), 2, 1),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
     });
-    
 }
 
 #[test]

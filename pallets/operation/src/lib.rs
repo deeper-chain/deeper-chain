@@ -406,7 +406,7 @@ pub mod pallet {
                         Error::<T>::NpowMintBeyoundDayLimit
                     );
                     NpowDayMintedDPR::<T>::insert(era, minted_dpr + dpr);
-                },
+                }
                 None => {
                     NpowDayMintedDPR::<T>::insert(era, dpr);
                 }
