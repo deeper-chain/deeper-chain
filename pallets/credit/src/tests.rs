@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #[cfg(test)]
-use crate::{mock::*, CampaignIdSwitch, Error, UserCredit, UserCreditHistory};
+use crate::{mock::*, CampaignIdSwitch, DprPrice, Error, UserCredit, UserCreditHistory};
 use frame_support::traits::Currency;
 use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::RawOrigin;
@@ -1000,11 +1000,7 @@ fn new_campaign_usdt_reward() {
             Privilege::CreditAdmin
         ));
 
-        assert_ok!(Credit::set_dpr_price(
-            Origin::signed(1),
-            25_000_000_000_000_000,
-            H160::zero()
-        ));
+        DprPrice::<Test>::put(25_000_000_000_000_000);
         Credit::set_staking_balance(&1000, 75_000_000_000_000_000_000);
 
         let new_credit_data = CreditData {
@@ -1057,23 +1053,58 @@ fn set_dpr_price_test() {
             1,
             Privilege::CreditAdmin
         ));
-        assert_ok!(Credit::set_dpr_price(Origin::signed(1), 100, H160::zero()));
         assert_ok!(Credit::set_price_diff_rate(
             Origin::signed(1),
             Percent::from_percent(10)
         ));
+        assert_ok!(Credit::set_oracle_credit_gap(Origin::signed(1), 100));
+
+        let credit_data_address_1 = CreditData {
+            campaign_id: 5,
+            credit: 101,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0u32,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 270,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            2,
+            credit_data_address_1
+        ));
+        assert_ok!(Credit::set_dpr_price(Origin::signed(2), 100, H160::zero()));
         assert_err!(
-            Credit::set_dpr_price(Origin::signed(1), 111, H160::zero()),
+            Credit::set_dpr_price(Origin::signed(2), 111, H160::zero()),
             Error::<Test>::PriceDiffTooMuch
         );
 
-        assert_ok!(Credit::set_dpr_price(Origin::signed(1), 110, H160::zero()));
+        assert_ok!(Credit::set_dpr_price(Origin::signed(2), 110, H160::zero()));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
                 .expect("should contains events")
                 .event,
             crate::tests::Event::from(crate::Event::DPRPrice(110, H160::zero()))
+        );
+
+        let credit_data_address_2 = CreditData {
+            campaign_id: 5,
+            credit: 99,
+            initial_credit_level: CreditLevel::Zero,
+            rank_in_initial_credit_level: 0u32,
+            number_of_referees: 0,
+            current_credit_level: CreditLevel::Zero,
+            reward_eras: 270,
+        };
+        assert_ok!(Credit::add_or_update_credit_data(
+            Origin::root(),
+            3,
+            credit_data_address_2
+        ));
+        assert_err!(
+            Credit::set_dpr_price(Origin::signed(3), 110, H160::zero()),
+            Error::<Test>::NotAuthority
         );
     });
 }

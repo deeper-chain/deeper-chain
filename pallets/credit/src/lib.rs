@@ -405,7 +405,7 @@ pub mod pallet {
                 PriceDiffRate::<T>::put(Percent::from_percent(20));
 
                 StorageVersion::<T>::put(Releases::V3_0_1);
-                return T::DbWeight::get().reads_writes(1, 10);
+                return T::DbWeight::get().reads_writes(1, 3);
             }
             0
         }
@@ -716,10 +716,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
-        pub fn set_oracle_credit_gap(
-            origin: OriginFor<T>,
-            credit_gap: u64,
-        ) -> DispatchResult {
+        pub fn set_oracle_credit_gap(origin: OriginFor<T>, credit_gap: u64) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
             OracleCreditGap::<T>::put(credit_gap);
@@ -735,7 +732,10 @@ pub mod pallet {
             ensure!(price != 0u32.into(), Error::<T>::PriceZero);
             let who = ensure_signed(origin)?;
             let credit_data = Self::user_credit(&who).unwrap();
-            ensure!(credit_data.credit > Self::oracle_credit_gap().unwrap(), Error::<T>::NotAuthority);
+            ensure!(
+                credit_data.credit > Self::oracle_credit_gap().unwrap(),
+                Error::<T>::NotAuthority
+            );
 
             let rate = Self::price_diff_rate();
             let old_price = Self::dpr_price();
