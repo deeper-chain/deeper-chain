@@ -1199,6 +1199,20 @@ pub mod pallet {
             };
             (daily_poc_reward, weight)
         }
+
+        // both campaign id is dpr staking or usdt staking
+
+        fn is_same_campaign_type(lhs: u16, rhs: u16) -> bool {
+            let dpr_campaign_ids = vec![0, 1, 2, 3, 4];
+            let usdt_campaign_ids = vec![5];
+
+            if usdt_campaign_ids.contains(&lhs) && usdt_campaign_ids.contains(&rhs) {
+                return true;
+            } else if dpr_campaign_ids.contains(&lhs) && dpr_campaign_ids.contains(&rhs) {
+                return true;
+            }
+            false
+        }
     }
 
     impl<T: Config> CreditInterface<T::AccountId, BalanceOf<T>> for Pallet<T> {
@@ -1225,7 +1239,7 @@ pub mod pallet {
             let campaign_id = match (user_campaign_id, require_id) {
                 (None, None) => u16::MAX,
                 (Some(campaign_id), Some(require_id)) => {
-                    if campaign_id == require_id {
+                    if Self::is_same_campaign_type(campaign_id, require_id) {
                         campaign_id
                     } else {
                         u16::MAX
