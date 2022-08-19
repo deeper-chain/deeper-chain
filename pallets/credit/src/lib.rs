@@ -380,6 +380,8 @@ pub mod pallet {
         CampaignIdNotMatch,
         /// Not Admin
         NotAdmin,
+        /// Not OracleWorker
+        NotOracleWorker,
         /// Staking credit score not set
         StakingCreditNotSet,
         /// Out of max burn credit per address
@@ -819,8 +821,10 @@ pub mod pallet {
         ) -> DispatchResult {
             ensure!(price != 0u32.into(), Error::<T>::PriceZero);
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
-
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::OracleWorker),
+                Error::<T>::NotOracleWorker
+            );
             let rate = Self::price_diff_rate();
             let old_price = Self::dpr_price();
 

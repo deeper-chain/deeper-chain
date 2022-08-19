@@ -1001,7 +1001,7 @@ fn new_campaign_usdt_reward() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::CreditAdmin
+            Privilege::OracleWorker
         ));
 
         assert_ok!(Credit::set_dpr_price(
@@ -1056,6 +1056,11 @@ fn set_dpr_price_test() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
         assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::OracleWorker
+        ));
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
