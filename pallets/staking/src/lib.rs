@@ -56,7 +56,7 @@ use node_primitives::{
     credit::{CreditInterface, CreditLevel},
     deeper_node::NodeInterface,
     user_privileges::{Privilege, UserPrivilegeInterface},
-    OperationInterface, VerifySignatureInterface,
+    OperationInterface, VerifySignatureInterface, DPR,
 };
 pub use pallet::*;
 use pallet_session::historical;
@@ -64,7 +64,8 @@ use scale_info::TypeInfo;
 use sp_runtime::{
     traits::{
         AccountIdConversion, AtLeast32BitUnsigned, CheckedSub, Convert, Dispatchable,
-        SaturatedConversion, Saturating, StaticLookup, UniqueSaturatedInto, Zero,
+        SaturatedConversion, Saturating, StaticLookup, UniqueSaturatedFrom, UniqueSaturatedInto,
+        Zero,
     },
     Perbill, Percent, RuntimeDebug,
 };
@@ -946,6 +947,19 @@ pub mod pallet {
     #[pallet::getter(fn user_referee_count)]
     pub type UserRefereeCount<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u32, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn npow_day_minted_dpr)]
+    pub type NpowDayMintedDPR<T: Config> = StorageValue<_, (EraIndex, BalanceOf<T>), OptionQuery>;
+
+    #[pallet::type_value]
+    pub fn NpowMintDayLimitDefault<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR)
+    }
+    #[pallet::storage]
+    #[pallet::getter(fn npow_mint_day_limit)]
+    pub type NpowMintDayLimit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, NpowMintDayLimitDefault<T>>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -1960,6 +1974,52 @@ pub mod pallet {
             }
             Ok(())
         }
+
+        #[pallet::weight(T::WeightInfo::npow_mint())]
+        pub fn set_npow_mint_limit(
+            origin: OriginFor<T>,
+            limit: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            NpowMintDayLimit::<T>::put(limit);
+            Self::deposit_event(Event::<T>::NpowMintChanged(limit));
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::WeightInfo::npow_mint())]
+        pub fn npow_mint(
+            origin: OriginFor<T>,
+            target: T::AccountId,
+            dpr: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::NpowMint),
+                Error::<T>::UnauthorizedAccounts
+            );
+            let limit = Self::npow_mint_day_limit();
+            ensure!(dpr <= limit, Error::<T>::NpowMintBeyoundDayLimit);
+            let era = T::CreditInterface::get_current_era();
+            match Self::npow_day_minted_dpr() {
+                Some((saved_era, minted_dpr)) => {
+                    if saved_era != era {
+                        NpowDayMintedDPR::<T>::put((era, dpr));
+                    } else {
+                        ensure!(
+                            minted_dpr + dpr <= limit,
+                            Error::<T>::NpowMintBeyoundDayLimit
+                        );
+                        NpowDayMintedDPR::<T>::put((era, minted_dpr + dpr));
+                    }
+                }
+                None => {
+                    NpowDayMintedDPR::<T>::put((era, dpr));
+                }
+            }
+            T::Currency::deposit_creating(&target, dpr);
+            Self::deposit_event(Event::<T>::NpowMint(target, dpr));
+            Ok(().into())
+        }
     }
 
     #[pallet::hooks]
@@ -2056,6 +2116,10 @@ pub mod pallet {
         StakingDelegate(T::AccountId, u8),
         /// The Referer  has been rewarded by this amount. \[account_id, amount\]
         RefererReward(T::AccountId, BalanceOf<T>),
+        /// Account got mint because of npow
+        NpowMint(T::AccountId, BalanceOf<T>),
+        /// npow day limit changed
+        NpowMintChanged(BalanceOf<T>),
     }
 
     /// Error for the staking module.
@@ -2127,6 +2191,8 @@ pub mod pallet {
         StakingBalanceNotEnough,
         /// usdt convert to dpr error
         UsdtConvertError,
+        /// npow amount is larger than day limit
+        NpowMintBeyoundDayLimit,
     }
 }
 

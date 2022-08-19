@@ -25,7 +25,7 @@ use sp_runtime::{
 };
 
 use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
-use frame_support::{assert_err, assert_ok, parameter_types, weights::Weight};
+use frame_support::{assert_ok, parameter_types, weights::Weight};
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -237,44 +237,6 @@ impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
     fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
         true
     }
-}
-
-#[test]
-fn npow_mint() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1);
-        assert_ok!(Operation::set_npow_mint_limit(Origin::root(), 100000));
-        assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 100));
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::Event::from(crate::Event::NpowMint(2, 100))
-        );
-        run_to_block(2);
-        assert!(Balances::free_balance(&2) > 100);
-
-        assert_err!(
-            Operation::npow_mint(Origin::signed(3), 2, 100),
-            Error::<Test>::UnauthorizedAccounts
-        );
-
-        run_to_block(3);
-        assert_err!(
-            Operation::npow_mint(Origin::signed(1), 2, 100_001),
-            Error::<Test>::NpowMintBeyoundDayLimit
-        );
-        assert_err!(
-            Operation::npow_mint(Origin::signed(1), 2, 99901),
-            Error::<Test>::NpowMintBeyoundDayLimit
-        );
-        assert_ok!(Operation::npow_mint(Origin::signed(1), 2, 99900));
-        assert_err!(
-            Operation::npow_mint(Origin::signed(1), 2, 1),
-            Error::<Test>::NpowMintBeyoundDayLimit
-        );
-    });
 }
 
 #[test]

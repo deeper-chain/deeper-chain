@@ -19,7 +19,7 @@
 
 use super::*;
 use frame_support::{
-    assert_noop, assert_ok,
+    assert_err, assert_noop, assert_ok,
     traits::{Currency, Hooks, ReservableCurrency},
 };
 use frame_system::RawOrigin;
@@ -3190,4 +3190,48 @@ fn staking_usdt_delegate() {
                 1643835616438356164 + 4109589041095890410
             );
         });
+}
+
+#[test]
+fn npow_mint() {
+    ExtBuilder::default().build_and_execute(|| {
+        run_to_block(1);
+        assert_ok!(Staking::set_npow_mint_limit(Origin::root(), 100000));
+
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::NpowMint
+        ));
+        assert_ok!(Staking::npow_mint(Origin::signed(1), 2, 100));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            mock::Event::from(crate::Event::NpowMint(2, 100))
+        );
+        run_to_block(2);
+        assert!(Balances::free_balance(&2) > 100);
+
+        assert_err!(
+            Staking::npow_mint(Origin::signed(3), 2, 100),
+            Error::<Test>::UnauthorizedAccounts
+        );
+
+        run_to_block(3);
+        assert_err!(
+            Staking::npow_mint(Origin::signed(1), 2, 100_001),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
+        assert_err!(
+            Staking::npow_mint(Origin::signed(1), 2, 99901),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
+        assert_ok!(Staking::npow_mint(Origin::signed(1), 2, 99900));
+        assert_err!(
+            Staking::npow_mint(Origin::signed(1), 2, 1),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
+    });
 }
