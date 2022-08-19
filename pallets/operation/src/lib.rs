@@ -41,7 +41,7 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use frame_system::{self, ensure_signed};
     use node_primitives::{
-        credit::CreditInterface,
+        credit::{CreditInterface, EraIndex},
         user_privileges::{Privilege, UserPrivilegeInterface},
         OperationInterface, DPR,
     };
@@ -92,6 +92,7 @@ pub mod pallet {
         UnstakingResult(T::AccountId, String),
         GetNpowReward(T::AccountId, H160),
         NpowMint(T::AccountId, BalanceOf<T>),
+        NpowMintChanged(BalanceOf<T>),
         BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
         BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
         DPRPrice(BalanceOf<T>, H160),
@@ -110,6 +111,7 @@ pub mod pallet {
         NpowRewardAddressNotFound,
         FundPoolNotSet,
         PriceDiffTooMuch,
+        NpowMintBeyoundDayLimit,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -217,6 +219,19 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn npow_day_minted_dpr)]
+    pub type NpowDayMintedDPR<T: Config> = StorageValue<_, (EraIndex, BalanceOf<T>), OptionQuery>;
+
+    #[pallet::type_value]
+    pub fn NpowMintDayLimitDefault<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR)
+    }
+    #[pallet::storage]
+    #[pallet::getter(fn npow_mint_day_limit)]
+    pub type NpowMintDayLimit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, NpowMintDayLimitDefault<T>>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -377,6 +392,17 @@ pub mod pallet {
         }
 
         #[pallet::weight(T::OPWeightInfo::npow_mint())]
+        pub fn set_npow_mint_limit(
+            origin: OriginFor<T>,
+            limit: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            NpowMintDayLimit::<T>::put(limit);
+            Self::deposit_event(Event::<T>::NpowMintChanged(limit));
+            Ok(().into())
+        }
+
+        #[pallet::weight(T::OPWeightInfo::npow_mint())]
         pub fn npow_mint(
             origin: OriginFor<T>,
             target: T::AccountId,
@@ -387,6 +413,25 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::NpowMint),
                 Error::<T>::UnauthorizedAccounts
             );
+            let limit = Self::npow_mint_day_limit();
+            ensure!(dpr <= limit, Error::<T>::NpowMintBeyoundDayLimit);
+            let era = T::CreditInterface::get_current_era();
+            match Self::npow_day_minted_dpr() {
+                Some((saved_era, minted_dpr)) => {
+                    if saved_era != era {
+                        NpowDayMintedDPR::<T>::put((era, dpr));
+                    } else {
+                        ensure!(
+                            minted_dpr + dpr <= limit,
+                            Error::<T>::NpowMintBeyoundDayLimit
+                        );
+                        NpowDayMintedDPR::<T>::put((era, minted_dpr + dpr));
+                    }
+                }
+                None => {
+                    NpowDayMintedDPR::<T>::put((era, dpr));
+                }
+            }
             T::Currency::deposit_creating(&target, dpr);
             Self::deposit_event(Event::<T>::NpowMint(target, dpr));
             Ok(().into())
