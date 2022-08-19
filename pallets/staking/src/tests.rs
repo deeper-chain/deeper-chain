@@ -3228,6 +3228,14 @@ fn npow_mint() {
             Staking::npow_mint(Origin::signed(1), 2, 99901),
             Error::<Test>::NpowMintBeyoundDayLimit
         );
+
+        RemainderMiningReward::<Test>::put(10000);
+        assert_err!(
+            Staking::npow_mint(Origin::signed(1), 2, 99900),
+            Error::<Test>::NpowMintBeyoundDayLimit
+        );
+
+        RemainderMiningReward::<Test>::put(1000000);
         assert_ok!(Staking::npow_mint(Origin::signed(1), 2, 99900));
         assert_err!(
             Staking::npow_mint(Origin::signed(1), 2, 1),

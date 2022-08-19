@@ -1999,6 +1999,16 @@ pub mod pallet {
             );
             let limit = Self::npow_mint_day_limit();
             ensure!(dpr <= limit, Error::<T>::NpowMintBeyoundDayLimit);
+
+            // TODO: use InsufficientMiningRewards when PR 322 got merged
+            let remainder_mining_reward = T::NumberToCurrency::convert(
+                Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
+            );
+            ensure!(
+                dpr <= remainder_mining_reward,
+                Error::<T>::NpowMintBeyoundDayLimit
+            );
+
             let era = T::CreditInterface::get_current_era();
             match Self::npow_day_minted_dpr() {
                 Some((saved_era, minted_dpr)) => {
@@ -2016,8 +2026,15 @@ pub mod pallet {
                     NpowDayMintedDPR::<T>::put((era, dpr));
                 }
             }
+
             T::Currency::deposit_creating(&target, dpr);
             Self::deposit_event(Event::<T>::NpowMint(target, dpr));
+            RemainderMiningReward::<T>::put(
+                TryInto::<u128>::try_into(remainder_mining_reward.saturating_sub(dpr))
+                    .ok()
+                    .unwrap(),
+            );
+
             Ok(().into())
         }
     }
