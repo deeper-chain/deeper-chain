@@ -9,14 +9,14 @@ repository = "https://github.com/paritytech/frontier/"
 description = "DISPATCH precompiles for EVM pallet."
 
 [dependencies]
-sp-core = { branch = "polkadot-v0.9.24", default-features = false, git = "https://github.com/paritytech/substrate" }
-sp-io = { branch = "polkadot-v0.9.24", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-support = { branch = "polkadot-v0.9.24", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-evm = {default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "dev/polkadot-v0.9.24" }
-fp-evm = {default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "dev/polkadot-v0.9.24" }
+sp-core = { branch = "polkadot-v0.9.24-1", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-io = { branch = "polkadot-v0.9.24-1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { branch = "polkadot-v0.9.24-1", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-evm = {default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "dev/polkadot-v0.9.24-1" }
+fp-evm = {default-features = false, git = "https://github.com/deeper-chain/frontier.git", branch = "dev/polkadot-v0.9.24-1" }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-sp-std = { branch = "polkadot-v0.9.24", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
+sp-std = { branch = "polkadot-v0.9.24-1", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = {default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24-1" }
 pallet-credit = { version = "3.0.0", path="../credit", default-features = false }
 node-primitives = {version = '2.0.0', default-features = false, path = "../../primitives"}
 arrayref = "0.3.6"

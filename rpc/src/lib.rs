@@ -37,7 +37,6 @@ use fc_rpc::{
     SchemaV2Override, SchemaV3Override, SchemaV4Override, StorageOverride,
 };
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
-use fc_rpc_core::TxPoolApiServer;
 use fp_storage::EthereumStorageSchema;
 use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
 use node_runtime::opaque::Block;
@@ -214,7 +213,8 @@ where
 {
     use fc_rpc::{
         Eth, EthApiServer, EthDevSigner, EthFilter, EthFilterApiServer, EthPubSub,
-        EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, Web3, Web3ApiServer,
+        EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, TxPoolApiServer, Web3,
+        Web3ApiServer,
     };
     use pallet_contracts_rpc::{Contracts, ContractsApiServer};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};

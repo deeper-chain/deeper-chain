@@ -2,7 +2,7 @@ const Web3 = require("web3");
 
 const web3 = new Web3("http://localhost:9933");
 
-web3.eth.extend({
+web3.extend({
     property: 'txpool',
     methods: [{
         name: 'content',
@@ -35,21 +35,21 @@ test().then(() => {
 });
 
 async function getTxpoolStatus() {
-    const status = await web3.eth.txpool.status();
+    const status = await web3.txpool.status();
     let str = JSON.stringify(status);
     console.log("txpool status: " + str);
     return status;
 }
 
 async function getTxpoolContent() {
-    const content = await web3.eth.txpool.content();
+    const content = await web3.txpool.content();
     let str = JSON.stringify(content);
     console.log("txpool content: " + str);
     return content;
 }
 
 async function getTxpoolInspect() {
-    const inspect = await web3.eth.txpool.inspect();
+    const inspect = await web3.txpool.inspect();
     let str = JSON.stringify(inspect);
     console.log("txpool inspect: " + str);
     return inspect;
