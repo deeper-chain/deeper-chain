@@ -644,6 +644,8 @@ pub mod pallet {
 
         type TotalMiningReward: Get<u128>;
 
+        type AlertMiningReward: Get<u128>;
+
         type ExistentialDeposit: Get<BalanceOf<Self>>;
 
         #[pallet::constant]
@@ -2038,6 +2040,10 @@ pub mod pallet {
         UnDelegated(T::AccountId),
         /// The delegator  has been rewarded by this amount. \[account_id, amount\]
         DelegatorReward(T::AccountId, BalanceOf<T>),
+        /// Mining Pool Empty Alert
+        PoolEmpty(T::BlockNumber),
+        /// Mining Pool Insufficient Funds Alert
+        InsufficientMiningRewards(T::BlockNumber, BalanceOf<T>),
         /// The delegator  has been compensation_rewarded by this amount. \[account_id, amount\]
         CompensationDelegatorReward(T::AccountId, BalanceOf<T>),
         /// The validator  has been rewarded by this amount. \[account_id, amount\]
@@ -2456,11 +2462,19 @@ impl<T: Config> pallet::Pallet<T> {
 
     /// Pay delegators based on their credit
     fn pay_delegators() -> Weight {
+        let current_block = <frame_system::Pallet<T>>::block_number();
         let mut remainder_mining_reward = T::NumberToCurrency::convert(
             Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
         );
         let mut weight = T::DbWeight::get().reads_writes(1, 0);
+        if Self::remainder_mining_reward() < Some(T::AlertMiningReward::get()) {
+            Self::deposit_event(Event::<T>::InsufficientMiningRewards(
+                current_block,
+                remainder_mining_reward,
+            ));
+        }
         if remainder_mining_reward == Zero::zero() {
+            Self::deposit_event(Event::<T>::PoolEmpty(current_block));
             return weight;
         }
         let prefix = Self::delegators_key_prefix(); // 1 read

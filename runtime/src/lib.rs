@@ -559,6 +559,7 @@ parameter_types! {
     pub const BondingDuration: pallet_staking::EraIndex = 24 * 28;
     pub const SlashDeferDuration: pallet_staking::EraIndex = 24 * 7; // 1/4 the bonding duration.
     pub const MiningReward: u128 = TOTAL_MINING_REWARD;
+    pub const AlertReward: u128 = 6_000_000_000_000_000_000_000_000;
     pub const MaxDelegates: usize = 1;
 
     pub const StakingPalletId: PalletId = PalletId(*b"stak_ing");
@@ -597,6 +598,7 @@ impl pallet_staking::Config for Runtime {
     type SessionInterface = Self;
     type Call = Call;
     type TotalMiningReward = MiningReward;
+    type AlertMiningReward = AlertReward;
     type ExistentialDeposit = ExistentialDeposit;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
     type VerifySignatureInterface = CreditAccumulation;
