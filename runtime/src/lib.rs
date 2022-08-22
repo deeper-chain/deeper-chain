@@ -27,14 +27,14 @@ use frame_support::{
     construct_runtime, parameter_types,
     traits::{
         AsEnsureOriginWithArg, ConstU128, ConstU32, Currency, EqualPrivilegeOnly, Everything,
-        FindAuthor, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing,
-        OnUnbalanced, U128CurrencyToVote,
+        Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced,
+        U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         ConstantMultiplier, DispatchClass, IdentityFee, Weight,
     },
-    ConsensusEngineId, PalletId, RuntimeDebug,
+    PalletId, RuntimeDebug,
 };
 use frame_system::{
     limits::{BlockLength, BlockWeights},
@@ -56,16 +56,16 @@ use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::traits::{
     self, BlakeTwo256, Block as BlockT, Convert, ConvertInto, DispatchInfoOf, Dispatchable,
     NumberFor, OpaqueKeys, PostDispatchInfoOf, SaturatedConversion, StaticLookup,
+    UniqueSaturatedInto,
 };
 use sp_runtime::transaction_validity::{
     TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
 };
-use sp_runtime::RuntimeAppPublic;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber, Perbill,
     Percent, Permill, Perquintill,
 };
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::prelude::*;
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -1283,20 +1283,6 @@ impl pallet_credit_accumulation::Config for Runtime {
     type AccountCreator = bench_mark_account::DefaultAccountCreator;
 }
 
-pub struct FindAuthorTruncated<F>(PhantomData<F>);
-impl<F: FindAuthor<u32>> FindAuthor<H160> for FindAuthorTruncated<F> {
-    fn find_author<'a, I>(digests: I) -> Option<H160>
-    where
-        I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
-    {
-        if let Some(author_index) = F::find_author(digests) {
-            let authority_id = Babe::authorities()[author_index as usize].0.clone();
-            return Some(H160::from_slice(&authority_id.to_raw_vec()[4..24]));
-        }
-        None
-    }
-}
-
 pub struct EvmDealWithFees;
 impl OnUnbalanced<NegativeImbalance> for EvmDealWithFees {
     fn on_unbalanced(fees: NegativeImbalance) {
@@ -1342,7 +1328,7 @@ impl pallet_evm::Config for Runtime {
     type ChainId = ChainId;
     type BlockGasLimit = BlockGasLimit;
     type OnChargeTransaction = EVMCurrencyAdapter<Balances, EvmDealWithFees>;
-    type FindAuthor = FindAuthorTruncated<Babe>;
+    type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Babe>;
 }
 
 impl pallet_ethereum::Config for Runtime {
@@ -1868,19 +1854,20 @@ impl_runtime_apis! {
 
             let is_transactional = false;
             let validate = true;
+            let evm_config = config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config());
             <Runtime as pallet_evm::Config>::Runner::call(
                 from,
                 to,
                 data,
                 value,
-                gas_limit.low_u64(),
+                gas_limit.unique_saturated_into(),
                 max_fee_per_gas,
                 max_priority_fee_per_gas,
                 nonce,
                 access_list.unwrap_or_default(),
                 is_transactional,
                 validate,
-                config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
+                evm_config,
             ).map_err(|err| err.error.into())
         }
 
@@ -1905,18 +1892,19 @@ impl_runtime_apis! {
 
             let is_transactional = false;
             let validate = true;
+            let evm_config = config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config());
             <Runtime as pallet_evm::Config>::Runner::create(
                 from,
                 data,
                 value,
-                gas_limit.low_u64(),
+                gas_limit.unique_saturated_into(),
                 max_fee_per_gas,
                 max_priority_fee_per_gas,
                 nonce,
                 access_list.unwrap_or_default(),
                 is_transactional,
                 validate,
-                config.as_ref().unwrap_or(<Runtime as pallet_evm::Config>::config()),
+                evm_config,
             ).map_err(|err| err.error.into())
         }
 

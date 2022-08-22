@@ -100,4 +100,7 @@ pub enum Subcommand {
 
     /// Revert the chain to a previous state.
     Revert(sc_cli::RevertCmd),
+
+    /// Db meta columns information.
+    FrontierDb(fc_cli::FrontierDbCmd),
 }
