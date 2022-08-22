@@ -2000,13 +2000,12 @@ pub mod pallet {
             let limit = Self::npow_mint_day_limit();
             ensure!(dpr <= limit, Error::<T>::NpowMintBeyoundDayLimit);
 
-            // TODO: use InsufficientMiningRewards when PR 322 got merged
             let remainder_mining_reward = T::NumberToCurrency::convert(
                 Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
             );
             ensure!(
                 dpr <= remainder_mining_reward,
-                Error::<T>::NpowMintBeyoundDayLimit
+                Error::<T>::InsufficientValue
             );
 
             let era = T::CreditInterface::get_current_era();

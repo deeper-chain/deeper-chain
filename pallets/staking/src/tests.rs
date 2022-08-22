@@ -3232,7 +3232,7 @@ fn npow_mint() {
         RemainderMiningReward::<Test>::put(10000);
         assert_err!(
             Staking::npow_mint(Origin::signed(1), 2, 99900),
-            Error::<Test>::NpowMintBeyoundDayLimit
+            Error::<Test>::InsufficientValue
         );
 
         RemainderMiningReward::<Test>::put(1000000);
