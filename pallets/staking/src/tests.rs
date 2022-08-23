@@ -306,26 +306,15 @@ fn rewards_should_work() {
                 init_balance_1001 + 21369858941948251800
             );
             remainder = remainder - 21369858941948251800;
-            assert_eq!(Balances::total_balance(&1001), init_balance_1002); // 1001 is not paid yet
+            assert_eq!(
+                Balances::total_balance(&1001),
+                init_balance_1001 + 21369858941948251800
+            ); // 1001 is paid
+            remainder = remainder - 21369858941948251800;
             assert_eq!(Balances::total_balance(&1003), init_balance_1003); // 1003 is not paid yet
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
 
             run_to_block(BLOCKS_PER_ERA + 2);
-            // 1001 is paid
-            assert_eq!(
-                Balances::total_balance(&1001),
-                init_balance_1001 + 21369858941948251800
-            );
-            // since 1002 is paid already, it should not pay it again
-            assert_eq!(
-                Balances::total_balance(&1002),
-                init_balance_1002 + 21369858941948251800
-            );
-            assert_eq!(Balances::total_balance(&1003), init_balance_1003); // 1003 is not paid yet
-            remainder = remainder - 21369858941948251800;
-            assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
-
-            run_to_block(BLOCKS_PER_ERA + 3);
             // since 1001 is paid already, it should not pay it again
             assert_eq!(
                 Balances::total_balance(&1001),
@@ -365,8 +354,8 @@ fn many_delegators_rewards_should_work() {
                 assert_eq!(Balances::total_balance(&i), *init_balances.get(&i).unwrap());
             }
             // since we need to pay BLOCKS_PER_ERA delegators in (BLOCKS_PER_ERA - 2) blocks
-            // 1 each block is not enough, instead we pay 2 delegators each block
-            assert_eq!(Staking::delegator_payouts_per_block(), 2);
+            // 1 each block is not enough,for some edge case,instead we pay 3 delegators each block
+            assert_eq!(Staking::delegator_payouts_per_block(), 3);
             assert!(!Staking::delegators_key_prefix().is_empty());
             assert_eq!(
                 Staking::delegators_key_prefix(),
@@ -374,17 +363,18 @@ fn many_delegators_rewards_should_work() {
             );
             let mut remainder = TOTAL_MINING_REWARD;
             let mut i = 1u64;
-            while i < BLOCKS_PER_ERA / 2 {
+            while i < BLOCKS_PER_ERA / 3 {
                 run_to_block(BLOCKS_PER_ERA + i);
-                // it should pay 2 delegators each block
-                remainder = remainder - 21369858941948251800 * 2;
+                // it should pay 3 delegators each block
+                remainder = remainder - 21369858941948251800 * 3;
                 assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
                 i += 1;
             }
-            run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2);
-            remainder = remainder - 21369858941948251800;
+            run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 3);
+            // 2 delegators last been paid
+            remainder = remainder - 21369858941948251800 - 21369858941948251800;
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
-            i = BLOCKS_PER_ERA / 2 + 1;
+            i = BLOCKS_PER_ERA / 3 + 1;
             while i < BLOCKS_PER_ERA {
                 run_to_block(BLOCKS_PER_ERA + i);
                 // all the delegators are paid, so no new payment should be made
@@ -558,7 +548,15 @@ fn rewards_not_affected_by_others_undelegating() {
                 Balances::total_balance(&1004),
                 init_balance_1004 + 21369858941948251800
             );
-            let mut remainder = TOTAL_MINING_REWARD - 21369858941948251800;
+            // 1002 is paid
+            assert_eq!(
+                Balances::total_balance(&1002),
+                init_balance_1002 + 21369858941948251800
+            );
+            assert_eq!(Balances::total_balance(&1001), init_balance_1001);
+            assert_eq!(Balances::total_balance(&1003), init_balance_1003);
+
+            let mut remainder = TOTAL_MINING_REWARD - 21369858941948251800 - 21369858941948251800;
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
 
             // 1004 undelegates now
@@ -568,17 +566,11 @@ fn rewards_not_affected_by_others_undelegating() {
             assert_eq!(Staking::active_delegator_count() as u64, 3);
             assert_eq!(Staking::delegator_count() as u64, 3);
 
-            run_to_block(BLOCKS_PER_ERA + 4);
+            run_to_block(BLOCKS_PER_ERA + 2);
             // 1001 is paid now
             assert_eq!(
                 Balances::total_balance(&1001),
                 init_balance_1001 + 21369858941948251800
-            );
-            remainder = remainder - 21369858941948251800;
-            // 1002 is paid now
-            assert_eq!(
-                Balances::total_balance(&1002),
-                init_balance_1002 + 21369858941948251800
             );
             remainder = remainder - 21369858941948251800;
             // 1003 is paid now
@@ -592,7 +584,6 @@ fn rewards_not_affected_by_others_undelegating() {
                 Balances::total_balance(&1004),
                 init_balance_1004 + 21369858941948251800
             );
-
             assert_eq!(Staking::remainder_mining_reward().unwrap(), remainder);
         });
 }

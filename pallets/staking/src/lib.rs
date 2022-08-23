@@ -1975,11 +1975,14 @@ pub mod pallet {
                         .ok()
                         .unwrap();
                     // figure out how many payouts to make per block, excluding the first and last block of each era
-                    let mut delegator_payouts_per_block =
-                        Self::delegator_count() / (blocks_per_era - 2);
-                    if Self::delegator_count() % (blocks_per_era - 2) > 0 {
-                        delegator_payouts_per_block += 1;
-                    }
+                    let paying_blocks_num = blocks_per_era - 2;
+                    // here +1 for handling edge cases such as when paying_blocks_num is equal to delegator_count,
+                    // then delegator_payouts_per_block is equal to 1. But within the scope of this era,
+                    // the number of delegator_count has increased,
+                    // which will lead to some delegators would not getting reward
+                    let delegator_payouts_per_block =
+                        (Self::delegator_count() + paying_blocks_num - 1) / paying_blocks_num + 1;
+
                     DelegatorPayoutsPerBlock::<T>::put(delegator_payouts_per_block);
                     let prefix = Self::get_delegators_prefix_hash();
                     DelegatorsKeyPrefix::<T>::put(prefix.clone());
