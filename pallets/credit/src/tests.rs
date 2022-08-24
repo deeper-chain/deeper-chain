@@ -1046,8 +1046,16 @@ fn new_campaign_usdt_reward() {
         Credit::set_staking_balance(&1000, 50_000_000_000_000_000_000);
 
         run_to_block(BLOCKS_PER_ERA * 3);
-
         assert_eq!(Credit::get_reward(&1000, 2, 2).0, Some(4109589041095890410));
+
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            2,
+            Privilege::CreditAdmin
+        ));
+        assert_ok!(Credit::unset_staking_balance(Origin::signed(2), 1000));
+        run_to_block(BLOCKS_PER_ERA * 4);
+        assert_eq!(Credit::get_reward(&1000, 3, 3).0, Some(0));
     });
 }
 

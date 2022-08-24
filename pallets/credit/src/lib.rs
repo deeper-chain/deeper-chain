@@ -847,6 +847,17 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::DPRPrice(price, worker));
             Ok(().into())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn unset_staking_balance(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+            UserStakingBalance::<T>::remove(account_id);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
