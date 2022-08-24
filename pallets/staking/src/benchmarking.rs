@@ -405,6 +405,17 @@ benchmarks! {
         let balance_after = <T as Config>::Currency::free_balance(&stash);
         assert!(balance_before > balance_after);
     }
+
+    npow_mint {
+        let account: T::AccountId = account("b", 1, USER_SEED);
+        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(account.clone());
+
+        let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::NpowMint);
+        let dpr = existential_deposit * 10u32.into();
+    }: npow_mint(RawOrigin::Signed(account.clone()), account.clone(), dpr)
+    verify {
+    }
 }
 
 #[cfg(test)]
