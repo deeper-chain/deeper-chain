@@ -844,7 +844,7 @@ pub mod pallet {
             }
 
             DprPrice::<T>::put(price);
-           
+
             Ok(().into())
         }
 
