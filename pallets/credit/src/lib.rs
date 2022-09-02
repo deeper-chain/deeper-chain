@@ -844,7 +844,6 @@ pub mod pallet {
             }
 
             DprPrice::<T>::put(price);
-            Self::deposit_event(Event::<T>::DPRPrice(price, worker));
             Ok(().into())
         }
 

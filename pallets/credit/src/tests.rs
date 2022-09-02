@@ -1085,12 +1085,5 @@ fn set_dpr_price_test() {
         );
 
         assert_ok!(Credit::set_dpr_price(Origin::signed(1), 110, H160::zero()));
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::Event::from(crate::Event::DPRPrice(110, H160::zero()))
-        );
     });
 }
