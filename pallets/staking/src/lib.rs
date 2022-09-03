@@ -2036,6 +2036,21 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        #[pallet::weight(T::WeightInfo::npow_mint())]
+        pub fn validator_burn(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let controller = ensure_signed(origin)?;
+            let mut ledger = Self::ledger(&controller).ok_or(Error::<T>::NotController)?;
+            T::Currency::remove_lock(STAKING_ID, &ledger.stash);
+            let amount = ledger.slash(amount, T::Currency::minimum_balance());
+            T::Currency::slash(&ledger.stash, amount);
+            Self::update_ledger(&controller, &ledger);
+
+            Ok(().into())
+        }
     }
 
     #[pallet::hooks]
