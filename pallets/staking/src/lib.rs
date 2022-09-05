@@ -2048,7 +2048,7 @@ pub mod pallet {
             let amount = ledger.slash(amount, T::Currency::minimum_balance());
             T::Currency::slash(&ledger.stash, amount);
             Self::update_ledger(&controller, &ledger);
-
+            Self::deposit_event(Event::<T>::ValidatorBurned(controller, amount));
             Ok(().into())
         }
     }
@@ -2154,6 +2154,8 @@ pub mod pallet {
         NpowMint(T::AccountId, BalanceOf<T>),
         /// npow day limit changed
         NpowMintChanged(BalanceOf<T>),
+        /// validator's funds burned
+        ValidatorBurned(T::AccountId, BalanceOf<T>),
     }
 
     /// Error for the staking module.

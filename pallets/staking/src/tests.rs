@@ -3283,5 +3283,14 @@ fn slash_staker() {
         let _ = Staking::validator_burn(Origin::signed(10), 30000000000000001000);
         assert_eq!(Balances::free_balance(&11), 30000000000000000000);
         assert_eq!(Balances::usable_balance(&11), 0);
+
+        // can burn all the staked funds
+        let _ = Staking::validator_burn(Origin::signed(10), 40000000000000000000);
+        assert_eq!(Balances::free_balance(&11), 1);
+        assert_eq!(Balances::usable_balance(&11), 1);
+
+        // will be reward next era
+        run_to_block(120);
+        assert_eq!(Balances::free_balance(&11), 60000000000000000001);
     });
 }
