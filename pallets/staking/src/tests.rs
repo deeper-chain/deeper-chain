@@ -3234,3 +3234,63 @@ fn npow_mint() {
         );
     });
 }
+
+#[test]
+fn slash_staker() {
+    ExtBuilder::default().build_and_execute(|| {
+        ErasRewardPoints::<Test>::insert(
+            0,
+            EraRewardPoints {
+                individual: vec![(11, 50)].into_iter().collect(),
+                total: 50,
+            },
+        );
+        ErasRewardPoints::<Test>::insert(
+            1,
+            EraRewardPoints {
+                individual: vec![(11, 50)].into_iter().collect(),
+                total: 50,
+            },
+        );
+        ErasRewardPoints::<Test>::insert(
+            2,
+            EraRewardPoints {
+                individual: vec![(11, 50)].into_iter().collect(),
+                total: 50,
+            },
+        );
+        ErasRewardPoints::<Test>::insert(
+            3,
+            EraRewardPoints {
+                individual: vec![(11, 50)].into_iter().collect(),
+                total: 50,
+            },
+        );
+        ErasRewardPoints::<Test>::insert(
+            4,
+            EraRewardPoints {
+                individual: vec![(11, 50)].into_iter().collect(),
+                total: 50,
+            },
+        );
+
+        assert_eq!(Balances::free_balance(&11), 1000);
+
+        run_to_block(37);
+        assert_eq!(Balances::free_balance(&11), 60000000000000001000);
+        assert_eq!(Balances::usable_balance(&11), 0);
+
+        let _ = Staking::validator_burn(Origin::signed(10), 30000000000000001000);
+        assert_eq!(Balances::free_balance(&11), 30000000000000000000);
+        assert_eq!(Balances::usable_balance(&11), 0);
+
+        // can burn all the staked funds
+        let _ = Staking::validator_burn(Origin::signed(10), 40000000000000000000);
+        assert_eq!(Balances::free_balance(&11), 1);
+        assert_eq!(Balances::usable_balance(&11), 1);
+
+        // will be reward next era
+        run_to_block(120);
+        assert_eq!(Balances::free_balance(&11), 60000000000000000001);
+    });
+}
