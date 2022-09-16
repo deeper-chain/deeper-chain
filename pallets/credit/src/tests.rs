@@ -968,6 +968,19 @@ fn unstaking_slash_credit() {
 #[test]
 fn new_campaign_usdt_reward() {
     new_test_ext().execute_with(|| {
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::OracleWorker
+        ));
+
+        assert_ok!(Credit::set_dpr_price(
+            Origin::signed(1),
+            25_000_000_000_000_000,
+            H160::zero()
+        ));
+        run_to_block(1);
+
         let credit_setting = CreditSetting {
             campaign_id: 5,
             credit_level: CreditLevel::One,
@@ -998,17 +1011,7 @@ fn new_campaign_usdt_reward() {
             RawOrigin::Root.into(),
             credit_setting.clone()
         ));
-        assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
-            1,
-            Privilege::OracleWorker
-        ));
 
-        assert_ok!(Credit::set_dpr_price(
-            Origin::signed(1),
-            25_000_000_000_000_000,
-            H160::zero()
-        ));
         Credit::set_staking_balance(&1000, 75_000_000_000_000_000_000);
 
         let new_credit_data = CreditData {
@@ -1071,6 +1074,11 @@ fn set_dpr_price_test() {
         ));
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
+            2,
+            Privilege::OracleWorker
+        ));
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
             1,
             Privilege::CreditAdmin
         ));
@@ -1079,11 +1087,16 @@ fn set_dpr_price_test() {
             Origin::signed(1),
             Percent::from_percent(10)
         ));
+        run_to_block(2);
+        assert_eq!(Credit::dpr_price(), Some(100));
         assert_err!(
             Credit::set_dpr_price(Origin::signed(1), 111, H160::zero()),
             Error::<Test>::PriceDiffTooMuch
         );
 
         assert_ok!(Credit::set_dpr_price(Origin::signed(1), 110, H160::zero()));
+        assert_ok!(Credit::set_dpr_price(Origin::signed(2), 102, H160::zero()));
+        run_to_block(3);
+        assert_eq!(Credit::dpr_price(), Some(106));
     });
 }

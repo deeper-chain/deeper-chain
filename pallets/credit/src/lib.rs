@@ -297,6 +297,9 @@ pub mod pallet {
     pub(super) type UserStakingBalance<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, (BalanceOf<T>, BalanceOf<T>), OptionQuery>;
 
+    #[pallet::storage]
+    pub(super) type CurrentPrices<T: Config> = StorageValue<_, Vec<BalanceOf<T>>, ValueQuery>;
+
     #[pallet::type_value]
     pub fn UsdtDefaultId() -> u16 {
         5
@@ -394,118 +397,20 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            if StorageVersion::<T>::get() == Some(Releases::V2_0_0) {
-                let new_campaign: Vec<CreditSetting<BalanceOf<T>>> = vec![
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Zero,
-                        staking_balance: BalanceOf::<T>::zero(),
-                        base_apy: Percent::from_percent(0),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::One,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(3_000 * DPR),
-                        base_apy: Percent::from_percent(20),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Two,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(5_000 * DPR),
-                        base_apy: Percent::from_percent(30),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Three,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(8_000 * DPR),
-                        base_apy: Percent::from_percent(35),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Four,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(12_000 * DPR),
-                        base_apy: Percent::from_percent(40),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Five,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(18_000 * DPR),
-                        base_apy: Percent::from_percent(45),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Six,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(24_000 * DPR),
-                        base_apy: Percent::from_percent(50),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Seven,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(32_000 * DPR),
-                        base_apy: Percent::from_percent(55),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                    CreditSetting {
-                        campaign_id: 5,
-                        credit_level: CreditLevel::Eight,
-                        staking_balance: UniqueSaturatedFrom::unique_saturated_from(40_000 * DPR),
-                        base_apy: Percent::from_percent(60),
-                        bonus_apy: Percent::from_percent(0),
-                        max_rank_with_bonus: 0u32,
-                        tax_rate: Percent::from_percent(0),
-                        max_referees_with_rewards: 0,
-                        reward_per_referee: BalanceOf::<T>::zero(),
-                    },
-                ];
-
-                for setting in new_campaign {
-                    Self::_update_credit_setting(setting);
-                }
-
-                StorageVersion::<T>::put(Releases::V3_0_0);
-                return T::DbWeight::get().reads_writes(1, 10);
+        fn on_finalize(_n: T::BlockNumber) {
+            let prices = CurrentPrices::<T>::take();
+            let len = prices.len();
+            if len == 0 {
+                return;
             }
-            0
+            let sum = {
+                let mut sum: BalanceOf<T> = 0u32.into();
+                for num in prices {
+                    sum += num;
+                }
+                sum
+            };
+            DprPrice::<T>::put(sum / (len as u32).into());
         }
     }
 
@@ -817,7 +722,7 @@ pub mod pallet {
         pub fn set_dpr_price(
             origin: OriginFor<T>,
             price: BalanceOf<T>,
-            worker: H160,
+            _worker: H160,
         ) -> DispatchResult {
             ensure!(price != 0u32.into(), Error::<T>::PriceZero);
             let who = ensure_signed(origin)?;
@@ -843,7 +748,7 @@ pub mod pallet {
                 _ => {}
             }
 
-            DprPrice::<T>::put(price);
+            CurrentPrices::<T>::mutate(|prices| prices.push(price));
             Ok(().into())
         }
 
