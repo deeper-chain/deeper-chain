@@ -3143,6 +3143,7 @@ fn staking_usdt_delegate() {
                 25_000_000_000_000_000,
                 H160::zero()
             ));
+            run_to_block(1);
 
             assert_ok!(Credit::set_usdt_credit_balances(
                 Origin::signed(1),

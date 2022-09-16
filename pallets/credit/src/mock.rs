@@ -616,6 +616,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
         <frame_system::Pallet<mock::Test> as OnFinalize<u64>>::on_finalize(System::block_number());
+        <pallet::Pallet<mock::Test> as OnFinalize<u64>>::on_finalize(System::block_number());
+
         System::set_block_number(System::block_number() + 1);
         <frame_system::Pallet<mock::Test> as OnInitialize<u64>>::on_initialize(
             System::block_number(),
