@@ -842,6 +842,7 @@ pub(crate) fn bond_validator(stash: AccountId, ctrl: AccountId, val: Balance) {
 /// a block import/propose process where we first initialize the block, then execute some stuff (not
 /// in the function), and then finalize the block.
 pub(crate) fn run_to_block(n: BlockNumber) {
+    Credit::on_finalize(System::block_number());
     Staking::on_finalize(System::block_number());
     for b in (System::block_number() + 1)..=n {
         System::set_block_number(b);
