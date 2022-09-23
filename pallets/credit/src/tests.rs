@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #[cfg(test)]
-use crate::{mock::*, CampaignIdSwitch, Error, UserCredit, UserCreditHistory};
+use crate::{mock::*, CampaignIdSwitch, Error, MaintainDevices, UserCredit, UserCreditHistory};
 use frame_support::traits::Currency;
 use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::RawOrigin;
@@ -344,6 +344,21 @@ fn update_credit_by_traffic() {
         run_to_block(BLOCKS_PER_ERA * 4);
         Credit::update_credit_by_traffic(1);
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 3); // 2 + 1
+
+        run_to_block(BLOCKS_PER_ERA * 5);
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            2,
+            Privilege::CreditAdmin
+        ));
+        assert_ok!(Credit::set_maintain_device(Origin::signed(2), 1));
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 3); // credit won't update because this address is in maintenance mode
+
+        run_to_block(BLOCKS_PER_ERA * 6);
+        assert_ok!(Credit::unset_maintain_device(Origin::signed(2), 1));
+        Credit::update_credit_by_traffic(1);
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 4); // credit updated because this address not in maintenance mode
     });
 }
 
@@ -1098,5 +1113,19 @@ fn set_dpr_price_test() {
         assert_ok!(Credit::set_dpr_price(Origin::signed(2), 102, H160::zero()));
         run_to_block(3);
         assert_eq!(Credit::dpr_price(), Some(106));
+    });
+}
+
+#[test]
+fn set_and_unset_maintain_device() {
+    new_test_ext().execute_with(|| {
+        run_to_block(1);
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::CreditAdmin
+        ));
+        assert_ok!(Credit::set_maintain_device(Origin::signed(1), 2));
+        assert_eq!(MaintainDevices::<Test>::get(), vec![2]);
     });
 }

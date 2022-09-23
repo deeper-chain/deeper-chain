@@ -309,6 +309,10 @@ pub mod pallet {
     #[pallet::getter(fn default_usdt_campaign_id)]
     pub(crate) type DefaultUsdtCampaignId<T> = StorageValue<_, u16, ValueQuery, UsdtDefaultId>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn get_maintain_devices)]
+    pub(crate) type MaintainDevices<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -762,6 +766,38 @@ pub mod pallet {
             UserStakingBalance::<T>::remove(account_id);
             Ok(().into())
         }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_maintain_device(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+
+            MaintainDevices::<T>::mutate(|addrs| {
+                if !addrs.contains(&account_id) {
+                    addrs.push(account_id);
+                }
+            });
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        pub fn unset_maintain_device(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+
+            MaintainDevices::<T>::mutate(|addrs| {
+                if let Some(index) = addrs.iter().position(|x| *x == account_id) {
+                    addrs.remove(index);
+                }
+            });
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -813,8 +849,11 @@ pub mod pallet {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             let eras = T::NodeInterface::get_eras_offline(&account_id);
             if eras > 0 && eras % 3 == 0 {
-                // slash one credit for being offline every 3 eras
-                weight = weight.saturating_add(Self::slash_credit(&account_id, None));
+                let addrs = MaintainDevices::<T>::get();
+                if !addrs.contains(account_id) {
+                    // slash one credit for being offline every 3 eras
+                    weight = weight.saturating_add(Self::slash_credit(&account_id, None));
+                }
             }
             weight
         }
@@ -1331,6 +1370,11 @@ pub mod pallet {
 
         /// update credit score by traffic
         fn update_credit_by_traffic(server_id: T::AccountId) {
+            let addrs = MaintainDevices::<T>::get();
+            if addrs.contains(&server_id) {
+                // if this address is in maintenance mode, it won't update credit
+                return;
+            }
             let onboard_era = Self::get_onboard_era(&server_id);
             if onboard_era.is_none() {
                 // credit is not updated if the device is never online
