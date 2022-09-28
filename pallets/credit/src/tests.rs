@@ -349,16 +349,11 @@ fn update_credit_by_traffic() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             2,
-            Privilege::CreditAdmin
+            Privilege::DeviceAdmin
         ));
         assert_ok!(Credit::set_maintain_device(Origin::signed(2), 1));
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 3); // credit won't update because this address is in maintenance mode
-
-        run_to_block(BLOCKS_PER_ERA * 6);
-        assert_ok!(Credit::unset_maintain_device(Origin::signed(2), 1));
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 4); // credit updated because this address not in maintenance mode
+        Credit::update_credit_by_traffic(1); // device maintain doesn't affect credit increase
+        assert_eq!(Credit::user_credit(&1).unwrap().credit, 4);
     });
 }
 
@@ -1123,7 +1118,7 @@ fn set_and_unset_maintain_device() {
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,
-            Privilege::CreditAdmin
+            Privilege::DeviceAdmin
         ));
         assert_ok!(Credit::set_maintain_device(Origin::signed(1), 2));
         assert_eq!(MaintainDevices::<Test>::get(), vec![2]);

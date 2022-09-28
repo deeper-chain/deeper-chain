@@ -773,7 +773,7 @@ pub mod pallet {
             account_id: T::AccountId,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+            ensure!(Self::is_device_admin(&who), Error::<T>::NotAdmin);
 
             MaintainDevices::<T>::mutate(|addrs| {
                 if !addrs.contains(&account_id) {
@@ -789,7 +789,7 @@ pub mod pallet {
             account_id: T::AccountId,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_admin(&who), Error::<T>::NotAdmin);
+            ensure!(Self::is_device_admin(&who), Error::<T>::NotAdmin);
 
             MaintainDevices::<T>::mutate(|addrs| {
                 if let Some(index) = addrs.iter().position(|x| *x == account_id) {
@@ -803,6 +803,10 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         fn is_admin(user: &T::AccountId) -> bool {
             T::UserPrivilegeInterface::has_privilege(&user, Privilege::CreditAdmin)
+        }
+
+        fn is_device_admin(user: &T::AccountId) -> bool {
+            T::UserPrivilegeInterface::has_privilege(&user, Privilege::DeviceAdmin)
         }
 
         fn is_evm_credit_operation_address(address: &H160) -> bool {
