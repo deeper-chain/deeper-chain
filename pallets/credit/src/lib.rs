@@ -1370,11 +1370,6 @@ pub mod pallet {
 
         /// update credit score by traffic
         fn update_credit_by_traffic(server_id: T::AccountId) {
-            let addrs = MaintainDevices::<T>::get();
-            if addrs.contains(&server_id) {
-                // if this address is in maintenance mode, it won't update credit
-                return;
-            }
             let onboard_era = Self::get_onboard_era(&server_id);
             if onboard_era.is_none() {
                 // credit is not updated if the device is never online
