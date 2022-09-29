@@ -460,6 +460,16 @@ fn slash_offline_devices_credit() {
         run_to_block(BLOCKS_PER_ERA * 9);
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
+
+        run_to_block(BLOCKS_PER_ERA * 12);
+        assert_ok!(UserPrivileges::set_user_privilege(
+            Origin::root(),
+            1,
+            Privilege::DeviceAdmin
+        ));
+        assert_ok!(Credit::set_maintain_device(Origin::signed(1), 3));
+        Credit::slash_offline_device_credit(&3);
+        assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
     });
 }
 
@@ -1115,6 +1125,11 @@ fn set_dpr_price_test() {
 fn set_and_unset_maintain_device() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
+        assert_err!(
+            Credit::set_maintain_device(Origin::signed(1), 2),
+            Error::<Test>::NotDeviceAdmin
+        );
+        run_to_block(2);
         assert_ok!(UserPrivileges::set_user_privilege(
             Origin::root(),
             1,

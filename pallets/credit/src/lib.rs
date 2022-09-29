@@ -397,6 +397,8 @@ pub mod pallet {
         PriceDiffTooMuch,
         /// price is zero
         PriceZero,
+        /// not device admin
+        NotDeviceAdmin,
     }
 
     #[pallet::hooks]
@@ -773,7 +775,7 @@ pub mod pallet {
             account_id: T::AccountId,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_device_admin(&who), Error::<T>::NotAdmin);
+            ensure!(Self::is_device_admin(&who), Error::<T>::NotDeviceAdmin);
 
             MaintainDevices::<T>::mutate(|addrs| {
                 if !addrs.contains(&account_id) {
@@ -789,7 +791,7 @@ pub mod pallet {
             account_id: T::AccountId,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(Self::is_device_admin(&who), Error::<T>::NotAdmin);
+            ensure!(Self::is_device_admin(&who), Error::<T>::NotDeviceAdmin);
 
             MaintainDevices::<T>::mutate(|addrs| {
                 if let Some(index) = addrs.iter().position(|x| *x == account_id) {
