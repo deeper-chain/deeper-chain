@@ -1060,13 +1060,14 @@ pub mod pallet {
             origin: OriginFor<T>,
             account_id: T::AccountId,
             usdt_amount: BalanceOf<T>,
+            dpr_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let admin = ensure_signed(origin)?;
             ensure!(
                 T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
                 Error::<T>::UnauthorizedAccounts
             );
-            Self::do_usdt_staking_delegate(account_id, usdt_amount)
+            Self::do_usdt_staking_delegate(account_id, usdt_amount, dpr_amount)
         }
 
         /// Take the origin account as a stash and lock up `value` of its balance. `controller` will
@@ -3068,7 +3069,11 @@ impl<T: Config> pallet::Pallet<T> {
         Ok(())
     }
 
-    fn do_usdt_staking_delegate(who: T::AccountId, usdt_amount: BalanceOf<T>) -> DispatchResult {
+    fn do_usdt_staking_delegate(
+        who: T::AccountId,
+        usdt_amount: BalanceOf<T>,
+        dpr_amount: BalanceOf<T>,
+    ) -> DispatchResult {
         let campaign_id = T::CreditInterface::get_default_usdt_campaign_id();
         let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
@@ -3105,10 +3110,7 @@ impl<T: Config> pallet::Pallet<T> {
         let score_gap =
             CreditLevel::credit_level_gap((dst_level as u8).into(), (cur_level as u8).into());
         T::CreditInterface::add_or_update_credit(who.clone(), score_gap, Some(campaign_id));
-        ensure!(
-            T::CreditInterface::set_staking_balance(&who, usdt_amount),
-            Error::<T>::UsdtConvertError
-        );
+        T::CreditInterface::set_staking_balance(&who, usdt_amount, dpr_amount);
         // level::zero can't delegate
         if dst_level > 0 {
             Self::delegate_any(who.clone())?;

@@ -3162,7 +3162,8 @@ fn staking_usdt_delegate() {
             assert_ok!(Staking::usdt_staking_delegate(
                 Origin::signed(1),
                 1002,
-                UniqueSaturatedFrom::unique_saturated_from(75 * DPR)
+                UniqueSaturatedFrom::unique_saturated_from(75 * DPR),
+                UniqueSaturatedFrom::unique_saturated_from(3000 * DPR)
             ));
             assert_eq!(Credit::user_credit(&1002).unwrap().credit, 100);
             run_to_block(BLOCKS_PER_ERA + 2);
@@ -3172,7 +3173,8 @@ fn staking_usdt_delegate() {
             assert_ok!(Staking::usdt_staking_delegate(
                 Origin::signed(1),
                 1002,
-                UniqueSaturatedFrom::unique_saturated_from(50 * DPR)
+                UniqueSaturatedFrom::unique_saturated_from(50 * DPR),
+                UniqueSaturatedFrom::unique_saturated_from(2000 * DPR)
             ));
 
             run_to_block(BLOCKS_PER_ERA * 2 + 2);
