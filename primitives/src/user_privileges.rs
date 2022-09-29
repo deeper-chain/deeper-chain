@@ -41,7 +41,7 @@ pub enum Privilege {
     BridgeAdmin = 1 << 7,
     #[codec(index = 8)]
     OracleWorker = 1 << 8,
-    #[codec(index = 8)]
+    #[codec(index = 9)]
     DeviceAdmin = 1 << 9,
 }
 
