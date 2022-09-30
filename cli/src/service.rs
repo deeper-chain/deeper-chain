@@ -41,6 +41,7 @@ use fc_mapping_sync::{MappingSyncWorker, SyncStrategy};
 use fc_rpc::{EthTask, OverrideHandle};
 use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
 pub use node_runtime::{self, opaque::Block};
+use sc_network_common::service::NetworkEventStream;
 use sc_service::BasePath;
 use sp_api::ProvideRuntimeApi;
 use sp_core::crypto::Pair;
@@ -256,7 +257,7 @@ pub fn new_partial(
     );
 
     let (block_import, babe_link) = sc_consensus_babe::block_import(
-        sc_consensus_babe::Config::get(&*client)?,
+        sc_consensus_babe::configuration(&*client)?,
         frontier_block_import,
         client.clone(),
     )?;
@@ -719,12 +720,6 @@ fn spawn_frontier_tasks(
             fee_history_cache,
             fee_history_cache_limit,
         ),
-    );
-
-    task_manager.spawn_essential_handle().spawn(
-        "frontier-schema-cache-task",
-        None,
-        EthTask::ethereum_schema_cache_task(client, frontier_backend),
     );
 }
 

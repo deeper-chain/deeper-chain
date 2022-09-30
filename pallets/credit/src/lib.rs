@@ -631,7 +631,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_credit_balances(
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
@@ -643,7 +643,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_usdt_credit_balances(
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
@@ -655,7 +655,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
         pub fn set_default_campaign_id(
             origin: OriginFor<T>,
             id: u16,
@@ -667,7 +667,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
         pub fn set_user_staking_credit(
             origin: OriginFor<T>,
             user_scores: Vec<(T::AccountId, u64)>,
@@ -681,7 +681,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
             let admin = ensure_signed(origin)?;
             if !Self::is_admin(&admin) {
@@ -707,7 +707,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_price_diff_rate(
             origin: OriginFor<T>,
             price_diff_rate: Percent,
@@ -752,7 +752,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn unset_staking_balance(
             origin: OriginFor<T>,
             account_id: T::AccountId,

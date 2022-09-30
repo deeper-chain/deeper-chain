@@ -27,9 +27,9 @@ pub mod chain_spec;
 
 #[macro_use]
 pub mod service;
+mod benchmarking;
 mod cli;
 mod command;
-mod command_helper;
 
 pub use cli::*;
 pub use command::*;

@@ -544,7 +544,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_tip_owner_address(origin: OriginFor<T>, owner: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
 

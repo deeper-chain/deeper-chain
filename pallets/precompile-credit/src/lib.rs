@@ -84,7 +84,7 @@ where
             SELECTOR_ADD_CREDIT_SCORE => Self::add_credit_score(handle),
             SELECTOR_SLASH_CREDIT_SCORE => Self::slash_credit_score(handle),
             _ => Err(PrecompileFailure::Error {
-                exit_status: ExitError::InvalidCode,
+                exit_status: ExitError::Other("InvalidCode".into()),
             }),
         }
     }

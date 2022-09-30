@@ -375,7 +375,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_fund_pool_address(
             origin: OriginFor<T>,
             funder: T::AccountId,

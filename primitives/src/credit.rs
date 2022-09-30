@@ -190,7 +190,7 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
         false
     }
     fn slash_credit(_account_id: &AccountId, _score: Option<u64>) -> Weight {
-        0
+        Weight::from_ref_time(0)
     }
     fn get_credit_level(_credit_score: u64) -> CreditLevel {
         CreditLevel::Zero
@@ -200,7 +200,7 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
         _from: EraIndex,
         _to: EraIndex,
     ) -> (Option<Balance>, Weight) {
-        (None, 0)
+        (None, Weight::from_ref_time(0))
     }
     fn update_credit_by_traffic(_server: AccountId) {}
     fn get_current_era() -> EraIndex {

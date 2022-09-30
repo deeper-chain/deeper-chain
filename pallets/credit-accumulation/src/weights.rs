@@ -55,23 +55,24 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn add_credit_by_traffic() -> Weight {
-        (88_843_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(4 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(88_843_000 as u64)
+            .saturating_add(T::DbWeight::get().reads(4 as u64))
+            .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn set_atmos_pubkey() -> Weight {
-        (1_872_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(1_872_000 as u64).saturating_add(T::DbWeight::get().writes(1 as u64))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn add_credit_by_traffic() -> Weight {
-        (88_843_000 as Weight)
-            .saturating_add(RocksDbWeight::get().reads(4 as Weight))
-            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(88_843_000 as u64)
+            .saturating_add(RocksDbWeight::get().reads(4 as u64))
+            .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn set_atmos_pubkey() -> Weight {
-        (1_872_000 as Weight).saturating_add(RocksDbWeight::get().writes(1 as Weight))
+        Weight::from_ref_time(1_872_000 as u64)
+            .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
 }
