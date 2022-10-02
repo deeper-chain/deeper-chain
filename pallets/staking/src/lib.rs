@@ -703,6 +703,11 @@ pub mod pallet {
     #[pallet::getter(fn bonded)]
     pub type Bonded<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, T::AccountId>;
 
+    /// Map from accounts in block list to prohibited time.
+    #[pallet::storage]
+    #[pallet::getter(fn black_list)]
+    pub type BlackList<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, T::BlockNumber>;
+
     /// Map from all (unlocked) "controller" accounts to the info regarding the staking.
     #[pallet::storage]
     #[pallet::getter(fn ledger)]
@@ -1864,6 +1869,44 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::weight(T::WeightInfo::add_blacklist_address())]
+        pub fn add_blacklist_address(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            block_num: T::BlockNumber,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            <BlackList<T>>::insert(&account_id, block_num);
+            Ok(())
+        }
+
+        #[pallet::weight(T::WeightInfo::delete_blacklist_account())]
+        pub fn delete_blacklist_account(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            <BlackList<T>>::remove(&account_id);
+            Ok(())
+        }
+
+        #[pallet::weight(T::WeightInfo::check_blacklist_account())]
+        pub fn check_blacklist_account(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            if !<BlackList<T>>::contains_key(&account_id){
+                return Ok(());
+            }
+
+            if <frame_system::Pallet<T>>::block_number() <
+                <BlackList<T>>::get(&account_id).unwrap() {
+                return Err(Error::<T>::AccountInBlackList)?;
+            }
+            return Ok(());
+        }
+
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
         pub fn difference_compensation(
             origin: OriginFor<T>,
@@ -2229,6 +2272,8 @@ pub mod pallet {
         UsdtConvertError,
         /// npow amount is larger than day limit
         NpowMintBeyoundDayLimit,
+        /// account in the black list
+        AccountInBlackList,
     }
 }
 

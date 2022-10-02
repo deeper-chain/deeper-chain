@@ -812,6 +812,66 @@ fn session_and_eras_work_complex() {
 }
 
 #[test]
+fn insert_and_remove_blacklist_address() {
+    ExtBuilder::default().build_and_execute(|| {
+        let block_num = System::block_number();
+        let  account : u64 =1000;
+        assert_ok!(Staking::add_blacklist_address(
+                Origin::root(),
+                account,
+                block_num
+            ));
+        assert_eq!(Staking::black_list(&account),Some(block_num));
+
+        assert_ok!(Staking::delete_blacklist_account(
+            Origin::root(),
+            account
+        ));
+    });
+}
+
+#[test]
+fn check_blacklist_address() {
+    ExtBuilder::default().build_and_execute(|| {
+        let  account : u64 =1000;
+        assert_ok!(Staking::check_blacklist_account(
+                Origin::root(),
+                account,
+            ));
+
+        // current block number < expire block number
+        let block_num = System::block_number();
+        assert_ok!(Staking::add_blacklist_address(
+                Origin::root(),
+                account,
+                block_num + 1000
+            ));
+
+        assert_err!(
+            Staking::check_blacklist_account(
+                Origin::root(),
+                account,
+            ),
+            Error::<Test>::AccountInBlackList
+        );
+
+        // current block number > expire block number
+        assert_ok!(Staking::add_blacklist_address(
+                Origin::root(),
+                account,
+                0
+            ));
+
+        assert_ok!(
+            Staking::check_blacklist_account(
+                Origin::root(),
+                account,
+            )
+        );
+    });
+}
+
+#[test]
 fn forcing_new_era_works() {
     ExtBuilder::default().build_and_execute(|| {
         // normal flow of session.
