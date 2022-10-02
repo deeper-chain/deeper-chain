@@ -77,9 +77,9 @@ pub trait WeightInfo {
     fn reap_stash(s: u32) -> Weight;
     fn new_era(v: u32, d: u32) -> Weight;
     fn npow_mint() -> Weight;
-    fn add_blacklist_address() -> Weight;
-    fn delete_blacklist_account() -> Weight;
-    fn check_blacklist_account() -> Weight;
+    fn add_account_to_blacklist() -> Weight;
+    fn remove_account_from_blacklist() -> Weight;
+    fn check_account_in_blacklist() -> Weight;
 }
 
 /// Weights for pallet_staking using the Substrate node and recommended hardware.
@@ -241,17 +241,17 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn add_blacklist_address() -> Weight {
+    fn add_account_to_blacklist() -> Weight {
         (33_965_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn delete_blacklist_account() -> Weight {
+    fn remove_account_from_blacklist() -> Weight {
         (33_965_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn check_blacklist_account()-> Weight {
+    fn check_account_in_blacklist() -> Weight {
         (33_965_000 as Weight)
             .saturating_add(T::DbWeight::get().reads(2 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
@@ -416,17 +416,17 @@ impl WeightInfo for () {
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn add_blacklist_address() -> Weight {
+    fn add_account_to_blacklist() -> Weight {
         (33_965_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn delete_blacklist_account() -> Weight {
+    fn remove_account_from_blacklist() -> Weight {
         (33_965_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))
     }
-    fn check_blacklist_account() -> Weight {
+    fn check_account_in_blacklist() -> Weight {
         (33_965_000 as Weight)
             .saturating_add(RocksDbWeight::get().reads(2 as Weight))
             .saturating_add(RocksDbWeight::get().writes(1 as Weight))

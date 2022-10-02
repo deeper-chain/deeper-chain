@@ -812,62 +812,31 @@ fn session_and_eras_work_complex() {
 }
 
 #[test]
-fn insert_and_remove_blacklist_address() {
+fn update_account_in_blacklist() {
     ExtBuilder::default().build_and_execute(|| {
-        let block_num = System::block_number();
-        let  account : u64 =1000;
-        assert_ok!(Staking::add_blacklist_address(
-                Origin::root(),
-                account,
-                block_num
-            ));
-        assert_eq!(Staking::black_list(&account),Some(block_num));
+        let era = current_era();
+        let account: u64 = 1000;
 
-        assert_ok!(Staking::delete_blacklist_account(
-            Origin::root(),
+        assert_ok!(UserPrivileges::set_user_privilege(
+                Origin::root(),
+                2,
+                Privilege::BlackListAdmin
+            ));
+
+        assert_ok!(Staking::add_account_to_blacklist(
+            Origin::signed(2),
+            account,
+            era
+        ));
+
+        assert_eq!(Staking::black_list(&account), Some(era));
+
+        assert_ok!(Staking::remove_account_from_blacklist(
+            Origin::signed(2),
             account
         ));
-    });
-}
 
-#[test]
-fn check_blacklist_address() {
-    ExtBuilder::default().build_and_execute(|| {
-        let  account : u64 =1000;
-        assert_ok!(Staking::check_blacklist_account(
-                Origin::root(),
-                account,
-            ));
-
-        // current block number < expire block number
-        let block_num = System::block_number();
-        assert_ok!(Staking::add_blacklist_address(
-                Origin::root(),
-                account,
-                block_num + 1000
-            ));
-
-        assert_err!(
-            Staking::check_blacklist_account(
-                Origin::root(),
-                account,
-            ),
-            Error::<Test>::AccountInBlackList
-        );
-
-        // current block number > expire block number
-        assert_ok!(Staking::add_blacklist_address(
-                Origin::root(),
-                account,
-                0
-            ));
-
-        assert_ok!(
-            Staking::check_blacklist_account(
-                Origin::root(),
-                account,
-            )
-        );
+        assert_eq!(Staking::black_list(&account), None);
     });
 }
 

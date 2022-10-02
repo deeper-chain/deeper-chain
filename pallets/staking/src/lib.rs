@@ -703,11 +703,6 @@ pub mod pallet {
     #[pallet::getter(fn bonded)]
     pub type Bonded<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, T::AccountId>;
 
-    /// Map from accounts in block list to prohibited time.
-    #[pallet::storage]
-    #[pallet::getter(fn black_list)]
-    pub type BlackList<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, T::BlockNumber>;
-
     /// Map from all (unlocked) "controller" accounts to the info regarding the staking.
     #[pallet::storage]
     #[pallet::getter(fn ledger)]
@@ -965,6 +960,10 @@ pub mod pallet {
     #[pallet::getter(fn npow_mint_day_limit)]
     pub type NpowMintDayLimit<T: Config> =
         StorageValue<_, BalanceOf<T>, ValueQuery, NpowMintDayLimitDefault<T>>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn black_list)]
+    pub type BlackList<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, EraIndex>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -1869,42 +1868,34 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(T::WeightInfo::add_blacklist_address())]
-        pub fn add_blacklist_address(
+        #[pallet::weight(T::WeightInfo::add_account_to_blacklist())]
+        pub fn add_account_to_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
-            block_num: T::BlockNumber,
+            era: EraIndex,
         ) -> DispatchResult {
-            ensure_root(origin)?;
-            <BlackList<T>>::insert(&account_id, block_num);
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BlackListAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            <BlackList<T>>::insert(&account_id, era);
             Ok(())
         }
 
-        #[pallet::weight(T::WeightInfo::delete_blacklist_account())]
-        pub fn delete_blacklist_account(
+        #[pallet::weight(T::WeightInfo::remove_account_from_blacklist())]
+        pub fn remove_account_from_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
         ) -> DispatchResult {
-            ensure_root(origin)?;
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BlackListAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+
             <BlackList<T>>::remove(&account_id);
             Ok(())
-        }
-
-        #[pallet::weight(T::WeightInfo::check_blacklist_account())]
-        pub fn check_blacklist_account(
-            origin: OriginFor<T>,
-            account_id: T::AccountId,
-        ) -> DispatchResult {
-            ensure_root(origin)?;
-            if !<BlackList<T>>::contains_key(&account_id){
-                return Ok(());
-            }
-
-            if <frame_system::Pallet<T>>::block_number() <
-                <BlackList<T>>::get(&account_id).unwrap() {
-                return Err(Error::<T>::AccountInBlackList)?;
-            }
-            return Ok(());
         }
 
         #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
@@ -2272,7 +2263,7 @@ pub mod pallet {
         UsdtConvertError,
         /// npow amount is larger than day limit
         NpowMintBeyoundDayLimit,
-        /// account in the black list
+        /// account is in the black list
         AccountInBlackList,
     }
 }
@@ -2722,17 +2713,27 @@ impl<T: Config> pallet::Pallet<T> {
             ));
             payout = reward;
         }
+        let mut is_in_blacklist = false;
         if delegator_data.delegating {
             Delegators::<T>::mutate(delegator, |data| {
                 data.unrewarded_since = Some(current_era);
+                let punish_era =
+                    <BlackList<T>>::get(&data.delegator).unwrap_or(EraIndex::default());
+                if current_era <= punish_era {
+                    is_in_blacklist = true;
+                }
             });
+
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
         } else {
             Delegators::<T>::remove(delegator);
             DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
         }
-
-        (payout, weight)
+        if is_in_blacklist {
+            (BalanceOf::<T>::zero(), weight)
+        } else {
+            (payout, weight)
+        }
     }
 
     fn pay_referer(
