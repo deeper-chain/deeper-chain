@@ -1868,7 +1868,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(T::WeightInfo::add_account_to_blacklist())]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn add_account_to_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -1883,7 +1883,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(T::WeightInfo::remove_account_from_blacklist())]
+        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
         pub fn remove_account_from_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -1893,7 +1893,6 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::BlackListAdmin),
                 Error::<T>::UnauthorizedAccounts
             );
-
             <BlackList<T>>::remove(&account_id);
             Ok(())
         }
