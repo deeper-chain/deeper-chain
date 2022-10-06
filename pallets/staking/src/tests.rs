@@ -818,10 +818,10 @@ fn update_account_in_blacklist() {
         let account: u64 = 1000;
 
         assert_ok!(UserPrivileges::set_user_privilege(
-                Origin::root(),
-                2,
-                Privilege::BlackListAdmin
-            ));
+            Origin::root(),
+            2,
+            Privilege::BlackListAdmin
+        ));
 
         assert_ok!(Staking::add_account_to_blacklist(
             Origin::signed(2),
@@ -838,6 +838,47 @@ fn update_account_in_blacklist() {
 
         assert_eq!(Staking::black_list(&account), None);
     });
+}
+
+#[test]
+fn no_rewards_in_blacklist() {
+    ExtBuilder::default()
+        .session_per_era(6)
+        .num_delegators(3)
+        .build_and_execute(|| {
+            let era = current_era();
+
+            assert_ok!(UserPrivileges::set_user_privilege(
+                Origin::root(),
+                2,
+                Privilege::BlackListAdmin
+            ));
+
+            assert_ok!(Staking::add_account_to_blacklist(
+                Origin::signed(2),
+                1002,
+                era + 10
+            ));
+
+            assert_ok!(Staking::delegate(Origin::signed(1002), vec![11, 21]));
+            assert_ok!(Staking::delegate(Origin::signed(1003), vec![11, 21]));
+
+            let init_balance_1002 = Balances::total_balance(&1002);
+
+            Payee::<Test>::insert(11, RewardDestination::Controller);
+            Payee::<Test>::insert(21, RewardDestination::Controller);
+
+            start_session(1);
+            start_session(2);
+            start_session(3);
+            start_session(4);
+            start_session(5);
+            start_session(6);
+
+            run_to_block(BLOCKS_PER_ERA + 1);
+
+            assert_eq!(Balances::total_balance(&1002), init_balance_1002);
+        });
 }
 
 #[test]

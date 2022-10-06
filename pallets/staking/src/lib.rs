@@ -2703,7 +2703,13 @@ impl<T: Config> pallet::Pallet<T> {
                 Reward::<T>::insert(delegator, reward_data); // 1 write
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             }
-            let reward = cmp::min(remainder_mining_reward, poc_reward);
+            let mut reward = cmp::min(remainder_mining_reward, poc_reward);
+            let punish_era =
+                <BlackList<T>>::get(&delegator_data.delegator).unwrap_or(EraIndex::default());
+            if current_era <= punish_era {
+                reward = BalanceOf::<T>::zero();
+            }
+
             let imbalance = T::Currency::deposit_creating(delegator, reward); // 1 write
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             Self::deposit_event(Event::<T>::DelegatorReward(
@@ -2712,27 +2718,17 @@ impl<T: Config> pallet::Pallet<T> {
             ));
             payout = reward;
         }
-        let mut is_in_blacklist = false;
         if delegator_data.delegating {
             Delegators::<T>::mutate(delegator, |data| {
                 data.unrewarded_since = Some(current_era);
-                let punish_era =
-                    <BlackList<T>>::get(&data.delegator).unwrap_or(EraIndex::default());
-                if current_era <= punish_era {
-                    is_in_blacklist = true;
-                }
             });
-
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
         } else {
             Delegators::<T>::remove(delegator);
             DelegatorCount::<T>::mutate(|count| *count = count.saturating_sub(1));
         }
-        if is_in_blacklist {
-            (BalanceOf::<T>::zero(), weight)
-        } else {
-            (payout, weight)
-        }
+
+        (payout, weight)
     }
 
     fn pay_referer(
