@@ -24,6 +24,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
+          toolchain: nightly-2022-09-01
           profile: minimal
           components: llvm-tools-preview
           target: wasm32-unknown-unknown
