@@ -1032,7 +1032,11 @@ fn new_campaign_usdt_reward() {
             credit_setting.clone()
         ));
 
-        Credit::set_staking_balance(&1000, 75_000_000_000_000_000_000);
+        Credit::set_staking_balance(
+            &1000,
+            75_000_000_000_000_000_000,
+            3_000_000_000_000_000_000_000,
+        );
 
         let new_credit_data = CreditData {
             campaign_id: 5,
@@ -1066,7 +1070,11 @@ fn new_campaign_usdt_reward() {
             new_credit_data
         ));
         // add 50 usdt
-        Credit::set_staking_balance(&1000, 50_000_000_000_000_000_000);
+        Credit::set_staking_balance(
+            &1000,
+            50_000_000_000_000_000_000,
+            2_000_000_000_000_000_000_000,
+        );
 
         run_to_block(BLOCKS_PER_ERA * 3);
         assert_eq!(Credit::get_reward(&1000, 2, 2).0, Some(4109589041095890410));
@@ -1078,7 +1086,8 @@ fn new_campaign_usdt_reward() {
         ));
         assert_ok!(Credit::unset_staking_balance(Origin::signed(2), 1000));
         run_to_block(BLOCKS_PER_ERA * 4);
-        assert_eq!(Credit::get_reward(&1000, 3, 3).0, Some(0));
+        // Even not staking, user also get reward based on virtual staking balance 25 USDT,
+        assert_eq!(Credit::get_reward(&1000, 3, 3).0, Some(821917808219178082));
     });
 }
 

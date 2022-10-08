@@ -1106,12 +1106,21 @@ pub mod pallet {
             credit_data: &CreditData,
         ) -> (BalanceOf<T>, Weight) {
             let mut weight = Weight::zero();
-            let staking_balance = Self::user_staking_balance(account_id);
+            let staking_balance = {
+                if let Some(staking_balance) = Self::user_staking_balance(account_id) {
+                    staking_balance
+                } else {
+                    // 25 USD is virtual balance for those who not staking usd,
+                    // but credit score more the level 1
+                    (
+                        UniqueSaturatedFrom::unique_saturated_from(25 * DPR),
+                        0u32.into(),
+                    )
+                }
+            };
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
-            if staking_balance.is_none() {
-                return (0u32.into(), weight);
-            }
-            let staking_usdt = staking_balance.unwrap().0;
+
+            let staking_usdt = staking_balance.0;
             let price = Self::dpr_price();
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(1, 0));
             if price.is_none() {
@@ -1534,23 +1543,20 @@ pub mod pallet {
             Self::user_credit_history(account_id)
         }
 
-        fn set_staking_balance(account_id: &T::AccountId, usdt_amount: BalanceOf<T>) -> bool {
-            match Self::dpr_price() {
-                Some(price) => {
-                    let dpr_amount = usdt_amount / price;
-                    UserStakingBalance::<T>::mutate(account_id, |balance| match balance {
-                        Some(balance) => {
-                            balance.0 += usdt_amount;
-                            balance.1 += dpr_amount;
-                        }
-                        _ => {
-                            *balance = Some((usdt_amount, dpr_amount));
-                        }
-                    });
-                    true
+        fn set_staking_balance(
+            account_id: &T::AccountId,
+            usdt_amount: BalanceOf<T>,
+            dpr_amount: BalanceOf<T>,
+        ) {
+            UserStakingBalance::<T>::mutate(account_id, |balance| match balance {
+                Some(balance) => {
+                    balance.0 += usdt_amount;
+                    balance.1 += dpr_amount;
                 }
-                None => false,
-            }
+                _ => {
+                    *balance = Some((usdt_amount, dpr_amount));
+                }
+            });
         }
 
         fn get_default_dpr_campaign_id() -> u16 {
