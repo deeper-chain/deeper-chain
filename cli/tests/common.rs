@@ -22,7 +22,7 @@ use assert_cmd::cargo::cargo_bin;
 use nix::sys::signal::{kill, Signal::SIGINT};
 use nix::unistd::Pid;
 use node_primitives::Block;
-use remote_externalities::rpc_api;
+use remote_externalities::rpc_api::RpcService;
 use std::{convert::TryInto, process::Command};
 use std::{
     ops::{Deref, DerefMut},
@@ -97,9 +97,10 @@ pub async fn wait_n_finalized_blocks(
 pub async fn wait_n_finalized_blocks_from(n: usize, url: &str) {
     let mut built_blocks = std::collections::HashSet::new();
     let mut interval = tokio::time::interval(Duration::from_secs(2));
+    let rpc_service = RpcService::new(url, false).await.unwrap();
 
     loop {
-        if let Ok(block) = rpc_api::get_finalized_head::<Block, _>(url.to_string()).await {
+        if let Ok(block) = rpc_service.get_finalized_head::<Block>().await {
             built_blocks.insert(block);
             if built_blocks.len() > n {
                 break;

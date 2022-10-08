@@ -63,7 +63,7 @@ frame_support::construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = 1024;
+    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
@@ -158,6 +158,7 @@ impl pallet_treasury::Config for Test {
     type SpendFunds = ();
     type MaxApprovals = MaxApprovals;
     type ProposalBondMaximum = ();
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u64>;
 }
 
 const MILLICENTS: Balance = 10_000_000_000_000;

@@ -122,6 +122,7 @@ impl pallet_treasury::Config for Test {
     type WeightInfo = ();
     type SpendFunds = ();
     type MaxApprovals = MaxApprovals;
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
 }
 
 parameter_types! {

@@ -100,7 +100,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn withdraw_unbonded_update(s: u32) -> Weight {
         Weight::from_ref_time(37_944_000 as u64) // Standard Error: 0
             .saturating_add(Weight::from_ref_time(
-                ((68_000 as u64).saturating_mul(s as u64)),
+                (68_000 as u64).saturating_mul(s as u64),
             ))
             .saturating_add(T::DbWeight::get().reads(5 as u64))
             .saturating_add(T::DbWeight::get().writes(3 as u64))
