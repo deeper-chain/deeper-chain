@@ -961,6 +961,10 @@ pub mod pallet {
     pub type NpowMintDayLimit<T: Config> =
         StorageValue<_, BalanceOf<T>, ValueQuery, NpowMintDayLimitDefault<T>>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn black_list)]
+    pub type BlackList<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, EraIndex>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
@@ -1866,6 +1870,35 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().writes(1))]
+        pub fn add_account_to_blacklist(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            era: EraIndex,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BlackListAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            <BlackList<T>>::insert(&account_id, era);
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().writes(1))]
+        pub fn remove_account_from_blacklist(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::BlackListAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            <BlackList<T>>::remove(&account_id);
+            Ok(())
+        }
+
         #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
         pub fn difference_compensation(
             origin: OriginFor<T>,
@@ -2231,6 +2264,8 @@ pub mod pallet {
         UsdtConvertError,
         /// npow amount is larger than day limit
         NpowMintBeyoundDayLimit,
+        /// account is in the black list
+        AccountInBlackList,
     }
 }
 
@@ -2670,7 +2705,13 @@ impl<T: Config> pallet::Pallet<T> {
                 Reward::<T>::insert(delegator, reward_data); // 1 write
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             }
-            let reward = cmp::min(remainder_mining_reward, poc_reward);
+            let mut reward = cmp::min(remainder_mining_reward, poc_reward);
+            let punish_era =
+                <BlackList<T>>::get(&delegator_data.delegator).unwrap_or(EraIndex::default());
+            if current_era <= punish_era {
+                reward = BalanceOf::<T>::zero();
+            }
+
             let imbalance = T::Currency::deposit_creating(delegator, reward); // 1 write
             weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
             Self::deposit_event(Event::<T>::DelegatorReward(

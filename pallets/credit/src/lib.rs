@@ -309,6 +309,10 @@ pub mod pallet {
     #[pallet::getter(fn default_usdt_campaign_id)]
     pub(crate) type DefaultUsdtCampaignId<T> = StorageValue<_, u16, ValueQuery, UsdtDefaultId>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn get_maintain_devices)]
+    pub(crate) type MaintainDevices<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -393,6 +397,8 @@ pub mod pallet {
         PriceDiffTooMuch,
         /// price is zero
         PriceZero,
+        /// not device admin
+        NotDeviceAdmin,
     }
 
     #[pallet::hooks]
@@ -762,11 +768,47 @@ pub mod pallet {
             UserStakingBalance::<T>::remove(account_id);
             Ok(().into())
         }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_maintain_device(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_device_admin(&who), Error::<T>::NotDeviceAdmin);
+
+            MaintainDevices::<T>::mutate(|addrs| {
+                if !addrs.contains(&account_id) {
+                    addrs.push(account_id);
+                }
+            });
+            Ok(().into())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        pub fn unset_maintain_device(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(Self::is_device_admin(&who), Error::<T>::NotDeviceAdmin);
+
+            MaintainDevices::<T>::mutate(|addrs| {
+                if let Some(index) = addrs.iter().position(|x| *x == account_id) {
+                    addrs.remove(index);
+                }
+            });
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
         fn is_admin(user: &T::AccountId) -> bool {
             T::UserPrivilegeInterface::has_privilege(&user, Privilege::CreditAdmin)
+        }
+
+        fn is_device_admin(user: &T::AccountId) -> bool {
+            T::UserPrivilegeInterface::has_privilege(&user, Privilege::DeviceAdmin)
         }
 
         fn is_evm_credit_operation_address(address: &H160) -> bool {
@@ -813,8 +855,11 @@ pub mod pallet {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             let eras = T::NodeInterface::get_eras_offline(&account_id);
             if eras > 0 && eras % 3 == 0 {
-                // slash one credit for being offline every 3 eras
-                weight = weight.saturating_add(Self::slash_credit(&account_id, None));
+                let addrs = MaintainDevices::<T>::get();
+                if !addrs.contains(account_id) {
+                    // slash one credit for being offline every 3 eras
+                    weight = weight.saturating_add(Self::slash_credit(&account_id, None));
+                }
             }
             weight
         }
