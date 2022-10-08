@@ -43,6 +43,8 @@ pub enum Privilege {
     OracleWorker = 1 << 8,
     #[codec(index = 9)]
     DeviceAdmin = 1 << 9,
+    #[codec(index = 10)]
+    BlackListAdmin = 1 << 10,
 }
 
 /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
