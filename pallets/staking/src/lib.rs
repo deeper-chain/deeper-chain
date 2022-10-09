@@ -19,8 +19,8 @@
 //
 // The Staking module is used to manage funds at stake by network maintainers.
 
-#![recursion_limit = "128"]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "runtime-benchmarks", recursion_limit = "256")]
 
 #[cfg(test)]
 mod mock;
