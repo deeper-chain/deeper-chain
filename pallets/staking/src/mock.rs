@@ -390,7 +390,6 @@ impl Config for Test {
     type NumberToCurrency = NumberCurrencyConverter;
     type TotalMiningReward = MiningReward;
     type AlertMiningReward = AlertMiningReward;
-    type ExistentialDeposit = ExistentialDeposit;
     type VerifySignatureInterface = ();
     type UserPrivilegeInterface = UserPrivileges;
     type OperationInterface = ();

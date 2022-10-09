@@ -19,8 +19,8 @@
 //
 // The Staking module is used to manage funds at stake by network maintainers.
 
-#![recursion_limit = "128"]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "runtime-benchmarks", recursion_limit = "256")]
 
 #[cfg(test)]
 mod mock;
@@ -647,8 +647,6 @@ pub mod pallet {
 
         type AlertMiningReward: Get<u128>;
 
-        type ExistentialDeposit: Get<BalanceOf<Self>>;
-
         #[pallet::constant]
         type PalletId: Get<PalletId>;
         /// verify dev signature
@@ -965,6 +963,14 @@ pub mod pallet {
     #[pallet::getter(fn black_list)]
     pub type BlackList<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, EraIndex>;
 
+    #[pallet::type_value]
+    pub fn ExistentialDepositDefault<T: Config>() -> BalanceOf<T> {
+        T::Currency::minimum_balance()
+    }
+    #[pallet::storage]
+    pub type ExistentialDeposit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, ExistentialDepositDefault<T>>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
@@ -1064,13 +1070,14 @@ pub mod pallet {
             origin: OriginFor<T>,
             account_id: T::AccountId,
             usdt_amount: BalanceOf<T>,
+            dpr_amount: BalanceOf<T>,
         ) -> DispatchResult {
             let admin = ensure_signed(origin)?;
             ensure!(
                 T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
                 Error::<T>::UnauthorizedAccounts
             );
-            Self::do_usdt_staking_delegate(account_id, usdt_amount)
+            Self::do_usdt_staking_delegate(account_id, usdt_amount, dpr_amount)
         }
 
         /// Take the origin account as a stash and lock up `value` of its balance. `controller` will
@@ -1114,8 +1121,7 @@ pub mod pallet {
                 Err(Error::<T>::AlreadyPaired)?
             }
 
-            // reject a bond which is considered to be _dust_.
-            if value < T::Currency::minimum_balance() {
+            if value < <ExistentialDeposit<T>>::get() {
                 Err(Error::<T>::InsufficientValue)?
             }
 
@@ -1141,6 +1147,22 @@ pub mod pallet {
                 claimed_rewards: (last_reward_era..current_era).collect(),
             };
             Self::update_ledger(&controller, &item);
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1, 1))]
+        pub fn set_existential_deposit(
+            origin: OriginFor<T>,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            if value < T::Currency::minimum_balance() {
+                Err(Error::<T>::InvalidExistentialDeposit)?
+            }
+
+            ExistentialDeposit::<T>::put(value);
+
             Ok(())
         }
 
@@ -2266,6 +2288,8 @@ pub mod pallet {
         NpowMintBeyoundDayLimit,
         /// account is in the black list
         AccountInBlackList,
+        /// existential deposit is lower than the minimum balance
+        InvalidExistentialDeposit,
     }
 }
 
@@ -3111,7 +3135,11 @@ impl<T: Config> pallet::Pallet<T> {
         Ok(())
     }
 
-    fn do_usdt_staking_delegate(who: T::AccountId, usdt_amount: BalanceOf<T>) -> DispatchResult {
+    fn do_usdt_staking_delegate(
+        who: T::AccountId,
+        usdt_amount: BalanceOf<T>,
+        dpr_amount: BalanceOf<T>,
+    ) -> DispatchResult {
         let campaign_id = T::CreditInterface::get_default_usdt_campaign_id();
         let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
@@ -3148,10 +3176,7 @@ impl<T: Config> pallet::Pallet<T> {
         let score_gap =
             CreditLevel::credit_level_gap((dst_level as u8).into(), (cur_level as u8).into());
         T::CreditInterface::add_or_update_credit(who.clone(), score_gap, Some(campaign_id));
-        ensure!(
-            T::CreditInterface::set_staking_balance(&who, usdt_amount),
-            Error::<T>::UsdtConvertError
-        );
+        T::CreditInterface::set_staking_balance(&who, usdt_amount, dpr_amount);
         // level::zero can't delegate
         if dst_level > 0 {
             Self::delegate_any(who.clone())?;

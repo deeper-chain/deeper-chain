@@ -166,13 +166,14 @@ benchmarks! {
     usdt_staking_delegate {
         let user = create_funded_user::<T>("user", USER_SEED, 100);
         let user_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
-        let amount = <T as Config>::Currency::minimum_balance() * 100u32.into();
+        let amount = <T as Config>::Currency::minimum_balance() * 800u32.into();
         let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
         let _ = pallet_credit::Pallet::<T>::set_dpr_price(RawOrigin::Signed(user.clone()).into(),100u32.into(),H160::zero());
-        let delegator = create_delegator::<T>(1, 100)?;
+        let delegator = create_funded_user::<T>("user1", USER_SEED, 200);
+        high_funded_user::<T>(&delegator,1000);
         let validators = create_validators_is_accountid::<T>(MAX_DELEGATES, 100)?;
         whitelist_account!(delegator);
-    }: _(RawOrigin::Signed(user),delegator.clone(),amount)
+    }: _(RawOrigin::Signed(user),delegator.clone(),amount,amount)
     verify {
         assert!(Delegators::<T>::contains_key(delegator));
     }
@@ -411,7 +412,7 @@ benchmarks! {
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(account.clone());
 
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
-        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::NpowMint);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::NpowMint);
         let dpr = existential_deposit * 10u32.into();
     }: npow_mint(RawOrigin::Signed(account.clone()), account.clone(), dpr)
     verify {

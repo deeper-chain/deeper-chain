@@ -170,7 +170,7 @@ pub trait CreditInterface<AccountId, Balance> {
     fn do_unstaking_slash_credit(user: &AccountId) -> DispatchResult;
     fn burn_record(burn_amount: Balance) -> bool;
     fn get_credit_history(account_id: &AccountId) -> Vec<(EraIndex, CreditData)>;
-    fn set_staking_balance(account_id: &AccountId, usdt_amount: Balance) -> bool;
+    fn set_staking_balance(account_id: &AccountId, usdt_amount: Balance, dpr_amount: Balance);
     fn get_default_dpr_campaign_id() -> u16;
     fn get_default_usdt_campaign_id() -> u16;
 }
@@ -228,9 +228,7 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
         Vec::new()
     }
 
-    fn set_staking_balance(_account_id: &AccountId, _usdt_amount: Balance) -> bool {
-        true
-    }
+    fn set_staking_balance(_account_id: &AccountId, _usdt_amount: Balance, _dpr_amount: Balance) {}
 
     fn get_default_dpr_campaign_id() -> u16 {
         4u16

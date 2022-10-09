@@ -727,6 +727,18 @@ fn double_controlling_should_fail() {
 }
 
 #[test]
+fn bond_lower_than_existential_should_fail() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(Staking::set_existential_deposit(Origin::root(), 100));
+
+        assert_noop!(
+            Staking::bond(Origin::signed(3), 2, 5, RewardDestination::default()),
+            Error::<Test>::InsufficientValue,
+        );
+    });
+}
+
+#[test]
 fn session_and_eras_work_simple() {
     ExtBuilder::default().period(1).build_and_execute(|| {
         assert_eq!(active_era(), 0);
@@ -3232,7 +3244,8 @@ fn staking_usdt_delegate() {
             assert_ok!(Staking::usdt_staking_delegate(
                 Origin::signed(1),
                 1002,
-                UniqueSaturatedFrom::unique_saturated_from(75 * DPR)
+                UniqueSaturatedFrom::unique_saturated_from(75 * DPR),
+                UniqueSaturatedFrom::unique_saturated_from(3000 * DPR)
             ));
             assert_eq!(Credit::user_credit(&1002).unwrap().credit, 100);
             run_to_block(BLOCKS_PER_ERA + 2);
@@ -3242,7 +3255,8 @@ fn staking_usdt_delegate() {
             assert_ok!(Staking::usdt_staking_delegate(
                 Origin::signed(1),
                 1002,
-                UniqueSaturatedFrom::unique_saturated_from(50 * DPR)
+                UniqueSaturatedFrom::unique_saturated_from(50 * DPR),
+                UniqueSaturatedFrom::unique_saturated_from(2000 * DPR)
             ));
 
             run_to_block(BLOCKS_PER_ERA * 2 + 2);
