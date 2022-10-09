@@ -17,7 +17,7 @@ log = "0.4.8"
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
-sc-service = { version = "0.10.0-dev", default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
+sc-service = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29" }

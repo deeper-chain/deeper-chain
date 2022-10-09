@@ -816,7 +816,7 @@ impl pallet_treasury::Config for Runtime {
     type SpendFunds = Bounties;
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
-    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
 }
 
 impl pallet_bounties::Config for Runtime {
