@@ -599,7 +599,6 @@ impl pallet_staking::Config for Runtime {
     type Call = Call;
     type TotalMiningReward = MiningReward;
     type AlertMiningReward = AlertReward;
-    type ExistentialDeposit = ExistentialDeposit;
     type WeightInfo = pallet_staking::weights::SubstrateWeight<Runtime>;
     type VerifySignatureInterface = CreditAccumulation;
     type OperationInterface = Operation;

@@ -727,6 +727,18 @@ fn double_controlling_should_fail() {
 }
 
 #[test]
+fn bond_lower_than_existential_should_fail() {
+    ExtBuilder::default().build_and_execute(|| {
+        assert_ok!(Staking::set_existential_deposit(Origin::root(), 100));
+
+        assert_noop!(
+            Staking::bond(Origin::signed(3), 2, 5, RewardDestination::default()),
+            Error::<Test>::InsufficientValue,
+        );
+    });
+}
+
+#[test]
 fn session_and_eras_work_simple() {
     ExtBuilder::default().period(1).build_and_execute(|| {
         assert_eq!(active_era(), 0);

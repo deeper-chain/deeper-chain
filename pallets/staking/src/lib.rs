@@ -647,8 +647,6 @@ pub mod pallet {
 
         type AlertMiningReward: Get<u128>;
 
-        type ExistentialDeposit: Get<BalanceOf<Self>>;
-
         #[pallet::constant]
         type PalletId: Get<PalletId>;
         /// verify dev signature
@@ -965,6 +963,14 @@ pub mod pallet {
     #[pallet::getter(fn black_list)]
     pub type BlackList<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, EraIndex>;
 
+    #[pallet::type_value]
+    pub fn ExistentialDepositDefault<T: Config>() -> BalanceOf<T> {
+        T::Currency::minimum_balance()
+    }
+    #[pallet::storage]
+    pub type ExistentialDeposit<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, ExistentialDepositDefault<T>>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
@@ -1115,8 +1121,7 @@ pub mod pallet {
                 Err(Error::<T>::AlreadyPaired)?
             }
 
-            // reject a bond which is considered to be _dust_.
-            if value < T::Currency::minimum_balance() {
+            if value < <ExistentialDeposit<T>>::get() {
                 Err(Error::<T>::InsufficientValue)?
             }
 
@@ -1142,6 +1147,22 @@ pub mod pallet {
                 claimed_rewards: (last_reward_era..current_era).collect(),
             };
             Self::update_ledger(&controller, &item);
+            Ok(())
+        }
+
+        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1, 1))]
+        pub fn set_existential_deposit(
+            origin: OriginFor<T>,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            if value < T::Currency::minimum_balance() {
+                Err(Error::<T>::InvalidExistentialDeposit)?
+            }
+
+            ExistentialDeposit::<T>::put(value);
+
             Ok(())
         }
 
@@ -2265,6 +2286,8 @@ pub mod pallet {
         NpowMintBeyoundDayLimit,
         /// account is in the black list
         AccountInBlackList,
+        /// existential deposit is lower than the minimum balance
+        InvalidExistentialDeposit,
     }
 }
 
