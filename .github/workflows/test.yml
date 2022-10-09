@@ -21,14 +21,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@master
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2022-09-01
-          override: true
-          profile: minimal
-          components: llvm-tools-preview
-          target: wasm32-unknown-unknown
+      - name: Setup rust toolchain
+        run: rustup show
 
       - name: show rustc version
         run: rustc --version

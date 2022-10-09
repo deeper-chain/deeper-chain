@@ -20,11 +20,8 @@ jobs:
           repository: deeper-chain/integration-tests
           path: './integration-tests'
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          target: wasm32-unknown-unknown
+      - name: Setup rust toolchain
+        run: rustup show
 
       - name: Compile
         run: cargo build
