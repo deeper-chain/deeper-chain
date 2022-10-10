@@ -1208,7 +1208,7 @@ pub mod pallet {
                 ledger.active += extra;
                 // last check: the new active amount of ledger must be more than ED.
                 ensure!(
-                    ledger.active >= T::Currency::minimum_balance(),
+                    ledger.active >= <ExistentialDeposit<T>>::get(),
                     Error::<T>::InsufficientValue
                 );
 
@@ -1334,7 +1334,7 @@ pub mod pallet {
             }
 
             let post_info_weight =
-                if ledger.unlocking.is_empty() && ledger.active <= T::Currency::minimum_balance() {
+                if ledger.unlocking.is_empty() && ledger.active <= <ExistentialDeposit<T>>::get() {
                     // This account must have called `unbond()` with some value that caused the active
                     // portion to fall below existential deposit + will have no more unlocking chunks
                     // left. We can now safely remove all staking-related information.
@@ -1748,7 +1748,7 @@ pub mod pallet {
             let ledger = ledger.rebond(value);
             // last check: the new active amount of ledger must be more than ED.
             ensure!(
-                ledger.active >= T::Currency::minimum_balance(),
+                ledger.active >= <ExistentialDeposit<T>>::get(),
                 Error::<T>::InsufficientValue
             );
 
@@ -1825,7 +1825,7 @@ pub mod pallet {
             stash: T::AccountId,
             num_slashing_spans: u32,
         ) -> DispatchResult {
-            let at_minimum = T::Currency::total_balance(&stash) == T::Currency::minimum_balance();
+            let at_minimum = T::Currency::total_balance(&stash) == <ExistentialDeposit<T>>::get();
             ensure!(at_minimum, Error::<T>::FundedTarget);
             Self::kill_stash(&stash, num_slashing_spans)?;
             T::Currency::remove_lock(STAKING_ID, &stash);
@@ -2102,7 +2102,7 @@ pub mod pallet {
             let controller = ensure_signed(origin)?;
             let mut ledger = Self::ledger(&controller).ok_or(Error::<T>::NotController)?;
             T::Currency::remove_lock(STAKING_ID, &ledger.stash);
-            let amount = ledger.slash(amount, T::Currency::minimum_balance());
+            let amount = ledger.slash(amount, <ExistentialDeposit<T>>::get());
             T::Currency::slash(&ledger.stash, amount);
             Self::update_ledger(&controller, &ledger);
             Self::deposit_event(Event::<T>::ValidatorBurned(controller, amount));
