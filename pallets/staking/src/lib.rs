@@ -1219,8 +1219,8 @@ pub mod pallet {
         }
 
         /// Schedule a portion of the stash to be unlocked ready for transfer out after the bond
-        /// period ends. If this leaves an amount actively bonded less than
-        /// T::Currency::minimum_balance(), then it is increased to the full amount.
+        /// period ends. If this leaves an amount actively bonded less than ExistentialDeposit,
+        /// then it is increased to the full amount.
         ///
         /// Once the unlock period is done, you can call `withdraw_unbonded` to actually move
         /// the funds out of management ready for transfer.
@@ -1272,7 +1272,7 @@ pub mod pallet {
                 ledger.active -= value;
 
                 // Avoid there being a dust balance left in the staking system.
-                if ledger.active < T::Currency::minimum_balance() {
+                if ledger.active < <ExistentialDeposit<T>>::get() {
                     value += ledger.active;
                     ledger.active = Zero::zero();
                 }
