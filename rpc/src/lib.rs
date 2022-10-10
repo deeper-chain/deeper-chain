@@ -44,7 +44,7 @@ use sc_client_api::{
     backend::{AuxStore, Backend, StateBackend, StorageProvider},
     client::BlockchainEvents,
 };
-use sc_consensus_babe::{Config, Epoch};
+use sc_consensus_babe::{BabeConfiguration, Epoch};
 
 use sc_consensus_epochs::SharedEpochChanges;
 use sc_finality_grandpa::{
@@ -81,7 +81,7 @@ pub struct LightDeps<C, F, P> {
 /// Extra dependencies for BABE.
 pub struct BabeDeps {
     /// BABE protocol config.
-    pub babe_config: Config,
+    pub babe_config: BabeConfiguration,
     /// BABE pending epoch changes.
     pub shared_epoch_changes: SharedEpochChanges<Block, Epoch>,
     /// The keystore that manages the keys of the node.
@@ -318,6 +318,7 @@ where
             block_data_cache.clone(),
             fee_history_cache,
             fee_history_cache_limit,
+            10,
         )
         .into_rpc(),
     )?;

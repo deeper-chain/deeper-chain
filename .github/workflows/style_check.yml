@@ -14,12 +14,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@master
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          components: rustfmt, clippy
-          target: wasm32-unknown-unknown
+      - name: Setup rust toolchain
+        run: rustup show
 
       - name: Cargo Fmt Check
         run: cargo fmt --all -- --check

@@ -15,20 +15,19 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-
+use super::benchmarking::{inherent_benchmark_data, RemarkBuilder, TransferKeepAliveBuilder};
 use crate::{
-    chain_spec,
-    command_helper::{inherent_benchmark_data, BenchmarkExtrinsicBuilder},
-    service,
+    chain_spec, service,
     service::{db_config_dir, new_partial, ExecutorDispatch},
     Cli, Subcommand,
 };
 use fc_db::frontier_database_dir;
+use frame_benchmarking_cli::ExtrinsicFactory;
 use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
-use node_runtime::{Block, RuntimeApi};
+use node_runtime::{Block, ExistentialDeposit, RuntimeApi};
 use sc_cli::{ChainSpec, Result, RuntimeVersion, SubstrateCli};
 use sc_service::{DatabaseSource, PartialComponents};
-use std::sync::Arc;
+use sp_keyring::Sr25519Keyring;
 
 impl SubstrateCli for Cli {
     fn impl_name() -> String {
@@ -124,13 +123,35 @@ pub fn run() -> Result<()> {
                             cmd.run(config, client, db, storage)
                         }
                         BenchmarkCmd::Overhead(cmd) => {
-                            let ext_builder = BenchmarkExtrinsicBuilder::new(client.clone());
+                            let partial = new_partial(&config, &cli)?;
+                            let ext_builder = RemarkBuilder::new(partial.client.clone());
 
                             cmd.run(
                                 config,
                                 client,
                                 inherent_benchmark_data()?,
-                                Arc::new(ext_builder),
+                                Vec::new(),
+                                &ext_builder,
+                            )
+                        }
+                        BenchmarkCmd::Extrinsic(cmd) => {
+                            // ensure that we keep the task manager alive
+                            let partial = service::new_partial(&config, &cli)?;
+                            // Register the *Remark* and *TKA* builders.
+                            let ext_factory = ExtrinsicFactory(vec![
+                                Box::new(RemarkBuilder::new(partial.client.clone())),
+                                Box::new(TransferKeepAliveBuilder::new(
+                                    partial.client.clone(),
+                                    Sr25519Keyring::Alice.to_account_id(),
+                                    ExistentialDeposit::get(),
+                                )),
+                            ]);
+
+                            cmd.run(
+                                partial.client,
+                                inherent_benchmark_data()?,
+                                Vec::new(),
+                                &ext_factory,
                             )
                         }
                         BenchmarkCmd::Machine(cmd) => {

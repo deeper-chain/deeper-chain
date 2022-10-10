@@ -42,7 +42,6 @@ use frame_system::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{AccountIndex, Balance, BlockNumber, Hash, Index, Moment};
-use pallet_contracts::weights::WeightInfo;
 use pallet_grandpa::fg_primitives;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
@@ -199,7 +198,7 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 /// by  Operational  extrinsics.
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 2 seconds of compute with a 5 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_mul(2u64);
 const WEIGHT_PER_GAS: u64 = 20_000;
 
 parameter_types! {
@@ -494,6 +493,7 @@ parameter_types! {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+    type Event = Event;
     type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
     type WeightToFee = IdentityFee<Balance>;
     type FeeMultiplierUpdate =
@@ -698,6 +698,8 @@ parameter_types! {
     pub const TermDuration: BlockNumber = 7 * DAYS;
     pub const DesiredMembers: u32 = 13;
     pub const DesiredRunnersUp: u32 = 7;
+    pub const MaxVoters: u32 = 1000;
+    pub const MaxCandidates: u32 = 1000;
     pub const ElectionsPhragmenPalletId: LockIdentifier = *b"phrelect";
 }
 
@@ -722,6 +724,8 @@ impl pallet_elections_phragmen::Config for Runtime {
     type DesiredRunnersUp = DesiredRunnersUp;
     type TermDuration = TermDuration;
     type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
+    type MaxVoters = MaxVoters;
+    type MaxCandidates = MaxCandidates;
 }
 
 parameter_types! {
@@ -811,6 +815,7 @@ impl pallet_treasury::Config for Runtime {
     type SpendFunds = Bounties;
     type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
     type MaxApprovals = MaxApprovals;
+    type SpendOrigin = frame_support::traits::NeverEnsureOrigin<Balance>;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -861,10 +866,7 @@ parameter_types! {
         RuntimeBlockWeights::get().max_block;
     // The weight needed for decoding the queue should be less or equal than a fifth
     // of the overall weight dedicated to the lazy deletion.
-    pub DeletionQueueDepth: u32 = ((DeletionWeightLimit::get() / (
-            <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(1) -
-            <Runtime as pallet_contracts::Config>::WeightInfo::on_initialize_per_queue_item(0)
-        )) / 5) as u32;
+    pub const DeletionQueueDepth: u32 = 128;
     pub Schedule: pallet_contracts::Schedule<Runtime> = Default::default();
 }
 
@@ -888,6 +890,7 @@ impl pallet_contracts::Config for Runtime {
     type ContractAccessWeight = pallet_contracts::DefaultContractAccessWeight<RuntimeBlockWeights>;
     type MaxCodeLen = ConstU32<{ 128 * 1024 }>;
     type RelaxedMaxCodeLen = ConstU32<{ 256 * 1024 }>;
+    type MaxStorageKeyLen = ConstU32<128>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1293,10 +1296,10 @@ impl OnUnbalanced<NegativeImbalance> for EvmDealWithFees {
 pub struct FixedGasWeightMapping;
 impl GasWeightMapping for FixedGasWeightMapping {
     fn gas_to_weight(gas: u64) -> Weight {
-        gas.saturating_mul(WEIGHT_PER_GAS)
+        Weight::from_ref_time(gas.saturating_mul(WEIGHT_PER_GAS))
     }
     fn weight_to_gas(weight: Weight) -> u64 {
-        weight.wrapping_div(WEIGHT_PER_GAS)
+        weight.saturating_div(WEIGHT_PER_GAS).ref_time()
     }
 }
 
@@ -1310,7 +1313,7 @@ pub const ChainId: u64 = 518;
 }
 
 parameter_types! {
-    pub BlockGasLimit: U256 = U256::from(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT / WEIGHT_PER_GAS);
+    pub BlockGasLimit: U256 = U256::from( NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT.ref_time() / WEIGHT_PER_GAS);
     pub PrecompilesValue: FrontierPrecompiles<Runtime> = FrontierPrecompiles::<_>::new();
 }
 
@@ -1346,6 +1349,7 @@ impl pallet_dynamic_fee::Config for Runtime {
 frame_support::parameter_types! {
     pub IsActive: bool = true;
     pub DefaultBaseFeePerGas: U256 = U256::from(1_000_000_000);
+    pub DefaultElasticity: Permill = Permill::from_parts(125_000);
 }
 
 pub struct BaseFeeThreshold;
@@ -1364,8 +1368,8 @@ impl pallet_base_fee::BaseFeeThreshold for BaseFeeThreshold {
 impl pallet_base_fee::Config for Runtime {
     type Event = Event;
     type Threshold = BaseFeeThreshold;
-    type IsActive = IsActive;
     type DefaultBaseFeePerGas = DefaultBaseFeePerGas;
+    type DefaultElasticity = DefaultElasticity;
 }
 
 construct_runtime!(
@@ -1383,7 +1387,7 @@ construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 3,
         Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 4,
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 5,
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 32,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 32,
 
         Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 6,
         Staking: pallet_staking::{Pallet, Call, Config<T>, Storage, Event<T>} = 7,
@@ -1667,17 +1671,17 @@ impl_runtime_apis! {
     }
 
     impl sp_consensus_babe::BabeApi<Block> for Runtime {
-        fn configuration() -> sp_consensus_babe::BabeGenesisConfiguration {
+        fn configuration() -> sp_consensus_babe::BabeConfiguration {
             // The choice of `c` parameter (where `1 - c` represents the
             // probability of a slot being empty), is done in accordance to the
             // slot duration and expected target block time, for safely
             // resisting network delays of maximum two seconds.
             // <https://research.web3.foundation/en/latest/polkadot/BABE/Babe/#6-practical-results>
-            sp_consensus_babe::BabeGenesisConfiguration {
+            sp_consensus_babe::BabeConfiguration {
                 slot_duration: Babe::slot_duration(),
                 epoch_length: EpochDuration::get(),
                 c: PRIMARY_PROBABILITY,
-                genesis_authorities: Babe::authorities().to_vec(),
+                authorities: Babe::authorities().to_vec(),
                 randomness: Babe::randomness(),
                 allowed_slots: sp_consensus_babe::AllowedSlots::PrimaryAndSecondaryPlainSlots,
             }
@@ -1744,7 +1748,7 @@ impl_runtime_apis! {
             storage_deposit_limit: Option<Balance>,
             input_data: Vec<u8>,
         ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
-            Contracts::bare_call(origin, dest, value, gas_limit, storage_deposit_limit, input_data, true)
+            Contracts::bare_call(origin, dest, value, Weight::from_ref_time(gas_limit), storage_deposit_limit, input_data, true)
         }
 
         fn instantiate(
@@ -1757,7 +1761,7 @@ impl_runtime_apis! {
             salt: Vec<u8>,
         ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
-            Contracts::bare_instantiate(origin, value, gas_limit, storage_deposit_limit, code, data, salt, true)
+            Contracts::bare_instantiate(origin, value, Weight::from_ref_time(gas_limit), storage_deposit_limit, code, data, salt, true)
         }
 
         fn upload_code(
@@ -1771,7 +1775,7 @@ impl_runtime_apis! {
 
         fn get_storage(
             address: AccountId,
-            key: [u8; 32],
+            key: Vec<u8>,
         ) -> pallet_contracts_primitives::GetStorageResult {
             Contracts::get_storage(address, key)
         }

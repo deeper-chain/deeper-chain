@@ -141,7 +141,7 @@ pub mod pallet {
                 StorageVersion::<T>::put(Releases::V2_0_0);
                 return T::DbWeight::get().reads_writes(2, 2);
             }
-            0
+            Weight::zero()
         }
     }
 

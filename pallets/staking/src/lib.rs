@@ -1150,7 +1150,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1, 1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1, 1))]
         pub fn set_existential_deposit(
             origin: OriginFor<T>,
             #[pallet::compact] value: BalanceOf<T>,
@@ -1754,8 +1754,10 @@ pub mod pallet {
 
             Self::update_ledger(&controller, &ledger);
             Ok(Some(
-                35 * WEIGHT_PER_MICROS
-                    + 50 * WEIGHT_PER_NANOS * (ledger.unlocking.len() as Weight)
+                WEIGHT_PER_MICROS.saturating_mul(35u64)
+                    + WEIGHT_PER_NANOS
+                        .saturating_mul(50u64)
+                        .saturating_mul(ledger.unlocking.len().try_into().unwrap())
                     + T::DbWeight::get().reads_writes(3, 2),
             )
             .into())
@@ -1890,7 +1892,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().writes(1))]
         pub fn add_account_to_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -1905,7 +1907,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().writes(1))]
         pub fn remove_account_from_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -1919,7 +1921,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
         pub fn difference_compensation(
             origin: OriginFor<T>,
             delegator: T::AccountId,
@@ -1977,14 +1979,14 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
         pub fn set_minimum_validator_count(origin: OriginFor<T>, count: u32) -> DispatchResult {
             ensure_root(origin)?;
             MinimumValidatorCount::<T>::put(count);
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(2,2))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(2,2))]
         pub fn set_user_referer(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -2010,7 +2012,7 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,2))]
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,2))]
         pub fn unset_user_referer(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -2964,8 +2966,8 @@ impl<T: Config> pallet::Pallet<T> {
 
     /// Clear all era information for given era.
     fn clear_era_information(era_index: EraIndex) {
-        <ErasStakers<T>>::remove_prefix(era_index, None);
-        <ErasValidatorPrefs<T>>::remove_prefix(era_index, None);
+        <ErasStakers<T>>::clear_prefix(era_index, u32::MAX, None);
+        <ErasValidatorPrefs<T>>::clear_prefix(era_index, u32::MAX, None);
         <ErasRewardPoints<T>>::remove(era_index);
         <ErasTotalStake<T>>::remove(era_index);
         <ErasValidators<T>>::remove(era_index);
@@ -3318,11 +3320,11 @@ where
         _disable_strategy: DisableStrategy,
     ) -> Weight {
         if !Self::era_election_status().is_closed() {
-            return 0;
+            return Weight::zero();
         }
 
         let reward_proportion = SlashRewardFraction::<T>::get();
-        let mut consumed_weight: Weight = 0;
+        let mut consumed_weight: Weight = Weight::zero();
         let mut add_db_reads_writes = |reads, writes| {
             consumed_weight += T::DbWeight::get().reads_writes(reads, writes);
         };
