@@ -2966,8 +2966,8 @@ impl<T: Config> pallet::Pallet<T> {
 
     /// Clear all era information for given era.
     fn clear_era_information(era_index: EraIndex) {
-        <ErasStakers<T>>::clear_prefix(era_index, u32::MAX, None);
-        <ErasValidatorPrefs<T>>::clear_prefix(era_index, u32::MAX, None);
+        let _ = <ErasStakers<T>>::clear_prefix(era_index, u32::MAX, None);
+        let _ = <ErasValidatorPrefs<T>>::clear_prefix(era_index, u32::MAX, None);
         <ErasRewardPoints<T>>::remove(era_index);
         <ErasTotalStake<T>>::remove(era_index);
         <ErasValidators<T>>::remove(era_index);
