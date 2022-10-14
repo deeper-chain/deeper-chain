@@ -443,7 +443,7 @@ impl<'a, T: 'a + Config> Drop for InspectingSpans<'a, T> {
 
 /// Clear slashing metadata for an obsolete era.
 pub(crate) fn clear_era_metadata<T: Config>(obsolete_era: EraIndex) {
-    <Pallet<T> as Store>::ValidatorSlashInEra::clear_prefix(&obsolete_era, u32::MAX, None);
+    let _ = <Pallet<T> as Store>::ValidatorSlashInEra::clear_prefix(&obsolete_era, u32::MAX, None);
 }
 
 /// Clear slashing metadata for a dead account.
