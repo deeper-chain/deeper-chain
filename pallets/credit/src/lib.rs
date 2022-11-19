@@ -63,9 +63,9 @@ pub mod pallet {
         DPR,
     };
     use scale_info::prelude::string::{String, ToString};
-    use sp_core::H160;
+    use sp_core::{H160, U256};
     use sp_runtime::{
-        traits::{One, Saturating, UniqueSaturatedFrom, Zero},
+        traits::{One, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero},
         Perbill, Percent,
     };
     use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
@@ -1127,8 +1127,7 @@ pub mod pallet {
                 return (0u32.into(), weight);
             }
             let dpr_amount =
-                staking_usdt / price.unwrap() * UniqueSaturatedFrom::unique_saturated_from(DPR);
-
+                Self::calc_price_dpr(staking_usdt, price.unwrap(), DPR.unique_saturated_into());
             let current_credit_level = credit_data.current_credit_level;
             let credit_setting =
                 Self::credit_settings(credit_data.campaign_id, current_credit_level);
@@ -1174,7 +1173,6 @@ pub mod pallet {
         }
 
         // both campaign id is dpr staking or usdt staking
-
         fn is_same_campaign_type(lhs: u16, rhs: u16) -> bool {
             let dpr_campaign_ids = vec![0, 1, 2, 3, 4];
             let usdt_campaign_ids = vec![5];
@@ -1185,6 +1183,18 @@ pub mod pallet {
                 return true;
             }
             false
+        }
+
+        pub fn calc_price_dpr(
+            numerator: BalanceOf<T>,
+            denominator: BalanceOf<T>,
+            base: BalanceOf<T>,
+        ) -> BalanceOf<T> {
+            let numerator: u128 = numerator.unique_saturated_into();
+            let denominator: u128 = denominator.unique_saturated_into();
+            let base: u128 = base.unique_saturated_into();
+            let res = U256::from(numerator) * U256::from(base) / U256::from(denominator);
+            res.low_u128().unique_saturated_into()
         }
     }
 
