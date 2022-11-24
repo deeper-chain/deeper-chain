@@ -482,6 +482,7 @@ impl pallet_operation::Config for Runtime {
     type MinimumBurnedDPR = MinimumBurnedDPR;
     type CreditInterface = Credit;
     type UserPrivilegeInterface = UserPrivileges;
+    type ChangeMembers = Council;
 }
 
 parameter_types! {
@@ -672,7 +673,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = 5 * MINUTES;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 13;
 }
@@ -695,7 +696,7 @@ parameter_types! {
     pub const VotingBondBase: Balance = deposit(1, 64);
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
-    pub const TermDuration: BlockNumber = 7 * DAYS;
+    pub const TermDuration: BlockNumber = 2 * MINUTES;
     pub const DesiredMembers: u32 = 13;
     pub const DesiredRunnersUp: u32 = 7;
     pub const MaxVoters: u32 = 1000;
@@ -710,7 +711,7 @@ impl pallet_elections_phragmen::Config for Runtime {
     type Event = Event;
     type PalletId = ElectionsPhragmenPalletId;
     type Currency = Balances;
-    type ChangeMembers = Council;
+    type ChangeMembers = Operation;
     // NOTE: this implies that council's genesis members cannot be set directly and must come from
     // this module.
     type InitializeMembers = (); //Council;

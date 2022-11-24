@@ -31,6 +31,7 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use codec::{Decode, Encode, MaxEncodedLen};
+    use frame_support::traits::ChangeMembers;
     use frame_support::traits::{
         Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
         OnUnbalanced, ReservableCurrency, WithdrawReasons,
@@ -72,6 +73,7 @@ pub mod pallet {
         type MinimumBurnedDPR: Get<BalanceOf<Self>>;
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
+        type ChangeMembers: ChangeMembers<Self::AccountId>;
     }
 
     #[pallet::pallet]
@@ -94,6 +96,7 @@ pub mod pallet {
         BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
         BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
         DPRPrice(BalanceOf<T>, H160),
+        ChangedMemebers(Vec<T::AccountId>),
     }
 
     // Errors inform users that something went wrong.
@@ -217,6 +220,10 @@ pub mod pallet {
     #[pallet::storage]
     pub(super) type StorageVersion<T> = StorageValue<_, Releases>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn council_white_list)]
+    pub(super) type CouncilWhiteList<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
+
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_finalize(_: T::BlockNumber) {
@@ -236,6 +243,16 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
+        pub fn add_whitelist(
+            origin: OriginFor<T>,
+            accounts: Vec<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            CouncilWhiteList::<T>::put(accounts);
+            Ok(().into())
+        }
+
         #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
         pub fn force_remove_lock(
             origin: OriginFor<T>,
@@ -550,6 +567,19 @@ pub mod pallet {
             } else {
                 false
             }
+        }
+    }
+
+    impl<T: Config> ChangeMembers<T::AccountId> for Pallet<T> {
+        fn change_members_sorted(
+            incoming: &[T::AccountId],
+            outgoing: &[T::AccountId],
+            sorted_new: &[T::AccountId],
+        ) {
+            let mut white_list = CouncilWhiteList::<T>::get();
+            white_list.extend(sorted_new.to_owned());
+            T::ChangeMembers::change_members_sorted(incoming, outgoing, &white_list);
+            Self::deposit_event(Event::<T>::ChangedMemebers(white_list));
         }
     }
 }
