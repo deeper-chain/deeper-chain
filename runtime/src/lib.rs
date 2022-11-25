@@ -26,9 +26,9 @@ use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
     construct_runtime, parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU128, ConstU32, Currency, EqualPrivilegeOnly, Everything,
-        Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing, OnUnbalanced,
-        U128CurrencyToVote,
+        AsEnsureOriginWithArg, ConstU128, ConstU32, Currency, EitherOfDiverse,
+        EqualPrivilegeOnly, Everything, Imbalance, InstanceFilter, KeyOwnerProofSystem,
+        LockIdentifier, Nothing, OnUnbalanced, U128CurrencyToVote,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -380,7 +380,10 @@ impl pallet_scheduler::Config for Runtime {
     type PalletsOrigin = OriginCaller;
     type Call = Call;
     type MaximumWeight = MaximumSchedulerWeight;
-    type ScheduleOrigin = EnsureRoot<AccountId>;
+    type ScheduleOrigin = EitherOfDiverse<
+        EnsureRoot<AccountId>,
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>,
+    >;
     type MaxScheduledPerBlock = MaxScheduledPerBlock;
     type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
     type OriginPrivilegeCmp = EqualPrivilegeOnly;
@@ -469,7 +472,7 @@ impl pallet_balances::Config for Runtime {
 
 impl pallet_user_privileges::Config for Runtime {
     type Event = Event;
-    type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+    type ForceOrigin = EnsureRoot<AccountId>;
     type WeightInfo = pallet_user_privileges::weights::SubstrateWeight<Runtime>;
 }
 
@@ -589,12 +592,10 @@ impl pallet_staking::Config for Runtime {
     type BondingDuration = BondingDuration;
     type SlashDeferDuration = SlashDeferDuration;
     /// A super-majority of the council can cancel the slash.
-    type SlashCancelOrigin = EnsureRoot<AccountId>;
-    // EnsureOneOf<
-    //     AccountId,
-    //     EnsureRoot<AccountId>,
-    //     pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>,
-    // >;
+    type SlashCancelOrigin = EitherOfDiverse<
+        EnsureRoot<AccountId>,
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>,
+    >;
     type SessionInterface = Self;
     type Call = Call;
     type TotalMiningReward = MiningReward;
@@ -628,41 +629,51 @@ impl pallet_democracy::Config for Runtime {
     type VoteLockingPeriod = EnactmentPeriod; // Same as EnactmentPeriod
     type MinimumDeposit = MinimumDeposit;
     /// A straight majority of the council can decide what their next motion is.
-    type ExternalOrigin = EnsureRoot<AccountId>;
-    // pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+    type ExternalOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>,
+        frame_system::EnsureRoot<AccountId>,
+    >;
     /// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
-    type ExternalMajorityOrigin = EnsureRoot<AccountId>;
-    //pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+    type ExternalMajorityOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+        frame_system::EnsureRoot<AccountId>,
+    >;
     /// A unanimous council can have the next scheduled referendum be a straight default-carries
     /// (NTB) vote.
-    type ExternalDefaultOrigin = EnsureRoot<AccountId>;
-    //pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+    type ExternalDefaultOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>,
+        frame_system::EnsureRoot<AccountId>,
+    >;
     /// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
     /// be tabled immediately and with a shorter voting/enactment period.
-    type FastTrackOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
-    type InstantOrigin =
-        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
+    type FastTrackOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>,
+        frame_system::EnsureRoot<AccountId>,
+    >;
+    type InstantOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
+        frame_system::EnsureRoot<AccountId>,
+    >;
     type InstantAllowed = InstantAllowed;
     type FastTrackVotingPeriod = FastTrackVotingPeriod;
     // To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-    type CancellationOrigin = EnsureRoot<AccountId>;
-    //pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+    type CancellationOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>,
+        EnsureRoot<AccountId>,
+    >;
     // To cancel a proposal before it has been passed, the technical committee must be unanimous or
     // Root must agree.
-    type CancelProposalOrigin = EnsureRoot<AccountId>;
-    // EnsureOneOf<
-    //     AccountId,
-    //     EnsureRoot<AccountId>,
-    //     pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
-    // >;
+    type CancelProposalOrigin = EitherOfDiverse<
+        pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
+        EnsureRoot<AccountId>,
+    >;
     type BlacklistOrigin = EnsureRoot<AccountId>;
     // Any single technical committee member may veto a coming council proposal, however they can
     // only do it once and it lasts only for the cooloff period.
     type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
     type CooloffPeriod = CooloffPeriod;
     type PreimageByteDeposit = PreimageByteDeposit;
-    type OperationalPreimageOrigin = EnsureNever<AccountId>; //pallet_collective::EnsureMember<AccountId, CouncilCollective>;
+    type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
     type Slash = Treasury;
     type Scheduler = Scheduler;
     type PalletsOrigin = OriginCaller;
@@ -746,18 +757,17 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
     type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
-// type EnsureRootOrHalfCouncil = EnsureOneOf<
-//     AccountId,
-//     EnsureRoot<AccountId>,
-//     pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
-// >;
+type EnsureRootOrHalfCouncil = EitherOfDiverse<
+    EnsureRoot<AccountId>,
+    pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
+>;
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
     type Event = Event;
-    type AddOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
-    type RemoveOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
-    type SwapOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
-    type ResetOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
-    type PrimeOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
+    type AddOrigin = EnsureRootOrHalfCouncil;
+    type RemoveOrigin = EnsureRootOrHalfCouncil;
+    type SwapOrigin = EnsureRootOrHalfCouncil;
+    type ResetOrigin = EnsureRootOrHalfCouncil;
+    type PrimeOrigin = EnsureRootOrHalfCouncil;
     type MembershipInitialized = TechnicalCommittee;
     type MembershipChanged = TechnicalCommittee;
     type MaxMembers = TechnicalMaxMembers;
@@ -792,18 +802,11 @@ parameter_types! {
 impl pallet_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
-    type ApproveOrigin = EnsureRoot<AccountId>;
-    type RejectOrigin = EnsureRoot<AccountId>;
-    // type ApproveOrigin = EnsureOneOf<
-    //     AccountId,
-    //     EnsureRoot<AccountId>,
-    //     pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>,
-    // >;
-    // type RejectOrigin = EnsureOneOf<
-    //     AccountId,
-    //     EnsureRoot<AccountId>,
-    //     pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
-    // >;
+    type ApproveOrigin = EitherOfDiverse<
+        EnsureRoot<AccountId>,
+        pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
+    >;
+    type RejectOrigin = EnsureRootOrHalfCouncil;
     type Event = Event;
     type OnSlash = ();
     type ProposalBond = ProposalBond;
@@ -1038,8 +1041,8 @@ impl pallet_identity::Config for Runtime {
     type MaxAdditionalFields = MaxAdditionalFields;
     type MaxRegistrars = MaxRegistrars;
     type Slashed = Treasury;
-    type ForceOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
-    type RegistrarOrigin = EnsureRoot<AccountId>; //EnsureRootOrHalfCouncil;
+    type ForceOrigin = EnsureRootOrHalfCouncil;
+    type RegistrarOrigin = EnsureRootOrHalfCouncil;
     type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
@@ -1085,8 +1088,7 @@ impl pallet_society::Config for Runtime {
     type MembershipChanged = ();
     type RotationPeriod = RotationPeriod;
     type MaxLockDuration = MaxLockDuration;
-    type FounderSetOrigin = EnsureRoot<AccountId>;
-    //pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>;
+    type FounderSetOrigin = pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>;
     type SuspensionJudgementOrigin = pallet_society::EnsureFounder<Runtime>;
     type MaxCandidateIntake = MaxCandidateIntake;
     type ChallengePeriod = ChallengePeriod;
