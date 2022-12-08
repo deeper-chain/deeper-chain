@@ -283,6 +283,9 @@ pub mod pallet {
 				Weight::zero()
 			}
 		}
+
+		
+
 	}
 
 	#[pallet::call]
@@ -408,7 +411,7 @@ pub mod pallet {
 				actual_count <= <T as Config>::MaxCandidates::get(),
 				Error::<T>::TooManyCandidates
 			);
-			ensure!(pallet_identity::Pallet::<T>::identity(&who).is_some(), Error::<T>::NotHasIdentity);
+			ensure!(Self::has_identity(&who), Error::<T>::NotHasIdentity);
 
 			let index = Self::is_candidate(&who).err().ok_or(Error::<T>::DuplicatedCandidate)?;
 
@@ -1111,6 +1114,10 @@ impl<T: Config> Pallet<T> {
 
 		<T as pallet::Config>::WeightInfo::election_phragmen(weight_candidates, weight_voters, weight_edges)
 	}
+
+	fn has_identity(who: &T::AccountId) {
+		pallet_identity::Pallet::<T>::identity(who).is_some()
+	}
 }
 
 impl<T: Config> Contains<T::AccountId> for Pallet<T> {
@@ -1167,7 +1174,6 @@ mod tests {
 		parameter_types,
 		traits::{ConstU32, ConstU64, OnInitialize},
 	};
-	use frame_system::ensure_signed;
 	use sp_core::H256;
 	use sp_runtime::{
 		testing::Header,
@@ -1175,6 +1181,8 @@ mod tests {
 		BuildStorage,
 	};
 	use substrate_test_utils::assert_eq_uvec;
+	use frame_system::{ensure_signed,EnsureRoot};
+	use pallet_identity::{Data,IdentityInfo};
 
 	parameter_types! {
 		pub BlockWeights: frame_system::limits::BlockWeights =
@@ -1229,6 +1237,22 @@ mod tests {
 		pub static TermDuration: u64 = 5;
 		pub static Members: Vec<u64> = vec![];
 		pub static Prime: Option<u64> = None;
+		pub const MaxAdditionalFields: u32 = 2;
+	}
+	
+	impl pallet_identity::Config for Test {
+		type Event = Event;
+		type Currency = Balances;
+		type BasicDeposit = ConstU64<0>;
+		type FieldDeposit = ConstU64<0>;
+		type SubAccountDeposit = ConstU64<10>;
+		type MaxSubAccounts = ConstU32<10>;
+		type MaxAdditionalFields = MaxAdditionalFields;
+		type MaxRegistrars = ConstU32<10>;
+		type Slashed = ();
+		type ForceOrigin = EnsureRoot<u64>;
+		type RegistrarOrigin = EnsureRoot<u64>;
+		type WeightInfo = ();
 	}
 
 	pub struct TestChangeMembers;
@@ -1313,6 +1337,7 @@ mod tests {
 			System: frame_system::{Pallet, Call, Event<T>},
 			Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
 			Elections: elections_phragmen::{Pallet, Call, Event<T>, Config<T>},
+			Identity: pallet_identity::{Pallet, Call, Event<T>},
 		}
 	);
 
@@ -1475,11 +1500,30 @@ mod tests {
 		assert!(!intersects(&candidate_ids(), &runners_up_ids()));
 	}
 
+	fn gen_identity(i : u64) -> IdentityInfo<MaxAdditionalFields> {
+		let data = Data::Raw(vec![0; 32].try_into().unwrap());
+		IdentityInfo {
+			display: Data::Raw(i.to_string().as_bytes().to_vec().try_into().unwrap()),
+			legal: Data::Raw(i.to_string().as_bytes().to_vec().try_into().unwrap()),
+			web: data.clone(),
+			riot: data.clone(),
+			email: data.clone(),
+			pgp_fingerprint: Some([0; 20]),
+			image: data.clone(),
+			twitter: data,
+			additional: vec![].try_into().unwrap(),
+		}
+	}
+
 	fn pre_conditions() {
 		System::set_block_number(1);
 		ensure_members_sorted();
 		ensure_candidates_sorted();
 		ensure_member_candidates_runners_up_disjoint();
+		for i in 1..=7 {
+			let info = gen_identity(i);
+			assert_ok!(Identity::set_identity(Origin::signed(i), Box::new(info)));
+		}
 	}
 
 	fn post_conditions() {

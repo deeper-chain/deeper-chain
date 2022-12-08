@@ -47,6 +47,7 @@ std = [
 	"sp-npos-elections/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"pallet-identity/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking/runtime-benchmarks",
