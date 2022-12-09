@@ -18,8 +18,8 @@
 //! Migrations to version [`4.0.0`], as denoted by the changelog.
 
 use frame_support::{
-	traits::{Get, StorageVersion},
-	weights::Weight,
+    traits::{Get, StorageVersion},
+    weights::Weight,
 };
 
 /// The old prefix.
@@ -33,38 +33,38 @@ pub const OLD_PREFIX: &[u8] = b"PhragmenElection";
 ///
 /// The old storage prefix, `PhragmenElection` is hardcoded in the migration code.
 pub fn migrate<T: crate::Config, N: AsRef<str>>(new_pallet_name: N) -> Weight {
-	if new_pallet_name.as_ref().as_bytes() == OLD_PREFIX {
-		log::info!(
-			target: "runtime::elections-phragmen",
-			"New pallet name is equal to the old prefix. No migration needs to be done.",
-		);
-		return Weight::zero()
-	}
-	let storage_version = StorageVersion::get::<crate::Pallet<T>>();
-	log::info!(
-		target: "runtime::elections-phragmen",
-		"Running migration to v4 for elections-phragmen with storage version {:?}",
-		storage_version,
-	);
+    if new_pallet_name.as_ref().as_bytes() == OLD_PREFIX {
+        log::info!(
+            target: "runtime::elections-phragmen",
+            "New pallet name is equal to the old prefix. No migration needs to be done.",
+        );
+        return Weight::zero();
+    }
+    let storage_version = StorageVersion::get::<crate::Pallet<T>>();
+    log::info!(
+        target: "runtime::elections-phragmen",
+        "Running migration to v4 for elections-phragmen with storage version {:?}",
+        storage_version,
+    );
 
-	if storage_version <= 3 {
-		log::info!("new prefix: {}", new_pallet_name.as_ref());
-		frame_support::storage::migration::move_pallet(
-			OLD_PREFIX,
-			new_pallet_name.as_ref().as_bytes(),
-		);
+    if storage_version <= 3 {
+        log::info!("new prefix: {}", new_pallet_name.as_ref());
+        frame_support::storage::migration::move_pallet(
+            OLD_PREFIX,
+            new_pallet_name.as_ref().as_bytes(),
+        );
 
-		StorageVersion::new(4).put::<crate::Pallet<T>>();
+        StorageVersion::new(4).put::<crate::Pallet<T>>();
 
-		<T as frame_system::Config>::BlockWeights::get().max_block
-	} else {
-		log::warn!(
-			target: "runtime::elections-phragmen",
-			"Attempted to apply migration to v4 but failed because storage version is {:?}",
-			storage_version,
-		);
-		Weight::zero()
-	}
+        <T as frame_system::Config>::BlockWeights::get().max_block
+    } else {
+        log::warn!(
+            target: "runtime::elections-phragmen",
+            "Attempted to apply migration to v4 but failed because storage version is {:?}",
+            storage_version,
+        );
+        Weight::zero()
+    }
 }
 
 /// Some checks prior to migration. This can be linked to
@@ -72,27 +72,27 @@ pub fn migrate<T: crate::Config, N: AsRef<str>>(new_pallet_name: N) -> Weight {
 ///
 /// Panics if anything goes wrong.
 pub fn pre_migration<T: crate::Config, N: AsRef<str>>(new: N) {
-	let new = new.as_ref();
-	log::info!("pre-migration elections-phragmen test with new = {}", new);
+    let new = new.as_ref();
+    log::info!("pre-migration elections-phragmen test with new = {}", new);
 
-	// the next key must exist, and start with the hash of `OLD_PREFIX`.
-	let next_key = sp_io::storage::next_key(OLD_PREFIX).unwrap();
-	assert!(next_key.starts_with(&sp_io::hashing::twox_128(OLD_PREFIX)));
+    // the next key must exist, and start with the hash of `OLD_PREFIX`.
+    let next_key = sp_io::storage::next_key(OLD_PREFIX).unwrap();
+    assert!(next_key.starts_with(&sp_io::hashing::twox_128(OLD_PREFIX)));
 
-	// ensure nothing is stored in the new prefix.
-	assert!(
-		sp_io::storage::next_key(new.as_bytes()).map_or(
-			// either nothing is there
-			true,
-			// or we ensure that it has no common prefix with twox_128(new).
-			|next_key| !next_key.starts_with(&sp_io::hashing::twox_128(new.as_bytes()))
-		),
-		"unexpected next_key({}) = {:?}",
-		new,
-		sp_core::hexdisplay::HexDisplay::from(&sp_io::storage::next_key(new.as_bytes()).unwrap())
-	);
-	// ensure storage version is 3.
-	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 3);
+    // ensure nothing is stored in the new prefix.
+    assert!(
+        sp_io::storage::next_key(new.as_bytes()).map_or(
+            // either nothing is there
+            true,
+            // or we ensure that it has no common prefix with twox_128(new).
+            |next_key| !next_key.starts_with(&sp_io::hashing::twox_128(new.as_bytes()))
+        ),
+        "unexpected next_key({}) = {:?}",
+        new,
+        sp_core::hexdisplay::HexDisplay::from(&sp_io::storage::next_key(new.as_bytes()).unwrap())
+    );
+    // ensure storage version is 3.
+    assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 3);
 }
 
 /// Some checks for after migration. This can be linked to
@@ -100,7 +100,7 @@ pub fn pre_migration<T: crate::Config, N: AsRef<str>>(new: N) {
 ///
 /// Panics if anything goes wrong.
 pub fn post_migration<T: crate::Config>() {
-	log::info!("post-migration elections-phragmen");
-	// ensure we've been updated to v4 by the automatic write of crate version -> storage version.
-	assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 4);
+    log::info!("post-migration elections-phragmen");
+    // ensure we've been updated to v4 by the automatic write of crate version -> storage version.
+    assert_eq!(StorageVersion::get::<crate::Pallet<T>>(), 4);
 }
