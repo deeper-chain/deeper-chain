@@ -284,7 +284,43 @@ pub mod pallet {
 			}
 		}
 
-		
+		fn on_runtime_upgrade() -> Weight {
+			<Candidates<T>>::mutate(|candidates| {
+				let mut removed_idxs = Vec::new();
+				for (idx,info) in candidates.iter().enumerate() {
+					if !Self::has_identity(&info.0) {
+						removed_idxs.push(idx);
+					}
+				}
+
+				for idx in removed_idxs.iter().rev() {
+					let (account,deposit) = candidates.remove(*idx);
+					let _remainder = CurrencyOf::<T>::unreserve(&account, deposit);
+					debug_assert!(_remainder.is_zero());
+				}
+			});
+
+			<RunnersUp<T>>::mutate(|runners_up| {
+				let mut removed_idxs = Vec::new();
+				for (idx,seat) in runners_up.iter().enumerate() {
+					if !Self::has_identity(&seat.who) {
+						removed_idxs.push(idx);
+					}
+				}
+				for idx in removed_idxs.iter().rev() {
+					let SeatHolder {who, deposit, .. } = runners_up.remove(*idx);
+					let _remainder = CurrencyOf::<T>::unreserve(&who, deposit);
+					debug_assert!(_remainder.is_zero());
+				}
+			});
+
+			let mut removed = Members::<T>::get().clone();
+			removed.retain(|seat| !Self::has_identity(&seat.who));
+			for seat in removed {
+				let _ = Self::remove_and_replace_member(&seat.who,false);
+			}
+			Weight::zero()
+		}
 
 	}
 
@@ -1115,7 +1151,7 @@ impl<T: Config> Pallet<T> {
 		<T as pallet::Config>::WeightInfo::election_phragmen(weight_candidates, weight_voters, weight_edges)
 	}
 
-	fn has_identity(who: &T::AccountId) {
+	fn has_identity(who: &T::AccountId)-> bool {
 		pallet_identity::Pallet::<T>::identity(who).is_some()
 	}
 }
