@@ -614,7 +614,7 @@ pub mod pallet {
         type NumberToCurrency: Convert<u128, BalanceOf<Self>>;
 
         /// The overarching event type.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
         /// Handler for the unbalanced reduction when slashing a staker.
         type Slash: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -632,13 +632,13 @@ pub mod pallet {
         type SlashDeferDuration: Get<EraIndex>;
 
         /// The origin which can cancel a deferred slash. Root can always do this.
-        type SlashCancelOrigin: EnsureOrigin<Self::Origin>;
+        type SlashCancelOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
         /// Interface for interacting with a session module.
         type SessionInterface: self::SessionInterface<Self::AccountId>;
 
         /// The overarching call type.
-        type Call: Dispatchable + From<Call<Self>> + IsSubType<Call<Self>> + Clone;
+        type RuntimeCall: Dispatchable + From<Call<Self>> + IsSubType<Call<Self>> + Clone;
 
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -1023,14 +1023,14 @@ pub mod pallet {
                     "Stash does not have enough balance to bond."
                 );
                 let _ = <Pallet<T>>::bond(
-                    T::Origin::from(Some(stash.clone()).into()),
+                    T::RuntimeOrigin::from(Some(stash.clone()).into()),
                     T::Lookup::unlookup(controller.clone()),
                     balance,
                     RewardDestination::Staked,
                 );
                 let _ = match status {
                     StakerStatus::Validator => <Pallet<T>>::validate(
-                        T::Origin::from(Some(controller.clone()).into()),
+                        T::RuntimeOrigin::from(Some(controller.clone()).into()),
                         Default::default(),
                     ),
                     _ => Ok(()),
@@ -1038,7 +1038,7 @@ pub mod pallet {
             }
             for &(ref delegator, ref validators) in &self.delegations {
                 <Pallet<T>>::delegate(
-                    T::Origin::from(Some(delegator.clone()).into()),
+                    T::RuntimeOrigin::from(Some(delegator.clone()).into()),
                     (*validators).clone(),
                 )
                 .unwrap();
@@ -2899,7 +2899,7 @@ impl<T: Config> pallet::Pallet<T> {
             }
             log!(
                 info,
-                "💸 new validator set of size {:?} has been elected for era {:?}\n 
+                "💸 new validator set of size {:?} has been elected for era {:?}\n
                 candidate_delegators: {:?}
                 ",
                 elected_validators.len(),

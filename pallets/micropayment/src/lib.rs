@@ -52,7 +52,6 @@ pub mod pallet {
         pallet_prelude::*,
     };
     use frame_system::pallet_prelude::*;
-    use log::error;
     use node_primitives::{credit::CreditInterface, deeper_node::NodeInterface};
     use sp_core::crypto::UncheckedFrom;
     use sp_core::sr25519;
@@ -67,7 +66,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         // Because this pallet emits events, it depends on the runtime's definition of an event.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: Currency<Self::AccountId>;
         type SecsPerBlock: Get<u32>;
         // CreditInterface of credit pallet
@@ -239,7 +238,7 @@ pub mod pallet {
                 expiration: expiration.clone(),
             };
             if !Self::take_from_account(&client, lock_amount) {
-                error!("Not enough free balance to open channel");
+                log::error!("Not enough free balance to open channel");
                 Err(Error::<T>::NotEnoughBalance)?
             }
             Channel::<T>::insert(&client, &server, chan);
@@ -362,7 +361,7 @@ pub mod pallet {
                 Error::<T>::ChannelNotExist
             );
             if !Self::take_from_account(&client, amount) {
-                error!("Not enough free balance to add into channel");
+                log::error!("Not enough free balance to add into channel");
                 Err(Error::<T>::NotEnoughBalance)?
             }
             Channel::<T>::mutate(&client, &server, |c| {
@@ -441,7 +440,7 @@ pub mod pallet {
                     server.clone(),
                     end_block,
                 ));
-                error!("Channel not enough balance");
+                log::error!("Channel not enough balance");
                 Err(Error::<T>::NotEnoughBalance)?
             }
 

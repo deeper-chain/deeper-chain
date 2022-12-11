@@ -64,7 +64,7 @@ pub mod pallet {
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_timestamp::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         type Currency: LockableCurrency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
         type MaxMember: Get<u32>;
         type OPWeightInfo: WeightInfo;

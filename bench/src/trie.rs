@@ -155,7 +155,7 @@ impl core::BenchmarkDescription for TrieReadBenchmarkDescription {
 
     fn name(&self) -> Cow<'static, str> {
         format!(
-            "Trie read benchmark({} database ({} keys), db_type: {})",
+            "Trie read benchmark({:?} database ({} keys), db_type: {:?})",
             self.database_size,
             pretty_print(self.database_size.keys()),
             self.database_type,
@@ -262,7 +262,7 @@ impl core::BenchmarkDescription for TrieWriteBenchmarkDescription {
 
     fn name(&self) -> Cow<'static, str> {
         format!(
-            "Trie write benchmark({} database ({} keys), db_type = {})",
+            "Trie write benchmark({:?} database ({} keys), db_type = {:?})",
             self.database_size,
             pretty_print(self.database_size.keys()),
             self.database_type,
@@ -284,7 +284,7 @@ impl core::Benchmark for TrieWriteBenchmark {
         let mut db = self.database.clone();
         let kvdb = db.open(self.database_type);
 
-        let mut new_root = self.root.clone();
+        let mut new_root = self.root;
 
         let mut overlay = HashMap::new();
         let mut trie = SimpleTrie {

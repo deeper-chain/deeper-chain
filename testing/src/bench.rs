@@ -36,8 +36,8 @@ use codec::{Decode, Encode};
 use futures::executor;
 use node_primitives::Block;
 use node_runtime::{
-    constants::currency::DOLLARS, AccountId, BalancesCall, Call, CheckedExtrinsic,
-    CheckedSignature, MinimumPeriod, Signature, SystemCall, UncheckedExtrinsic,
+    constants::currency::DOLLARS, AccountId, BalancesCall, CheckedExtrinsic, CheckedSignature,
+    MinimumPeriod, RuntimeCall, Signature, SystemCall, UncheckedExtrinsic,
 };
 use sc_block_builder::BlockBuilderProvider;
 use sc_client_api::{
@@ -335,20 +335,22 @@ impl<'a> Iterator for BlockContentIterator<'a> {
                 ),
                 function: match self.content.block_type {
                     BlockType::RandomTransfersKeepAlive => {
-                        Call::Balances(BalancesCall::transfer_keep_alive {
+                        RuntimeCall::Balances(BalancesCall::transfer_keep_alive {
                             dest: sp_runtime::MultiAddress::Id(receiver),
                             value: node_runtime::ExistentialDeposit::get() + 1,
                         })
                     }
                     BlockType::RandomTransfersReaping => {
-                        Call::Balances(BalancesCall::transfer {
+                        RuntimeCall::Balances(BalancesCall::transfer {
                             dest: sp_runtime::MultiAddress::Id(receiver),
                             // Transfer so that ending balance would be 1 less than existential
                             // deposit so that we kill the sender account.
                             value: 100 * DOLLARS - (node_runtime::ExistentialDeposit::get() - 1),
                         })
                     }
-                    BlockType::Noop => Call::System(SystemCall::remark { remark: Vec::new() }),
+                    BlockType::Noop => {
+                        RuntimeCall::System(SystemCall::remark { remark: Vec::new() })
+                    }
                 },
             },
             self.runtime_version.spec_version,
@@ -422,7 +424,7 @@ impl BenchDb {
             trie_cache_maximum_size: Some(16 * 1024 * 1024),
             state_pruning: Some(PruningMode::ArchiveAll),
             source: database_type.into_settings(dir.into()),
-            blocks_pruning: sc_client_db::BlocksPruning::All,
+            blocks_pruning: sc_client_db::BlocksPruning::KeepAll,
         };
         let task_executor = TaskExecutor::new();
 

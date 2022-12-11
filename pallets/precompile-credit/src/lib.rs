@@ -60,9 +60,9 @@ pub struct CreditDispatch<Runtime> {
 impl<Runtime> Precompile for CreditDispatch<Runtime>
 where
     Runtime: pallet_credit::Config + pallet_evm::Config,
-    Runtime::Call: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo + Decode,
-    <Runtime::Call as Dispatchable>::Origin: From<Option<Runtime::AccountId>>,
-    Runtime::Call: From<CreditCall<Runtime>>,
+    Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo + Decode,
+    <Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+    Runtime::RuntimeCall: From<CreditCall<Runtime>>,
 {
     fn execute(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         /*
@@ -93,9 +93,9 @@ where
 impl<Runtime> CreditDispatch<Runtime>
 where
     Runtime: pallet_credit::Config + pallet_evm::Config,
-    Runtime::Call: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo + Decode,
-    <Runtime::Call as Dispatchable>::Origin: From<Option<Runtime::AccountId>>,
-    Runtime::Call: From<CreditCall<Runtime>>,
+    Runtime::RuntimeCall: Dispatchable<PostInfo = PostDispatchInfo> + GetDispatchInfo + Decode,
+    <Runtime::RuntimeCall as Dispatchable>::RuntimeOrigin: From<Option<Runtime::AccountId>>,
+    Runtime::RuntimeCall: From<CreditCall<Runtime>>,
 {
     pub fn get_credit_score(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         // Bound check
