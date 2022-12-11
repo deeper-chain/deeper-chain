@@ -48,8 +48,8 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        type ForceOrigin: EnsureOrigin<Self::Origin>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+        type ForceOrigin: EnsureOrigin<Self::RuntimeOrigin>;
         type WeightInfo: WeightInfo;
     }
 

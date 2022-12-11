@@ -25,7 +25,7 @@ use frame_system_rpc_runtime_api::AccountNonceApi;
 use futures::prelude::*;
 pub use node_runtime::RuntimeApi;
 use sc_cli::SubstrateCli;
-use sc_client_api::{BlockBackend, BlockchainEvents, ExecutorProvider};
+use sc_client_api::{BlockBackend, BlockchainEvents};
 use sc_consensus_babe::{self, SlotProportion};
 use sc_executor::NativeElseWasmExecutor;
 use sc_network::{Event, NetworkService};
@@ -107,7 +107,7 @@ pub fn fetch_nonce(client: &FullClient, account: sp_core::sr25519::Pair) -> u32 
 pub fn create_extrinsic(
     client: &FullClient,
     sender: sp_core::sr25519::Pair,
-    function: impl Into<node_runtime::Call>,
+    function: impl Into<node_runtime::RuntimeCall>,
     nonce: Option<u32>,
 ) -> node_runtime::UncheckedExtrinsic {
     let function = function.into();
@@ -235,6 +235,7 @@ pub fn new_partial(
     );
 
     let frontier_backend = Arc::new(FrontierBackend::open(
+        Arc::clone(&client),
         &config.database,
         &db_config_dir(config),
     )?);
@@ -278,7 +279,7 @@ pub fn new_partial(
 
         let dynamic_fee = fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
 
-        Ok((timestamp, slot, uncles, dynamic_fee))
+        Ok((slot, timestamp, uncles, dynamic_fee))
     };
 
     let import_queue = sc_consensus_babe::import_queue(
@@ -290,7 +291,6 @@ pub fn new_partial(
         create_inherent_data_providers,
         &task_manager.spawn_essential_handle(),
         config.prometheus_registry(),
-        sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
         telemetry.as_ref().map(|x| x.handle()),
     )?;
 
@@ -379,7 +379,7 @@ pub fn new_full_base(
         Vec::default(),
     ));
 
-    let (network, system_rpc_tx, network_starter) =
+    let (network, system_rpc_tx, tx_handler_controller, network_starter) =
         sc_service::build_network(sc_service::BuildNetworkParams {
             config: &config,
             client: client.clone(),
@@ -497,6 +497,7 @@ pub fn new_full_base(
         transaction_pool: transaction_pool.clone(),
         task_manager: &mut task_manager,
         system_rpc_tx,
+        tx_handler_controller,
         telemetry: telemetry.as_mut(),
     })?;
 
@@ -525,8 +526,6 @@ pub fn new_full_base(
         );
 
         proposer.set_default_block_size_limit(10 * 1024 * 1024);
-        let can_author_with =
-            sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
 
         let client_clone = client.clone();
         let slot_duration = babe_link.config().slot_duration();
@@ -565,13 +564,12 @@ pub fn new_full_base(
                     let dynamic_fee =
                         fp_dynamic_fee::InherentDataProvider(U256::from(target_gas_price));
 
-                    Ok((timestamp, slot, uncles, storage_proof, dynamic_fee))
+                    Ok((slot, timestamp, uncles, storage_proof, dynamic_fee))
                 }
             },
             force_authoring,
             backoff_authoring_blocks,
             babe_link,
-            can_author_with,
             block_proposal_slot_portion: SlotProportion::new(0.5),
             max_block_proposal_slot_portion: None,
             telemetry: telemetry.as_ref().map(|x| x.handle()),

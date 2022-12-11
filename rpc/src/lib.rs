@@ -198,7 +198,6 @@ where
         + Send
         + 'static,
     C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
-    C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance, BlockNumber, Hash>,
     C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
     C::Api: BabeApi<Block>,
     C::Api: BlockBuilder<Block>,
@@ -216,7 +215,6 @@ where
         EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, TxPoolApiServer, Web3,
         Web3ApiServer,
     };
-    use pallet_contracts_rpc::{Contracts, ContractsApiServer};
     use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
     use sc_consensus_babe_rpc::{Babe, BabeApiServer};
     use sc_finality_grandpa_rpc::{Grandpa, GrandpaApiServer};
@@ -259,10 +257,6 @@ where
     } = grandpa;
 
     io.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
-    // Making synchronous calls in light client freezes the browser currently,
-    // more context: https://github.com/paritytech/substrate/pull/3480
-    // These RPCs should use an asynchronous caller instead.
-    io.merge(Contracts::new(client.clone()).into_rpc())?;
     io.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
     io.merge(
