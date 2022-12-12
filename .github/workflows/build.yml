@@ -9,25 +9,27 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Chain Repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       - name: Checkout Integration Tests Repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
         with:
           repository: deeper-chain/integration-tests
           path: './integration-tests'
 
       - name: Setup rust toolchain
         run: rustup show
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v1
 
       - name: Compile
         run: cargo build
 
       - name: Install node env
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
 

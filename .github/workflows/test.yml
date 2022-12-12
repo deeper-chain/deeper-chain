@@ -14,18 +14,17 @@ jobs:
       CARGO_INCREMENTAL: 0
       SKIP_BUILD_WASM: true
       BUILD_DUMMY_WASM_BINARY: true
-      LLVM_PROFILE_FILE: "llvmcoveragedata-%p-%m.profraw"
+      LLVM_PROFILE_FILE: 'llvmcoveragedata-%p-%m.profraw'
       WASM_TARGET_DIRECTORY: /tmp/wasm
-      RUSTFLAGS: "-Cinstrument-coverage"
+      RUSTFLAGS: '-Zinstrument-coverage'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       - name: Setup rust toolchain
         run: rustup show
-
-      - name: show rustc version
-        run: rustc --version
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v1
 
       - name: test
         run: cargo test --workspace --exclude node-cli
@@ -37,7 +36,7 @@ jobs:
         run: ./grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing --ignore "/*" -o lcov.info
 
       - name: upload to codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           files: ./lcov.info
           verbose: true
