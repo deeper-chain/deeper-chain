@@ -325,6 +325,9 @@ pub mod pallet {
                 for seat in removed {
                     let _ = Self::remove_and_replace_member(&seat.who, false);
                 }
+                <Voting<T>>::iter()
+                    .filter(|(_, x)| Self::is_defunct_voter(&x.votes))
+                    .for_each(|(dv, _)| Self::do_remove_voter(&dv));
             }
             Weight::zero()
         }
