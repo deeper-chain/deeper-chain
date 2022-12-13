@@ -481,7 +481,7 @@ pub mod pallet {
                 actual_count <= <T as Config>::MaxCandidates::get(),
                 Error::<T>::TooManyCandidates
             );
-            ensure!(Self::has_identity(&who), Error::<T>::NotHasIdentity);
+            ensure!(Self::has_identity(&who), Error::<T>::NotHasEmailIdentity);
 
             let index = Self::is_candidate(&who)
                 .err()
@@ -706,8 +706,8 @@ pub mod pallet {
         InvalidRenouncing,
         /// Prediction regarding replacement after member removal is wrong.
         InvalidReplacement,
-        /// candidacy must has identity.
-        NotHasIdentity,
+        /// candidacy must has email identity.
+        NotHasEmailIdentity,
     }
 
     /// The current elected members.
@@ -1235,7 +1235,10 @@ impl<T: Config> Pallet<T> {
     }
 
     fn has_identity(who: &T::AccountId) -> bool {
-        pallet_identity::Pallet::<T>::identity(who).is_some()
+        pallet_identity::Pallet::<T>::has_identity(
+            who,
+            pallet_identity::IdentityField::Email as u64,
+        )
     }
 }
 
@@ -1642,12 +1645,13 @@ mod tests {
 
     fn gen_identity(i: u64) -> IdentityInfo<MaxAdditionalFields> {
         let data = Data::Raw(vec![0; 32].try_into().unwrap());
+        let email = Data::Raw(b"tmp@tmp.tmp".to_vec().try_into().unwrap());
         IdentityInfo {
             display: Data::Raw(i.to_string().as_bytes().to_vec().try_into().unwrap()),
             legal: Data::Raw(i.to_string().as_bytes().to_vec().try_into().unwrap()),
             web: data.clone(),
             riot: data.clone(),
-            email: data.clone(),
+            email,
             pgp_fingerprint: Some([0; 20]),
             image: data.clone(),
             twitter: data,
