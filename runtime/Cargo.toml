@@ -62,7 +62,6 @@ pallet-contracts = { git = "https://github.com/paritytech/substrate", branch = "
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false}
 pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
-pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false}
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false}
 pallet-im-online = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false}
@@ -95,6 +94,8 @@ pallet-credit-accumulation = { version = "3.0.0", default-features = false, path
 pallet-operation = { version = "3.0.0", default-features = false, path = "../pallets/operation" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.29", default-features = false }
 pallet-user-privileges = { version = "4.0.0", default-features = false, path = "../pallets/user-privileges" }
+pallet-elections-phragmen = { path = "../pallets/elections-phragmen", default-features = false}
+
 
 # frontier frame dependencies
 libsecp256k1 = { version = "0.6", default-features = false, optional = true }
