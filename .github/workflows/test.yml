@@ -16,7 +16,7 @@ jobs:
       BUILD_DUMMY_WASM_BINARY: true
       LLVM_PROFILE_FILE: "llvmcoveragedata-%p-%m.profraw"
       WASM_TARGET_DIRECTORY: /tmp/wasm
-      RUSTFLAGS: "-Zinstrument-coverage"
+      RUSTFLAGS: "-Cinstrument-coverage"
     steps:
       - name: Checkout Repository
         uses: actions/checkout@master
