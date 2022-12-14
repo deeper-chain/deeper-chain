@@ -150,7 +150,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 29,
+    spec_version: 30,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 13,
@@ -606,13 +606,13 @@ impl pallet_staking::Config for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
+    pub const LaunchPeriod: BlockNumber = 10 * MINUTES;
+    pub const VotingPeriod: BlockNumber = 15 * MINUTES;
+    pub const FastTrackVotingPeriod: BlockNumber = 5 * MINUTES;
     pub const InstantAllowed: bool = true;
     pub const MinimumDeposit: Balance = 100 * DPR;
-    pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-    pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+    pub const EnactmentPeriod: BlockNumber = 20 * MINUTES;
+    pub const CooloffPeriod: BlockNumber = 8 * MINUTES;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = 1 * CENTS;
     pub const MaxVotes: u32 = 100;
