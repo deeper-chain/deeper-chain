@@ -150,7 +150,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 34,
+    spec_version: 35,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 13,
@@ -740,7 +740,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = 5 * MINUTES;
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -777,9 +777,9 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
     pub const ProposalBondMinimum: Balance = 1 * DPR;
-    pub const SpendPeriod: BlockNumber = 24 * DAYS;
+    pub const SpendPeriod: BlockNumber = 10 * MINUTES;
     pub const Burn: Permill = Permill::from_percent(1);
-    pub const TipCountdown: BlockNumber = 1 * DAYS;
+    pub const TipCountdown: BlockNumber = 8 * MINUTES;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = 1 * DPR;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
@@ -787,9 +787,9 @@ parameter_types! {
     pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
     pub const CuratorDepositMin: Balance = 1 * DOLLARS;
     pub const CuratorDepositMax: Balance = 100 * DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 1 * DAYS;
+    pub const BountyDepositPayoutDelay: BlockNumber = 12 * MINUTES;
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-    pub const BountyUpdatePeriod: BlockNumber = 14 * DAYS;
+    pub const BountyUpdatePeriod: BlockNumber = 15 * MINUTES;
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 5 * DPR;
