@@ -606,13 +606,13 @@ impl pallet_staking::Config for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
+    pub const LaunchPeriod: BlockNumber = 5 * DAYS;
+    pub const VotingPeriod: BlockNumber = 5 * DAYS;
+    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
     pub const InstantAllowed: bool = true;
-    pub const MinimumDeposit: Balance = 100 * DPR;
-    pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-    pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+    pub const MinimumDeposit: Balance = 1000 * DPR;
+    pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
+    pub const CooloffPeriod: BlockNumber = 5 * DAYS;
     // One cent: $10,000 / MB
     pub const PreimageByteDeposit: Balance = 1 * CENTS;
     pub const MaxVotes: u32 = 100;
@@ -683,7 +683,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = 2 * DAYS;
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 13;
 }
@@ -740,7 +740,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = 7 * DAYS;
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -777,9 +777,9 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
     pub const ProposalBondMinimum: Balance = 1 * DPR;
-    pub const SpendPeriod: BlockNumber = 24 * DAYS;
+    pub const SpendPeriod: BlockNumber = 14 * DAYS;
     pub const Burn: Permill = Permill::from_percent(1);
-    pub const TipCountdown: BlockNumber = 1 * DAYS;
+    pub const TipCountdown: BlockNumber = 2 * DAYS;
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = 1 * DPR;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
