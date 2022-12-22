@@ -40,8 +40,8 @@ mod multiplier_tests {
 
     use crate::{
         constants::{currency::*, time::*},
-        AdjustmentVariable, MinimumMultiplier, Runtime, RuntimeBlockWeights as BlockWeights,
-        System, TargetBlockFullness, TransactionPayment,
+        AdjustmentVariable, MaximumMultiplier, MinimumMultiplier, Runtime,
+        RuntimeBlockWeights as BlockWeights, System, TargetBlockFullness, TransactionPayment,
     };
     use frame_support::weights::{DispatchClass, Weight, WeightToFee};
 
@@ -63,11 +63,12 @@ mod multiplier_tests {
     // update based on runtime impl.
     fn runtime_multiplier_update(fm: Multiplier) -> Multiplier {
         TargetedFeeAdjustment::<
-			Runtime,
-			TargetBlockFullness,
-			AdjustmentVariable,
-			MinimumMultiplier,
-		>::convert(fm)
+            Runtime,
+            TargetBlockFullness,
+            AdjustmentVariable,
+            MinimumMultiplier,
+            MaximumMultiplier,
+        >::convert(fm)
     }
 
     // update based on reference impl.

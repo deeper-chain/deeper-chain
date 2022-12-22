@@ -37,34 +37,34 @@ fn add_credit_by_traffic() {
         // InvalidAtomosNonce
         let nonce: u64 = 1;
         let signature: [u8; 64] = hex!("2623f985877cc214821b3c01e364ae14a88a2042222a4bcf7580b48e407c2764c8527be4157c4953378a43f2f7da896d7c0cd268e69f70e601b44db020a05889");
-        assert_eq!(CreditAccumulation::add_credit_by_traffic(Origin::signed(alice()), nonce, signature.into()),
+        assert_eq!(CreditAccumulation::add_credit_by_traffic(RuntimeOrigin::signed(alice()), nonce, signature.into()),
         Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidAtomosNonce)));
 
         // OK
         let nonce: u64 = 0;
         let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
         assert_ok!(CreditAccumulation::add_credit_by_traffic(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             nonce, signature.into()
         ));
 
         // InvalidAtomosNonce
         let nonce: u64 = 0;
         let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
-        assert_eq!(CreditAccumulation::add_credit_by_traffic(Origin::signed(alice()), nonce, signature.into()),
+        assert_eq!(CreditAccumulation::add_credit_by_traffic(RuntimeOrigin::signed(alice()), nonce, signature.into()),
         Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidAtomosNonce)));
 
         // InvalidSignature
         let nonce: u64 = 0;
         let signature: [u8; 64] = hex!("5071a1a526b1d2d1833e4de43d1ce22ad3506de2e10ee4a9c18c0b310c54286b9cb10bfb4ee12be6b93e91337de0fa2ea2edd787d083db36211109bdc8438989");
-        assert_eq!(CreditAccumulation::add_credit_by_traffic(Origin::signed(bob()), nonce, signature.into()),
+        assert_eq!(CreditAccumulation::add_credit_by_traffic(RuntimeOrigin::signed(bob()), nonce, signature.into()),
         Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidSignature)));
 
         // OK
         let nonce: u64 = 1;
         let signature: [u8; 64] = hex!("2623f985877cc214821b3c01e364ae14a88a2042222a4bcf7580b48e407c2764c8527be4157c4953378a43f2f7da896d7c0cd268e69f70e601b44db020a05889");
         assert_ok!(CreditAccumulation::add_credit_by_traffic(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             nonce, signature.into()
         ));
     });
@@ -86,7 +86,7 @@ fn add_one_credit_one_era() {
         run_to_block(BLOCKS_PER_ERA+2);
         let signature: [u8; 64] = hex!("34fb245d1d6df01f8177a8e3d29d30a63eb22b9d6c691a97536e1a2805953951194250865971237cf70edb934d76c91744460fe78a7cb86b537ab56146e32b81");
         assert_ok!(CreditAccumulation::add_credit_by_traffic(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             nonce, signature.into()
         ));
 
@@ -96,17 +96,17 @@ fn add_one_credit_one_era() {
         let mut events = <frame_system::Pallet<Test>>::events();
         assert_eq!(
             events.pop().expect("should get first events").event,
-            crate::tests::Event::from(pallet_credit::Event::CreditDataAddedByTraffic(alice(), 211))
+            crate::tests::RuntimeEvent::from(pallet_credit::Event::CreditDataAddedByTraffic(alice(), 211))
         );
 
         assert_eq!(
             events.pop().expect("should get second events").event,
-            crate::tests::Event::from(pallet_credit::Event::CreditUpdateSuccess(alice(), 211))
+            crate::tests::RuntimeEvent::from(pallet_credit::Event::CreditUpdateSuccess(alice(), 211))
         );
 
         assert_eq!(
             events.pop().expect("should get third events").event,
-            crate::tests::Event::from(crate::Event::AtmosSignatureValid(alice()))
+            crate::tests::RuntimeEvent::from(crate::Event::AtmosSignatureValid(alice()))
         );
 
         assert!(events.is_empty());
@@ -129,7 +129,7 @@ fn not_add_credit_less_than_one_era() {
         run_to_block(BLOCKS_PER_ERA+1);
         let signature: [u8; 64] = hex!("34fb245d1d6df01f8177a8e3d29d30a63eb22b9d6c691a97536e1a2805953951194250865971237cf70edb934d76c91744460fe78a7cb86b537ab56146e32b81");
         assert_ok!(CreditAccumulation::add_credit_by_traffic(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             nonce, signature.into()
         ));
 
@@ -139,7 +139,7 @@ fn not_add_credit_less_than_one_era() {
         let mut events = <frame_system::Pallet<Test>>::events();
         assert_eq!(
             events.pop().expect("should get first events").event,
-            crate::tests::Event::from(crate::Event::AtmosSignatureValid(alice()))
+            crate::tests::RuntimeEvent::from(crate::Event::AtmosSignatureValid(alice()))
         );
 
         assert!(events.is_empty());
@@ -162,7 +162,7 @@ fn only_add_one_credit_even_if_more_eras() {
         run_to_block(2*BLOCKS_PER_ERA+3);
         let signature: [u8; 64] = hex!("34fb245d1d6df01f8177a8e3d29d30a63eb22b9d6c691a97536e1a2805953951194250865971237cf70edb934d76c91744460fe78a7cb86b537ab56146e32b81");
         assert_ok!(CreditAccumulation::add_credit_by_traffic(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             nonce, signature.into()
         ));
 
@@ -172,17 +172,17 @@ fn only_add_one_credit_even_if_more_eras() {
         let mut events = <frame_system::Pallet<Test>>::events();
         assert_eq!(
             events.pop().expect("should get first events").event,
-            crate::tests::Event::from(pallet_credit::Event::CreditDataAddedByTraffic(alice(), 211))
+            crate::tests::RuntimeEvent::from(pallet_credit::Event::CreditDataAddedByTraffic(alice(), 211))
         );
 
         assert_eq!(
             events.pop().expect("should get second events").event,
-            crate::tests::Event::from(pallet_credit::Event::CreditUpdateSuccess(alice(), 211))
+            crate::tests::RuntimeEvent::from(pallet_credit::Event::CreditUpdateSuccess(alice(), 211))
         );
 
         assert_eq!(
             events.pop().expect("should get third events").event,
-            crate::tests::Event::from(crate::Event::AtmosSignatureValid(alice()))
+            crate::tests::RuntimeEvent::from(crate::Event::AtmosSignatureValid(alice()))
         );
 
         assert!(events.is_empty());
@@ -200,7 +200,7 @@ fn set_atmos_pubkey() {
 
         // BadOrigin
         assert_noop!(
-            CreditAccumulation::set_atmos_pubkey(Origin::signed(alice()), bob(),),
+            CreditAccumulation::set_atmos_pubkey(RuntimeOrigin::signed(alice()), bob(),),
             BadOrigin
         );
     });

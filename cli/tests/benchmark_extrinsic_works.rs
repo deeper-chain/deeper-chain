@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) 2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,25 +16,31 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(unix)]
-
 use assert_cmd::cargo::cargo_bin;
 use std::process::Command;
 use tempfile::tempdir;
 
-pub mod common;
+/// Tests that the `benchmark extrinsic` command works for
+/// remark and transfer_keep_alive within the substrate dev runtime.
+#[test]
+fn benchmark_extrinsic_works() {
+    benchmark_extrinsic("system", "remark");
+    benchmark_extrinsic("balances", "transfer_keep_alive");
+}
 
-#[tokio::test]
-async fn check_block_works() {
-    let base_path = tempdir().expect("could not create a temp dir");
-
-    common::run_node_for_a_while(base_path.path(), &["--dev", "--no-hardware-benchmarks"]).await;
+/// Checks that the `benchmark extrinsic` command works for the given pallet and extrinsic.
+fn benchmark_extrinsic(pallet: &str, extrinsic: &str) {
+    let base_dir = tempdir().expect("could not create a temp dir");
 
     let status = Command::new(cargo_bin("deeper-chain"))
-        .args(&["check-block", "--dev", "-d"])
-        .arg(base_path.path())
-        .arg("1")
+        .args(&["benchmark", "extrinsic", "--dev"])
+        .arg("-d")
+        .arg(base_dir.path())
+        .args(&["--pallet", pallet, "--extrinsic", extrinsic])
+        // Run with low repeats for faster execution.
+        .args(["--warmup=10", "--repeat=10", "--max-ext-per-block=10"])
         .status()
         .unwrap();
+
     assert!(status.success());
 }

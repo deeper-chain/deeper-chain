@@ -147,13 +147,13 @@ impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type Index = AccountIndex;
     type BlockNumber = BlockNumber;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -168,7 +168,7 @@ impl frame_system::Config for Test {
 impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
     type Balance = Balance;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -183,7 +183,7 @@ parameter_types! {
     pub const MicropaymentBurn: Percent = Percent::from_percent(10);
 }
 impl pallet_micropayment::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type CreditInterface = Credit;
     type SecsPerBlock = SecsPerBlock;
@@ -200,7 +200,7 @@ parameter_types! {
     pub const MaxIpLength: usize = 256;
 }
 impl pallet_deeper_node::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
     type MaxDurationEras = MaxDurationEras;
@@ -229,7 +229,7 @@ parameter_types! {
 }
 
 impl pallet_uniques::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CollectionId = u32;
     type ItemId = u32;
     type Currency = Balances;
@@ -257,7 +257,7 @@ parameter_types! {
 }
 
 impl pallet_credit::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditAttenuationStep = CreditAttenuationStep;
@@ -279,7 +279,7 @@ parameter_types! {
 
 impl pallet_operation::Config for Test {
     type MaxMember = MaxLocks;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type BurnedTo = ();
     type OPWeightInfo = ();
@@ -289,7 +289,7 @@ impl pallet_operation::Config for Test {
 }
 
 impl pallet_user_privileges::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>;
     type WeightInfo = ();
 }
@@ -308,7 +308,7 @@ impl pallet_session::Config for Test {
     type Keys = SessionKeys;
     type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
     type SessionHandler = (OtherSessionHandler,);
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ValidatorId = AccountId;
     type ValidatorIdOf = crate::StashOf<Test>;
     type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
@@ -375,14 +375,14 @@ impl Config for Test {
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type UnixTime = Timestamp;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Slash = ();
     type SessionsPerEra = SessionsPerEra;
     type SlashDeferDuration = SlashDeferDuration;
     type SlashCancelOrigin = frame_system::EnsureRoot<Self::AccountId>;
     type BondingDuration = BondingDuration;
     type SessionInterface = Self;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type WeightInfo = ();
     type CreditInterface = Credit;
     type NodeInterface = DeeperNode;
@@ -397,13 +397,13 @@ impl Config for Test {
 
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
 where
-    Call: From<LocalCall>,
+    RuntimeCall: From<LocalCall>,
 {
-    type OverarchingCall = Call;
+    type OverarchingCall = RuntimeCall;
     type Extrinsic = Extrinsic;
 }
 
-pub type Extrinsic = TestXt<Call, ()>;
+pub type Extrinsic = TestXt<RuntimeCall, ()>;
 
 pub struct ExtBuilder {
     validator_pool: bool,
@@ -770,7 +770,7 @@ impl ExtBuilder {
 fn pre_conditions() {
     // (BLOCKS_PER_ERA + 1) delegators are enough for all the tests now
     for account in 1000..1001 + BLOCKS_PER_ERA {
-        assert_ok!(DeeperNode::im_online(Origin::signed(account as u64)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(account as u64)));
     }
 }
 
@@ -824,13 +824,13 @@ pub(crate) fn bond_validator(stash: AccountId, ctrl: AccountId, val: Balance) {
     let _ = Balances::make_free_balance_be(&stash, val);
     let _ = Balances::make_free_balance_be(&ctrl, val);
     assert_ok!(Staking::bond(
-        Origin::signed(stash),
+        RuntimeOrigin::signed(stash),
         ctrl,
         val,
         RewardDestination::Controller,
     ));
     assert_ok!(Staking::validate(
-        Origin::signed(ctrl),
+        RuntimeOrigin::signed(ctrl),
         ValidatorPrefs::default()
     ));
 }

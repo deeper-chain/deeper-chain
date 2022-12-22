@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) 2020-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@ use nix::{
     },
     unistd::Pid,
 };
-use std::{convert::TryInto, process::Command};
+use std::process::{self, Child, Command};
 use tempfile::tempdir;
 
 pub mod common;
@@ -36,14 +36,23 @@ async fn running_the_node_works_and_can_be_interrupted() {
         let base_path = tempdir().expect("could not create a temp dir");
         let mut cmd = common::KillChildOnDrop(
             Command::new(cargo_bin("deeper-chain"))
+                .stdout(process::Stdio::piped())
+                .stderr(process::Stdio::piped())
                 .args(&["--dev", "-d"])
                 .arg(base_path.path())
                 .arg("--db=paritydb")
+                .arg("--no-hardware-benchmarks")
                 .spawn()
                 .unwrap(),
         );
 
-        common::wait_n_finalized_blocks(3, 60).await.unwrap();
+        let stderr = cmd.stderr.take().unwrap();
+
+        let (ws_url, _) = common::find_ws_url_from_output(stderr);
+
+        common::wait_n_finalized_blocks(3, 30, &ws_url)
+            .await
+            .expect("Blocks are produced in time");
         assert!(
             cmd.try_wait().unwrap().is_none(),
             "the process should still be running"
@@ -51,7 +60,7 @@ async fn running_the_node_works_and_can_be_interrupted() {
         kill(Pid::from_raw(cmd.id().try_into().unwrap()), signal).unwrap();
         assert_eq!(
             common::wait_for(&mut cmd, 30).map(|x| x.success()),
-            Some(true),
+            Ok(true),
             "the process must exit gracefully after signal {}",
             signal,
         );
@@ -65,4 +74,54 @@ async fn running_the_node_works_and_can_be_interrupted() {
 
     run_command_and_kill(SIGINT).await;
     run_command_and_kill(SIGTERM).await;
+}
+
+#[tokio::test]
+async fn running_two_nodes_with_the_same_ws_port_should_work() {
+    fn start_node() -> Child {
+        Command::new(cargo_bin("deeper-chain"))
+            .stdout(process::Stdio::piped())
+            .stderr(process::Stdio::piped())
+            .args(&[
+                "--dev",
+                "--tmp",
+                "--ws-port=45789",
+                "--no-hardware-benchmarks",
+            ])
+            .spawn()
+            .unwrap()
+    }
+
+    let mut first_node = common::KillChildOnDrop(start_node());
+    let mut second_node = common::KillChildOnDrop(start_node());
+
+    let stderr = first_node.stderr.take().unwrap();
+    let (ws_url, _) = common::find_ws_url_from_output(stderr);
+
+    common::wait_n_finalized_blocks(3, 30, &ws_url)
+        .await
+        .unwrap();
+
+    assert!(
+        first_node.try_wait().unwrap().is_none(),
+        "The first node should still be running"
+    );
+    assert!(
+        second_node.try_wait().unwrap().is_none(),
+        "The second node should still be running"
+    );
+
+    kill(Pid::from_raw(first_node.id().try_into().unwrap()), SIGINT).unwrap();
+    kill(Pid::from_raw(second_node.id().try_into().unwrap()), SIGINT).unwrap();
+
+    assert_eq!(
+        common::wait_for(&mut first_node, 30).map(|x| x.success()),
+        Ok(true),
+        "The first node must exit gracefully",
+    );
+    assert_eq!(
+        common::wait_for(&mut second_node, 30).map(|x| x.success()),
+        Ok(true),
+        "The second node must exit gracefully",
+    );
 }
