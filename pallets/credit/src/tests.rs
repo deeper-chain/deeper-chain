@@ -74,7 +74,7 @@ fn update_credit_setting() {
             reward_per_referee: 18,
         };
         assert_noop!(
-            Credit::update_credit_setting(Origin::signed(1), credit_setting.clone()),
+            Credit::update_credit_setting(RuntimeOrigin::signed(1), credit_setting.clone()),
             BadOrigin
         );
         assert_ok!(Credit::update_credit_setting(
@@ -119,7 +119,7 @@ fn add_or_update_credit_data() {
         };
         // Only sudo can call update_credit_data
         assert_noop!(
-            Credit::add_or_update_credit_data(Origin::signed(1), 2, credit_data.clone()),
+            Credit::add_or_update_credit_data(RuntimeOrigin::signed(1), 2, credit_data.clone()),
             BadOrigin
         );
         assert_eq!(Credit::get_credit_balance(&1, Some(5)), Vec::new());
@@ -141,7 +141,7 @@ fn add_or_update_credit_data() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(1, 100))
+            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(1, 100))
         );
 
         // add_credit_data works
@@ -158,7 +158,7 @@ fn add_or_update_credit_data() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(14, 100))
+            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(14, 100))
         );
 
         // credit_data invalid
@@ -196,7 +196,7 @@ fn add_or_update_credit_data() {
 fn add_or_update_credit_data_check_credit_history_and_reward() {
     new_test_ext().execute_with(|| {
         // era 0
-        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(3)));
         // era 1
         run_to_block(BLOCKS_PER_ERA);
         assert_eq!(Credit::user_credit_history(3), vec![]);
@@ -315,7 +315,7 @@ fn slash_credit() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(
+            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(
                 1,
                 100 - CREDIT_ATTENUATION_STEP
             ))
@@ -329,7 +329,7 @@ fn update_credit_by_traffic() {
         Credit::update_credit_by_traffic(1);
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
 
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         Credit::update_credit_by_traffic(1);
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
 
@@ -347,11 +347,11 @@ fn update_credit_by_traffic() {
 
         run_to_block(BLOCKS_PER_ERA * 5);
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             2,
             Privilege::DeviceAdmin
         ));
-        assert_ok!(Credit::set_maintain_device(Origin::signed(2), 1));
+        assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(2), 1));
         Credit::update_credit_by_traffic(1); // device maintain doesn't affect credit increase
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 4);
     });
@@ -363,7 +363,7 @@ fn update_credit_by_tip() {
         Credit::update_credit_by_tip(1, 8);
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
 
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         Credit::update_credit_by_tip(1, 8);
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 8); // 0 + 8
     });
@@ -435,7 +435,7 @@ fn get_reward_failed() {
 fn slash_offline_devices_credit() {
     new_test_ext().execute_with(|| {
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
-        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(3)));
 
         run_to_block(BLOCKS_PER_ERA);
         Credit::slash_offline_device_credit(&3);
@@ -463,11 +463,11 @@ fn slash_offline_devices_credit() {
 
         run_to_block(BLOCKS_PER_ERA * 12);
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::DeviceAdmin
         ));
-        assert_ok!(Credit::set_maintain_device(Origin::signed(1), 3));
+        assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(1), 3));
         Credit::slash_offline_device_credit(&3);
         assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
     });
@@ -630,8 +630,8 @@ fn burn_dpr_add_credit() {
         // run_to_block, era=1
         run_to_block(BLOCKS_PER_ERA * 3);
 
-        assert!(Credit::burn_for_add_credit(Origin::signed(1), 100).is_ok());
-        assert!(Credit::burn_for_add_credit(Origin::signed(3), 200).is_ok());
+        assert!(Credit::burn_for_add_credit(RuntimeOrigin::signed(1), 100).is_ok());
+        assert!(Credit::burn_for_add_credit(RuntimeOrigin::signed(3), 200).is_ok());
 
         assert_eq!(Credit::user_credit(1).unwrap().credit, 100);
         assert_eq!(Credit::user_credit(3).unwrap().credit, 300);
@@ -717,7 +717,7 @@ fn force_modify_credit_history() {
                 ),
             ],
         );
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 8).is_ok());
+        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 8).is_ok());
         assert_eq!(
             Credit::user_credit_history(1),
             vec![
@@ -748,7 +748,7 @@ fn force_modify_credit_history() {
             ]
         );
 
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 6).is_err()); // do not modify
+        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 6).is_err()); // do not modify
         assert_eq!(
             Credit::user_credit_history(1),
             vec![
@@ -779,7 +779,7 @@ fn force_modify_credit_history() {
             ]
         );
 
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 10).is_ok());
+        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 10).is_ok());
         assert_eq!(
             Credit::user_credit_history(1),
             vec![(
@@ -796,7 +796,7 @@ fn force_modify_credit_history() {
             )]
         );
 
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 12).is_ok());
+        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 12).is_ok());
         assert_eq!(
             Credit::user_credit_history(1),
             vec![(
@@ -813,7 +813,7 @@ fn force_modify_credit_history() {
             )]
         );
 
-        assert!(Credit::force_modify_credit_history(Origin::root().into(), 1, 12).is_ok());
+        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 12).is_ok());
         assert_eq!(
             Credit::user_credit_history(1),
             vec![(
@@ -836,19 +836,27 @@ fn force_modify_credit_history() {
 fn update_nft_class_credit() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            Credit::update_nft_class_credit(Origin::signed(1), 0, 5),
+            Credit::update_nft_class_credit(RuntimeOrigin::signed(1), 0, 5),
             Error::<Test>::NotAdmin
         );
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             3,
             Privilege::CreditAdmin
         ));
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 5));
+        assert_ok!(Credit::update_nft_class_credit(
+            RuntimeOrigin::signed(3),
+            0,
+            5
+        ));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 1, 10));
+        assert_ok!(Credit::update_nft_class_credit(
+            RuntimeOrigin::signed(3),
+            1,
+            10
+        ));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
     });
 }
@@ -857,17 +865,17 @@ fn update_nft_class_credit() {
 fn update_sum_of_credit_nft_burn_history() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            Credit::update_sum_of_credit_nft_burn_history(Origin::signed(1), 0, 5),
+            Credit::update_sum_of_credit_nft_burn_history(RuntimeOrigin::signed(1), 0, 5),
             Error::<Test>::NotAdmin
         );
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             3,
             Privilege::CreditAdmin
         ));
 
         assert_ok!(Credit::update_sum_of_credit_nft_burn_history(
-            Origin::signed(3),
+            RuntimeOrigin::signed(3),
             0,
             5
         ));
@@ -878,36 +886,44 @@ fn update_sum_of_credit_nft_burn_history() {
 #[test]
 fn burn_nft() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Uniques::force_create(Origin::root(), 0, 1, true));
-        assert_ok!(Uniques::force_create(Origin::root(), 1, 1, true));
-        assert_ok!(Uniques::force_create(Origin::root(), 2, 1, true));
+        assert_ok!(Uniques::force_create(RuntimeOrigin::root(), 0, 1, true));
+        assert_ok!(Uniques::force_create(RuntimeOrigin::root(), 1, 1, true));
+        assert_ok!(Uniques::force_create(RuntimeOrigin::root(), 2, 1, true));
 
-        assert_ok!(Uniques::mint(Origin::signed(1), 0, 42, 1));
-        assert_ok!(Uniques::mint(Origin::signed(1), 1, 42, 1));
-        assert_ok!(Uniques::mint(Origin::signed(1), 2, 42, 1));
+        assert_ok!(Uniques::mint(RuntimeOrigin::signed(1), 0, 42, 1));
+        assert_ok!(Uniques::mint(RuntimeOrigin::signed(1), 1, 42, 1));
+        assert_ok!(Uniques::mint(RuntimeOrigin::signed(1), 2, 42, 1));
 
         assert_noop!(
-            Credit::burn_nft(Origin::signed(1), 0, 42),
+            Credit::burn_nft(RuntimeOrigin::signed(1), 0, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
         assert_noop!(
-            Credit::burn_nft(Origin::signed(1), 1, 42),
+            Credit::burn_nft(RuntimeOrigin::signed(1), 1, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
         assert_noop!(
-            Credit::burn_nft(Origin::signed(1), 2, 42),
+            Credit::burn_nft(RuntimeOrigin::signed(1), 2, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
 
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             3,
             Privilege::CreditAdmin
         ));
 
-        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 0, 50));
+        assert_ok!(Credit::update_nft_class_credit(
+            RuntimeOrigin::signed(3),
+            0,
+            50
+        ));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 50);
-        assert_ok!(Credit::update_nft_class_credit(Origin::signed(3), 1, 30));
+        assert_ok!(Credit::update_nft_class_credit(
+            RuntimeOrigin::signed(3),
+            1,
+            30
+        ));
         assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 30);
 
         let credit_data = CreditData {
@@ -921,22 +937,22 @@ fn burn_nft() {
         };
         // update_credit_data works
         assert_ok!(Credit::add_or_update_credit_data(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             credit_data.clone()
         ));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 100);
 
-        assert_ok!(Credit::burn_nft(Origin::signed(1), 0, 42));
+        assert_ok!(Credit::burn_nft(RuntimeOrigin::signed(1), 0, 42));
         assert_eq!(Credit::user_credit(&1).unwrap().credit, 150);
 
         assert_noop!(
-            Credit::burn_nft(Origin::signed(1), 1, 42),
+            Credit::burn_nft(RuntimeOrigin::signed(1), 1, 42),
             Error::<Test>::OutOfMaxBurnCreditPerAddress
         );
 
         assert_noop!(
-            Credit::burn_nft(Origin::signed(1), 2, 42),
+            Credit::burn_nft(RuntimeOrigin::signed(1), 2, 42),
             Error::<Test>::MiningMachineClassCreditNoConfig
         );
     });
@@ -946,13 +962,13 @@ fn burn_nft() {
 fn unstaking_slash_credit() {
     new_test_ext().execute_with(|| {
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::CreditAdmin
         ));
 
         assert_ok!(Credit::set_user_staking_credit(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             vec!((3, 50))
         ));
 
@@ -967,12 +983,12 @@ fn unstaking_slash_credit() {
             reward_eras: 270,
         };
         assert_ok!(Credit::add_or_update_credit_data(
-            Origin::root(),
+            RuntimeOrigin::root(),
             3,
             new_credit_data
         ));
 
-        assert_ok!(Credit::unstaking_slash_credit(Origin::signed(1), 3));
+        assert_ok!(Credit::unstaking_slash_credit(RuntimeOrigin::signed(1), 3));
         assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
         assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 4);
         assert_eq!(
@@ -980,7 +996,7 @@ fn unstaking_slash_credit() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::CreditUpdateSuccess(3, 50))
+            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(3, 50))
         );
     });
 }
@@ -989,13 +1005,13 @@ fn unstaking_slash_credit() {
 fn new_campaign_usdt_reward() {
     new_test_ext().execute_with(|| {
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::OracleWorker
         ));
 
         assert_ok!(Credit::set_dpr_price(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             25_000_000_000_000_000,
             H160::zero()
         ));
@@ -1048,7 +1064,7 @@ fn new_campaign_usdt_reward() {
             reward_eras: 270,
         };
         assert_ok!(Credit::add_or_update_credit_data(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1000,
             new_credit_data
         ));
@@ -1065,7 +1081,7 @@ fn new_campaign_usdt_reward() {
             reward_eras: 270,
         };
         assert_ok!(Credit::add_or_update_credit_data(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1000,
             new_credit_data
         ));
@@ -1080,11 +1096,14 @@ fn new_campaign_usdt_reward() {
         assert_eq!(Credit::get_reward(&1000, 2, 2).0, Some(4109589041095890410));
 
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             2,
             Privilege::CreditAdmin
         ));
-        assert_ok!(Credit::unset_staking_balance(Origin::signed(2), 1000));
+        assert_ok!(Credit::unset_staking_balance(
+            RuntimeOrigin::signed(2),
+            1000
+        ));
         run_to_block(BLOCKS_PER_ERA * 4);
         // Even not staking, user also get reward based on virtual staking balance 25 USDT,
         assert_eq!(Credit::get_reward(&1000, 3, 3).0, Some(821917808219178082));
@@ -1095,36 +1114,48 @@ fn new_campaign_usdt_reward() {
 fn set_dpr_price_test() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::OracleWorker
         ));
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             2,
             Privilege::OracleWorker
         ));
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::CreditAdmin
         ));
-        assert_ok!(Credit::set_dpr_price(Origin::signed(1), 100, H160::zero()));
+        assert_ok!(Credit::set_dpr_price(
+            RuntimeOrigin::signed(1),
+            100,
+            H160::zero()
+        ));
         assert_ok!(Credit::set_price_diff_rate(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             Percent::from_percent(10)
         ));
         run_to_block(2);
         assert_eq!(Credit::dpr_price(), Some(100));
         assert_err!(
-            Credit::set_dpr_price(Origin::signed(1), 111, H160::zero()),
+            Credit::set_dpr_price(RuntimeOrigin::signed(1), 111, H160::zero()),
             Error::<Test>::PriceDiffTooMuch
         );
 
-        assert_ok!(Credit::set_dpr_price(Origin::signed(1), 110, H160::zero()));
-        assert_ok!(Credit::set_dpr_price(Origin::signed(2), 102, H160::zero()));
+        assert_ok!(Credit::set_dpr_price(
+            RuntimeOrigin::signed(1),
+            110,
+            H160::zero()
+        ));
+        assert_ok!(Credit::set_dpr_price(
+            RuntimeOrigin::signed(2),
+            102,
+            H160::zero()
+        ));
         run_to_block(3);
         assert_eq!(Credit::dpr_price(), Some(106));
     });
@@ -1135,16 +1166,16 @@ fn set_and_unset_maintain_device() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
         assert_err!(
-            Credit::set_maintain_device(Origin::signed(1), 2),
+            Credit::set_maintain_device(RuntimeOrigin::signed(1), 2),
             Error::<Test>::NotDeviceAdmin
         );
         run_to_block(2);
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::DeviceAdmin
         ));
-        assert_ok!(Credit::set_maintain_device(Origin::signed(1), 2));
+        assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(1), 2));
         assert_eq!(MaintainDevices::<Test>::get(), vec![2]);
     });
 }

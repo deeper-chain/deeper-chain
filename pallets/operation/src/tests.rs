@@ -63,13 +63,13 @@ impl frame_system::Config for Test {
     type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
     type BlockNumber = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -88,7 +88,7 @@ parameter_types! {
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = u64;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -119,7 +119,7 @@ parameter_types! {
 }
 
 impl Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type OPWeightInfo = ();
     type MaxMember = MaxMember;
     type Currency = pallet_balances::Pallet<Self>;
@@ -155,10 +155,10 @@ pub fn run_to_block(n: u64) {
 #[test]
 fn set_lock_members_works() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
         assert_ok!(Operation::force_reserve_by_member(Some(1).into(), 2, 500));
         assert_eq!(Balances::free_balance(&2), 500);
-        assert_ok!(Balances::force_unreserve(Origin::root(), 2, 500));
+        assert_ok!(Balances::force_unreserve(RuntimeOrigin::root(), 2, 500));
         assert_eq!(Balances::free_balance(&2), 1000);
     });
 }
@@ -167,7 +167,7 @@ fn set_lock_members_works() {
 fn set_release_limit_parameter() {
     new_test_ext().execute_with(|| {
         assert_ok!(Operation::set_release_limit_parameter(
-            Origin::root(),
+            RuntimeOrigin::root(),
             10,
             1000
         ));
@@ -180,7 +180,7 @@ fn set_release_limit_parameter() {
 fn set_staking_release_info() {
     new_test_ext().execute_with(|| {
         assert_ok!(Operation::set_release_limit_parameter(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1000,
             2000
         ));
@@ -189,12 +189,21 @@ fn set_staking_release_info() {
         let info2 = ReleaseInfo::<Test>::new(4, 2, 0, 2000);
         // start day is day 2
         let info3 = ReleaseInfo::<Test>::new(5, 1, 1000 * 3600 * 24 * 2 + 1, 1000);
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 10, 0));
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 10, 0));
         assert_eq!(Balances::free_balance(&3), 0);
 
-        assert_ok!(Operation::unstaking_release(Origin::signed(1), info2));
-        assert_ok!(Operation::unstaking_release(Origin::signed(1), info1));
-        assert_ok!(Operation::unstaking_release(Origin::signed(1), info3));
+        assert_ok!(Operation::unstaking_release(
+            RuntimeOrigin::signed(1),
+            info2
+        ));
+        assert_ok!(Operation::unstaking_release(
+            RuntimeOrigin::signed(1),
+            info1
+        ));
+        assert_ok!(Operation::unstaking_release(
+            RuntimeOrigin::signed(1),
+            info3
+        ));
 
         run_to_block(BLOCKS_PER_DAY + 2);
         assert_eq!(Balances::free_balance(&3), 1000);
@@ -219,7 +228,11 @@ fn set_staking_release_info() {
 fn burn_for_ezc() {
     new_test_ext().execute_with(|| {
         assert_eq!(Balances::free_balance(&1), 98);
-        assert_ok!(Operation::burn_for_ezc(Origin::signed(1), 48, H160::zero()));
+        assert_ok!(Operation::burn_for_ezc(
+            RuntimeOrigin::signed(1),
+            48,
+            H160::zero()
+        ));
         assert_eq!(Balances::free_balance(&1), 50);
     });
 }
@@ -243,13 +256,16 @@ impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
 fn bridge_test() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        assert_ok!(Balances::set_balance(Origin::root(), 2, 1_000, 0));
-        assert_ok!(Operation::set_fund_pool_address(Origin::signed(1), 2));
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
+        assert_ok!(Operation::set_fund_pool_address(
+            RuntimeOrigin::signed(1),
+            2
+        ));
 
         assert_eq!(Balances::free_balance(&3), 0);
 
         assert_ok!(Operation::bridge_other_to_deeper(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             3,
             H160::zero(),
             200,
@@ -260,7 +276,7 @@ fn bridge_test() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::BridgeOtherToDeeper(
+            crate::tests::RuntimeEvent::from(crate::Event::BridgeOtherToDeeper(
                 3,
                 H160::zero(),
                 200,
@@ -271,7 +287,7 @@ fn bridge_test() {
         assert_eq!(Balances::free_balance(&3), 200);
 
         assert_ok!(Operation::bridge_deeper_to_other(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             H160::zero(),
             3,
             100,
@@ -282,7 +298,7 @@ fn bridge_test() {
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::BridgeDeeperToOther(
+            crate::tests::RuntimeEvent::from(crate::Event::BridgeDeeperToOther(
                 H160::zero(),
                 3,
                 100,

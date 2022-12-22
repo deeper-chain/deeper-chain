@@ -67,7 +67,7 @@ impl system::Config for Test {
     type BlockLength = ();
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -75,7 +75,7 @@ impl system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -97,7 +97,7 @@ impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type MaxReserves = ();
@@ -144,7 +144,7 @@ parameter_types! {
 }
 
 impl pallet_uniques::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CollectionId = u32;
     type ItemId = u32;
     type Currency = Balances;
@@ -167,7 +167,7 @@ parameter_types! {
 }
 
 impl pallet_credit::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditAttenuationStep = CreditAttenuationStep;
@@ -189,7 +189,7 @@ parameter_types! {
     pub const MaxIpLength: usize = 256;
 }
 impl pallet_deeper_node::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
     type MaxDurationEras = MaxDurationEras;
@@ -204,7 +204,7 @@ parameter_types! {
     pub const DataPerDPR: u64 = 1024 * 1024 * 1024 * 1024;
 }
 impl pallet_credit_accumulation::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type CreditInterface = Credit;
     type WeightInfo = ();

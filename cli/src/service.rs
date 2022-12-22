@@ -734,7 +734,7 @@ mod tests {
     use node_primitives::{Block, DigestItem, Signature};
     use node_runtime::{
         constants::{currency::CENTS, time::SLOT_DURATION},
-        Address, BalancesCall, Call, GenericUncheckedExtrinsic,
+        Address, BalancesCall, GenericUncheckedExtrinsic, RuntimeCall,
     };
     use sc_cli::SubstrateCli;
     use sc_client_api::BlockBackend;
@@ -939,7 +939,7 @@ mod tests {
                 };
                 let signer = charlie.clone();
 
-                let function = Call::Balances(BalancesCall::transfer {
+                let function = RuntimeCall::Balances(BalancesCall::transfer {
                     dest: to.into(),
                     value: amount,
                 });
