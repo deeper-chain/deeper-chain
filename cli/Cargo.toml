@@ -174,5 +174,5 @@ cli = [
 ]
 runtime-benchmarks = [
 	"node-runtime/runtime-benchmarks",
-	"frame-benchmarking-cli",
+	"frame-benchmarking-cli/runtime-benchmarks",
 ]

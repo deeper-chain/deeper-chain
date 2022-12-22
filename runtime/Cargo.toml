@@ -130,6 +130,8 @@ with-tracing = ["frame-executive/with-tracing"]
 std = [
 	"sp-authority-discovery/std",
 	"pallet-assets/std",
+	"frame-system-benchmarking?/std",
+	"frame-benchmarking?/std",
 	"pallet-authority-discovery/std",
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
@@ -243,7 +245,7 @@ runtime-benchmarks = [
 	"pallet-credit-accumulation/runtime-benchmarks",
 	"pallet-operation/runtime-benchmarks",
 	"pallet-user-privileges/runtime-benchmarks",
-	"frame-system-benchmarking",
+	"frame-system-benchmarking/runtime-benchmarks",
 	"hex-literal",
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-evm/runtime-benchmarks",
