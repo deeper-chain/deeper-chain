@@ -34,7 +34,7 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, 2);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let origin = T::ForceOrigin::successful_origin();
-    }: _<T::Origin>(origin, user_lookup, Privilege::LockerMember)
+    }: _<T::RuntimeOrigin>(origin, user_lookup, Privilege::LockerMember)
     verify {
         assert_eq!(UserPriv::<T>::has_privilege(&user, Privilege::LockerMember),true);
     }
@@ -43,7 +43,7 @@ benchmarks! {
         let user: T::AccountId = account("user", 0, 2);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let origin = T::ForceOrigin::successful_origin();
-    }: _<T::Origin>(origin, user_lookup)
+    }: _<T::RuntimeOrigin>(origin, user_lookup)
     verify {
         assert_eq!(UserPriv::<T>::has_privilege(&user, Privilege::LockerMember),false);
     }

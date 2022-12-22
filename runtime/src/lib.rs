@@ -196,7 +196,9 @@ const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
 /// by  Operational  extrinsics.
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 2 seconds of compute with a 5 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND.saturating_mul(2u64);
+const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND
+    .saturating_mul(2u64)
+    .set_proof_size(u64::MAX);
 const WEIGHT_PER_GAS: u64 = 20_000;
 
 parameter_types! {
@@ -1944,6 +1946,8 @@ impl_runtime_apis! {
         fn elasticity() -> Option<Permill> {
             Some(BaseFee::elasticity())
         }
+
+        fn gas_limit_multiplier_support() {}
     }
 
     impl fp_rpc::ConvertTransactionRuntimeApi<Block> for Runtime {
