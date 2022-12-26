@@ -43,7 +43,7 @@ pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-micropayment = { version = '3.0.0', default-features = false, path = "../micropayment" }
 pallet-credit = { version = '3.0.0', default-features = false, path = "../credit" }
 pallet-credit-accumulation = { default-features = false, path = "../credit-accumulation" }
-pallet-evm = { default-features = false, git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
+pallet-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
 
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32", optional = true }

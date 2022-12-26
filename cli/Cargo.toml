@@ -63,11 +63,11 @@ sp-authorship = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
 
 # frontier primitives
-fp-consensus = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fp-dynamic-fee = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fp-evm = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fp-rpc = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fp-storage = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
+fp-consensus = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fp-dynamic-fee = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fp-evm = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fp-rpc = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fp-storage = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
 
 # client dependencies
 sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
@@ -93,12 +93,12 @@ sc-consensus-uncles = { git = "https://github.com/paritytech/substrate", branch 
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
 
 # frontier client dependencies
-fc-cli = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fc-consensus = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fc-rpc = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fc-rpc-core = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fc-db = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
-fc-mapping-sync = { git = "https://github.com/geb789/frontier", branch = "dev/polkadot-v0.9.32" }
+fc-cli = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fc-consensus = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fc-rpc = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fc-rpc-core = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fc-db = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
+fc-mapping-sync = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v0.9.32" }
 
 # frame dependencies
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.32" }
