@@ -8,14 +8,18 @@ on:
 
 jobs:
   style_check:
-    name: cargo fmt and 
-    runs-on: [ubuntu-latest]
+    name: cargo fmt and
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       - name: Setup rust toolchain
-        run: rustup show
+        run: |
+          rustup show
+          rustup component add rustfmt clippy
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v1
 
       - name: Cargo Fmt Check
         run: cargo fmt --all -- --check

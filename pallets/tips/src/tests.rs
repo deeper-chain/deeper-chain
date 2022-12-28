@@ -72,16 +72,16 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
     type BlockNumber = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -99,7 +99,7 @@ parameter_types! {
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
     type Balance = u64;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
@@ -147,7 +147,7 @@ impl pallet_treasury::Config for Test {
     type Currency = pallet_balances::Pallet<Test>;
     type ApproveOrigin = frame_system::EnsureRoot<u128>;
     type RejectOrigin = frame_system::EnsureRoot<u128>;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type OnSlash = ();
     type ProposalBond = ProposalBond;
     type ProposalBondMinimum = ProposalBondMinimum;
@@ -174,7 +174,7 @@ parameter_types! {
 }
 
 impl pallet_uniques::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type CollectionId = u32;
     type ItemId = u32;
     type Currency = Balances;
@@ -202,7 +202,7 @@ parameter_types! {
     pub const MaxBurnCreditPerAddress: u32 = 50;
 }
 impl pallet_credit::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlocksPerEra = BlocksPerEra;
     type Currency = Balances;
     type CreditAttenuationStep = CreditAttenuationStep;
@@ -232,7 +232,7 @@ parameter_types! {
     pub const MaxIpLength: usize = 256;
 }
 impl pallet_deeper_node::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
     type MaxDurationEras = MaxDurationEras;
@@ -256,7 +256,7 @@ impl Config for Test {
     type TipFindersFee = TipFindersFee;
     type TipReportDepositBase = TipReportDepositBase;
     type DataDepositPerByte = DataDepositPerByte;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type WeightInfo = ();
 }
 
@@ -279,7 +279,7 @@ fn last_event() -> TipEvent<Test> {
         .into_iter()
         .map(|r| r.event)
         .filter_map(|e| {
-            if let Event::Tips(inner) = e {
+            if let RuntimeEvent::Tips(inner) = e {
                 Some(inner)
             } else {
                 None
@@ -310,13 +310,13 @@ fn tip_new_cannot_be_used_twice() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
         assert_ok!(Tips::tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             10
         ));
         assert_noop!(
-            Tips::tip_new(Origin::signed(11), b"awesome.dot".to_vec(), 3, 10),
+            Tips::tip_new(RuntimeOrigin::signed(11), b"awesome.dot".to_vec(), 3, 10),
             Error::<Test>::AlreadyKnown
         );
     });
@@ -325,7 +325,7 @@ fn tip_new_cannot_be_used_twice() {
 #[test]
 fn credit_tip_new_and_credit_tip() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(3)));
 
         let credit_data_before = CreditData {
             campaign_id: 0,
@@ -346,40 +346,43 @@ fn credit_tip_new_and_credit_tip() {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
         // Invalid Tippers will not commit tips
         assert_noop!(
-            Tips::credit_tip_new(Origin::signed(9), b"awesome.dot".to_vec(), 3, 10),
+            Tips::credit_tip_new(RuntimeOrigin::signed(9), b"awesome.dot".to_vec(), 3, 10),
             BadOrigin
         );
 
         assert_ok!(Tips::credit_tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             10
         ));
         assert_noop!(
-            Tips::credit_tip_new(Origin::signed(11), b"awesome.dot".to_vec(), 3, 10),
+            Tips::credit_tip_new(RuntimeOrigin::signed(11), b"awesome.dot".to_vec(), 3, 10),
             Error::<Test>::AlreadyKnown
         );
 
         let h = tip_hash();
         let e = tip_hash_error();
-        assert_ok!(Tips::credit_tip(Origin::signed(10), h.clone(), 10));
-        assert_ok!(Tips::credit_tip(Origin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::credit_tip(RuntimeOrigin::signed(10), h.clone(), 10));
+        assert_ok!(Tips::credit_tip(RuntimeOrigin::signed(11), h.clone(), 10));
         // UnknownTip
         assert_noop!(
-            Tips::credit_tip(Origin::signed(12), e.clone(), 10),
+            Tips::credit_tip(RuntimeOrigin::signed(12), e.clone(), 10),
             Error::<Test>::UnknownTip
         );
-        assert_ok!(Tips::credit_tip(Origin::signed(12), h.clone(), 10));
-        assert_noop!(Tips::tip(Origin::signed(9), h.clone(), 10), BadOrigin);
+        assert_ok!(Tips::credit_tip(RuntimeOrigin::signed(12), h.clone(), 10));
+        assert_noop!(
+            Tips::tip(RuntimeOrigin::signed(9), h.clone(), 10),
+            BadOrigin
+        );
         System::set_block_number(2);
         // UnknownTip
         assert_noop!(
-            Tips::close_credit_tip(Origin::signed(100), e.clone()),
+            Tips::close_credit_tip(RuntimeOrigin::signed(100), e.clone()),
             Error::<Test>::UnknownTip
         );
 
-        assert_ok!(Tips::close_credit_tip(Origin::signed(100), h.into()));
+        assert_ok!(Tips::close_credit_tip(RuntimeOrigin::signed(100), h.into()));
 
         let credit_data_after = CreditData {
             campaign_id: 0,
@@ -398,7 +401,7 @@ fn credit_tip_new_and_credit_tip() {
 #[test]
 fn credit_tip_new_and_check_get_level() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::im_online(Origin::signed(3)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(3)));
 
         let credit_data_before = CreditData {
             campaign_id: 0,
@@ -417,26 +420,26 @@ fn credit_tip_new_and_check_get_level() {
         assert_eq!(Credit::user_credit(3), Some(credit_data_before));
 
         assert_ok!(Tips::credit_tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             10
         ));
         let h = tip_hash();
-        assert_ok!(Tips::credit_tip(Origin::signed(10), h.clone(), 10));
-        assert_ok!(Tips::credit_tip(Origin::signed(11), h.clone(), 10));
-        assert_ok!(Tips::credit_tip(Origin::signed(12), h.clone(), 10));
+        assert_ok!(Tips::credit_tip(RuntimeOrigin::signed(10), h.clone(), 10));
+        assert_ok!(Tips::credit_tip(RuntimeOrigin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::credit_tip(RuntimeOrigin::signed(12), h.clone(), 10));
         // Premature
         assert_noop!(
-            Tips::close_credit_tip(Origin::signed(100), h.clone()),
+            Tips::close_credit_tip(RuntimeOrigin::signed(100), h.clone()),
             Error::<Test>::Premature
         );
         System::set_block_number(2);
-        assert_ok!(Tips::close_credit_tip(Origin::signed(100), h.into()));
+        assert_ok!(Tips::close_credit_tip(RuntimeOrigin::signed(100), h.into()));
 
         // UnknownTip
         assert_noop!(
-            Tips::close_credit_tip(Origin::signed(100), h.clone()),
+            Tips::close_credit_tip(RuntimeOrigin::signed(100), h.clone()),
             Error::<Test>::UnknownTip
         );
 
@@ -462,7 +465,7 @@ fn report_awesome_and_tip_works() {
         TipPaymentAddress::<Test>::put(5);
 
         assert_ok!(Tips::report_awesome(
-            Origin::signed(0),
+            RuntimeOrigin::signed(0),
             b"awesome.dot".to_vec(),
             3
         ));
@@ -471,17 +474,20 @@ fn report_awesome_and_tip_works() {
 
         // other reports don't count.
         assert_noop!(
-            Tips::report_awesome(Origin::signed(1), b"awesome.dot".to_vec(), 3),
+            Tips::report_awesome(RuntimeOrigin::signed(1), b"awesome.dot".to_vec(), 3),
             Error::<Test>::AlreadyKnown
         );
 
         let h = tip_hash();
-        assert_ok!(Tips::tip(Origin::signed(10), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 10));
-        assert_noop!(Tips::tip(Origin::signed(9), h.clone(), 10), BadOrigin);
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(10), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 10));
+        assert_noop!(
+            Tips::tip(RuntimeOrigin::signed(9), h.clone(), 10),
+            BadOrigin
+        );
         System::set_block_number(2);
-        assert_ok!(Tips::close_tip(Origin::signed(100), h.into()));
+        assert_ok!(Tips::close_tip(RuntimeOrigin::signed(100), h.into()));
         assert_eq!(Balances::reserved_balance(0), 0);
         assert_eq!(Balances::free_balance(0), 102);
         assert_eq!(Balances::free_balance(3), 8);
@@ -495,18 +501,18 @@ fn report_awesome_from_beneficiary_and_tip_works() {
         assert_ok!(Balances::set_balance(RawOrigin::Root.into(), 5, 100, 0));
         TipPaymentAddress::<Test>::put(5);
         assert_ok!(Tips::report_awesome(
-            Origin::signed(0),
+            RuntimeOrigin::signed(0),
             b"awesome.dot".to_vec(),
             0
         ));
         assert_eq!(Balances::reserved_balance(0), 12);
         assert_eq!(Balances::free_balance(0), 88);
         let h = BlakeTwo256::hash_of(&(BlakeTwo256::hash(b"awesome.dot"), 0u128));
-        assert_ok!(Tips::tip(Origin::signed(10), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(10), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 10));
         System::set_block_number(2);
-        assert_ok!(Tips::close_tip(Origin::signed(100), h.into()));
+        assert_ok!(Tips::close_tip(RuntimeOrigin::signed(100), h.into()));
         assert_eq!(Balances::reserved_balance(0), 0);
         assert_eq!(Balances::free_balance(0), 110);
     });
@@ -521,7 +527,7 @@ fn close_tip_works() {
         assert_eq!(Treasury::pot(), 100);
 
         assert_ok!(Tips::tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             10
@@ -531,31 +537,31 @@ fn close_tip_works() {
 
         assert_eq!(last_event(), TipEvent::NewTip(h));
 
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10));
 
         assert_noop!(
-            Tips::close_tip(Origin::signed(0), h.into()),
+            Tips::close_tip(RuntimeOrigin::signed(0), h.into()),
             Error::<Test>::StillOpen
         );
 
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 10));
 
         assert_eq!(last_event(), TipEvent::TipClosing(h));
 
         assert_noop!(
-            Tips::close_tip(Origin::signed(0), h.into()),
+            Tips::close_tip(RuntimeOrigin::signed(0), h.into()),
             Error::<Test>::Premature
         );
 
         System::set_block_number(2);
-        assert_noop!(Tips::close_tip(Origin::none(), h.into()), BadOrigin);
-        assert_ok!(Tips::close_tip(Origin::signed(0), h.into()));
+        assert_noop!(Tips::close_tip(RuntimeOrigin::none(), h.into()), BadOrigin);
+        assert_ok!(Tips::close_tip(RuntimeOrigin::signed(0), h.into()));
         assert_eq!(Balances::free_balance(3), 10);
 
         assert_eq!(last_event(), TipEvent::TipClosed(h, 3, 10));
 
         assert_noop!(
-            Tips::close_tip(Origin::signed(100), h.into()),
+            Tips::close_tip(RuntimeOrigin::signed(100), h.into()),
             Error::<Test>::UnknownTip
         );
     });
@@ -572,7 +578,7 @@ fn slash_tip_works() {
         assert_eq!(Balances::free_balance(0), 100);
 
         assert_ok!(Tips::report_awesome(
-            Origin::signed(0),
+            RuntimeOrigin::signed(0),
             b"awesome.dot".to_vec(),
             3
         ));
@@ -584,10 +590,13 @@ fn slash_tip_works() {
         assert_eq!(last_event(), TipEvent::NewTip(h));
 
         // can't remove from any origin
-        assert_noop!(Tips::slash_tip(Origin::signed(0), h.clone()), BadOrigin);
+        assert_noop!(
+            Tips::slash_tip(RuntimeOrigin::signed(0), h.clone()),
+            BadOrigin
+        );
 
         // can remove from root.
-        assert_ok!(Tips::slash_tip(Origin::root(), h.clone()));
+        assert_ok!(Tips::slash_tip(RuntimeOrigin::root(), h.clone()));
         assert_eq!(last_event(), TipEvent::TipSlashed(h, 0, 12));
 
         // tipper slashed
@@ -602,44 +611,44 @@ fn retract_tip_works() {
         // with report awesome
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
         assert_ok!(Tips::report_awesome(
-            Origin::signed(0),
+            RuntimeOrigin::signed(0),
             b"awesome.dot".to_vec(),
             3
         ));
         let h = tip_hash();
-        assert_ok!(Tips::tip(Origin::signed(10), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(10), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 10));
         assert_noop!(
-            Tips::retract_tip(Origin::signed(10), h.clone()),
+            Tips::retract_tip(RuntimeOrigin::signed(10), h.clone()),
             Error::<Test>::NotFinder
         );
-        assert_ok!(Tips::retract_tip(Origin::signed(0), h.clone()));
+        assert_ok!(Tips::retract_tip(RuntimeOrigin::signed(0), h.clone()));
         System::set_block_number(2);
         assert_noop!(
-            Tips::close_tip(Origin::signed(0), h.into()),
+            Tips::close_tip(RuntimeOrigin::signed(0), h.into()),
             Error::<Test>::UnknownTip
         );
 
         // with tip new
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
         assert_ok!(Tips::tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             10
         ));
         let h = tip_hash();
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 10));
         assert_noop!(
-            Tips::retract_tip(Origin::signed(0), h.clone()),
+            Tips::retract_tip(RuntimeOrigin::signed(0), h.clone()),
             Error::<Test>::NotFinder
         );
-        assert_ok!(Tips::retract_tip(Origin::signed(10), h.clone()));
+        assert_ok!(Tips::retract_tip(RuntimeOrigin::signed(10), h.clone()));
         System::set_block_number(2);
         assert_noop!(
-            Tips::close_tip(Origin::signed(10), h.into()),
+            Tips::close_tip(RuntimeOrigin::signed(10), h.into()),
             Error::<Test>::UnknownTip
         );
     });
@@ -650,16 +659,16 @@ fn tip_median_calculation_works() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
         assert_ok!(Tips::tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             0
         ));
         let h = tip_hash();
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 1000000));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 1000000));
         System::set_block_number(2);
-        assert_ok!(Tips::close_tip(Origin::signed(0), h.into()));
+        assert_ok!(Tips::close_tip(RuntimeOrigin::signed(0), h.into()));
         assert_eq!(Balances::free_balance(3), 10);
     });
 }
@@ -669,21 +678,21 @@ fn tip_changing_works() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
         assert_ok!(Tips::tip_new(
-            Origin::signed(10),
+            RuntimeOrigin::signed(10),
             b"awesome.dot".to_vec(),
             3,
             10000
         ));
         let h = tip_hash();
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 10000));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 10000));
-        assert_ok!(Tips::tip(Origin::signed(13), h.clone(), 0));
-        assert_ok!(Tips::tip(Origin::signed(14), h.clone(), 0));
-        assert_ok!(Tips::tip(Origin::signed(12), h.clone(), 1000));
-        assert_ok!(Tips::tip(Origin::signed(11), h.clone(), 100));
-        assert_ok!(Tips::tip(Origin::signed(10), h.clone(), 10));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 10000));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 10000));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(13), h.clone(), 0));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(14), h.clone(), 0));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(12), h.clone(), 1000));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(11), h.clone(), 100));
+        assert_ok!(Tips::tip(RuntimeOrigin::signed(10), h.clone(), 10));
         System::set_block_number(2);
-        assert_ok!(Tips::close_tip(Origin::signed(0), h.into()));
+        assert_ok!(Tips::close_tip(RuntimeOrigin::signed(0), h.into()));
         assert_eq!(Balances::free_balance(3), 10);
     });
 }

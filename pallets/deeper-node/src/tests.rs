@@ -25,7 +25,7 @@ fn register_device() {
         DeeperNode::setup_region_map();
         // register device
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
@@ -35,14 +35,18 @@ fn register_device() {
 
         // register device with invalid ip (length > 256)
         assert_eq!(
-            DeeperNode::register_device(Origin::signed(2), vec![1; 257], "US".as_bytes().to_vec()),
+            DeeperNode::register_device(
+                RuntimeOrigin::signed(2),
+                vec![1; 257],
+                "US".as_bytes().to_vec()
+            ),
             Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidIP))
         );
 
         // register device with invalid country code
         assert_eq!(
             DeeperNode::register_device(
-                Origin::signed(3),
+                RuntimeOrigin::signed(3),
                 vec![1, 2, 3, 4],
                 "ZZ".as_bytes().to_vec()
             ),
@@ -51,12 +55,12 @@ fn register_device() {
 
         // register device twice
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(4),
+            RuntimeOrigin::signed(4),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(4),
+            RuntimeOrigin::signed(4),
             vec![1, 3, 4, 5],
             "CA".as_bytes().to_vec()
         ));
@@ -72,15 +76,15 @@ fn unregister_device() {
         DeeperNode::setup_region_map();
         // unregister a registered device
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
-        assert_ok!(DeeperNode::unregister_device(Origin::signed(1)));
+        assert_ok!(DeeperNode::unregister_device(RuntimeOrigin::signed(1)));
 
         // unregister an unregistered device
         assert_eq!(
-            DeeperNode::unregister_device(Origin::signed(2)),
+            DeeperNode::unregister_device(RuntimeOrigin::signed(2)),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::DeviceNotRegister
             ))
@@ -94,18 +98,18 @@ fn register_server() {
         DeeperNode::setup_region_map();
         // register device, then register server
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
-        assert_ok!(DeeperNode::register_server(Origin::signed(1), 1));
+        assert_ok!(DeeperNode::register_server(RuntimeOrigin::signed(1), 1));
         let servers = DeeperNode::servers_by_country("US".as_bytes().to_vec());
         let index = servers.iter().position(|x| *x == 1);
         assert_eq!(index, Some(0));
 
         // register server before register device
         assert_eq!(
-            DeeperNode::register_server(Origin::signed(2), 1),
+            DeeperNode::register_server(RuntimeOrigin::signed(2), 1),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::DeviceNotRegister
             ))
@@ -113,12 +117,12 @@ fn register_server() {
 
         // register server with invalid duration
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(3),
+            RuntimeOrigin::signed(3),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
         assert_eq!(
-            DeeperNode::register_server(Origin::signed(3), 8),
+            DeeperNode::register_server(RuntimeOrigin::signed(3), 8),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::DurationOverflow
             ))
@@ -132,16 +136,16 @@ fn unregister_server() {
         DeeperNode::setup_region_map();
         // register device, then register server
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
-        assert_ok!(DeeperNode::register_server(Origin::signed(1), 1));
-        assert_ok!(DeeperNode::unregister_server(Origin::signed(1)));
+        assert_ok!(DeeperNode::register_server(RuntimeOrigin::signed(1), 1));
+        assert_ok!(DeeperNode::unregister_server(RuntimeOrigin::signed(1)));
 
         // register server before register device
         assert_eq!(
-            DeeperNode::unregister_server(Origin::signed(2)),
+            DeeperNode::unregister_server(RuntimeOrigin::signed(2)),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::DeviceNotRegister
             ))
@@ -155,15 +159,15 @@ fn update_server() {
         DeeperNode::setup_region_map();
         // register device, then update server
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
-        assert_ok!(DeeperNode::update_server(Origin::signed(1), 1));
+        assert_ok!(DeeperNode::update_server(RuntimeOrigin::signed(1), 1));
 
         // update server before register device
         assert_eq!(
-            DeeperNode::update_server(Origin::signed(2), 1),
+            DeeperNode::update_server(RuntimeOrigin::signed(2), 1),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::DeviceNotRegister
             ))
@@ -171,12 +175,12 @@ fn update_server() {
 
         // register device, then register server
         assert_ok!(DeeperNode::register_device(
-            Origin::signed(3),
+            RuntimeOrigin::signed(3),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
         ));
         assert_eq!(
-            DeeperNode::update_server(Origin::signed(3), 10),
+            DeeperNode::update_server(RuntimeOrigin::signed(3), 10),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::DurationOverflow
             ))
@@ -188,17 +192,17 @@ fn update_server() {
 fn im_online() {
     new_test_ext().execute_with(|| {
         assert_eq!(DeeperNode::onboard_time(1), None);
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(0));
         assert_eq!(DeeperNode::onboard_time(1), Some(0));
         assert_eq!(DeeperNode::devices_onboard(), vec![1]);
         run_to_block(1);
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         assert_eq!(DeeperNode::get_im_online(1), Some(1));
         assert_eq!(DeeperNode::onboard_time(1), Some(0));
         assert_eq!(DeeperNode::devices_onboard(), vec![1]);
         run_to_block(2);
-        assert_ok!(DeeperNode::im_online(Origin::signed(2)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(2)));
         assert_eq!(DeeperNode::get_im_online(1), Some(1));
         assert_eq!(DeeperNode::get_im_online(2), Some(2));
         assert_eq!(DeeperNode::onboard_time(2), Some(2));
@@ -210,7 +214,7 @@ fn im_online() {
 fn report_credit_proof() {
     new_test_ext().execute_with(|| {
         assert_ok!(DeeperNode::report_credit_proof(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             0,
             Vec::new(),
             1655007560,
@@ -229,7 +233,7 @@ fn reward_mapping() {
     new_test_ext().execute_with(|| {
         let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
         assert_ok!(DeeperNode::reward_mapping(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             0,
             Vec::new(),
             evm_address
@@ -247,7 +251,7 @@ fn reward_mapping_switch_evm_address() {
         let evm_old_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
         let evm_new_address = H160::from_str("1000000000000000000000000000000000000002").unwrap();
         assert_ok!(DeeperNode::reward_mapping(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             0,
             Vec::new(),
             evm_old_address
@@ -258,7 +262,7 @@ fn reward_mapping_switch_evm_address() {
         );
 
         assert_ok!(DeeperNode::reward_mapping(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             0,
             Vec::new(),
             evm_new_address
@@ -275,7 +279,7 @@ fn reward_mapping_with_already_mapped_evm_address() {
     new_test_ext().execute_with(|| {
         let evm_address = H160::from_str("1000000000000000000000000000000000000001").unwrap();
         assert_ok!(DeeperNode::reward_mapping(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             0,
             Vec::new(),
             evm_address
@@ -286,7 +290,7 @@ fn reward_mapping_with_already_mapped_evm_address() {
         );
 
         assert_err!(
-            DeeperNode::reward_mapping(Origin::signed(2), 0, Vec::new(), evm_address),
+            DeeperNode::reward_mapping(RuntimeOrigin::signed(2), 0, Vec::new(), evm_address),
             Error::<Test>::EthAddressAlreadyMapped
         );
     });
@@ -295,7 +299,7 @@ fn reward_mapping_with_already_mapped_evm_address() {
 #[test]
 fn get_onboard_time() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         run_to_block(1);
         assert_eq!(DeeperNode::get_onboard_time(&1), Some(0));
     });
@@ -305,7 +309,7 @@ fn get_onboard_time() {
 fn im_ever_online() {
     new_test_ext().execute_with(|| {
         assert_eq!(DeeperNode::im_ever_online(&1), false);
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         assert_eq!(DeeperNode::im_ever_online(&1), true);
     });
 }
@@ -313,7 +317,7 @@ fn im_ever_online() {
 #[test]
 fn get_eras_offline() {
     new_test_ext().execute_with(|| {
-        assert_ok!(DeeperNode::im_online(Origin::signed(1)));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
         run_to_block(BLOCKS_PER_ERA - 1);
         assert_eq!(DeeperNode::get_eras_offline(&1), 0);
         run_to_block(BLOCKS_PER_ERA);
@@ -329,23 +333,23 @@ fn get_npow_reward() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
         assert_err!(
-            DeeperNode::get_npow_reward(Origin::signed(2)),
+            DeeperNode::get_npow_reward(RuntimeOrigin::signed(2)),
             Error::<Test>::NpowRewardAddressNotFound
         );
 
         assert_ok!(DeeperNode::reward_mapping(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             0,
             Vec::new(),
             H160::zero(),
         ));
-        assert_ok!(DeeperNode::get_npow_reward(Origin::signed(1)));
+        assert_ok!(DeeperNode::get_npow_reward(RuntimeOrigin::signed(1)));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
                 .expect("should contains events")
                 .event,
-            crate::tests::Event::from(crate::Event::GetNpowReward(1, H160::zero()))
+            crate::tests::RuntimeEvent::from(crate::Event::GetNpowReward(1, H160::zero()))
         );
     });
 }

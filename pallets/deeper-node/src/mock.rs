@@ -55,8 +55,8 @@ impl system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type Origin = Origin;
-    type Call = Call;
+    type RuntimeOrigin = RuntimeOrigin;
+    type RuntimeCall = RuntimeCall;
     type Index = u64;
     type BlockNumber = u64;
     type Hash = H256;
@@ -64,7 +64,7 @@ impl system::Config for Test {
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -86,7 +86,7 @@ impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
     type Balance = Balance;
     type DustRemoval = ();
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type MaxReserves = ();
@@ -106,7 +106,7 @@ parameter_types! {
     pub const MaxIpLength: usize = 256;
 }
 impl pallet_deeper_node::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type Currency = Balances;
     type MinLockAmt = MinLockAmt;
     type MaxDurationEras = MaxDurationEras;

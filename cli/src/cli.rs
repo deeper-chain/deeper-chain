@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,28 +17,27 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use clap::Parser;
-use sc_cli::{SignCmd, VanityCmd, VerifyCmd};
 
 #[allow(missing_docs)]
-#[derive(Debug, Parser)]
-pub struct RunCmd {
+#[derive(Debug, Clone, Parser)]
+pub struct Cmd {
     #[allow(missing_docs)]
     #[clap(flatten)]
     pub base: sc_cli::RunCmd,
 
-    #[clap(long)]
+    #[arg(long)]
     pub enable_dev_signer: bool,
 
     /// Maximum number of logs in a query.
-    #[clap(long, default_value = "10000")]
+    #[arg(long, default_value = "10000")]
     pub max_past_logs: u32,
 
     /// Maximum fee history cache size.
-    #[clap(long, default_value = "2048")]
+    #[arg(long, default_value = "2048")]
     pub fee_history_limit: u64,
 
     /// The dynamic-fee pallet target gas price set by block author
-    #[clap(long, default_value = "1")]
+    #[arg(long, default_value = "1")]
     pub target_gas_price: u64,
 }
 
@@ -46,39 +45,51 @@ pub struct RunCmd {
 #[derive(Debug, clap::Parser)]
 pub struct Cli {
     /// Possible subcommand with parameters.
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub subcommand: Option<Subcommand>,
+
     #[allow(missing_docs)]
     #[clap(flatten)]
-    pub run: RunCmd,
+    pub run: Cmd,
+
+    /// Disable automatic hardware benchmarks.
+    ///
+    /// By default these benchmarks are automatically ran at startup and measure
+    /// the CPU speed, the memory bandwidth and the disk speed.
+    ///
+    /// The results are then printed out in the logs, and also sent as part of
+    /// telemetry, if telemetry is enabled.
+    #[arg(long)]
+    pub no_hardware_benchmarks: bool,
 }
 
 /// Possible subcommands of the main binary.
 #[derive(Debug, clap::Subcommand)]
 pub enum Subcommand {
-    /// Key management cli utilities
-    #[clap(subcommand)]
-    Key(sc_cli::KeySubcommand),
-
     /// The custom inspect subcommmand for decoding blocks and extrinsics.
-    #[clap(
+    #[command(
         name = "inspect",
         about = "Decode given block or extrinsic using current native runtime."
     )]
     Inspect(node_inspect::cli::InspectCmd),
 
-    /// The custom benchmark subcommmand benchmarking runtime pallets.
-    #[clap(subcommand)]
+    /// Sub-commands concerned with benchmarking.
+    /// The pallet benchmarking moved to the `pallet` sub-command.
+    #[command(subcommand)]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
+    /// Key management cli utilities
+    #[command(subcommand)]
+    Key(sc_cli::KeySubcommand),
+
     /// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
-    Verify(VerifyCmd),
+    Verify(sc_cli::VerifyCmd),
 
     /// Generate a seed that provides a vanity address.
-    Vanity(VanityCmd),
+    Vanity(sc_cli::VanityCmd),
 
     /// Sign a message, with a given (secret) key.
-    Sign(SignCmd),
+    Sign(sc_cli::SignCmd),
 
     /// Build a chain specification.
     BuildSpec(sc_cli::BuildSpecCmd),

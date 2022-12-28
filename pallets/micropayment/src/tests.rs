@@ -29,7 +29,7 @@ fn open_channel() {
         let alice = alice();
         let bob = bob();
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice.clone()),
+            RuntimeOrigin::signed(alice.clone()),
             bob.clone(),
             399,
             3600
@@ -48,7 +48,12 @@ fn open_channel() {
 
         // Channel already opened
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(alice.clone()), bob.clone(), 1000, 3600),
+            Micropayment::open_channel(
+                RuntimeOrigin::signed(alice.clone()),
+                bob.clone(),
+                1000,
+                3600
+            ),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::ChannelAlreadyOpened
             ))
@@ -56,7 +61,7 @@ fn open_channel() {
 
         // Channel should connect two different accounts
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(bob.clone()), bob.clone(), 1000, 3600),
+            Micropayment::open_channel(RuntimeOrigin::signed(bob.clone()), bob.clone(), 1000, 3600),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::SameChannelEnds
             ))
@@ -64,13 +69,13 @@ fn open_channel() {
 
         //  duration should > 0
         assert_eq!(
-            Micropayment::open_channel(Origin::signed(charlie()), dave(), 200, 0),
+            Micropayment::open_channel(RuntimeOrigin::signed(charlie()), dave(), 200, 0),
             Ok(().into())
         );
 
         // balance of 2 is 500, but channel balance experted is 1000
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::open_channel(Origin::signed(bob.clone()), charlie(), 1000, 3600)
+            Micropayment::open_channel(RuntimeOrigin::signed(bob.clone()), charlie(), 1000, 3600)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -84,7 +89,7 @@ fn open_channel() {
 
         // balance is 500, after open_channel alice should has at least 100 DPR in her account, so can't lock 400 DPR
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::open_channel(Origin::signed(alice.clone()), charlie(), 400, 3600)
+            Micropayment::open_channel(RuntimeOrigin::signed(alice.clone()), charlie(), 400, 3600)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -103,42 +108,45 @@ fn close_channel() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             bob(),
             300,
             3600
         ));
-        assert_ok!(Micropayment::close_channel(Origin::signed(bob()), alice()));
+        assert_ok!(Micropayment::close_channel(
+            RuntimeOrigin::signed(bob()),
+            alice()
+        ));
 
         // Ok close by sender
         run_to_block(1);
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(charlie()),
+            RuntimeOrigin::signed(charlie()),
             dave(),
             300,
             1
         )); // 1 day = (24 * 3600 * 1000 / 5000)
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(charlie()), dave()),
+            Micropayment::close_channel(RuntimeOrigin::signed(charlie()), dave()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::UnexpiredChannelCannotBeClosedBySender
             ))
         );
         run_to_block(24 * 720 + 2);
         assert_ok!(Micropayment::close_channel(
-            Origin::signed(charlie()),
+            RuntimeOrigin::signed(charlie()),
             dave()
         ));
 
         // Channel not exists
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(bob()), charlie()),
+            Micropayment::close_channel(RuntimeOrigin::signed(bob()), charlie()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::ChannelNotExist
             ))
         );
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(alice()), bob()),
+            Micropayment::close_channel(RuntimeOrigin::signed(alice()), bob()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::ChannelNotExist
             ))
@@ -146,29 +154,32 @@ fn close_channel() {
 
         // when a server is offline longer then 1 era, client can close_channel
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             bob(),
             300,
             3600 * 24
         ));
-        assert_ok!(DeeperNode::im_online(Origin::signed(alice())));
-        assert_ok!(DeeperNode::im_online(Origin::signed(bob())));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(alice())));
+        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(bob())));
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(alice()), bob()),
+            Micropayment::close_channel(RuntimeOrigin::signed(alice()), bob()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::UnexpiredChannelCannotBeClosedBySender
             ))
         ); // can't close channel after channel is created immediately
         run_to_block(24 * 720 + 2 + 1);
         assert_eq!(
-            Micropayment::close_channel(Origin::signed(alice()), bob()),
+            Micropayment::close_channel(RuntimeOrigin::signed(alice()), bob()),
             Err(DispatchErrorWithPostInfo::from(
                 Error::<Test>::UnexpiredChannelCannotBeClosedBySender
             ))
         ); // can't close channel after channel is created only 2 block
         run_to_block(24 * 720 + 2 + crate::mock::BLOCKS_PER_ERA);
         // can close channel when server is offline longer then 1 era
-        assert_ok!(Micropayment::close_channel(Origin::signed(alice()), bob()));
+        assert_ok!(Micropayment::close_channel(
+            RuntimeOrigin::signed(alice()),
+            bob()
+        ));
     });
 }
 
@@ -177,28 +188,28 @@ fn close_expired_channels() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             bob(),
             100,
             1
         )); // 1 day = (24 * 3600 * 1000 / 5000)
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             charlie(),
             100,
             1
         ));
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             dave(),
             100,
             2
         ));
 
         run_to_block(24 * 720 + 1);
-        assert_ok!(Micropayment::close_expired_channels(
-            Origin::signed(alice())
-        ));
+        assert_ok!(Micropayment::close_expired_channels(RuntimeOrigin::signed(
+            alice()
+        )));
     });
 }
 
@@ -207,20 +218,20 @@ fn add_balance() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             bob(),
             300,
             3600
         ));
         assert_ok!(Micropayment::add_balance(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             bob(),
             99 // open_channel cost 300DPR, account must keep 100 DPR, so at most add 99 DPR
         ));
 
         // Channel not exists
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::add_balance(Origin::signed(bob()), charlie(), 100)
+            Micropayment::add_balance(RuntimeOrigin::signed(bob()), charlie(), 100)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -234,13 +245,13 @@ fn add_balance() {
 
         // NotEnoughBalance 500-300 = 200, but add_balance 500
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(charlie()),
+            RuntimeOrigin::signed(charlie()),
             dave(),
             300,
             3600
         ));
         if let Err(dispatch_error_with_post_info) =
-            Micropayment::add_balance(Origin::signed(charlie()), dave(), 500)
+            Micropayment::add_balance(RuntimeOrigin::signed(charlie()), dave(), 500)
         {
             assert_eq!(
                 dispatch_error_with_post_info.error,
@@ -259,7 +270,7 @@ fn claim_payment() {
     new_test_ext().execute_with(|| {
         // OK
         assert_ok!(Micropayment::open_channel(
-            Origin::signed(alice()),
+            RuntimeOrigin::signed(alice()),
             bob(),
             300,
             3600
@@ -271,7 +282,7 @@ fn claim_payment() {
         println!("{:#02x?}", msg);
         let signature: [u8; 64] = hex!("1a2157be0e159a600502c5c6435539672bcbce956355a1ca35201762fd1fb72e0b48e853e812011919e5d25b07e4056b9b98e6b2de612652d450bd14063a6185");
         assert_ok!(Micropayment::claim_payment(
-            Origin::signed(bob()),
+            RuntimeOrigin::signed(bob()),
             alice(), session_id, claim_amount, signature.into()
         ));
 

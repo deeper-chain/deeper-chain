@@ -40,8 +40,8 @@ mod multiplier_tests {
 
     use crate::{
         constants::{currency::*, time::*},
-        AdjustmentVariable, MinimumMultiplier, Runtime, RuntimeBlockWeights as BlockWeights,
-        System, TargetBlockFullness, TransactionPayment,
+        AdjustmentVariable, MaximumMultiplier, MinimumMultiplier, Runtime,
+        RuntimeBlockWeights as BlockWeights, System, TargetBlockFullness, TransactionPayment,
     };
     use frame_support::weights::{DispatchClass, Weight, WeightToFee};
 
@@ -63,11 +63,12 @@ mod multiplier_tests {
     // update based on runtime impl.
     fn runtime_multiplier_update(fm: Multiplier) -> Multiplier {
         TargetedFeeAdjustment::<
-			Runtime,
-			TargetBlockFullness,
-			AdjustmentVariable,
-			MinimumMultiplier,
-		>::convert(fm)
+            Runtime,
+            TargetBlockFullness,
+            AdjustmentVariable,
+            MinimumMultiplier,
+            MaximumMultiplier,
+        >::convert(fm)
     }
 
     // update based on reference impl.
@@ -135,15 +136,18 @@ mod multiplier_tests {
     fn multiplier_can_grow_from_zero() {
         // if the min is too small, then this will not change, and we are doomed forever.
         // the weight is 1/100th bigger than target.
-        run_with_system_weight(target() * 101 / 100, || {
-            let next = runtime_multiplier_update(min_multiplier());
-            assert!(
-                next > min_multiplier(),
-                "{:?} !>= {:?}",
-                next,
-                min_multiplier()
-            );
-        })
+        run_with_system_weight(
+            target().set_ref_time(target().ref_time() * 101 / 100),
+            || {
+                let next = runtime_multiplier_update(min_multiplier());
+                assert!(
+                    next > min_multiplier(),
+                    "{:?} !>= {:?}",
+                    next,
+                    min_multiplier()
+                );
+            },
+        )
     }
 
     #[test]

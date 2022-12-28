@@ -57,16 +57,16 @@ impl frame_system::Config for Test {
     type BlockWeights = ();
     type BlockLength = ();
     type DbWeight = ();
-    type Origin = Origin;
+    type RuntimeOrigin = RuntimeOrigin;
     type Index = u64;
     type BlockNumber = u64;
-    type Call = Call;
+    type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
@@ -80,7 +80,7 @@ impl frame_system::Config for Test {
 }
 
 impl pallet_user_privileges::Config for Test {
-    type Event = Event;
+    type RuntimeEvent = RuntimeEvent;
     type ForceOrigin = EnsureRoot<Self::AccountId>;
     type WeightInfo = ();
 }
@@ -96,12 +96,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 fn op_user_privilege() {
     new_test_ext().execute_with(|| {
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::LockerMember
         ));
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::ReleaseSetter
         ));
@@ -114,7 +114,7 @@ fn op_user_privilege() {
             true
         );
         assert_ok!(UserPrivileges::unset_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::ReleaseSetter
         ));
@@ -122,25 +122,28 @@ fn op_user_privilege() {
             UserPrivileges::has_privilege(&1, Privilege::ReleaseSetter),
             false
         );
-        assert_ok!(UserPrivileges::clear_user_privilege(Origin::root(), 1));
+        assert_ok!(UserPrivileges::clear_user_privilege(
+            RuntimeOrigin::root(),
+            1
+        ));
         assert_eq!(
             UserPrivileges::has_privilege(&1, Privilege::LockerMember),
             false
         );
 
         assert_ok!(UserPrivileges::set_user_privilege(
-            Origin::root(),
+            RuntimeOrigin::root(),
             1,
             Privilege::EvmAddressSetter
         ));
 
         assert_ok!(UserPrivileges::set_evm_privilege(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             H160::from_low_u64_be(88),
             Privilege::EvmCreditOperation
         ));
         assert_ok!(UserPrivileges::set_evm_privilege(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             H160::from_low_u64_be(88),
             Privilege::ReleaseSetter
         ));
@@ -157,7 +160,7 @@ fn op_user_privilege() {
         );
 
         assert_ok!(UserPrivileges::unset_evm_privilege(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             H160::from_low_u64_be(88),
             Privilege::EvmCreditOperation
         ));
@@ -169,7 +172,7 @@ fn op_user_privilege() {
             false
         );
         assert_ok!(UserPrivileges::clear_evm_privilege(
-            Origin::signed(1),
+            RuntimeOrigin::signed(1),
             H160::from_low_u64_be(88)
         ));
         assert_eq!(

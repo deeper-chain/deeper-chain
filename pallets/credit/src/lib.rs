@@ -77,7 +77,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_uniques::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Number of blocks per era.
         type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Currency
@@ -140,7 +140,7 @@ pub mod pallet {
     pub type UserStakingCredit<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u64, OptionQuery>;
 
-    /// user credit history is empty until user's device gets onboard   
+    /// user credit history is empty until user's device gets onboard
     #[pallet::storage]
     #[pallet::getter(fn user_credit_history)]
     pub type UserCreditHistory<T: Config> =
@@ -180,7 +180,7 @@ pub mod pallet {
         ValueQuery,
     >;
 
-    /// record the latest era when user updates the credit with micro-payment    
+    /// record the latest era when user updates the credit with micro-payment
     #[pallet::storage]
     #[pallet::getter(fn last_credit_update)]
     pub type LastCreditUpdate<T: Config> =

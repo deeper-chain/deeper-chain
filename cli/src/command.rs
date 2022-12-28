@@ -98,7 +98,7 @@ pub fn run() -> Result<()> {
 
                 runner.sync_run(|config| {
                     let PartialComponents {
-                        client, backend, ..
+                        client, ..
                     } = service::new_partial(&config, &cli)?;
 
                     // This switch needs to be in the client, since the client decides
@@ -108,7 +108,7 @@ pub fn run() -> Result<()> {
                             if !cfg!(feature = "runtime-benchmarks") {
                                 return Err(
                                     "Runtime benchmarking wasn't enabled when building the node. \
-								You can enable it with `--features runtime-benchmarks`."
+                                    You can enable it with `--features runtime-benchmarks`."
                                         .into(),
                                 );
                             }
@@ -116,12 +116,20 @@ pub fn run() -> Result<()> {
                             cmd.run::<Block, service::ExecutorDispatch>(config)
                         }
                         BenchmarkCmd::Block(cmd) => cmd.run(client),
+                        #[cfg(not(feature = "runtime-benchmarks"))]
+                        BenchmarkCmd::Storage(_) => Err(
+                            "Storage benchmarking can be enabled with `--features runtime-benchmarks`."
+                                .into(),
+                        ),
+                        #[cfg(feature = "runtime-benchmarks")]
                         BenchmarkCmd::Storage(cmd) => {
-                            let db = backend.expose_db();
-                            let storage = backend.expose_storage();
+                            // ensure that we keep the task manager alive
+                            let partial = new_partial(&config,&cli)?;
+                            let db = partial.backend.expose_db();
+                            let storage = partial.backend.expose_storage();
 
-                            cmd.run(config, client, db, storage)
-                        }
+                            cmd.run(config, partial.client, db, storage)
+                        },
                         BenchmarkCmd::Overhead(cmd) => {
                             let partial = new_partial(&config, &cli)?;
                             let ext_builder = RemarkBuilder::new(partial.client.clone());
