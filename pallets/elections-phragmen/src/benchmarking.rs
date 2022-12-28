@@ -35,10 +35,10 @@ fn endowed_account<T: Config>(name: &'static str, index: u32) -> T::AccountId {
     // Fund each account with at-least his stake but still a sane amount as to not mess up
     // the vote calculation.
     let amount = default_stake::<T>(T::MaxVoters::get()) * BalanceOf::<T>::from(BALANCE_FACTOR);
-    let _ = T::Currency::make_free_balance_be(&account, amount);
-    // important to increase the total issuance since T::CurrencyToVote will need it to be sane for
+    let _ = CurrencyOf::<T>::make_free_balance_be(&account, amount);
+    // important to increase the total issuance since CurrencyOf::<T>ToVote will need it to be sane for
     // phragmen to work.
-    T::Currency::issue(amount);
+    CurrencyOf::<T>::issue(amount);
 
     account
 }
@@ -50,7 +50,7 @@ fn as_lookup<T: Config>(account: T::AccountId) -> AccountIdLookupOf<T> {
 
 /// Get a reasonable amount of stake based on the execution trait's configuration
 fn default_stake<T: Config>(num_votes: u32) -> BalanceOf<T> {
-    let min = T::Currency::minimum_balance();
+    let min = CurrencyOf::<T>::minimum_balance();
     Elections::<T>::deposit_of(num_votes as usize).max(min)
 }
 
@@ -374,7 +374,7 @@ benchmarks! {
         // total number of voters.
         let v in (T::MaxVoters::get() / 2) .. T::MaxVoters::get();
         // those that are defunct and need removal.
-        let d in 1 .. (T::MaxVoters::get() / 2);
+        let d in 0 .. (T::MaxVoters::get() / 2);
 
         // remove any previous stuff.
         clean::<T>();

@@ -98,7 +98,7 @@ pub fn run() -> Result<()> {
 
                 runner.sync_run(|config| {
                     let PartialComponents {
-                        client, backend, ..
+                        client, ..
                     } = service::new_partial(&config, &cli)?;
 
                     // This switch needs to be in the client, since the client decides

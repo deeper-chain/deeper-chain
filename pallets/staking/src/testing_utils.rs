@@ -36,9 +36,9 @@ const MAX_VALIDATORS: u32 = 1000;
 
 /// This function removes all validators and delegators from storage.
 pub fn clear_validators_and_delegators<T: Config>() {
-    Validators::<T>::remove_all(None);
-    CandidateValidators::<T>::remove_all(None);
-    Delegators::<T>::remove_all(None);
+    let _ = Validators::<T>::clear(u32::max_value(), None);
+    let _ = CandidateValidators::<T>::clear(u32::max_value(), None);
+    let _ = Delegators::<T>::clear(u32::max_value(), None);
 }
 
 /// Grab a funded user.

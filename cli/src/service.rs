@@ -48,7 +48,7 @@ use sp_core::crypto::Pair;
 use sp_core::U256;
 use std::{collections::BTreeMap, sync::Mutex, time::Duration};
 
-// Our native executor instance.
+/// Our native executor instance.
 pub struct ExecutorDispatch;
 
 impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
