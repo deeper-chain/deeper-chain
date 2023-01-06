@@ -619,8 +619,8 @@ parameter_types! {
     pub const MinimumDeposit: Balance = 1000 * DPR;
     pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
     pub const CooloffPeriod: BlockNumber = 5 * DAYS;
-    // One cent: $10,000 / MB
-    pub const PreimageByteDeposit: Balance = 1 * CENTS;
+    // One cent: $10 / MB
+    pub const PreimageByteDeposit: Balance = 1 * MILLICENTS;
     pub const MaxVotes: u32 = 100;
     pub const MaxProposals: u32 = 100;
 }
