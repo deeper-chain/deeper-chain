@@ -2290,6 +2290,8 @@ pub mod pallet {
         AccountInBlackList,
         /// existential deposit is lower than the minimum balance
         InvalidExistentialDeposit,
+        /// not has credit leger
+        NotHasCreditLeger,
     }
 }
 
@@ -3102,19 +3104,15 @@ impl<T: Config> pallet::Pallet<T> {
         );
 
         let credit_score = T::CreditInterface::get_credit_score(&who);
+        ensure!(credit_score.is_some(), Error::<T>::NotHasCreditLeger);
+
         let (need_balance, score_gap) = {
-            if let Some(credit_score) = credit_score {
-                let cur_level = CreditLevel::get_credit_level(credit_score).into();
-                ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
-                let need_balance = credit_balances[dst_level as usize]
-                    .saturating_sub(credit_balances[cur_level as usize]);
-                let score_gap = CreditLevel::credit_level_gap(dst_level.into(), cur_level.into());
-                (need_balance, score_gap)
-            } else {
-                let need_balance = credit_balances[dst_level as usize];
-                let score_gap = CreditLevel::credit_level_gap(dst_level.into(), 0u8.into());
-                (need_balance, score_gap)
-            }
+            let cur_level = CreditLevel::get_credit_level(credit_score.unwrap()).into();
+            ensure!(dst_level > cur_level, Error::<T>::TargetLevelLow);
+            let need_balance = credit_balances[dst_level as usize]
+                .saturating_sub(credit_balances[cur_level as usize]);
+            let score_gap = CreditLevel::credit_level_gap(dst_level.into(), cur_level.into());
+            (need_balance, score_gap)
         };
 
         T::Currency::transfer(
