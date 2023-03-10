@@ -1061,7 +1061,8 @@ pub mod pallet {
             {
                 Err(Error::<T>::SignatureVerifyFailed)?
             }
-            Self::do_staking_delegate(who, dst_level)
+            // Self::do_staking_delegate(who, dst_level)
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::usdt_staking_delegate())]
