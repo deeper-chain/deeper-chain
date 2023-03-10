@@ -1298,7 +1298,7 @@ pub mod pallet {
                 ));
             } else {
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                UserCredit::<T>::mutate_exists(account_id, |v| {
+                UserCredit::<T>::mutate(account_id, |v| {
                     if let Some(credit_data) = v {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty);
                         credit_data.current_credit_level =
@@ -1312,13 +1312,13 @@ pub mod pallet {
                             (*account_id).clone(),
                             (*credit_data).clone().credit,
                         ));
-
-                        weight = weight.saturating_add(Self::update_credit_history(
-                            account_id,
-                            Self::get_current_era(),
-                        ));
                     }
                 });
+
+                weight = weight.saturating_add(Self::update_credit_history(
+                    account_id,
+                    Self::get_current_era(),
+                ));
             }
 
             weight
