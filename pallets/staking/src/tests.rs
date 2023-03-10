@@ -3113,7 +3113,7 @@ fn staking_delegate() {
             ));
 
             assert_eq!(Balances::free_balance(&51), 2000);
-            assert_ok!(Staking::do_staking_delegate(51, 1));
+            assert_ok!(Staking::_do_staking_delegate(51, 1));
             let credit_balances = Credit::get_credit_balance(&51, Some(4));
             let pay = credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay);
@@ -3128,7 +3128,7 @@ fn staking_delegate() {
             );
             assert_eq!(Credit::user_credit(&51).unwrap().reward_eras, 10 * 365);
 
-            assert_ok!(Staking::do_staking_delegate(51, 3));
+            assert_ok!(Staking::_do_staking_delegate(51, 3));
             let sec_pay = credit_balances[3] - credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay - sec_pay);
             assert_eq!(Credit::user_credit(&51).unwrap().credit, 300);
@@ -3139,6 +3139,46 @@ fn staking_delegate() {
 
             assert_eq!(Staking::delegators(&51).delegator, 51);
             assert_eq!(Staking::delegators(&51).delegating, true);
+        });
+}
+
+#[test]
+fn force_unstaking_delegate() {
+    ExtBuilder::default()
+        .validator_pool(true)
+        .build_and_execute(|| {
+            assert_ok!(UserPrivileges::set_user_privilege(
+                RuntimeOrigin::root(),
+                51,
+                Privilege::CreditAdmin
+            ));
+
+            let new_credit_data = CreditData {
+                campaign_id: 4,
+                credit: 210,
+                initial_credit_level: CreditLevel::Zero,
+                rank_in_initial_credit_level: 0u32,
+                number_of_referees: 0,
+                current_credit_level: CreditLevel::Two,
+                reward_eras: 3650,
+            };
+            assert_ok!(Credit::add_or_update_credit_data(
+                RuntimeOrigin::root(),
+                1,
+                new_credit_data
+            ));
+            Credit::init_delegator_history(&1, 250);
+
+            assert!(!Credit::user_credit(&1).is_none());
+            assert!(!Credit::user_credit_history(&1).is_empty());
+
+            assert_ok!(Staking::force_unstaking_delegate(
+                RuntimeOrigin::signed(51),
+                1
+            ));
+
+            assert!(Credit::user_credit(&1).is_none());
+            assert!(Credit::user_credit_history(&1).is_empty());
         });
 }
 
