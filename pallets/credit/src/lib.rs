@@ -1288,10 +1288,18 @@ pub mod pallet {
 
         fn slash_credit(account_id: &T::AccountId, score: Option<u64>) -> Weight {
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            if UserCredit::<T>::contains_key(account_id) {
-                let penalty = score.unwrap_or(T::CreditAttenuationStep::get());
-                UserCredit::<T>::mutate(account_id, |v| match v {
-                    Some(credit_data) => {
+            let penalty = score.unwrap_or(T::CreditAttenuationStep::get());
+            if penalty == u64::MAX {
+                let credit_data = UserCredit::<T>::take(account_id);
+                UserCreditHistory::<T>::remove(account_id);
+                Self::deposit_event(Event::CreditScoreSlashed(
+                    (*account_id).clone(),
+                    credit_data.unwrap_or_default().credit,
+                ));
+            } else {
+                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
+                UserCredit::<T>::mutate_exists(account_id, |v| {
+                    if let Some(credit_data) = v {
                         credit_data.credit = credit_data.credit.saturating_sub(penalty);
                         credit_data.current_credit_level =
                             CreditLevel::get_credit_level(credit_data.credit);
@@ -1304,15 +1312,15 @@ pub mod pallet {
                             (*account_id).clone(),
                             (*credit_data).clone().credit,
                         ));
+
+                        weight = weight.saturating_add(Self::update_credit_history(
+                            account_id,
+                            Self::get_current_era(),
+                        ));
                     }
-                    _ => (),
                 });
-                weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
-                weight = weight.saturating_add(Self::update_credit_history(
-                    account_id,
-                    Self::get_current_era(),
-                ));
             }
+
             weight
         }
 

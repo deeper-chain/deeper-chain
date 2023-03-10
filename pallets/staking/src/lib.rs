@@ -1053,7 +1053,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             nonce: u64,
             signature: Vec<u8>,
-            dst_level: u8,
+            _dst_level: u8,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -2109,6 +2109,22 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::ValidatorBurned(controller, amount));
             Ok(().into())
         }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
+        pub fn force_unstaking_delegate(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            T::CreditInterface::slash_credit(&account_id, Some(u64::MAX));
+            Self::_undelegate(&account_id);
+
+            Ok(())
+        }
     }
 
     #[pallet::hooks]
@@ -3093,7 +3109,7 @@ impl<T: Config> pallet::Pallet<T> {
         frame_support::storage::unhashed::get::<DelegatorData<T::AccountId>>(next_key)
     }
 
-    fn do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
+    fn _do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
         let campaign_id = T::CreditInterface::get_default_dpr_campaign_id();
         let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
