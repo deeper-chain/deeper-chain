@@ -572,6 +572,7 @@ parameter_types! {
     pub const MaxDelegates: usize = 1;
 
     pub const StakingPalletId: PalletId = PalletId(*b"stak_ing");
+    pub const RewardBlocksPerEra: BlockNumber = BLOCKS_PER_ERA - 80;
 
 }
 
@@ -584,7 +585,7 @@ impl Convert<u128, Balance> for NumberCurrencyConverter {
 
 impl pallet_staking::Config for Runtime {
     type PalletId = StakingPalletId;
-    type BlocksPerEra = BlocksPerEra;
+    type BlocksPerEra = RewardBlocksPerEra;
     type Currency = Balances;
     type CreditInterface = Credit;
     type UserPrivilegeInterface = UserPrivileges;
