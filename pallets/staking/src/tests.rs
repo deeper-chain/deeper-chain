@@ -3432,3 +3432,50 @@ fn slash_staker() {
         assert_eq!(Balances::free_balance(&11), 60000000000000000001);
     });
 }
+
+#[test]
+fn compensate_reward() {
+    ExtBuilder::default()
+        .validator_pool(true)
+        .session_per_era(4)
+        .num_delegators(2)
+        .build_and_execute(|| {
+            let new_credit_data = CreditData {
+                campaign_id: 0,
+                credit: 220,
+                initial_credit_level: CreditLevel::Two,
+                rank_in_initial_credit_level: 0u32,
+                number_of_referees: 0,
+                current_credit_level: CreditLevel::Two,
+                reward_eras: 3650,
+            };
+
+            assert_ok!(Credit::add_or_update_credit_data(
+                RuntimeOrigin::root(),
+                1001,
+                new_credit_data
+            ));
+            Credit::init_delegator_history(&1001, 0);
+            assert_eq!(Balances::free_balance(&1001), 0);
+            DelayRewardEra::<Test>::put(0);
+
+            run_to_block_change_timestamp(BLOCKS_PER_ERA + 1);
+            assert_eq!(Balances::free_balance(&1001), 60263002216294070076);
+            // here session'era > reward'era = 1,double reward
+            run_to_block_change_timestamp(BLOCKS_PER_ERA * 2 + 1);
+            assert_eq!(Balances::free_balance(&1001), 180789006648882210228);
+
+            run_to_block_change_timestamp(BLOCKS_PER_ERA * 3 + 1);
+            assert_eq!(Balances::free_balance(&1001), 241052008865176280304);
+
+            // here session'era > reward'era = 2,double reward
+            run_to_block_change_timestamp(BLOCKS_PER_ERA * 4 + 1);
+            assert_eq!(Balances::free_balance(&1001), 361578013297764420456);
+            run_to_block_change_timestamp(BLOCKS_PER_ERA * 5 + 1);
+            assert_eq!(Balances::free_balance(&1001), 421841015514058490532);
+
+            // here session'era > reward'era = 3,double reward
+            run_to_block_change_timestamp(BLOCKS_PER_ERA * 6 + 1);
+            assert_eq!(Balances::free_balance(&1001), 542367019946646630684);
+        });
+}

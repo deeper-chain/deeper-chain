@@ -854,6 +854,20 @@ pub(crate) fn run_to_block(n: BlockNumber) {
     }
 }
 
+pub(crate) fn run_to_block_change_timestamp(n: BlockNumber) {
+    Credit::on_finalize(System::block_number());
+    Staking::on_finalize(System::block_number());
+    for b in (System::block_number() + 1)..=n {
+        System::set_block_number(b);
+        Session::on_initialize(b);
+        Staking::on_initialize(b);
+        Timestamp::set_timestamp(System::block_number() * BLOCK_TIME / 2 + INIT_TIMESTAMP);
+        if b != n {
+            Staking::on_finalize(System::block_number());
+        }
+    }
+}
+
 /// Progresses from the current block number (whatever that may be) to the `P * session_index + 1`.
 pub(crate) fn start_session(session_index: SessionIndex) {
     let end: u64 = if Offset::get().is_zero() {

@@ -971,6 +971,17 @@ pub mod pallet {
     pub type ExistentialDeposit<T: Config> =
         StorageValue<_, BalanceOf<T>, ValueQuery, ExistentialDepositDefault<T>>;
 
+    #[pallet::storage]
+    pub type DelayRewardEra<T: Config> = StorageValue<_, u32, ValueQuery, DelayRewardEraDefault<T>>;
+
+    #[pallet::type_value]
+    pub fn DelayRewardEraDefault<T: Config>() -> u32 {
+        2
+    }
+
+    #[pallet::storage]
+    pub type CompensateFlag<T: Config> = StorageValue<_, bool, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub history_depth: u32,
@@ -2131,16 +2142,26 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_initialize(now: T::BlockNumber) -> Weight {
             // payout delegators only after the first era
+            let cur_era = CurrentEra::<T>::get().unwrap_or(0);
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
-            if CurrentEra::<T>::get().unwrap_or(0) > 0 {
-                let remainder = now % T::BlocksPerEra::get();
+            if cur_era > 0 {
+                let blocks_per_era = T::BlocksPerEra::get();
+                let remainder = now % blocks_per_era;
                 if remainder == T::BlockNumber::default() {
+                    let reward_era: u32 =
+                        TryInto::<u32>::try_into(now / blocks_per_era).ok().unwrap();
+
+                    let delay_era = DelayRewardEra::<T>::get();
+                    if cur_era.saturating_sub(reward_era) > delay_era {
+                        CompensateFlag::<T>::put(true);
+                        DelayRewardEra::<T>::put(delay_era + 1);
+                    } else {
+                        CompensateFlag::<T>::put(false);
+                    }
                     // first block of the era
-                    let blocks_per_era = TryInto::<u32>::try_into(T::BlocksPerEra::get())
-                        .ok()
-                        .unwrap();
+                    let blocks_per_era = TryInto::<u32>::try_into(blocks_per_era).ok().unwrap();
                     // figure out how many payouts to make per block, excluding the first and last block of each era
-                    let paying_blocks_num = blocks_per_era - 2;
+                    let paying_blocks_num = blocks_per_era.saturating_sub(2);
                     // here +1 for handling edge cases such as when paying_blocks_num is equal to delegator_count,
                     // then delegator_payouts_per_block is equal to 1. But within the scope of this era,
                     // the number of delegator_count has increased,
@@ -2724,7 +2745,11 @@ impl<T: Config> pallet::Pallet<T> {
         let (rewards, get_reward_weight) =
             T::CreditInterface::get_reward(delegator, earliest_unrewarded_era, current_era - 1);
         weight = weight.saturating_add(get_reward_weight);
-        if let Some(poc_reward) = rewards {
+        if let Some(mut poc_reward) = rewards {
+            // need compensating for reward cacultate delay
+            if CompensateFlag::<T>::get() {
+                poc_reward *= 2u32.into();
+            }
             // update RewardData
             if Reward::<T>::contains_key(delegator) {
                 // 1 read
