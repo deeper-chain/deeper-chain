@@ -103,6 +103,28 @@ pub mod constants;
 use constants::{currency::*, time::*};
 use sp_runtime::generic::Era;
 
+// from polkadot for test fast waiting period
+#[macro_export]
+macro_rules! prod_or_fast {
+    ($prod:expr, $test:expr) => {
+        if cfg!(feature = "fast-runtime") {
+            $test
+        } else {
+            $prod
+        }
+    };
+    ($prod:expr, $test:expr, $env:expr) => {
+        if cfg!(feature = "fast-runtime") {
+            core::option_env!($env)
+                .map(|s| s.parse().ok())
+                .flatten()
+                .unwrap_or($test)
+        } else {
+            $prod
+        }
+    };
+}
+
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
@@ -615,13 +637,13 @@ impl pallet_staking::Config for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 5 * DAYS;
-    pub const VotingPeriod: BlockNumber = 5 * DAYS;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+    pub const LaunchPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
+    pub const VotingPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
+    pub const FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS,1*MINUTES);
     pub const InstantAllowed: bool = true;
     pub const MinimumDeposit: Balance = 1000 * DPR;
-    pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
-    pub const CooloffPeriod: BlockNumber = 5 * DAYS;
+    pub const EnactmentPeriod: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
+    pub const CooloffPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
     // One cent: $10 / MB
     pub const PreimageByteDeposit: Balance = 1 * MILLICENTS;
     pub const MaxVotes: u32 = 100;
@@ -692,7 +714,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 2 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 13;
 }
@@ -715,7 +737,7 @@ parameter_types! {
     pub const VotingBondBase: Balance = deposit(1, 64);
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
-    pub const TermDuration: BlockNumber = 7 * DAYS;
+    pub const TermDuration: BlockNumber = prod_or_fast!(7 * DAYS,2*MINUTES);
     pub const DesiredMembers: u32 = 13;
     pub const DesiredRunnersUp: u32 = 7;
     pub const MaxVoters: u32 = 1000;
@@ -749,7 +771,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 7 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = prod_or_fast!(7 * DAYS,2*MINUTES);
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -786,9 +808,9 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
     pub const ProposalBondMinimum: Balance = 1 * DPR;
-    pub const SpendPeriod: BlockNumber = 14 * DAYS;
+    pub const SpendPeriod: BlockNumber = prod_or_fast!(14 * DAYS,3*MINUTES);
     pub const Burn: Permill = Permill::from_percent(1);
-    pub const TipCountdown: BlockNumber = 2 * DAYS;
+    pub const TipCountdown: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = 1 * DPR;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
@@ -796,9 +818,9 @@ parameter_types! {
     pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
     pub const CuratorDepositMin: Balance = 1 * DOLLARS;
     pub const CuratorDepositMax: Balance = 100 * DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 1 * DAYS;
+    pub const BountyDepositPayoutDelay: BlockNumber = prod_or_fast!(1 * DAYS,1*MINUTES);
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-    pub const BountyUpdatePeriod: BlockNumber = 14 * DAYS;
+    pub const BountyUpdatePeriod: BlockNumber = prod_or_fast!(14 * DAYS,3*MINUTES);
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 5 * DPR;
@@ -872,7 +894,7 @@ impl pallet_tips::Config for Runtime {
 parameter_types! {
     pub const DepositPerItem: Balance = deposit(1, 0);
     pub const DepositPerByte: Balance = deposit(0, 1);
-    pub RentFraction: Perbill = Perbill::from_rational(1u32, 30 * DAYS);
+    //pub RentFraction: Perbill = Perbill::from_rational(1u32, 30 * DAYS);
     // The lazy deletion runs inside on_initialize.
     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
         RuntimeBlockWeights::get().max_block;
@@ -1078,7 +1100,7 @@ parameter_types! {
     pub const RotationPeriod: BlockNumber = 80 * HOURS;
     pub const PeriodSpend: Balance = 500 * DPR;
     pub const MaxLockDuration: BlockNumber = 36 * 30 * DAYS;
-    pub const ChallengePeriod: BlockNumber = 7 * DAYS;
+    pub const ChallengePeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES);
     pub const MaxCandidateIntake: u32 = 10;
     pub const SocietyPalletId: PalletId = PalletId(*b"py/socie");
 }
