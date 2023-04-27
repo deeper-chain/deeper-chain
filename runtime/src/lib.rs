@@ -52,8 +52,9 @@ pub use pallet_transaction_payment::{CurrencyAdapter, Multiplier, TargetedFeeAdj
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 use sp_api::impl_runtime_apis;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160, H256, U256};
+use sp_core::{crypto::KeyTypeId, ConstBool, OpaqueMetadata, H160, H256, U256};
 use sp_inherents::{CheckInherentsResult, InherentData};
+use sp_mmr_primitives as mmr;
 use sp_runtime::traits::{
     self, BlakeTwo256, Block as BlockT, Bounded, Convert, ConvertInto, DispatchInfoOf,
     Dispatchable, NumberFor, OpaqueKeys, PostDispatchInfoOf, SaturatedConversion, StaticLookup,
@@ -101,6 +102,28 @@ use impls::Author;
 pub mod constants;
 use constants::{currency::*, time::*};
 use sp_runtime::generic::Era;
+
+// from polkadot for test fast waiting period
+#[macro_export]
+macro_rules! prod_or_fast {
+    ($prod:expr, $test:expr) => {
+        if cfg!(feature = "fast-runtime") {
+            $test
+        } else {
+            $prod
+        }
+    };
+    ($prod:expr, $test:expr, $env:expr) => {
+        if cfg!(feature = "fast-runtime") {
+            core::option_env!($env)
+                .map(|s| s.parse().ok())
+                .flatten()
+                .unwrap_or($test)
+        } else {
+            $prod
+        }
+    };
+}
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -202,6 +225,7 @@ const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND
     .saturating_mul(2u64)
     .set_proof_size(u64::MAX);
 const WEIGHT_PER_GAS: u64 = 20_000;
+const CONTRACTS_DEBUG_OUTPUT: bool = true;
 
 parameter_types! {
     pub const BlockHashCount: BlockNumber = 2400;
@@ -613,13 +637,13 @@ impl pallet_staking::Config for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = 5 * DAYS;
-    pub const VotingPeriod: BlockNumber = 5 * DAYS;
-    pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+    pub const LaunchPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
+    pub const VotingPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
+    pub const FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS,1*MINUTES);
     pub const InstantAllowed: bool = true;
     pub const MinimumDeposit: Balance = 1000 * DPR;
-    pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
-    pub const CooloffPeriod: BlockNumber = 5 * DAYS;
+    pub const EnactmentPeriod: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
+    pub const CooloffPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
     // One cent: $10 / MB
     pub const PreimageByteDeposit: Balance = 1 * MILLICENTS;
     pub const MaxVotes: u32 = 100;
@@ -690,7 +714,7 @@ impl pallet_democracy::Config for Runtime {
 }
 
 parameter_types! {
-    pub const CouncilMotionDuration: BlockNumber = 2 * DAYS;
+    pub const CouncilMotionDuration: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
     pub const CouncilMaxProposals: u32 = 100;
     pub const CouncilMaxMembers: u32 = 13;
 }
@@ -713,7 +737,7 @@ parameter_types! {
     pub const VotingBondBase: Balance = deposit(1, 64);
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
-    pub const TermDuration: BlockNumber = 7 * DAYS;
+    pub const TermDuration: BlockNumber = prod_or_fast!(7 * DAYS,2*MINUTES);
     pub const DesiredMembers: u32 = 13;
     pub const DesiredRunnersUp: u32 = 7;
     pub const MaxVoters: u32 = 1000;
@@ -747,7 +771,7 @@ impl pallet_elections_phragmen::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TechnicalMotionDuration: BlockNumber = 7 * DAYS;
+    pub const TechnicalMotionDuration: BlockNumber = prod_or_fast!(7 * DAYS,2*MINUTES);
     pub const TechnicalMaxProposals: u32 = 100;
     pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -784,9 +808,9 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 parameter_types! {
     pub const ProposalBond: Permill = Permill::from_percent(5);
     pub const ProposalBondMinimum: Balance = 1 * DPR;
-    pub const SpendPeriod: BlockNumber = 14 * DAYS;
+    pub const SpendPeriod: BlockNumber = prod_or_fast!(14 * DAYS,3*MINUTES);
     pub const Burn: Permill = Permill::from_percent(1);
-    pub const TipCountdown: BlockNumber = 2 * DAYS;
+    pub const TipCountdown: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
     pub const TipFindersFee: Percent = Percent::from_percent(20);
     pub const TipReportDepositBase: Balance = 1 * DPR;
     pub const DataDepositPerByte: Balance = 1 * CENTS;
@@ -794,9 +818,9 @@ parameter_types! {
     pub const CuratorDepositMultiplier: Permill = Permill::from_percent(50);
     pub const CuratorDepositMin: Balance = 1 * DOLLARS;
     pub const CuratorDepositMax: Balance = 100 * DOLLARS;
-    pub const BountyDepositPayoutDelay: BlockNumber = 1 * DAYS;
+    pub const BountyDepositPayoutDelay: BlockNumber = prod_or_fast!(1 * DAYS,1*MINUTES);
     pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
-    pub const BountyUpdatePeriod: BlockNumber = 14 * DAYS;
+    pub const BountyUpdatePeriod: BlockNumber = prod_or_fast!(14 * DAYS,3*MINUTES);
     pub const MaximumReasonLength: u32 = 16384;
     pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
     pub const BountyValueMinimum: Balance = 5 * DPR;
@@ -870,7 +894,7 @@ impl pallet_tips::Config for Runtime {
 parameter_types! {
     pub const DepositPerItem: Balance = deposit(1, 0);
     pub const DepositPerByte: Balance = deposit(0, 1);
-    pub RentFraction: Perbill = Perbill::from_rational(1u32, 30 * DAYS);
+    //pub RentFraction: Perbill = Perbill::from_rational(1u32, 30 * DAYS);
     // The lazy deletion runs inside on_initialize.
     pub DeletionWeightLimit: Weight = AVERAGE_ON_INITIALIZE_RATIO *
         RuntimeBlockWeights::get().max_block;
@@ -899,6 +923,7 @@ impl pallet_contracts::Config for Runtime {
     type AddressGenerator = pallet_contracts::DefaultAddressGenerator;
     type MaxCodeLen = ConstU32<{ 128 * 1024 }>;
     type MaxStorageKeyLen = ConstU32<128>;
+    type UnsafeUnstableInterface = ConstBool<true>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1075,7 +1100,7 @@ parameter_types! {
     pub const RotationPeriod: BlockNumber = 80 * HOURS;
     pub const PeriodSpend: Balance = 500 * DPR;
     pub const MaxLockDuration: BlockNumber = 36 * 30 * DAYS;
-    pub const ChallengePeriod: BlockNumber = 7 * DAYS;
+    pub const ChallengePeriod: BlockNumber = prod_or_fast!(7 * DAYS, 2 * MINUTES);
     pub const MaxCandidateIntake: u32 = 10;
     pub const SocietyPalletId: PalletId = PalletId(*b"py/socie");
 }
@@ -1113,15 +1138,6 @@ impl pallet_vesting::Config for Runtime {
     type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
     type UnvestedFundsAllowedWithdrawReasons = UnvestedFundsAllowedWithdrawReasons;
     const MAX_VESTING_SCHEDULES: u32 = 28;
-}
-
-impl pallet_mmr::Config for Runtime {
-    const INDEXING_PREFIX: &'static [u8] = b"mmr";
-    type Hashing = <Runtime as frame_system::Config>::Hashing;
-    type Hash = <Runtime as frame_system::Config>::Hash;
-    type LeafData = pallet_mmr::ParentNumberAndHash<Self>;
-    type OnNewRoot = ();
-    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -1166,6 +1182,11 @@ impl pallet_assets::Config for Runtime {
     type Freezer = ();
     type Extra = ();
     type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+    type RemoveItemsLimit = ConstU32<100>;
+    type AssetIdParameter = u32;
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
 }
 
 parameter_types! {
@@ -1427,7 +1448,6 @@ construct_runtime!(
         Society: pallet_society::{Pallet, Call, Storage, Event<T>, Config<T>} = 43,
         Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>} = 44,
         Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 45,
-        Mmr: pallet_mmr::{Pallet, Storage} = 46,
         Lottery: pallet_lottery::{Pallet, Call, Storage, Event<T>} = 47,
         ChildBounties: pallet_child_bounties::{Pallet, Call, Storage, Event<T>} = 48,
         Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>} = 49,
@@ -1574,16 +1594,6 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
             _ => None,
         }
     }
-}
-
-/// MMR helper types.
-mod mmr {
-    use super::Runtime;
-    pub use pallet_mmr::primitives::*;
-
-    pub type Leaf = <<Runtime as pallet_mmr::Config>::LeafData as LeafDataProvider>::LeafData;
-    pub type Hash = <Runtime as pallet_mmr::Config>::Hash;
-    pub type Hashing = <Runtime as pallet_mmr::Config>::Hashing;
 }
 
 impl_runtime_apis! {
@@ -1738,7 +1748,10 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash> for Runtime
+
+
+    impl pallet_contracts::ContractsApi<Block, AccountId, Balance, BlockNumber, Hash>
+        for Runtime
     {
         fn call(
             origin: AccountId,
@@ -1749,7 +1762,16 @@ impl_runtime_apis! {
             input_data: Vec<u8>,
         ) -> pallet_contracts_primitives::ContractExecResult<Balance> {
             let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
-            Contracts::bare_call(origin, dest, value, gas_limit, storage_deposit_limit, input_data, true)
+            Contracts::bare_call(
+                origin,
+                dest,
+                value,
+                gas_limit,
+                storage_deposit_limit,
+                input_data,
+                CONTRACTS_DEBUG_OUTPUT,
+                pallet_contracts::Determinism::Deterministic,
+            )
         }
 
         fn instantiate(
@@ -1763,16 +1785,26 @@ impl_runtime_apis! {
         ) -> pallet_contracts_primitives::ContractInstantiateResult<AccountId, Balance>
         {
             let gas_limit = gas_limit.unwrap_or(RuntimeBlockWeights::get().max_block);
-            Contracts::bare_instantiate(origin, value, gas_limit, storage_deposit_limit, code, data, salt, true)
+            Contracts::bare_instantiate(
+                origin,
+                value,
+                gas_limit,
+                storage_deposit_limit,
+                code,
+                data,
+                salt,
+                CONTRACTS_DEBUG_OUTPUT
+            )
         }
 
         fn upload_code(
             origin: AccountId,
             code: Vec<u8>,
             storage_deposit_limit: Option<Balance>,
+            determinism: pallet_contracts::Determinism,
         ) -> pallet_contracts_primitives::CodeUploadResult<Hash, Balance>
         {
-            Contracts::bare_upload_code(origin, code, storage_deposit_limit)
+            Contracts::bare_upload_code(origin, code, storage_deposit_limit, determinism)
         }
 
         fn get_storage(
@@ -1984,93 +2016,34 @@ impl_runtime_apis! {
         }
     }
 
-    impl pallet_mmr::primitives::MmrApi<
-        Block,
-        mmr::Hash,
-        BlockNumber,
-    > for Runtime {
-        fn generate_proof(block_number: BlockNumber)
-            -> Result<(mmr::EncodableOpaqueLeaf, mmr::Proof<mmr::Hash>), mmr::Error>
-        {
-            Mmr::generate_batch_proof(vec![block_number]).and_then(|(leaves, proof)|
-                Ok((
-                    mmr::EncodableOpaqueLeaf::from_leaf(&leaves[0]),
-                    mmr::BatchProof::into_single_leaf_proof(proof)?
-                ))
-            )
+    impl mmr::MmrApi<Block, Hash, BlockNumber> for Runtime {
+        fn mmr_root() -> Result<Hash, mmr::Error> {
+            Err(mmr::Error::PalletNotIncluded)
         }
 
-        fn verify_proof(leaf: mmr::EncodableOpaqueLeaf, proof: mmr::Proof<mmr::Hash>)
+        fn mmr_leaf_count() -> Result<mmr::LeafIndex, mmr::Error> {
+            Err(mmr::Error::PalletNotIncluded)
+        }
+
+        fn generate_proof(
+            _block_numbers: Vec<BlockNumber>,
+            _best_known_block_number: Option<BlockNumber>,
+        ) -> Result<(Vec<mmr::EncodableOpaqueLeaf>, mmr::Proof<Hash>), mmr::Error> {
+            Err(mmr::Error::PalletNotIncluded)
+        }
+
+        fn verify_proof(_leaves: Vec<mmr::EncodableOpaqueLeaf>, _proof: mmr::Proof<Hash>)
             -> Result<(), mmr::Error>
         {
-            let leaf: mmr::Leaf = leaf
-                .into_opaque_leaf()
-                .try_decode()
-                .ok_or(mmr::Error::Verify)?;
-            Mmr::verify_leaves(vec![leaf], mmr::Proof::into_batch_proof(proof))
+            Err(mmr::Error::PalletNotIncluded)
         }
 
         fn verify_proof_stateless(
-            root: mmr::Hash,
-            leaf: mmr::EncodableOpaqueLeaf,
-            proof: mmr::Proof<mmr::Hash>
+            _root: Hash,
+            _leaves: Vec<mmr::EncodableOpaqueLeaf>,
+            _proof: mmr::Proof<Hash>
         ) -> Result<(), mmr::Error> {
-            let node = mmr::DataOrHash::Data(leaf.into_opaque_leaf());
-            pallet_mmr::verify_leaves_proof::<mmr::Hashing, _>(root, vec![node], mmr::Proof::into_batch_proof(proof))
-        }
-
-        fn mmr_root() -> Result<mmr::Hash, mmr::Error> {
-            Ok(Mmr::mmr_root())
-        }
-
-        fn generate_batch_proof(
-            block_numbers: Vec<BlockNumber>,
-        ) -> Result<(Vec<mmr::EncodableOpaqueLeaf>, mmr::BatchProof<mmr::Hash>), mmr::Error> {
-            Mmr::generate_batch_proof(block_numbers).map(|(leaves, proof)| {
-                (
-                    leaves
-                        .into_iter()
-                        .map(|leaf| mmr::EncodableOpaqueLeaf::from_leaf(&leaf))
-                        .collect(),
-                    proof,
-                )
-            })
-        }
-
-        fn generate_historical_batch_proof(
-            block_numbers: Vec<BlockNumber>,
-            best_known_block_number: BlockNumber,
-        ) -> Result<(Vec<mmr::EncodableOpaqueLeaf>, mmr::BatchProof<mmr::Hash>), mmr::Error> {
-            Mmr::generate_historical_batch_proof(block_numbers, best_known_block_number).map(
-                |(leaves, proof)| {
-                    (
-                        leaves
-                            .into_iter()
-                            .map(|leaf| mmr::EncodableOpaqueLeaf::from_leaf(&leaf))
-                            .collect(),
-                        proof,
-                    )
-                },
-            )
-        }
-
-        fn verify_batch_proof(leaves: Vec<mmr::EncodableOpaqueLeaf>, proof: mmr::BatchProof<mmr::Hash>)
-            -> Result<(), mmr::Error>
-        {
-            let leaves = leaves.into_iter().map(|leaf|
-                leaf.into_opaque_leaf()
-                .try_decode()
-                .ok_or(mmr::Error::Verify)).collect::<Result<Vec<mmr::Leaf>, mmr::Error>>()?;
-            Mmr::verify_leaves(leaves, proof)
-        }
-
-        fn verify_batch_proof_stateless(
-            root: mmr::Hash,
-            leaves: Vec<mmr::EncodableOpaqueLeaf>,
-            proof: mmr::BatchProof<mmr::Hash>
-        ) -> Result<(), mmr::Error> {
-            let nodes = leaves.into_iter().map(|leaf|mmr::DataOrHash::Data(leaf.into_opaque_leaf())).collect();
-            pallet_mmr::verify_leaves_proof::<mmr::Hashing, _>(root, nodes, proof)
+            Err(mmr::Error::PalletNotIncluded)
         }
     }
 
@@ -2112,7 +2085,6 @@ impl_runtime_apis! {
             list_benchmark!(list, extra, pallet_im_online, ImOnline);
             list_benchmark!(list, extra, pallet_indices, Indices);
             list_benchmark!(list, extra, pallet_lottery, Lottery);
-            list_benchmark!(list, extra, pallet_mmr, Mmr);
             list_benchmark!(list, extra, pallet_multisig, Multisig);
             list_benchmark!(list, extra, pallet_proxy, Proxy);
             list_benchmark!(list, extra, pallet_scheduler, Scheduler);
@@ -2180,7 +2152,6 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_im_online, ImOnline);
             add_benchmark!(params, batches, pallet_indices, Indices);
             add_benchmark!(params, batches, pallet_lottery, Lottery);
-            add_benchmark!(params, batches, pallet_mmr, Mmr);
             add_benchmark!(params, batches, pallet_multisig, Multisig);
             add_benchmark!(params, batches, pallet_proxy, Proxy);
             add_benchmark!(params, batches, pallet_scheduler, Scheduler);

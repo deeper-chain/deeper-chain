@@ -152,9 +152,14 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
             BlockAddress::Number(number) => {
                 let id = BlockId::number(number);
                 let not_found = format!("Could not find block {:?}", id);
+                let hash = self
+                    .chain
+                    .block_hash(number)?
+                    .ok_or_else(|| Error::NotFound(not_found.clone()))?;
+
                 let body = self
                     .chain
-                    .block_body(&id)?
+                    .block_body(hash)?
                     .ok_or_else(|| Error::NotFound(not_found.clone()))?;
                 let header = self
                     .chain
@@ -167,7 +172,7 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
                 let not_found = format!("Could not find block {:?}", id);
                 let body = self
                     .chain
-                    .block_body(&id)?
+                    .block_body(hash)?
                     .ok_or_else(|| Error::NotFound(not_found.clone()))?;
                 let header = self
                     .chain
