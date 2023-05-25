@@ -1053,7 +1053,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             nonce: u64,
             signature: Vec<u8>,
-            _dst_level: u8,
+            dst_level: u8,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
 
@@ -1061,8 +1061,7 @@ pub mod pallet {
             {
                 Err(Error::<T>::SignatureVerifyFailed)?
             }
-            // Self::do_staking_delegate(who, dst_level)
-            Ok(())
+            Self::do_staking_delegate(who, dst_level)
         }
 
         #[pallet::weight(T::WeightInfo::usdt_staking_delegate())]
@@ -3109,7 +3108,7 @@ impl<T: Config> pallet::Pallet<T> {
         frame_support::storage::unhashed::get::<DelegatorData<T::AccountId>>(next_key)
     }
 
-    fn _do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
+    fn do_staking_delegate(who: T::AccountId, dst_level: u8) -> DispatchResult {
         let campaign_id = T::CreditInterface::get_default_dpr_campaign_id();
         let credit_balances = T::CreditInterface::get_credit_balance(&who, Some(campaign_id));
         let len = credit_balances.len();
