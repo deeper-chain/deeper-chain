@@ -3106,6 +3106,12 @@ fn staking_delegate() {
                 current_credit_level: CreditLevel::Zero,
                 reward_eras: 3650,
             };
+
+            assert_err!(
+                Staking::do_staking_delegate(51, 2),
+                Error::<Test>::NotHasCreditLeger
+            );
+
             assert_ok!(Credit::add_or_update_credit_data(
                 RuntimeOrigin::root(),
                 51,
@@ -3113,7 +3119,7 @@ fn staking_delegate() {
             ));
 
             assert_eq!(Balances::free_balance(&51), 2000);
-            assert_ok!(Staking::_do_staking_delegate(51, 1));
+            assert_ok!(Staking::do_staking_delegate(51, 1));
             let credit_balances = Credit::get_credit_balance(&51, Some(4));
             let pay = credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay);
@@ -3128,7 +3134,7 @@ fn staking_delegate() {
             );
             assert_eq!(Credit::user_credit(&51).unwrap().reward_eras, 10 * 365);
 
-            assert_ok!(Staking::_do_staking_delegate(51, 3));
+            assert_ok!(Staking::do_staking_delegate(51, 3));
             let sec_pay = credit_balances[3] - credit_balances[1];
             assert_eq!(Balances::free_balance(&51), 2000 - pay - sec_pay);
             assert_eq!(Credit::user_credit(&51).unwrap().credit, 300);
