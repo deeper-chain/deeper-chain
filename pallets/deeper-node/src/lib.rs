@@ -403,7 +403,7 @@ pub mod pallet {
             let deeper_address = ensure_signed(origin)?;
 
             ensure!(
-                T::VerifySignatureInterface::verify_atomos_signature(
+                T::VerifySignatureInterface::verify_atomos_new_signature(
                     nonce,
                     signature,
                     deeper_address.clone()
