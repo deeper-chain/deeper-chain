@@ -186,6 +186,18 @@ pub mod pallet {
             }
         }
 
+        pub fn verify_atomos_new_signature(
+            nonce: u64,
+            signature: &[u8],
+            sender: T::AccountId,
+        ) -> DispatchResultWithPostInfo {
+            let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
+                .expect("infinite input; qed");
+            let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account.clone());
+            Self::do_verify(nonce, signature, sender.clone(), atomos_accountid);
+            Ok(().into())
+        }
+
         fn do_verify(
             nonce: u64,
             signature: &[u8],
@@ -216,6 +228,14 @@ pub mod pallet {
     impl<T: Config> VerifySignatureInterface<T::AccountId> for Pallet<T> {
         fn verify_atomos_signature(nonce: u64, signature: Vec<u8>, sender: T::AccountId) -> bool {
             Self::verify_atomos_signature(nonce, &signature, sender.clone()).is_ok()
+        }
+
+        fn verify_atomos_new_signature(
+            nonce: u64,
+            signature: Vec<u8>,
+            sender: T::AccountId,
+        ) -> bool {
+            Self::verify_atomos_new_signature(nonce, &signature, sender.clone()).is_ok()
         }
     }
 }
