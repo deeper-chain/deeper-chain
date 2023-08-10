@@ -107,22 +107,6 @@ pub mod pallet {
         InvalidAtomosNonce,
     }
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> frame_support::weights::Weight {
-            let tmp_accout_id = Self::tmp_atmos_accountid();
-            if tmp_accout_id.is_some() {
-                return T::DbWeight::get().reads_writes(1, 0);
-            }
-            let old_account_id = Self::atmos_accountid();
-            if old_account_id.is_none() {
-                return T::DbWeight::get().reads_writes(2, 0);
-            }
-            TmpAtmosAccountid::<T>::put(old_account_id.unwrap());
-            T::DbWeight::get().reads_writes(2, 1)
-        }
-    }
-
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
     // These functions materialize as "extrinsics", which are often compared to transactions.
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
@@ -194,8 +178,7 @@ pub mod pallet {
             let zero_account = T::AccountId::decode(&mut TrailingZeroInput::new(&[][..]))
                 .expect("infinite input; qed");
             let atomos_accountid = Self::atmos_accountid().unwrap_or(zero_account.clone());
-            Self::do_verify(nonce, signature, sender.clone(), atomos_accountid);
-            Ok(().into())
+            Self::do_verify(nonce, signature, sender.clone(), atomos_accountid)
         }
 
         fn do_verify(
