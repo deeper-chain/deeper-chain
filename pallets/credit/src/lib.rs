@@ -315,7 +315,7 @@ pub mod pallet {
     pub(crate) type MaintainDevices<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
     #[pallet::storage]
-    pub type GenesisChangeRewardEra<T: Config> = StorageValue<_, u32, ValueQuery>;
+    pub(crate) type GenesisChangeRewardEra<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -416,8 +416,11 @@ pub mod pallet {
             let mut weight = T::DbWeight::get().reads(1 as u64);
             const SIX_MOUNTH: u32 = 180;
             if remainder == T::BlockNumber::default() {
-                let int_era =
-                    Self::get_current_era().saturating_sub(GenesisChangeRewardEra::<T>::get());
+                let change_era = GenesisChangeRewardEra::<T>::get();
+                if change_era == 0 {
+                    return weight;
+                }
+                let int_era = Self::get_current_era().saturating_sub(change_era);
                 let remainder_era = int_era % SIX_MOUNTH;
                 weight += T::DbWeight::get().writes(2 as u64);
                 // now six month reached
@@ -446,7 +449,9 @@ pub mod pallet {
             }
             let cur_era = Self::get_current_era();
             // operating change in next era
-            GenesisChangeRewardEra::<T>::put(cur_era + 1);
+            GenesisChangeRewardEra::<T>::put(cur_era);
+            CampaignIdSwitch::<T>::insert(0, 6);
+            CampaignIdSwitch::<T>::insert(1, 6);
             T::DbWeight::get()
                 .writes(2 as u64)
                 .saturating_mul(len as u64)
@@ -1390,7 +1395,7 @@ pub mod pallet {
                 return (None, Weight::zero());
             }
 
-            let optional_credit_data = Self::user_credit(account_id); // 1 db read
+            let optional_credit_data = Self::user_credit(account_id);
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             if optional_credit_data.is_none() {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 2));

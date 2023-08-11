@@ -156,14 +156,14 @@ impl pallet_deeper_node::Config for Test {
 pub const MILLISECS_PER_BLOCK: Moment = 5000;
 pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
-pub const BLOCKS_PER_ERA: u64 = (6 * EPOCH_DURATION_IN_BLOCKS) as u64;
+pub const BLOCKS_PER_ERA: u64 = (1 * EPOCH_DURATION_IN_BLOCKS) as u64;
 pub const CREDIT_ATTENUATION_STEP: u64 = 1;
 
 parameter_types! {
     pub const CreditAttenuationStep: u64 = CREDIT_ATTENUATION_STEP;
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
-    pub const BlocksPerEra: BlockNumber =  6 * EPOCH_DURATION_IN_BLOCKS;
+    pub const BlocksPerEra: BlockNumber =  1 * EPOCH_DURATION_IN_BLOCKS;
     pub const SecsPerBlock: u32 = 5u32;
     pub const DPRPerCreditBurned: u64 = 50;
 }
@@ -576,7 +576,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
                 11,
                 CreditData {
                     campaign_id: 1,
-                    credit: 200,
+                    credit: 210,
                     initial_credit_level: CreditLevel::Two,
                     rank_in_initial_credit_level: 801u32,
                     number_of_referees: 2,
@@ -623,6 +623,7 @@ pub fn run_to_block(n: u64) {
         <frame_system::Pallet<mock::Test> as OnInitialize<u64>>::on_initialize(
             System::block_number(),
         );
+        <pallet::Pallet<mock::Test> as OnInitialize<u64>>::on_initialize(System::block_number());
         Timestamp::set_timestamp(System::block_number() * BLOCK_TIME + INIT_TIMESTAMP);
     }
 }
