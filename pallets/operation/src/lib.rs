@@ -23,6 +23,7 @@ mod tests;
 mod benchmarking;
 
 pub mod weights;
+use frame_support::traits::{CallMetadata, Contains, GetCallMetadata};
 use scale_info::TypeInfo;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
@@ -38,8 +39,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, transactional,
     };
-    use frame_system::pallet_prelude::*;
-    use frame_system::{self, ensure_signed};
+    use frame_system::{self, ensure_signed, pallet_prelude::*};
     use node_primitives::{
         credit::CreditInterface,
         user_privileges::{Privilege, UserPrivilegeInterface},
@@ -94,6 +94,10 @@ pub mod pallet {
         BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
         BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
         DPRPrice(BalanceOf<T>, H160),
+        /// Paused transaction
+        Paused(String, String, T::AccountId),
+        /// Unpaused transaction
+        Unpaused(String, String),
     }
 
     // Errors inform users that something went wrong.
@@ -109,6 +113,10 @@ pub mod pallet {
         NpowRewardAddressNotFound,
         FundPoolNotSet,
         PriceDiffTooMuch,
+        /// not allow pause
+        NotAllow,
+        /// invalid pallet or funciton name
+        InvalidName,
     }
 
     #[derive(Encode, Decode, Clone, Copy, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -216,6 +224,11 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(super) type StorageVersion<T> = StorageValue<_, Releases>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn paused_calls)]
+    pub type PausedCalls<T: Config> =
+        StorageMap<_, Twox64Concat, (Vec<u8>, Vec<u8>), T::AccountId, OptionQuery>;
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
@@ -440,6 +453,67 @@ pub mod pallet {
             Self::deposit_event(Event::<T>::BridgeOtherToDeeper(to, from, amount, tx));
             Ok(().into())
         }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        pub fn pause_call(
+            origin: OriginFor<T>,
+            pallet_name: Vec<u8>,
+            function_name: Vec<u8>,
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                Self::is_locker_member(&sender),
+                Error::<T>::UnauthorizedAccounts
+            );
+
+            let pallet_name_str =
+                sp_std::str::from_utf8(&pallet_name).map_err(|_| Error::<T>::InvalidName)?;
+            let function_name_str =
+                sp_std::str::from_utf8(&function_name).map_err(|_| Error::<T>::InvalidName)?;
+            ensure!(
+                function_name_str != "pause_call" && function_name_str != "unpause_call",
+                Error::<T>::NotAllow
+            );
+
+            PausedCalls::<T>::mutate_exists(
+                (pallet_name.clone(), function_name.clone()),
+                |maybe_paused| {
+                    if maybe_paused.is_none() {
+                        *maybe_paused = Some(sender.clone());
+                        Self::deposit_event(Event::Paused(
+                            pallet_name_str.to_string(),
+                            function_name_str.to_string(),
+                            sender,
+                        ));
+                    }
+                },
+            );
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        pub fn unpause_call(
+            origin: OriginFor<T>,
+            pallet_name: Vec<u8>,
+            function_name: Vec<u8>,
+        ) -> DispatchResult {
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                Self::is_locker_member(&sender),
+                Error::<T>::UnauthorizedAccounts
+            );
+            if PausedCalls::<T>::take((&pallet_name, &function_name)).is_some() {
+                let pallet_name_str =
+                    sp_std::str::from_utf8(&pallet_name).map_err(|_| Error::<T>::InvalidName)?;
+                let function_name_str =
+                    sp_std::str::from_utf8(&function_name).map_err(|_| Error::<T>::InvalidName)?;
+                Self::deposit_event(Event::Unpaused(
+                    pallet_name_str.to_string(),
+                    function_name_str.to_string(),
+                ));
+            }
+            Ok(())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -551,5 +625,19 @@ pub mod pallet {
                 false
             }
         }
+    }
+}
+
+pub struct PausedCallFilter<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> Contains<T::RuntimeCall> for PausedCallFilter<T>
+where
+    <T as frame_system::Config>::RuntimeCall: GetCallMetadata,
+{
+    fn contains(call: &T::RuntimeCall) -> bool {
+        let CallMetadata {
+            function_name,
+            pallet_name,
+        } = call.get_call_metadata();
+        PausedCalls::<T>::contains_key((pallet_name.as_bytes(), function_name.as_bytes()))
     }
 }

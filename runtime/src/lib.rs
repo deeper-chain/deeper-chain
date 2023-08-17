@@ -28,9 +28,9 @@ use frame_support::{
     dispatch::DispatchClass,
     parameter_types,
     traits::{
-        AsEnsureOriginWithArg, ConstU128, ConstU32, Currency, EitherOfDiverse, EqualPrivilegeOnly,
-        Everything, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier, Nothing,
-        OnUnbalanced, U128CurrencyToVote, WithdrawReasons,
+        AsEnsureOriginWithArg, ConstU128, ConstU32, Contains, Currency, EitherOfDiverse,
+        EqualPrivilegeOnly, Imbalance, InstanceFilter, KeyOwnerProofSystem, LockIdentifier,
+        Nothing, OnUnbalanced, U128CurrencyToVote, WithdrawReasons,
     },
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -255,8 +255,26 @@ parameter_types! {
 
 const_assert!(NORMAL_DISPATCH_RATIO.deconstruct() >= AVERAGE_ON_INITIALIZE_RATIO.deconstruct());
 
+pub struct BaseCallFilter;
+impl Contains<RuntimeCall> for BaseCallFilter {
+    fn contains(call: &RuntimeCall) -> bool {
+        let is_core_call = matches!(
+            call,
+            RuntimeCall::Sudo(_)
+                | RuntimeCall::System(_)
+                | RuntimeCall::Timestamp(_)
+                | RuntimeCall::UserPrivileges(_)
+        );
+        if is_core_call {
+            return true;
+        }
+
+        !pallet_operation::PausedCallFilter::<Runtime>::contains(call)
+    }
+}
+
 impl frame_system::Config for Runtime {
-    type BaseCallFilter = Everything;
+    type BaseCallFilter = BaseCallFilter;
     type BlockWeights = RuntimeBlockWeights;
     type BlockLength = RuntimeBlockLength;
     type DbWeight = RocksDbWeight;
