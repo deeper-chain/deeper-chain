@@ -25,6 +25,7 @@ mod tests;
 
 #[cfg(any(feature = "runtime-benchmarks", test))]
 pub mod benchmarking;
+mod credit_setting;
 pub mod weights;
 pub(crate) const LOG_TARGET: &'static str = "credit";
 pub(crate) const USDT_CAMPAIGN_ID: u16 = 5;
@@ -313,6 +314,9 @@ pub mod pallet {
     #[pallet::getter(fn get_maintain_devices)]
     pub(crate) type MaintainDevices<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
 
+    #[pallet::storage]
+    pub(crate) type GenesisChangeRewardEra<T: Config> = StorageValue<_, u32, ValueQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
@@ -403,20 +407,54 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_n: T::BlockNumber) {
-            let prices = CurrentPrices::<T>::take();
-            let len = prices.len();
-            if len == 0 {
-                return;
-            }
-            let sum = {
-                let mut sum: BalanceOf<T> = 0u32.into();
-                for num in prices {
-                    sum += num;
+        fn on_finalize(_: T::BlockNumber) {
+            Self::set_price();
+        }
+
+        fn on_initialize(now: T::BlockNumber) -> Weight {
+            let remainder = now % T::BlocksPerEra::get();
+            let mut weight = T::DbWeight::get().reads(1 as u64);
+            const SIX_MOUNTH: u32 = 180;
+            if remainder == T::BlockNumber::default() {
+                let change_era = GenesisChangeRewardEra::<T>::get();
+                if change_era == 0 {
+                    return weight;
                 }
-                sum
-            };
-            DprPrice::<T>::put(sum / (len as u32).into());
+                let int_era = Self::get_current_era().saturating_sub(change_era);
+                let remainder_era = int_era % SIX_MOUNTH;
+                weight += T::DbWeight::get().writes(2 as u64);
+                // now six month reached
+                if remainder_era == 0 {
+                    let times = int_era / SIX_MOUNTH;
+                    if times > 0 && times <= 5 {
+                        let changed_settings = credit_setting::sub_genesis_apy::<T>(times as u8);
+                        let len = changed_settings.len();
+                        for setting in &changed_settings {
+                            Self::_update_credit_setting(setting.clone());
+                        }
+                        weight += T::DbWeight::get()
+                            .writes(2 as u64)
+                            .saturating_mul(len as u64)
+                    }
+                }
+            }
+            weight
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let settings = credit_setting::new_genesis_credit_settings::<T>();
+            let len = settings.len();
+            for setting in settings {
+                Self::_update_credit_setting(setting.clone());
+            }
+            let cur_era = Self::get_current_era();
+            // operating change in next era
+            GenesisChangeRewardEra::<T>::put(cur_era);
+            CampaignIdSwitch::<T>::insert(0, 6);
+            CampaignIdSwitch::<T>::insert(1, 6);
+            T::DbWeight::get()
+                .writes(2 as u64)
+                .saturating_mul(len as u64)
         }
     }
 
@@ -813,6 +851,22 @@ pub mod pallet {
 
         fn is_evm_credit_operation_address(address: &H160) -> bool {
             T::UserPrivilegeInterface::has_evm_privilege(&address, Privilege::EvmCreditOperation)
+        }
+
+        fn set_price() {
+            let prices = CurrentPrices::<T>::take();
+            let len = prices.len();
+            if len == 0 {
+                return;
+            }
+            let sum = {
+                let mut sum: BalanceOf<T> = 0u32.into();
+                for num in prices {
+                    sum += num;
+                }
+                sum
+            };
+            DprPrice::<T>::put(sum / (len as u32).into());
         }
 
         pub fn evm_update_credit(
@@ -1236,6 +1290,7 @@ pub mod pallet {
                 0 | 1 => Self::genesis_credit_balances(),
                 2 | 4 => Self::credit_balances(),
                 5 => Self::usdt_credit_balances(),
+                6 => Self::credit_balances(),
                 _ => Vec::new(),
             }
         }
@@ -1340,7 +1395,7 @@ pub mod pallet {
                 return (None, Weight::zero());
             }
 
-            let optional_credit_data = Self::user_credit(account_id); // 1 db read
+            let optional_credit_data = Self::user_credit(account_id);
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             if optional_credit_data.is_none() {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 2));
@@ -1371,9 +1426,9 @@ pub mod pallet {
             }
             let delegate_era = credit_history[0].0;
             let expiry_era = delegate_era + credit_data.reward_eras - 1;
-            if from == expiry_era {
+            if from == expiry_era || credit_data.campaign_id == 0 || credit_data.campaign_id == 1 {
                 // switcch campaign forehead
-                Self::do_switch_campaign(account_id, credit_data, expiry_era);
+                Self::do_switch_campaign(account_id, credit_data, from);
             } else if from > expiry_era {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 5));
                 return (None, weight);

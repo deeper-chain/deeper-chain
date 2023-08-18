@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     name: Unit test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted,linux]
     env:
       CARGO_INCREMENTAL: 0
       SKIP_BUILD_WASM: true
