@@ -173,7 +173,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     // and set impl_version to 0. If only runtime
     // implementation changes and behavior does not, then leave spec_version as
     // is and increment impl_version.
-    spec_version: 47,
+    spec_version: 48,
     impl_version: 0,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 15,
@@ -636,13 +636,13 @@ impl pallet_staking::Config for Runtime {
 }
 
 parameter_types! {
-    pub const LaunchPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
-    pub const VotingPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
-    pub const FastTrackVotingPeriod: BlockNumber = prod_or_fast!(3 * HOURS,1*MINUTES);
+    pub const LaunchPeriod: BlockNumber = prod_or_fast!(5 * MINUTES,1*MINUTES);
+    pub const VotingPeriod: BlockNumber = prod_or_fast!(12 * MINUTES,1*MINUTES);
+    pub const FastTrackVotingPeriod: BlockNumber = prod_or_fast!(4 * MINUTES,1*MINUTES);
     pub const InstantAllowed: bool = true;
-    pub const MinimumDeposit: Balance = 1000 * DPR;
-    pub const EnactmentPeriod: BlockNumber = prod_or_fast!(2 * DAYS,1*MINUTES);
-    pub const CooloffPeriod: BlockNumber = prod_or_fast!(5 * DAYS,1*MINUTES);
+    pub const MinimumDeposit: Balance = 100 * DPR;
+    pub const EnactmentPeriod: BlockNumber = prod_or_fast!(2 * MINUTES,1*MINUTES);
+    pub const CooloffPeriod: BlockNumber = prod_or_fast!(5 * MINUTES,1*MINUTES);
     // One cent: $10 / MB
     pub const PreimageByteDeposit: Balance = 1 * MILLICENTS;
     pub const MaxVotes: u32 = 100;
@@ -736,7 +736,7 @@ parameter_types! {
     pub const VotingBondBase: Balance = deposit(1, 64);
     // additional data per vote is 32 bytes (account id).
     pub const VotingBondFactor: Balance = deposit(0, 32);
-    pub const TermDuration: BlockNumber = prod_or_fast!(7 * DAYS,2*MINUTES);
+    pub const TermDuration: BlockNumber = prod_or_fast!(7 * MINUTES,2*MINUTES);
     pub const DesiredMembers: u32 = 13;
     pub const DesiredRunnersUp: u32 = 7;
     pub const MaxVoters: u32 = 1000;
