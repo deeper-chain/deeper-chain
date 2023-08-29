@@ -4530,6 +4530,7 @@ dependencies = [
  "libsecp256k1 0.6.0",
  "log",
  "node-primitives",
+ "pallet-adst",
  "pallet-assets",
  "pallet-authority-discovery",
  "pallet-authorship",

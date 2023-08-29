@@ -30,8 +30,8 @@ pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 pallet-user-privileges = { default-features = false, path = "../user-privileges" }
+pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", optional = true }
@@ -52,6 +52,7 @@ std = [
 	'sp-std/std',
 	'node-primitives/std',
 	'pallet-balances/std',
+	'pallet-timestamp/std',
 	'pallet-uniques/std',
 	'pallet-assets/std',
 	'pallet-user-privileges/std',

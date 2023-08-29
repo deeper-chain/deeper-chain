@@ -1,4 +1,6 @@
-// Copyright (C) 2021 Deeper Network Inc.
+// This file is part of Substrate.
+
+// Copyright (C) 2017-2021 Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,1220 +15,196 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(test)]
-use crate::{
-    mock::*, CampaignIdSwitch, CreditSettings, Error, GenesisChangeRewardEra, MaintainDevices,
-    UserCredit, UserCreditHistory,
+//! Macro for creating the tests for the module.
+
+use frame_support::traits::{fungibles::Mutate, AsEnsureOriginWithArg, ConstU32, ConstU64, Hooks};
+use frame_support::{assert_ok, parameter_types, weights::Weight, PalletId};
+use pallet_user_privileges::H160;
+use sp_core::H256;
+use sp_runtime::{
+    testing::Header,
+    traits::{BlakeTwo256, IdentityLookup},
+    Perbill,
 };
-use frame_support::traits::{Currency, Hooks};
-use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
-use frame_system::RawOrigin;
+
+use super::*;
+use crate::{self as pallet_adst};
 use node_primitives::{
-    credit::{CreditData, CreditInterface, CreditLevel, CreditSetting},
-    user_privileges::Privilege,
+    user_privileges::{Privilege, UserPrivilegeInterface},
+    Moment, DPR,
 };
-use sp_core::H160;
-use sp_runtime::traits::BadOrigin;
-use sp_runtime::Percent;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-#[test]
-fn get_credit_level() {
-    new_test_ext().execute_with(|| {
-        assert_eq!(CreditLevel::get_credit_level(0), CreditLevel::Zero);
-        assert_eq!(CreditLevel::get_credit_level(50), CreditLevel::Zero);
-        assert_eq!(CreditLevel::get_credit_level(99), CreditLevel::Zero);
-        assert_eq!(CreditLevel::get_credit_level(100), CreditLevel::One);
-        assert_eq!(CreditLevel::get_credit_level(150), CreditLevel::One);
-        assert_eq!(CreditLevel::get_credit_level(199), CreditLevel::One);
-        assert_eq!(CreditLevel::get_credit_level(200), CreditLevel::Two);
-        assert_eq!(CreditLevel::get_credit_level(250), CreditLevel::Two);
-        assert_eq!(CreditLevel::get_credit_level(299), CreditLevel::Two);
-        assert_eq!(CreditLevel::get_credit_level(300), CreditLevel::Three);
-        assert_eq!(CreditLevel::get_credit_level(350), CreditLevel::Three);
-        assert_eq!(CreditLevel::get_credit_level(399), CreditLevel::Three);
-        assert_eq!(CreditLevel::get_credit_level(400), CreditLevel::Four);
-        assert_eq!(CreditLevel::get_credit_level(450), CreditLevel::Four);
-        assert_eq!(CreditLevel::get_credit_level(499), CreditLevel::Four);
-        assert_eq!(CreditLevel::get_credit_level(500), CreditLevel::Five);
-        assert_eq!(CreditLevel::get_credit_level(550), CreditLevel::Five);
-        assert_eq!(CreditLevel::get_credit_level(599), CreditLevel::Five);
-        assert_eq!(CreditLevel::get_credit_level(600), CreditLevel::Six);
-        assert_eq!(CreditLevel::get_credit_level(650), CreditLevel::Six);
-        assert_eq!(CreditLevel::get_credit_level(699), CreditLevel::Six);
-        assert_eq!(CreditLevel::get_credit_level(700), CreditLevel::Seven);
-        assert_eq!(CreditLevel::get_credit_level(750), CreditLevel::Seven);
-        assert_eq!(CreditLevel::get_credit_level(799), CreditLevel::Seven);
-        assert_eq!(CreditLevel::get_credit_level(800), CreditLevel::Eight);
-        assert_eq!(CreditLevel::get_credit_level(950), CreditLevel::Eight);
-        assert_eq!(CreditLevel::get_credit_level(1099), CreditLevel::Eight);
-    });
+frame_support::construct_runtime!(
+    pub enum Test where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+        Adst: pallet_adst::{Pallet, Call, Storage, Event<T>},
+        Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
+    }
+);
+
+parameter_types! {
+    pub const BlockHashCount: u64 = 250;
+    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+    pub const MaximumBlockLength: u32 = 2 * 1024;
+    pub const AvailableBlockRatio: Perbill = Perbill::one();
+}
+impl frame_system::Config for Test {
+    type BaseCallFilter = frame_support::traits::Everything;
+    type BlockWeights = ();
+    type BlockLength = ();
+    type DbWeight = ();
+    type RuntimeOrigin = RuntimeOrigin;
+    type Index = u64;
+    type BlockNumber = u64;
+    type RuntimeCall = RuntimeCall;
+    type Hash = H256;
+    type Hashing = BlakeTwo256;
+    type AccountId = u64;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Header = Header;
+    type RuntimeEvent = RuntimeEvent;
+    type BlockHashCount = BlockHashCount;
+    type Version = ();
+    type PalletInfo = PalletInfo;
+    type AccountData = pallet_balances::AccountData<u64>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
+    type SS58Prefix = ();
+    type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
+}
+
+parameter_types! {
+    pub const ExistentialDeposit: u64 = 1;
+    pub const MinimumBurnedDPR: u64 = 1;
+}
+impl pallet_balances::Config for Test {
+    type MaxLocks = ();
+    type Balance = u64;
+    type RuntimeEvent = RuntimeEvent;
+    type DustRemoval = ();
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = System;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const MinimumPeriod: Moment = 5u64;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
+impl pallet_assets::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type Balance = u128;
+    type AssetId = u32;
+    type AssetIdParameter = u32;
+    type Currency = Balances;
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<u64>>;
+    type ForceOrigin = frame_system::EnsureRoot<u64>;
+    type AssetDeposit = ConstU64<1>;
+    type AssetAccountDeposit = ConstU64<10>;
+    type MetadataDepositBase = ConstU64<1>;
+    type MetadataDepositPerByte = ConstU64<1>;
+    type ApprovalDeposit = ConstU64<1>;
+    type StringLimit = ConstU32<50>;
+    type Freezer = ();
+    type WeightInfo = ();
+    type Extra = ();
+    type RemoveItemsLimit = ConstU32<5>;
+    #[cfg(feature = "runtime-benchmarks")]
+    type BenchmarkHelper = ();
+}
+
+pub const MILLISECS_PER_BLOCK: u64 = 5000;
+pub const SECS_PER_BLOCK: u64 = MILLISECS_PER_BLOCK / 1000;
+pub const EPOCH_DURATION_IN_BLOCKS: u64 = 60 / SECS_PER_BLOCK;
+pub const BlocksPerEra: u64 = (1 * EPOCH_DURATION_IN_BLOCKS) as u64;
+
+parameter_types! {
+    pub const AdstPalletId: PalletId = PalletId(*b"dep/adst");
+}
+
+impl Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+
+    type AdstCurrency = Assets;
+    type WeightInfo = ();
+    type Time = Timestamp;
+    type AdstId = ConstU32<1>;
+    type PalletId = AdstPalletId;
+    type UserPrivilegeInterface = U128FakeUserPrivilege;
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Test>()
+        .unwrap();
+    pallet_balances::GenesisConfig::<Test> {
+        // Total issuance will be 200 with treasury account initialized at ED.
+        balances: vec![(0, 100), (1, 98), (2, 1)],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+    t.into()
+}
+
+pub fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        Timestamp::set_timestamp(System::block_number() * 1440 * 5000);
+
+        println!("Timestamp::now() {}", Timestamp::now());
+        Adst::on_initialize(System::block_number());
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+    }
 }
 
 #[test]
-fn update_credit_setting() {
+fn adst_pay_reward() {
     new_test_ext().execute_with(|| {
-        let credit_setting = CreditSetting {
-            campaign_id: 0,
-            credit_level: CreditLevel::One,
-            staking_balance: 20_000,
-            base_apy: Percent::from_percent(39),
-            bonus_apy: Percent::from_percent(0),
-            max_rank_with_bonus: 1u32,
-            tax_rate: Percent::from_percent(10),
-            max_referees_with_rewards: 1,
-            reward_per_referee: 18,
-        };
-        assert_noop!(
-            Credit::update_credit_setting(RuntimeOrigin::signed(1), credit_setting.clone()),
-            BadOrigin
-        );
-        assert_ok!(Credit::update_credit_setting(
-            RawOrigin::Root.into(),
-            credit_setting.clone()
-        ));
-        assert_eq!(Credit::credit_settings(0, CreditLevel::One), credit_setting);
+        Adst::on_runtime_upgrade();
 
-        let credit_setting_updated = CreditSetting {
-            campaign_id: 0,
-            credit_level: CreditLevel::One,
-            staking_balance: 40_000,
-            base_apy: Percent::from_percent(45),
-            bonus_apy: Percent::from_percent(3),
-            max_rank_with_bonus: 2u32,
-            tax_rate: Percent::from_percent(9),
-            max_referees_with_rewards: 2,
-            reward_per_referee: 18,
-        };
-        assert_ok!(Credit::update_credit_setting(
-            RawOrigin::Root.into(),
-            credit_setting_updated.clone()
-        ));
-        assert_eq!(
-            Credit::credit_settings(0, CreditLevel::One),
-            credit_setting_updated
-        );
+        assert_ok!(<Test as Config>::AdstCurrency::mint_into(1, &3, 1 * DPR));
+        assert_eq!(Assets::balance(1, &3), 1 * DPR);
+        // start day is day 0
+
+        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
+
+        run_to_block(BlocksPerEra + 1);
+
+        assert_eq!(Assets::balance(1, &2), 1000);
     });
 }
 
-#[test]
-fn add_or_update_credit_data() {
-    new_test_ext().execute_with(|| {
-        let credit_data = CreditData {
-            campaign_id: 0,
-            credit: 100,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 0,
-            number_of_referees: 1,
-            current_credit_level: CreditLevel::One,
-            reward_eras: 0,
-        };
-        // Only sudo can call update_credit_data
-        assert_noop!(
-            Credit::add_or_update_credit_data(RuntimeOrigin::signed(1), 2, credit_data.clone()),
-            BadOrigin
-        );
-        assert_eq!(Credit::get_credit_balance(&1, Some(5)), Vec::new());
-        assert_eq!(
-            Credit::get_credit_balance(&1, Some(1)),
-            Credit::get_credit_balance(&1, Some(4))
-        );
-
-        // update_credit_data works
-        run_to_block(1);
-        assert_ok!(Credit::add_or_update_credit_data(
-            RawOrigin::Root.into(),
-            1,
-            credit_data.clone()
-        ));
-        assert_eq!(Credit::user_credit(1), Some(credit_data.clone()));
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(1, 100))
-        );
-
-        // add_credit_data works
-        run_to_block(2 * BLOCKS_PER_ERA - 1);
-        assert_ok!(Credit::add_or_update_credit_data(
-            RawOrigin::Root.into(),
-            14,
-            credit_data.clone()
-        ));
-        assert_eq!(Credit::user_credit(14), Some(credit_data.clone()));
-        assert_eq!(Credit::user_credit_history(14), vec![]);
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(14, 100))
-        );
-
-        // credit_data invalid
-        let credit_data = CreditData {
-            campaign_id: 0,
-            credit: 100,
-            initial_credit_level: CreditLevel::Two,
-            rank_in_initial_credit_level: 0,
-            number_of_referees: 1,
-            current_credit_level: CreditLevel::Two,
-            reward_eras: 0,
-        };
-        assert_eq!(
-            Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
-            Err(DispatchError::from(Error::<Test>::InvalidCreditData))
-        );
-
-        let credit_data = CreditData {
-            campaign_id: 0,
-            credit: 100,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 0,
-            number_of_referees: 10,
-            current_credit_level: CreditLevel::One,
-            reward_eras: 100,
-        };
-        assert_eq!(
-            Credit::add_or_update_credit_data(RawOrigin::Root.into(), 1, credit_data.clone()),
-            Err(DispatchError::from(Error::<Test>::InvalidCreditData))
-        );
-    });
-}
-
-#[test]
-fn add_or_update_credit_data_check_credit_history_and_reward() {
-    new_test_ext().execute_with(|| {
-        // era 0
-        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(3)));
-        // era 1
-        run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(Credit::user_credit_history(3), vec![]);
-        assert!(Credit::init_delegator_history(&3, 0));
-        assert_eq!(Credit::get_reward(&3, 0, 0).0, Some(21369858941948251800));
-        let credit_historys = vec![(
-            0,
-            CreditData {
-                campaign_id: 0,
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1,
-                number_of_referees: 1,
-                current_credit_level: CreditLevel::One,
-                reward_eras: 1,
-            },
-        )];
-        assert_eq!(Credit::user_credit_history(3), credit_historys);
-
-        let credit_data = CreditData {
-            campaign_id: 0,
-            credit: 400,
-            initial_credit_level: CreditLevel::Four,
-            rank_in_initial_credit_level: 0,
-            number_of_referees: 1,
-            current_credit_level: CreditLevel::Four,
-            reward_eras: 270,
-        };
-
-        assert_ok!(Credit::add_or_update_credit_data(
-            RawOrigin::Root.into(),
-            3,
-            credit_data.clone()
-        ));
-        assert_eq!(Credit::user_credit(3), Some(credit_data));
-        let credit_historys = vec![
-            (
-                0,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 100,
-                    initial_credit_level: CreditLevel::One,
-                    rank_in_initial_credit_level: 1,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::One,
-                    reward_eras: 1,
-                },
-            ),
-            (
-                1,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 400,
-                    initial_credit_level: CreditLevel::Four,
-                    rank_in_initial_credit_level: 0,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::Four,
-                    reward_eras: 270,
-                },
-            ),
-        ];
-        assert_eq!(Credit::user_credit_history(3), credit_historys);
-
-        // era 2
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&3, 1, 1).0, Some(223068450647875213020));
-
-        // era 3
-        run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(Credit::get_reward(&3, 2, 2).0, Some(223068450647875213020));
-    });
-}
-
-#[test]
-fn get_credit_score() {
-    new_test_ext().execute_with(|| {
-        UserCredit::<Test>::insert(
-            1,
-            CreditData {
-                campaign_id: 0,
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1u32,
-                number_of_referees: 1,
-                current_credit_level: CreditLevel::One,
-                reward_eras: 1,
-            },
-        );
-        assert_eq!(Credit::get_credit_score(&1).unwrap(), 100);
-    });
-}
-
-#[test]
-fn slash_credit() {
-    new_test_ext().execute_with(|| {
-        UserCredit::<Test>::insert(
-            1,
-            CreditData {
-                campaign_id: 0,
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1u32,
-                number_of_referees: 1,
-                reward_eras: 1,
-                current_credit_level: CreditLevel::One,
-            },
-        );
-        run_to_block(1);
-        Credit::slash_credit(&1, None);
-        assert_eq!(
-            Credit::get_credit_score(&1).unwrap(),
-            100 - CREDIT_ATTENUATION_STEP
-        );
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(
-                1,
-                100 - CREDIT_ATTENUATION_STEP
-            ))
-        );
-    });
-}
-
-#[test]
-fn update_credit_by_traffic() {
-    new_test_ext().execute_with(|| {
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
-
-        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
-
-        run_to_block(BLOCKS_PER_ERA * 2);
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 1); // 0 + 1
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 2); // 1 + 1
-
-        run_to_block(BLOCKS_PER_ERA * 4);
-        Credit::update_credit_by_traffic(1);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 3); // 2 + 1
-
-        run_to_block(BLOCKS_PER_ERA * 5);
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            2,
-            Privilege::DeviceAdmin
-        ));
-        assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(2), 1));
-        Credit::update_credit_by_traffic(1); // device maintain doesn't affect credit increase
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 4);
-    });
-}
-
-#[test]
-fn update_credit_by_tip() {
-    new_test_ext().execute_with(|| {
-        Credit::update_credit_by_tip(1, 8);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 0);
-
-        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(1)));
-        Credit::update_credit_by_tip(1, 8);
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 8); // 0 + 8
-    });
-}
-
-#[test]
-fn update_credit_by_burn_nft() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Credit::update_credit_by_burn_nft(1, 8));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 8); // 0 + 8
-    });
-}
-
-#[test]
-fn get_reward_work() {
-    new_test_ext().execute_with(|| {
-        assert_eq!(Credit::get_reward(&3, 0, 0).0, None);
-        assert!(Credit::init_delegator_history(&3, 0));
-        assert!(Credit::init_delegator_history(&7, 0));
-        assert!(Credit::init_delegator_history(&8, 0));
-        assert!(Credit::init_delegator_history(&9, 0));
-        assert!(Credit::init_delegator_history(&10, 0));
-        assert!(Credit::init_delegator_history(&11, 0));
-        run_to_block(BLOCKS_PER_ERA); // era 1
-        assert_eq!(Credit::get_reward(&3, 0, 0).0, Some(21369858941948251800));
-        assert_eq!(Credit::get_reward(&7, 0, 0).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&8, 0, 0).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&9, 0, 0).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&10, 0, 0).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&11, 0, 0).0, Some(56416427606743384752));
-        run_to_block(BLOCKS_PER_ERA * 2); // era 2, credit expires at era 1
-        assert_eq!(Credit::get_reward(&3, 1, 1).0, None);
-        assert_eq!(Credit::get_reward(&7, 1, 1).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&8, 1, 1).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&9, 1, 1).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&10, 1, 1).0, Some(223068450647875213020));
-        assert_eq!(Credit::get_reward(&11, 1, 1).0, Some(56416427606743384752));
-    });
-}
-
-#[test]
-fn get_reward_with_slash_credit_with_bonus() {
-    new_test_ext().execute_with(|| {
-        assert_eq!(Credit::user_credit(&7).unwrap().credit, 400);
-        assert!(Credit::init_delegator_history(&7, 0));
-        run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(Credit::get_reward(&7, 0, 0).0, Some(223068450647875213020));
-
-        Credit::slash_credit(&7, None);
-        assert_eq!(
-            Credit::user_credit(&7).unwrap().credit,
-            400 - CREDIT_ATTENUATION_STEP
-        );
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&7, 1, 1).0, Some(111517786970905338624));
-    });
-}
-
-#[test]
-fn get_reward_failed() {
-    new_test_ext().execute_with(|| {
-        run_to_block(BLOCKS_PER_ERA);
-        assert_eq!(Credit::get_reward(&5, 0, 0).0, None); // 5 credit 0
-        assert_eq!(Credit::get_reward(&8, 0, 0).0, None); // 8 not contains in storage
-    });
-}
-
-#[test]
-fn slash_offline_devices_credit() {
-    new_test_ext().execute_with(|| {
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
-        assert_ok!(DeeperNode::im_online(RuntimeOrigin::signed(3)));
-
-        run_to_block(BLOCKS_PER_ERA);
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 100);
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
-
-        run_to_block(BLOCKS_PER_ERA * 5);
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 99);
-
-        run_to_block(BLOCKS_PER_ERA * 6);
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
-
-        run_to_block(BLOCKS_PER_ERA * 8);
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 98);
-
-        run_to_block(BLOCKS_PER_ERA * 9);
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
-
-        run_to_block(BLOCKS_PER_ERA * 12);
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::DeviceAdmin
-        ));
-        assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(1), 3));
-        Credit::slash_offline_device_credit(&3);
-        assert_eq!(Credit::user_credit(&3).unwrap().credit, 97);
-    });
-}
-
-#[test]
-fn update_credit_history_when_era_is_the_same() {
-    new_test_ext().execute_with(|| {
-        UserCredit::<Test>::insert(
-            1,
-            CreditData {
-                campaign_id: 0,
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1u32,
-                number_of_referees: 1,
-                current_credit_level: CreditLevel::One,
-                reward_eras: 270,
-            },
-        );
-        assert!(Credit::init_delegator_history(&1, 0));
-        //default era=0
-
-        let credit_historys = vec![(
-            0,
-            CreditData {
-                campaign_id: 0,
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1u32,
-                number_of_referees: 1,
-                current_credit_level: CreditLevel::One,
-                reward_eras: 270,
-            },
-        )];
-
-        assert_eq!(Credit::user_credit_history(1), credit_historys);
-    });
-}
-
-#[test]
-fn update_credit_history_when_era_is_non_zero() {
-    new_test_ext().execute_with(|| {
-        //default era = 0
-        UserCredit::<Test>::insert(
-            1,
-            CreditData {
-                campaign_id: 0,
-                credit: 100,
-                initial_credit_level: CreditLevel::One,
-                rank_in_initial_credit_level: 1u32,
-                number_of_referees: 1,
-                current_credit_level: CreditLevel::One,
-                reward_eras: 270,
-            },
-        );
-        // run_to_block, era=1
-        run_to_block(BLOCKS_PER_ERA);
-        assert!(Credit::init_delegator_history(&1, 1));
-        Credit::update_credit_history(&1, 10);
-
-        let credit_historys = vec![
-            (
-                1,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 100,
-                    initial_credit_level: CreditLevel::One,
-                    rank_in_initial_credit_level: 1u32,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::One,
-                    reward_eras: 270,
-                },
-            ),
-            (
-                10,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 100,
-                    initial_credit_level: CreditLevel::One,
-                    rank_in_initial_credit_level: 1u32,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::One,
-                    reward_eras: 270,
-                },
-            ),
-        ];
-
-        assert_eq!(Credit::user_credit_history(1), credit_historys);
-    });
-}
-
-#[test]
-fn burn_dpr_add_credit() {
-    new_test_ext().execute_with(|| {
-        // 1,3's gennesis balance = 500
-        let _ = Balances::deposit_creating(&1, 5000);
-        let _ = Balances::deposit_creating(&3, 10000);
-        // genesis 1's credit score 100
-        UserCreditHistory::<Test>::insert(
-            1,
-            vec![
-                (
-                    1,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 10,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    2,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 50,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-            ],
-        );
-
-        // genesis 3's credit score 100
-        UserCreditHistory::<Test>::insert(
-            3,
-            vec![
-                (
-                    1,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 100,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    2,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 300,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::Three,
-                        reward_eras: 270,
-                    },
-                ),
-            ],
-        );
-        // run_to_block, era=1
-        run_to_block(BLOCKS_PER_ERA * 3);
-
-        assert!(Credit::burn_for_add_credit(RuntimeOrigin::signed(1), 100).is_ok());
-        assert!(Credit::burn_for_add_credit(RuntimeOrigin::signed(3), 200).is_ok());
-
-        assert_eq!(Credit::user_credit(1).unwrap().credit, 100);
-        assert_eq!(Credit::user_credit(3).unwrap().credit, 300);
-
-        assert_eq!(Balances::free_balance(&1), 500);
-        assert_eq!(Balances::free_balance(&3), 500);
-        assert_eq!(Treasury::pot(), 10000 + 5000);
-    });
-}
-
-#[test]
-fn switch_campaign_duration() {
-    new_test_ext().execute_with(|| {
-        // 1,3's gennesis balance = 500
-        let _ = Balances::deposit_creating(&13, 5000);
-        CampaignIdSwitch::<Test>::insert(0, 1);
-        //let credit_data = Credit::user_credit(1).unwrap();
-        assert!(Credit::init_delegator_history(&13, 1));
-        // run_to_block, era=1
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&13, 1, 1).0, Some(60263002216294070076));
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(Credit::get_reward(&13, 2, 2).0, Some(56416427606743384752));
-
-        assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 1);
-        assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 3650);
-
-        run_to_block(BLOCKS_PER_ERA * 4);
-        assert_eq!(Credit::get_reward(&13, 3, 3).0, Some(56416427606743384752));
-    });
-}
-
-#[test]
-fn switch_campaign_same_id() {
-    new_test_ext().execute_with(|| {
-        // 1,3's gennesis balance = 500
-        let _ = Balances::deposit_creating(&13, 5000);
-        CampaignIdSwitch::<Test>::insert(0, 0);
-        //let credit_data = Credit::user_credit(1).unwrap();
-        assert!(Credit::init_delegator_history(&13, 1));
-        // run_to_block, era=1
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&13, 1, 1).0, Some(60263002216294070076));
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(Credit::get_reward(&13, 2, 2).0, Some(60263002216294070076));
-
-        assert_eq!(Credit::user_credit(13).unwrap().campaign_id, 0);
-        assert_eq!(Credit::user_credit(13).unwrap().reward_eras, 1 + 360);
-    });
-}
-
-#[test]
-fn force_modify_credit_history() {
-    new_test_ext().execute_with(|| {
-        UserCreditHistory::<Test>::insert(
-            1,
-            vec![
-                (
-                    6,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 110,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    10,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 109,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-            ],
-        );
-        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 8).is_ok());
-        assert_eq!(
-            Credit::user_credit_history(1),
-            vec![
-                (
-                    8,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 110,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    10,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 109,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-            ]
-        );
-
-        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 6).is_err()); // do not modify
-        assert_eq!(
-            Credit::user_credit_history(1),
-            vec![
-                (
-                    8,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 110,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-                (
-                    10,
-                    CreditData {
-                        campaign_id: 0,
-                        credit: 109,
-                        initial_credit_level: CreditLevel::One,
-                        rank_in_initial_credit_level: 1u32,
-                        number_of_referees: 1,
-                        current_credit_level: CreditLevel::One,
-                        reward_eras: 270,
-                    },
-                ),
-            ]
-        );
-
-        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 10).is_ok());
-        assert_eq!(
-            Credit::user_credit_history(1),
-            vec![(
-                10,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 109,
-                    initial_credit_level: CreditLevel::One,
-                    rank_in_initial_credit_level: 1u32,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::One,
-                    reward_eras: 270,
-                },
-            )]
-        );
-
-        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 12).is_ok());
-        assert_eq!(
-            Credit::user_credit_history(1),
-            vec![(
-                12,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 109,
-                    initial_credit_level: CreditLevel::One,
-                    rank_in_initial_credit_level: 1u32,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::One,
-                    reward_eras: 270,
-                },
-            )]
-        );
-
-        assert!(Credit::force_modify_credit_history(RuntimeOrigin::root().into(), 1, 12).is_ok());
-        assert_eq!(
-            Credit::user_credit_history(1),
-            vec![(
-                12,
-                CreditData {
-                    campaign_id: 0,
-                    credit: 109,
-                    initial_credit_level: CreditLevel::One,
-                    rank_in_initial_credit_level: 1u32,
-                    number_of_referees: 1,
-                    current_credit_level: CreditLevel::One,
-                    reward_eras: 270,
-                },
-            )]
-        );
-    });
-}
-
-#[test]
-fn update_nft_class_credit() {
-    new_test_ext().execute_with(|| {
-        assert_noop!(
-            Credit::update_nft_class_credit(RuntimeOrigin::signed(1), 0, 5),
-            Error::<Test>::NotAdmin
-        );
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            3,
-            Privilege::CreditAdmin
-        ));
-
-        assert_ok!(Credit::update_nft_class_credit(
-            RuntimeOrigin::signed(3),
-            0,
-            5
-        ));
-        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 5);
-
-        assert_ok!(Credit::update_nft_class_credit(
-            RuntimeOrigin::signed(3),
-            1,
-            10
-        ));
-        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 10);
-    });
-}
-
-#[test]
-fn update_sum_of_credit_nft_burn_history() {
-    new_test_ext().execute_with(|| {
-        assert_noop!(
-            Credit::update_sum_of_credit_nft_burn_history(RuntimeOrigin::signed(1), 0, 5),
-            Error::<Test>::NotAdmin
-        );
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            3,
-            Privilege::CreditAdmin
-        ));
-
-        assert_ok!(Credit::update_sum_of_credit_nft_burn_history(
-            RuntimeOrigin::signed(3),
-            0,
-            5
-        ));
-        assert_eq!(crate::CreditFromBurnNft::<Test>::get(0), 5);
-    });
-}
-
-#[test]
-fn burn_nft() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Uniques::force_create(RuntimeOrigin::root(), 0, 1, true));
-        assert_ok!(Uniques::force_create(RuntimeOrigin::root(), 1, 1, true));
-        assert_ok!(Uniques::force_create(RuntimeOrigin::root(), 2, 1, true));
-
-        assert_ok!(Uniques::mint(RuntimeOrigin::signed(1), 0, 42, 1));
-        assert_ok!(Uniques::mint(RuntimeOrigin::signed(1), 1, 42, 1));
-        assert_ok!(Uniques::mint(RuntimeOrigin::signed(1), 2, 42, 1));
-
-        assert_noop!(
-            Credit::burn_nft(RuntimeOrigin::signed(1), 0, 42),
-            Error::<Test>::MiningMachineClassCreditNoConfig
-        );
-        assert_noop!(
-            Credit::burn_nft(RuntimeOrigin::signed(1), 1, 42),
-            Error::<Test>::MiningMachineClassCreditNoConfig
-        );
-        assert_noop!(
-            Credit::burn_nft(RuntimeOrigin::signed(1), 2, 42),
-            Error::<Test>::MiningMachineClassCreditNoConfig
-        );
-
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            3,
-            Privilege::CreditAdmin
-        ));
-
-        assert_ok!(Credit::update_nft_class_credit(
-            RuntimeOrigin::signed(3),
-            0,
-            50
-        ));
-        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(0), 50);
-        assert_ok!(Credit::update_nft_class_credit(
-            RuntimeOrigin::signed(3),
-            1,
-            30
-        ));
-        assert_eq!(crate::MiningMachineClassCredit::<Test>::get(1), 30);
-
-        let credit_data = CreditData {
-            campaign_id: 0,
-            credit: 100,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 0,
-            number_of_referees: 1,
-            current_credit_level: CreditLevel::One,
-            reward_eras: 0,
-        };
-        // update_credit_data works
-        assert_ok!(Credit::add_or_update_credit_data(
-            RuntimeOrigin::root(),
-            1,
-            credit_data.clone()
-        ));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 100);
-
-        assert_ok!(Credit::burn_nft(RuntimeOrigin::signed(1), 0, 42));
-        assert_eq!(Credit::user_credit(&1).unwrap().credit, 150);
-
-        assert_noop!(
-            Credit::burn_nft(RuntimeOrigin::signed(1), 1, 42),
-            Error::<Test>::OutOfMaxBurnCreditPerAddress
-        );
-
-        assert_noop!(
-            Credit::burn_nft(RuntimeOrigin::signed(1), 2, 42),
-            Error::<Test>::MiningMachineClassCreditNoConfig
-        );
-    });
-}
-
-#[test]
-fn unstaking_slash_credit() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::CreditAdmin
-        ));
-
-        assert_ok!(Credit::set_user_staking_credit(
-            RuntimeOrigin::signed(1),
-            vec!((3, 50))
-        ));
-
-        run_to_block(1);
-        let new_credit_data = CreditData {
-            campaign_id: 0,
-            credit: 100,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 1u32,
-            number_of_referees: 1,
-            current_credit_level: CreditLevel::One,
-            reward_eras: 270,
-        };
-        assert_ok!(Credit::add_or_update_credit_data(
-            RuntimeOrigin::root(),
-            3,
-            new_credit_data
-        ));
-
-        assert_ok!(Credit::unstaking_slash_credit(RuntimeOrigin::signed(1), 3));
-        assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
-        assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 4);
-        assert_eq!(
-            <frame_system::Pallet<Test>>::events()
-                .pop()
-                .expect("should contains events")
-                .event,
-            crate::tests::RuntimeEvent::from(crate::Event::CreditUpdateSuccess(3, 50))
-        );
-    });
-}
-
-#[test]
-fn new_campaign_usdt_reward() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::OracleWorker
-        ));
-
-        assert_ok!(Credit::set_dpr_price(
-            RuntimeOrigin::signed(1),
-            25_000_000_000_000_000,
-            H160::zero()
-        ));
-        run_to_block(1);
-
-        let credit_setting = CreditSetting {
-            campaign_id: 5,
-            credit_level: CreditLevel::One,
-            staking_balance: 3_000,
-            base_apy: Percent::from_percent(20),
-            bonus_apy: Percent::from_percent(0),
-            max_rank_with_bonus: 0u32,
-            tax_rate: Percent::from_percent(0),
-            max_referees_with_rewards: 0,
-            reward_per_referee: 0,
-        };
-        assert_ok!(Credit::update_credit_setting(
-            RawOrigin::Root.into(),
-            credit_setting.clone()
-        ));
-        let credit_setting = CreditSetting {
-            campaign_id: 5,
-            credit_level: CreditLevel::Two,
-            staking_balance: 5_000,
-            base_apy: Percent::from_percent(30),
-            bonus_apy: Percent::from_percent(0),
-            max_rank_with_bonus: 0u32,
-            tax_rate: Percent::from_percent(0),
-            max_referees_with_rewards: 0,
-            reward_per_referee: 0,
-        };
-        assert_ok!(Credit::update_credit_setting(
-            RawOrigin::Root.into(),
-            credit_setting.clone()
-        ));
-
-        Credit::set_staking_balance(
-            &1000,
-            75_000_000_000_000_000_000,
-            3_000_000_000_000_000_000_000,
-        );
-
-        let new_credit_data = CreditData {
-            campaign_id: 5,
-            credit: 102,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 0u32,
-            number_of_referees: 0,
-            current_credit_level: CreditLevel::One,
-            reward_eras: 270,
-        };
-        assert_ok!(Credit::add_or_update_credit_data(
-            RuntimeOrigin::root(),
-            1000,
-            new_credit_data
-        ));
-        assert!(Credit::init_delegator_history(&1000, 1));
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&1000, 1, 1).0, Some(1643835616438356164));
-        let new_credit_data = CreditData {
-            campaign_id: 5,
-            credit: 202,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 0u32,
-            number_of_referees: 0,
-            current_credit_level: CreditLevel::Two,
-            reward_eras: 270,
-        };
-        assert_ok!(Credit::add_or_update_credit_data(
-            RuntimeOrigin::root(),
-            1000,
-            new_credit_data
-        ));
-        // add 50 usdt
-        Credit::set_staking_balance(
-            &1000,
-            50_000_000_000_000_000_000,
-            2_000_000_000_000_000_000_000,
-        );
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(Credit::get_reward(&1000, 2, 2).0, Some(4109589041095890410));
-
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            2,
-            Privilege::CreditAdmin
-        ));
-        assert_ok!(Credit::unset_staking_balance(
-            RuntimeOrigin::signed(2),
-            1000
-        ));
-        run_to_block(BLOCKS_PER_ERA * 4);
-        // Even not staking, user also get reward based on virtual staking balance 25 USDT,
-        assert_eq!(Credit::get_reward(&1000, 3, 3).0, Some(821917808219178082));
-    });
-}
-
-#[test]
-fn set_dpr_price_test() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1);
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::OracleWorker
-        ));
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            2,
-            Privilege::OracleWorker
-        ));
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::CreditAdmin
-        ));
-        assert_ok!(Credit::set_dpr_price(
-            RuntimeOrigin::signed(1),
-            100,
-            H160::zero()
-        ));
-        assert_ok!(Credit::set_price_diff_rate(
-            RuntimeOrigin::signed(1),
-            Percent::from_percent(10)
-        ));
-        run_to_block(2);
-        assert_eq!(Credit::dpr_price(), Some(100));
-        assert_err!(
-            Credit::set_dpr_price(RuntimeOrigin::signed(1), 111, H160::zero()),
-            Error::<Test>::PriceDiffTooMuch
-        );
-
-        assert_ok!(Credit::set_dpr_price(
-            RuntimeOrigin::signed(1),
-            110,
-            H160::zero()
-        ));
-        assert_ok!(Credit::set_dpr_price(
-            RuntimeOrigin::signed(2),
-            102,
-            H160::zero()
-        ));
-        run_to_block(3);
-        assert_eq!(Credit::dpr_price(), Some(106));
-    });
-}
-
-#[test]
-fn set_and_unset_maintain_device() {
-    new_test_ext().execute_with(|| {
-        run_to_block(1);
-        assert_err!(
-            Credit::set_maintain_device(RuntimeOrigin::signed(1), 2),
-            Error::<Test>::NotDeviceAdmin
-        );
-        run_to_block(2);
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::DeviceAdmin
-        ));
-        assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(1), 2));
-        assert_eq!(MaintainDevices::<Test>::get(), vec![2]);
-    });
-}
-
-#[test]
-fn change_genesis_campaign_reward() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::OracleWorker
-        ));
-
-        assert!(Credit::init_delegator_history(&11, 0));
-
-        run_to_block(BLOCKS_PER_ERA * 1);
-        Credit::on_runtime_upgrade();
-        assert_eq!(Credit::get_reward(&11, 0, 0).0, Some(56416427606743384752));
-        assert_eq!(GenesisChangeRewardEra::<Test>::get(), 1);
-        let id = CampaignIdSwitch::<Test>::get(0);
-        assert_eq!(id.unwrap(), 6);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(40));
-
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&11, 1, 1).0, Some(10958902021511924000));
-        let ucredit = UserCredit::<Test>::get(11).unwrap();
-        assert_eq!(ucredit.campaign_id, 6);
-        assert_eq!(ucredit.current_credit_level, CreditLevel::Two);
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(Credit::get_reward(&11, 2, 2).0, Some(10958902021511924000));
-
-        run_to_block(BLOCKS_PER_ERA * 181);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(39));
-
-        assert_eq!(
-            Credit::get_reward(&11, 180, 180).0,
-            Some(10684929470974125900)
-        );
-
-        run_to_block(BLOCKS_PER_ERA * 180 * 6 + 1);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(35));
-
-        run_to_block(BLOCKS_PER_ERA * 180 * 7 + 1);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(35));
-    });
+pub struct U128FakeUserPrivilege;
+
+impl UserPrivilegeInterface<u64> for U128FakeUserPrivilege {
+    fn has_privilege(user: &u64, _p: Privilege) -> bool {
+        if user == &1 {
+            return true;
+        }
+        false
+    }
+
+    fn has_evm_privilege(_user: &H160, _p: Privilege) -> bool {
+        true
+    }
 }

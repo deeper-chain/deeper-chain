@@ -18,29 +18,12 @@
 pub use pallet::*;
 
 #[cfg(test)]
-mod mock;
-
-#[cfg(test)]
 mod tests;
 
-#[cfg(any(feature = "runtime-benchmarks", test))]
-pub mod benchmarking;
-pub mod weights;
-pub(crate) const LOG_TARGET: &'static str = "credit";
-pub(crate) const USDT_CAMPAIGN_ID: u16 = 5;
+// #[cfg(any(feature = "runtime-benchmarks", test))]
+mod benchmarking;
+mod weights;
 
-// syntactic sugar for logging.
-#[macro_export]
-macro_rules! log {
-	($level:tt, $patter:expr $(, $values:expr)* $(,)?) => {
-		log::$level!(
-			target: crate::LOG_TARGET,
-			$patter $(, $values)*
-		)
-	};
-}
-
-use frame_support::dispatch::DispatchResult;
 pub use weights::WeightInfo;
 
 #[frame_support::pallet]
@@ -79,16 +62,16 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-        /// Number of blocks per era.
-        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
         /// Currency
-        type Adst: MetaMutate<Self::AccountId> + Mutate<Self::AccountId> + Create<Self::AccountId>;
+        type AdstCurrency: MetaMutate<Self::AccountId>
+            + Mutate<Self::AccountId>
+            + Create<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
         /// query user prvileges
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
 
-        type Nft: NftInspect<Self::AccountId>;
+        // type Nft: NftInspect<Self::AccountId>;
 
         type Time: Time;
 
@@ -100,16 +83,16 @@ pub mod pallet {
     }
 
     pub(crate) type AssetIdOf<T> =
-        <<T as Config>::Adst as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
+        <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
     pub(crate) type AssetBalanceOf<T> =
-        <<T as Config>::Adst as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+        <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
-    pub(crate) type CollectionIdOf<T> =
-        <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::CollectionId;
+    // pub(crate) type CollectionIdOf<T> =
+    //     <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::CollectionId;
 
-    pub(crate) type ItemIdOf<T> =
-        <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::ItemId;
+    // pub(crate) type ItemIdOf<T> =
+    //     <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::ItemId;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -129,7 +112,8 @@ pub mod pallet {
     pub type CurrentStakerNum<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
-    pub type CurrentAdstReward<T: Config> = StorageValue<_, AssetBalanceOf<T>, ValueQuery>;
+    pub type CurrentAdstBaseReward<T: Config> =
+        StorageValue<_, AssetBalanceOf<T>, ValueQuery, AdstInitReward<T>>;
 
     #[pallet::type_value]
     pub fn AdstInitReward<T: Config>() -> AssetBalanceOf<T> {
@@ -138,6 +122,15 @@ pub mod pallet {
 
     #[pallet::storage]
     pub type CurrentMintedAdst<T: Config> = StorageValue<_, AssetBalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    pub type CurrentHalfTarget<T: Config> =
+        StorageValue<_, AssetBalanceOf<T>, ValueQuery, AdstInitTarget<T>>;
+
+    #[pallet::type_value]
+    pub fn AdstInitTarget<T: Config>() -> AssetBalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(1_000_000_000 * DPR)
+    }
 
     #[pallet::storage]
     pub type CurrentRewardPeriod<T: Config> = StorageValue<_, u32, ValueQuery, ConstU32<180>>;
@@ -194,7 +187,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            let _ = T::Adst::create(
+            let _ = T::AdstCurrency::create(
                 T::AdstId::get(),
                 Self::account_id(),
                 true,
@@ -204,22 +197,31 @@ pub mod pallet {
             Weight::from_ref_time(0)
         }
 
-        fn on_finalize(_: T::BlockNumber) {
+        fn on_initialize(_: T::BlockNumber) -> Weight {
             const MILLISECS_PER_DAY: u64 = 1000 * 3600 * 24;
-            const BLOCK_PER_DAY: u32 = 17200;
+            const BLOCK_PER_DAY: u32 = 17000;
 
             let saved_day = Self::saved_day();
             let cur_time: u64 = T::Time::now().unique_saturated_into();
+
+            let mut weight = T::DbWeight::get().reads(2 as u64);
             let cur_day = (cur_time / MILLISECS_PER_DAY) as u32;
+            println!("{} {}", saved_day, cur_day);
             if cur_day > saved_day {
                 SavedDay::<T>::put(cur_day);
                 let prefix = Self::get_account_release_prefix_hash();
-                AdstStakerLastKey::<T>::put(prefix);
                 let staker_num = CurrentStakerNum::<T>::get();
+                println!("staker_num {} prefix {:?}", staker_num, prefix);
+                AdstStakerLastKey::<T>::put(prefix);
                 BlocklyRewardNum::<T>::put(staker_num / BLOCK_PER_DAY + 2);
+                weight += T::DbWeight::get()
+                    .reads(2 as u64)
+                    .saturating_add(T::DbWeight::get().writes(3 as u64));
             } else {
-                Self::adst_reward(cur_day);
+                weight += Self::adst_reward(cur_day);
             }
+
+            weight
         }
     }
 
@@ -235,11 +237,8 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-
             let period = CurrentRewardPeriod::<T>::get();
-
             AdstStakers::<T>::insert(account_id, period);
-
             Ok(())
         }
     }
@@ -254,14 +253,28 @@ pub mod pallet {
             AdstStakers::<T>::prefix_hash()
         }
 
-        fn pay_reward(account : &T::AccountId, day : u32) {
-
+        fn pay_reward(account: &T::AccountId, day: u32) -> DispatchResult {
+            let cur_base_val = AdstInitReward::<T>::get();
+            let portion = Perbill::from_rational(day, CurrentRewardPeriod::<T>::get());
+            let real_pay = portion * cur_base_val;
+            T::AdstCurrency::mint_into(T::AdstId::get(), account, real_pay)?;
+            let cur_minted = CurrentMintedAdst::<T>::mutate(|num| {
+                *num += real_pay;
+                *num
+            });
+            let cur_hf_target = CurrentHalfTarget::<T>::get();
+            if cur_minted >= cur_hf_target {
+                CurrentHalfTarget::<T>::put(cur_hf_target.saturating_mul(2u32.into()));
+                CurrentAdstBaseReward::<T>::mutate(|base| *base = *base / 2u32.into());
+            }
+            Ok(())
         }
 
-        fn adst_reward(_cur_day: u32) {
+        fn adst_reward(_cur_day: u32) -> Weight {
             let last_key = Self::adst_staker_last_key();
+            let mut weight = T::DbWeight::get().reads(1 as u64);
             if last_key.is_empty() {
-                return;
+                return weight;
             }
             let mut to_be_removed = Vec::new();
             let mut to_be_sub = Vec::new();
@@ -269,13 +282,18 @@ pub mod pallet {
             let mut adst_iter = AdstStakers::<T>::iter_from(last_key);
             let blockly_num = BlocklyRewardNum::<T>::get();
             let mut last_key = Vec::new();
+            weight += T::DbWeight::get().reads(1 as u64);
             loop {
                 if let Some((account, period)) = adst_iter.next() {
                     last_key = AdstStakers::<T>::hashed_key_for(&account);
                     if period == 0 {
                         to_be_removed.push(account);
                     } else {
-                        Self::pay_reward(&account,period);
+                        let _ = Self::pay_reward(&account, period);
+
+                        weight += T::DbWeight::get()
+                            .reads(3 as u64)
+                            .saturating_add(T::DbWeight::get().writes(3 as u64));
                         to_be_sub.push(account);
                     }
                 } else {
@@ -289,16 +307,20 @@ pub mod pallet {
             }
 
             AdstStakerLastKey::<T>::put(last_key);
+            weight += T::DbWeight::get().writes(1 as u64);
             for account in to_be_removed {
                 AdstStakers::<T>::remove(&account);
+                weight += T::DbWeight::get().writes(1 as u64);
             }
             for account in to_be_sub {
+                weight += T::DbWeight::get().writes(1 as u64);
                 AdstStakers::<T>::mutate_exists(&account, |period| {
                     if let Some(ref mut p) = period {
                         *p = p.saturating_sub(1);
                     }
                 });
             }
+            weight
         }
     }
 }
