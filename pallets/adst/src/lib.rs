@@ -30,13 +30,10 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::traits::{
-         fungibles::metadata::Mutate as MetaMutate, fungibles::Create,
-        fungibles::Inspect, fungibles::Mutate, Time
+        fungibles::metadata::Mutate as MetaMutate, fungibles::Create, fungibles::Inspect,
+        fungibles::Mutate, Time,
     };
-    use frame_support::{
-        pallet_prelude::*, weights::Weight,
-        PalletId,
-    };
+    use frame_support::{pallet_prelude::*, weights::Weight, PalletId};
     use frame_system::pallet_prelude::*;
     use node_primitives::{
         user_privileges::{Privilege, UserPrivilegeInterface},
@@ -44,9 +41,7 @@ pub mod pallet {
     };
 
     use sp_runtime::{
-        traits::{
-            AccountIdConversion,Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, 
-        },
+        traits::{AccountIdConversion, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto},
         Perbill,
     };
     use sp_std::{convert::TryInto, prelude::*};
@@ -138,7 +133,6 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         AdstStakerAdd(T::AccountId, u32),
-       
     }
 
     #[pallet::error]
@@ -199,7 +193,7 @@ pub mod pallet {
                 Error::<T>::NotAdmin
             );
             let period = CurrentRewardPeriod::<T>::get();
-           
+
             AdstStakers::<T>::insert(&account_id, period);
             Self::deposit_event(Event::AdstStakerAdd(account_id, period));
             Ok(())

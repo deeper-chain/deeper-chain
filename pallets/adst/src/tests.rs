@@ -192,29 +192,31 @@ fn adst_pay_reward() {
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 8));
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 9));
 
-
         run_to_block(BlocksPerEra + 3);
         assert_eq!(Assets::balance(1, &2), 1560 * DPR);
 
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
 
-        run_to_block(2*BlocksPerEra + 3);
+        run_to_block(2 * BlocksPerEra + 3);
         assert_eq!(Assets::balance(1, &2), 3111333332640000000000);
         assert_eq!(Assets::balance(1, &3), 1560 * DPR);
 
-        run_to_block(180*BlocksPerEra + 3);
+        run_to_block(180 * BlocksPerEra + 3);
         assert_eq!(Assets::balance(1, &2), 141179999875200000000000);
         assert_eq!(Assets::balance(1, &3), 141171333209400000000000);
 
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
 
-        assert_eq!(AdstStakers::<Test>::get(3),Some(180));
-        assert_eq!(AdstStakers::<Test>::get(2),Some(0));
+        assert_eq!(AdstStakers::<Test>::get(3), Some(180));
+        assert_eq!(AdstStakers::<Test>::get(2), Some(0));
 
-        run_to_block(181*BlocksPerEra + 3);
-        assert_eq!(Assets::balance(1, &3), 141171333209400000000000 + 1560*DPR);
+        run_to_block(181 * BlocksPerEra + 3);
+        assert_eq!(
+            Assets::balance(1, &3),
+            141171333209400000000000 + 1560 * DPR
+        );
 
-        assert_eq!(AdstStakers::<Test>::get(2),None);
+        assert_eq!(AdstStakers::<Test>::get(2), None);
         assert_eq!(Assets::balance(1, &2), 141179999875200000000000);
         assert_eq!(Assets::balance(1, &8), 141179999875200000000000);
         assert_eq!(Assets::balance(1, &9), 141179999875200000000000);
