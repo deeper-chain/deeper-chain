@@ -45,6 +45,8 @@ pub enum Privilege {
     DeviceAdmin = 1 << 9,
     #[codec(index = 10)]
     BlackListAdmin = 1 << 10,
+    #[codec(index = 11)]
+    AdstAdmin = 1 << 11,
 }
 
 /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.

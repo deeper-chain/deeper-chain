@@ -4530,6 +4530,7 @@ dependencies = [
  "libsecp256k1 0.6.0",
  "log",
  "node-primitives",
+ "pallet-adst",
  "pallet-assets",
  "pallet-authority-discovery",
  "pallet-authorship",
@@ -4853,6 +4854,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "628223faebab4e3e40667ee0b2336d34a5b960ff60ea743ddfdbcf7770bcfb66"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "pallet-adst"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-timestamp",
+ "pallet-uniques",
+ "pallet-user-privileges",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

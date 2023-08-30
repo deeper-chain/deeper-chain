@@ -1168,7 +1168,7 @@ parameter_types! {
 
 impl pallet_assets::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type Balance = u64;
+    type Balance = Balance;
     type AssetId = u32;
     type Currency = Balances;
     type ForceOrigin = EnsureRoot<AccountId>;
@@ -1394,6 +1394,20 @@ impl pallet_base_fee::Config for Runtime {
     type DefaultElasticity = DefaultElasticity;
 }
 
+parameter_types! {
+    pub const AdstPalletId: PalletId = PalletId(*b"dep/adst");
+}
+
+impl pallet_adst::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type AdstCurrency = Assets;
+    type WeightInfo = ();
+    type UserPrivilegeInterface = UserPrivileges;
+    type Time = Timestamp;
+    type AdstId = ConstU32<1>;
+    type PalletId = AdstPalletId;
+}
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1462,6 +1476,8 @@ construct_runtime!(
 
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
         UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
+        Adst: pallet_adst::{Pallet, Call, Storage,Event<T>} = 92,
+
     }
 );
 
