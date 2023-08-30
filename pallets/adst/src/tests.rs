@@ -17,7 +17,7 @@
 
 //! Macro for creating the tests for the module.
 
-use frame_support::traits::{fungibles::Mutate, AsEnsureOriginWithArg, ConstU32, ConstU64, Hooks};
+use frame_support::traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, Hooks};
 use frame_support::{assert_ok, parameter_types, weights::Weight, PalletId};
 use pallet_user_privileges::H160;
 use sp_core::H256;
@@ -135,7 +135,7 @@ impl pallet_assets::Config for Test {
 pub const MILLISECS_PER_BLOCK: u64 = 5000;
 pub const SECS_PER_BLOCK: u64 = MILLISECS_PER_BLOCK / 1000;
 pub const EPOCH_DURATION_IN_BLOCKS: u64 = 60 / SECS_PER_BLOCK;
-pub const BlocksPerEra: u64 = (1 * EPOCH_DURATION_IN_BLOCKS) as u64;
+pub const BLOCKS_PER_ERA: u64 = (1 * EPOCH_DURATION_IN_BLOCKS) as u64;
 
 parameter_types! {
     pub const AdstPalletId: PalletId = PalletId(*b"dep/adst");
@@ -168,8 +168,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
         Timestamp::set_timestamp(System::block_number() * 1440 * 5000);
-
-        println!("Timestamp::now() {}", Timestamp::now());
         Adst::on_initialize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
@@ -181,27 +179,26 @@ pub fn run_to_block(n: u64) {
 fn adst_pay_reward() {
     new_test_ext().execute_with(|| {
         Adst::on_runtime_upgrade();
-
-        assert_ok!(<Test as Config>::AdstCurrency::mint_into(1, &11, 1 * DPR));
-        assert_eq!(Assets::balance(1, &11), 1 * DPR);
         // start day is day 0
-
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
 
         // 8,9 only check when 180
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 8));
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 9));
 
-        run_to_block(BlocksPerEra + 3);
+        run_to_block(BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(1, &2), 1560 * DPR);
+
+        assert_eq!(CurrentMintedAdst::<Test>::get(), 1560 * 3 * DPR);
+        assert_eq!(Assets::total_supply(1), 1560 * 3 * DPR);
 
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
 
-        run_to_block(2 * BlocksPerEra + 3);
+        run_to_block(2 * BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(1, &2), 3111333332640000000000);
         assert_eq!(Assets::balance(1, &3), 1560 * DPR);
 
-        run_to_block(180 * BlocksPerEra + 3);
+        run_to_block(180 * BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(1, &2), 141179999875200000000000);
         assert_eq!(Assets::balance(1, &3), 141171333209400000000000);
 
@@ -210,7 +207,7 @@ fn adst_pay_reward() {
         assert_eq!(AdstStakers::<Test>::get(3), Some(180));
         assert_eq!(AdstStakers::<Test>::get(2), Some(0));
 
-        run_to_block(181 * BlocksPerEra + 3);
+        run_to_block(181 * BLOCKS_PER_ERA + 3);
         assert_eq!(
             Assets::balance(1, &3),
             141171333209400000000000 + 1560 * DPR
@@ -220,6 +217,38 @@ fn adst_pay_reward() {
         assert_eq!(Assets::balance(1, &2), 141179999875200000000000);
         assert_eq!(Assets::balance(1, &8), 141179999875200000000000);
         assert_eq!(Assets::balance(1, &9), 141179999875200000000000);
+    });
+}
+
+#[test]
+fn adst_half_reward() {
+    new_test_ext().execute_with(|| {
+        Adst::on_runtime_upgrade();
+
+        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
+        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
+
+        CurrentHalfTarget::<Test>::put(1560 * 2 * DPR);
+
+        run_to_block(BLOCKS_PER_ERA + 3);
+        assert_eq!(Assets::balance(1, &2), 1560 * DPR);
+        assert_eq!(Assets::balance(1, &3), 1560 * DPR);
+
+        assert_eq!(
+            CurrentHalfTarget::<Test>::get(),
+            1560 * 2 * DPR + 1_000_000_000 * DPR
+        );
+        //half base reward
+        assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 * DPR);
+        CurrentHalfTarget::<Test>::put(1560 * 3 * DPR);
+
+        run_to_block(2 * BLOCKS_PER_ERA + 3);
+        // added balance = 1560/2 * (179/180)*DPR
+        assert_eq!(Assets::balance(1, &2), 2335666666320000000000);
+        assert_eq!(Assets::balance(1, &3), 2335666666320000000000);
+
+        run_to_block(3 * BLOCKS_PER_ERA + 3);
+        assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
     });
 }
 

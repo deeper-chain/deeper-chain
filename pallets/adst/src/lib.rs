@@ -133,6 +133,9 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         AdstStakerAdd(T::AccountId, u32),
+        RewardPeriod(u32),
+        HalfRewardTarget(AssetBalanceOf<T>),
+        BaseReward(AssetBalanceOf<T>),
     }
 
     #[pallet::error]
@@ -151,7 +154,15 @@ pub mod pallet {
                 1_000_000_000u32.into(),
             );
 
-            Weight::from_ref_time(0)
+            let _ = T::AdstCurrency::set(
+                T::AdstId::get(),
+                &Self::account_id(),
+                b"Adst".to_vec(),
+                b"Adst".to_vec(),
+                18,
+            );
+
+            T::DbWeight::get().writes(2u64)
         }
 
         fn on_initialize(_: T::BlockNumber) -> Weight {
@@ -198,6 +209,48 @@ pub mod pallet {
             Self::deposit_event(Event::AdstStakerAdd(account_id, period));
             Ok(())
         }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn set_reward_period(origin: OriginFor<T>, period: u32) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            CurrentRewardPeriod::<T>::put(period);
+            Self::deposit_event(Event::RewardPeriod(period));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn set_half_reward_target(
+            origin: OriginFor<T>,
+            target: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            CurrentHalfTarget::<T>::put(target);
+            Self::deposit_event(Event::HalfRewardTarget(target));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn set_base_reward(
+            origin: OriginFor<T>,
+            base_reward: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            CurrentAdstBaseReward::<T>::put(base_reward);
+            Self::deposit_event(Event::BaseReward(base_reward));
+            Ok(())
+        }
     }
 
     impl<T: Config> pallet::Pallet<T> {
@@ -210,7 +263,7 @@ pub mod pallet {
         }
 
         fn pay_reward(account: &T::AccountId, day: u32) -> DispatchResult {
-            let cur_base_val = AdstInitReward::<T>::get();
+            let cur_base_val = CurrentAdstBaseReward::<T>::get();
             let portion = Perbill::from_rational(day, CurrentRewardPeriod::<T>::get());
             let real_pay = portion * cur_base_val;
             T::AdstCurrency::mint_into(T::AdstId::get(), account, real_pay)?;
@@ -220,7 +273,9 @@ pub mod pallet {
             });
             let cur_hf_target = CurrentHalfTarget::<T>::get();
             if cur_minted >= cur_hf_target {
-                CurrentHalfTarget::<T>::put(cur_hf_target.saturating_mul(2u32.into()));
+                CurrentHalfTarget::<T>::put(
+                    cur_hf_target.saturating_add(AdstInitTarget::<T>::get()),
+                );
                 CurrentAdstBaseReward::<T>::mutate(|base| *base = *base / 2u32.into());
             }
             Ok(())
