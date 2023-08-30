@@ -30,32 +30,26 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use frame_support::traits::{
-        fungibles, fungibles::metadata::Mutate as MetaMutate, fungibles::Create,
-        fungibles::Inspect, fungibles::Mutate, nonfungibles::Inspect as NftInspect, Currency,
-        ExistenceRequirement, OnUnbalanced, Time, UnixTime, WithdrawReasons,
+         fungibles::metadata::Mutate as MetaMutate, fungibles::Create,
+        fungibles::Inspect, fungibles::Mutate, Time
     };
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, transactional, weights::Weight,
+        pallet_prelude::*, weights::Weight,
         PalletId,
     };
     use frame_system::pallet_prelude::*;
     use node_primitives::{
-        deeper_node::NodeInterface,
         user_privileges::{Privilege, UserPrivilegeInterface},
         DPR,
     };
-    use scale_info::prelude::string::{String, ToString};
-    use sp_core::{H160, U256};
+
     use sp_runtime::{
         traits::{
-            AccountIdConversion, One, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, Zero,
+            AccountIdConversion,Saturating, UniqueSaturatedFrom, UniqueSaturatedInto, 
         },
-        Perbill, Percent,
+        Perbill,
     };
-    use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
-
-    #[cfg(feature = "std")]
-    use frame_support::traits::GenesisBuild;
+    use sp_std::{convert::TryInto, prelude::*};
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
@@ -102,14 +96,11 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn adst_stakers)]
     pub type AdstStakers<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, u32, OptionQuery>;
+        CountedStorageMap<_, Blake2_128Concat, T::AccountId, u32, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn adst_staker_last_key)]
     pub(crate) type AdstStakerLastKey<T> = StorageValue<_, Vec<u8>, ValueQuery>;
-
-    #[pallet::storage]
-    pub type CurrentStakerNum<T: Config> = StorageValue<_, u32, ValueQuery>;
 
     #[pallet::storage]
     pub type CurrentAdstBaseReward<T: Config> =
@@ -146,42 +137,14 @@ pub mod pallet {
     //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        CreditUpdateSuccess(T::AccountId, u64),
-        CreditUpdateFailed(T::AccountId, u64),
+        AdstStakerAdd(T::AccountId, u32),
+       
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// invalid credit data
-        InvalidCreditData,
-        /// credit data has been initialized
-        CreditDataInitialized,
-        /// over history credit max value
-        CreditAddTooMuch,
-        /// credit history or input era is wrong
-        BadEraOrHistory,
-        /// account not found
-        AccountNotFound,
-        /// account not exist in user credit
-        AccountNoExistInUserCredit,
-        /// mining machine class credit no config
-        MiningMachineClassCreditNoConfig,
-        /// Campain id switch not match
-        CampaignIdNotMatch,
         /// Not Admin
         NotAdmin,
-        /// Not OracleWorker
-        NotOracleWorker,
-        /// Staking credit score not set
-        StakingCreditNotSet,
-        /// Out of max burn credit per address
-        OutOfMaxBurnCreditPerAddress,
-        /// price diffs too much
-        PriceDiffTooMuch,
-        /// price is zero
-        PriceZero,
-        /// not device admin
-        NotDeviceAdmin,
     }
 
     #[pallet::hooks]
@@ -191,7 +154,7 @@ pub mod pallet {
                 T::AdstId::get(),
                 Self::account_id(),
                 true,
-                1_000_000u32.into(),
+                1_000_000_000u32.into(),
             );
 
             Weight::from_ref_time(0)
@@ -206,12 +169,10 @@ pub mod pallet {
 
             let mut weight = T::DbWeight::get().reads(2 as u64);
             let cur_day = (cur_time / MILLISECS_PER_DAY) as u32;
-            println!("{} {}", saved_day, cur_day);
             if cur_day > saved_day {
                 SavedDay::<T>::put(cur_day);
-                let prefix = Self::get_account_release_prefix_hash();
-                let staker_num = CurrentStakerNum::<T>::get();
-                println!("staker_num {} prefix {:?}", staker_num, prefix);
+                let prefix = Self::get_staker_prefix_hash();
+                let staker_num = AdstStakers::<T>::count();
                 AdstStakerLastKey::<T>::put(prefix);
                 BlocklyRewardNum::<T>::put(staker_num / BLOCK_PER_DAY + 2);
                 weight += T::DbWeight::get()
@@ -238,7 +199,9 @@ pub mod pallet {
                 Error::<T>::NotAdmin
             );
             let period = CurrentRewardPeriod::<T>::get();
-            AdstStakers::<T>::insert(account_id, period);
+           
+            AdstStakers::<T>::insert(&account_id, period);
+            Self::deposit_event(Event::AdstStakerAdd(account_id, period));
             Ok(())
         }
     }
@@ -248,9 +211,8 @@ pub mod pallet {
             T::PalletId::get().into_account_truncating()
         }
 
-        fn get_account_release_prefix_hash() -> Vec<u8> {
-            use frame_support::storage::generator::StorageMap;
-            AdstStakers::<T>::prefix_hash()
+        fn get_staker_prefix_hash() -> Vec<u8> {
+            AdstStakers::<T>::map_storage_final_prefix()
         }
 
         fn pay_reward(account: &T::AccountId, day: u32) -> DispatchResult {
@@ -273,6 +235,7 @@ pub mod pallet {
         fn adst_reward(_cur_day: u32) -> Weight {
             let last_key = Self::adst_staker_last_key();
             let mut weight = T::DbWeight::get().reads(1 as u64);
+
             if last_key.is_empty() {
                 return weight;
             }
@@ -299,13 +262,11 @@ pub mod pallet {
                 } else {
                     break;
                 }
-
                 counter += 1;
                 if counter == blockly_num {
                     break;
                 }
             }
-
             AdstStakerLastKey::<T>::put(last_key);
             weight += T::DbWeight::get().writes(1 as u64);
             for account in to_be_removed {
