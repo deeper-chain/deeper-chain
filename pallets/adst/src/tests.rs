@@ -182,7 +182,7 @@ fn adst_pay_reward() {
         // start day is day 0
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
 
-        // 8,9 only check when 180
+        // 8,9 only check when 365
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 8));
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 9));
 
@@ -195,28 +195,28 @@ fn adst_pay_reward() {
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
-        assert_eq!(Assets::balance(1, &2), 3111333332640000000000);
+        assert_eq!(Assets::balance(1, &2), 3115726025880000000000);
         assert_eq!(Assets::balance(1, &3), 1560 * DPR);
 
-        run_to_block(180 * BLOCKS_PER_ERA + 3);
-        assert_eq!(Assets::balance(1, &2), 141179999875200000000000);
-        assert_eq!(Assets::balance(1, &3), 141171333209400000000000);
+        run_to_block(365 * BLOCKS_PER_ERA + 3);
+        assert_eq!(Assets::balance(1, &2), 285479999719200000000000);
+        assert_eq!(Assets::balance(1, &3), 285475725746640000000000);
 
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
 
-        assert_eq!(AdstStakers::<Test>::get(3), Some(180));
+        assert_eq!(AdstStakers::<Test>::get(3), Some(365));
         assert_eq!(AdstStakers::<Test>::get(2), Some(0));
 
-        run_to_block(181 * BLOCKS_PER_ERA + 3);
+        run_to_block(366 * BLOCKS_PER_ERA + 3);
         assert_eq!(
             Assets::balance(1, &3),
-            141171333209400000000000 + 1560 * DPR
+            285475725746640000000000 + 1560 * DPR
         );
 
         assert_eq!(AdstStakers::<Test>::get(2), None);
-        assert_eq!(Assets::balance(1, &2), 141179999875200000000000);
-        assert_eq!(Assets::balance(1, &8), 141179999875200000000000);
-        assert_eq!(Assets::balance(1, &9), 141179999875200000000000);
+        assert_eq!(Assets::balance(1, &2), 285479999719200000000000);
+        assert_eq!(Assets::balance(1, &8), 285479999719200000000000);
+        assert_eq!(Assets::balance(1, &9), 285479999719200000000000);
     });
 }
 
@@ -236,16 +236,16 @@ fn adst_half_reward() {
 
         assert_eq!(
             CurrentHalfTarget::<Test>::get(),
-            1560 * 2 * DPR + 1_000_000_000 * DPR
+            1560 * 2 * DPR + 5_000_000_000 * DPR
         );
         //half base reward
         assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 * DPR);
         CurrentHalfTarget::<Test>::put(1560 * 3 * DPR);
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
-        // added balance = 1560/2 * (179/180)*DPR
-        assert_eq!(Assets::balance(1, &2), 2335666666320000000000);
-        assert_eq!(Assets::balance(1, &3), 2335666666320000000000);
+        // added balance = 1560/2 * (364/365)*DPR
+        assert_eq!(Assets::balance(1, &2), 2337863012940000000000);
+        assert_eq!(Assets::balance(1, &3), 2337863012940000000000);
 
         run_to_block(3 * BLOCKS_PER_ERA + 3);
         assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);

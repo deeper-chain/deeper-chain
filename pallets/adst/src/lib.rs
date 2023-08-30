@@ -115,11 +115,11 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn AdstInitTarget<T: Config>() -> AssetBalanceOf<T> {
-        UniqueSaturatedFrom::unique_saturated_from(1_000_000_000 * DPR)
+        UniqueSaturatedFrom::unique_saturated_from(5_000_000_000 * DPR)
     }
 
     #[pallet::storage]
-    pub type CurrentRewardPeriod<T: Config> = StorageValue<_, u32, ValueQuery, ConstU32<180>>;
+    pub type CurrentRewardPeriod<T: Config> = StorageValue<_, u32, ValueQuery, ConstU32<365>>;
 
     #[pallet::storage]
     pub type BlocklyRewardNum<T: Config> = StorageValue<_, u32, ValueQuery, ConstU32<2>>;
