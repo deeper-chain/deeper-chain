@@ -1428,7 +1428,7 @@ pub mod pallet {
             let expiry_era = delegate_era + credit_data.reward_eras - 1;
             if from == expiry_era || credit_data.campaign_id == 0 || credit_data.campaign_id == 1 {
                 // switcch campaign forehead
-                Self::do_switch_campaign(account_id, credit_data, from);
+                Self::do_switch_campaign(account_id, credit_data, cur_era);
             } else if from > expiry_era {
                 Self::deposit_event(Event::GetRewardResult(account_id.clone(), from, to, 5));
                 return (None, weight);
