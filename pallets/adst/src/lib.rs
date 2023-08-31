@@ -48,7 +48,7 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_uniques::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Currency
@@ -59,8 +59,6 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
         /// query user prvileges
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
-
-        // type Nft: NftInspect<Self::AccountId>;
 
         type Time: Time;
 
@@ -77,11 +75,8 @@ pub mod pallet {
     pub(crate) type AssetBalanceOf<T> =
         <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
-    // pub(crate) type CollectionIdOf<T> =
-    //     <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::CollectionId;
-
-    // pub(crate) type ItemIdOf<T> =
-    //     <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::ItemId;
+        pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
+        pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -206,6 +201,30 @@ pub mod pallet {
             let period = CurrentRewardPeriod::<T>::get();
 
             AdstStakers::<T>::insert(&account_id, period);
+            Self::deposit_event(Event::AdstStakerAdd(account_id, period));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn add_adst_staking_account_with_nft(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            collection_id :ClassIdOf<T>,
+            item_id : InstanceIdOf<T>,
+            data : Vec<u8>
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            let period = CurrentRewardPeriod::<T>::get();
+
+            AdstStakers::<T>::insert(&account_id, period);
+
+            pallet_uniques::Pallet::<T>::mint_into(origin, class_id, instance_id, None)?;
+            pallet_uniques::Pallet::<T>::burn(origin, class_id, instance_id, None)?;
+
             Self::deposit_event(Event::AdstStakerAdd(account_id, period));
             Ok(())
         }
