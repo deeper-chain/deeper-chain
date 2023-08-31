@@ -33,7 +33,9 @@ pub mod pallet {
         fungibles::metadata::Mutate as MetaMutate, fungibles::Create, fungibles::Inspect,
         fungibles::Mutate, Time,
     };
-    use frame_support::{pallet_prelude::*, weights::Weight, PalletId};
+    use frame_support::{
+        dispatch::RawOrigin, pallet_prelude::*, transactional, weights::Weight, PalletId,
+    };
     use frame_system::pallet_prelude::*;
     use node_primitives::{
         user_privileges::{Privilege, UserPrivilegeInterface},
@@ -75,8 +77,8 @@ pub mod pallet {
     pub(crate) type AssetBalanceOf<T> =
         <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
-        pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
-        pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
+    pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
+    pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -87,6 +89,11 @@ pub mod pallet {
     #[pallet::getter(fn adst_stakers)]
     pub type AdstStakers<T: Config> =
         CountedStorageMap<_, Blake2_128Concat, T::AccountId, u32, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn adst_nfts)]
+    pub type AdstNfts<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, (ClassIdOf<T>, InstanceIdOf<T>), OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn adst_staker_last_key)]
@@ -128,6 +135,7 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         AdstStakerAdd(T::AccountId, u32),
+        AdstStakerAddNft(T::AccountId, u32, ClassIdOf<T>, InstanceIdOf<T>),
         RewardPeriod(u32),
         HalfRewardTarget(AssetBalanceOf<T>),
         BaseReward(AssetBalanceOf<T>),
@@ -205,13 +213,14 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::weight(Weight::from_ref_time(20_000u64))]
+        #[transactional]
         pub fn add_adst_staking_account_with_nft(
             origin: OriginFor<T>,
             account_id: T::AccountId,
-            collection_id :ClassIdOf<T>,
-            item_id : InstanceIdOf<T>,
-            data : Vec<u8>
+            collection_id: ClassIdOf<T>,
+            item_id: InstanceIdOf<T>,
+            data: Vec<u8>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
@@ -221,11 +230,29 @@ pub mod pallet {
             let period = CurrentRewardPeriod::<T>::get();
 
             AdstStakers::<T>::insert(&account_id, period);
+            AdstNfts::<T>::insert(&account_id, (collection_id, item_id));
 
-            pallet_uniques::Pallet::<T>::mint_into(origin, class_id, instance_id, None)?;
-            pallet_uniques::Pallet::<T>::burn(origin, class_id, instance_id, None)?;
+            pallet_uniques::Pallet::<T>::do_mint(
+                collection_id,
+                item_id,
+                account_id.clone(),
+                |_| Ok(()),
+            )?;
+            let data = BoundedVec::truncate_from(data.to_vec());
+            pallet_uniques::Pallet::<T>::set_metadata(
+                RawOrigin::Signed(account_id.clone()).into(),
+                collection_id,
+                item_id,
+                data,
+                false,
+            )?;
 
-            Self::deposit_event(Event::AdstStakerAdd(account_id, period));
+            Self::deposit_event(Event::AdstStakerAddNft(
+                account_id,
+                period,
+                collection_id,
+                item_id,
+            ));
             Ok(())
         }
 
@@ -339,6 +366,11 @@ pub mod pallet {
             weight += T::DbWeight::get().writes(1 as u64);
             for account in to_be_removed {
                 AdstStakers::<T>::remove(&account);
+                if let Some((collection_id, item_id)) = AdstNfts::<T>::take(&account) {
+                    let _ =
+                        pallet_uniques::Pallet::<T>::do_burn(collection_id, item_id, |_, _| Ok(()));
+                }
+
                 weight += T::DbWeight::get().writes(1 as u64);
             }
             for account in to_be_sub {
