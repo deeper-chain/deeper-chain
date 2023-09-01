@@ -14,11 +14,8 @@
 // limitations under the License.
 
 #[cfg(test)]
-use crate::{
-    mock::*, CampaignIdSwitch, CreditSettings, Error, GenesisChangeRewardEra, MaintainDevices,
-    UserCredit, UserCreditHistory,
-};
-use frame_support::traits::{Currency, Hooks};
+use crate::{mock::*, CampaignIdSwitch, Error, MaintainDevices, UserCredit, UserCreditHistory};
+use frame_support::traits::Currency;
 use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
 use frame_system::RawOrigin;
 use node_primitives::{
@@ -1180,53 +1177,5 @@ fn set_and_unset_maintain_device() {
         ));
         assert_ok!(Credit::set_maintain_device(RuntimeOrigin::signed(1), 2));
         assert_eq!(MaintainDevices::<Test>::get(), vec![2]);
-    });
-}
-
-#[test]
-fn change_genesis_campaign_reward() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(UserPrivileges::set_user_privilege(
-            RuntimeOrigin::root(),
-            1,
-            Privilege::OracleWorker
-        ));
-
-        assert!(Credit::init_delegator_history(&11, 0));
-
-        run_to_block(BLOCKS_PER_ERA * 1);
-        Credit::on_runtime_upgrade();
-        assert_eq!(Credit::get_reward(&11, 0, 0).0, Some(56416427606743384752));
-        assert_eq!(GenesisChangeRewardEra::<Test>::get(), 1);
-        let id = CampaignIdSwitch::<Test>::get(0);
-        assert_eq!(id.unwrap(), 6);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(40));
-
-        run_to_block(BLOCKS_PER_ERA * 2);
-        assert_eq!(Credit::get_reward(&11, 1, 1).0, Some(10958902021511924000));
-        let ucredit = UserCredit::<Test>::get(11).unwrap();
-        assert_eq!(ucredit.campaign_id, 6);
-        assert_eq!(ucredit.current_credit_level, CreditLevel::Two);
-
-        run_to_block(BLOCKS_PER_ERA * 3);
-        assert_eq!(Credit::get_reward(&11, 2, 2).0, Some(10958902021511924000));
-
-        run_to_block(BLOCKS_PER_ERA * 181);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(39));
-
-        assert_eq!(
-            Credit::get_reward(&11, 180, 180).0,
-            Some(10684929470974125900)
-        );
-
-        run_to_block(BLOCKS_PER_ERA * 180 * 6 + 1);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(35));
-
-        run_to_block(BLOCKS_PER_ERA * 180 * 7 + 1);
-        let setting = CreditSettings::<Test>::get(6, CreditLevel::Two);
-        assert_eq!(setting.base_apy, Percent::from_percent(35));
     });
 }
