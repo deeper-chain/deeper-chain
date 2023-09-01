@@ -43,6 +43,7 @@ pub mod pallet {
         DPR,
     };
 
+    use sp_core::H160;
     use sp_runtime::{
         traits::{AccountIdConversion, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto},
         Perbill,
@@ -141,8 +142,8 @@ pub mod pallet {
         HalfRewardTarget(AssetBalanceOf<T>),
         BaseReward(AssetBalanceOf<T>),
         AdstReward(T::AccountId, AssetBalanceOf<T>),
-        BridgeBurned(T::AccountId, AssetBalanceOf<T>),
-        BridgeMinted(T::AccountId, AssetBalanceOf<T>),
+        BridgeBurned(T::AccountId, H160, AssetBalanceOf<T>),
+        BridgeMinted(T::AccountId, H160, AssetBalanceOf<T>),
     }
 
     #[pallet::error]
@@ -290,9 +291,10 @@ pub mod pallet {
         }
 
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        pub fn burn_adst(
+        pub fn bridge_burn_adst(
             origin: OriginFor<T>,
-            account_id: T::AccountId,
+            from: T::AccountId,
+            to: H160,
             amount: AssetBalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -300,15 +302,16 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-            T::AdstCurrency::burn_from(T::AdstId::get(), &account_id, amount)?;
-            Self::deposit_event(Event::BridgeBurned(account_id, amount));
+            T::AdstCurrency::burn_from(T::AdstId::get(), &from, amount)?;
+            Self::deposit_event(Event::BridgeBurned(from, to, amount));
             Ok(())
         }
 
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        pub fn mint_adst(
+        pub fn bridge_mint_adst(
             origin: OriginFor<T>,
-            account_id: T::AccountId,
+            from: H160,
+            to: T::AccountId,
             amount: AssetBalanceOf<T>,
         ) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -316,8 +319,8 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-            T::AdstCurrency::mint_into(T::AdstId::get(), &account_id, amount)?;
-            Self::deposit_event(Event::BridgeMinted(account_id, amount));
+            T::AdstCurrency::mint_into(T::AdstId::get(), &to, amount)?;
+            Self::deposit_event(Event::BridgeMinted(to, from, amount));
             Ok(())
         }
     }
