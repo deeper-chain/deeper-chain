@@ -29,9 +29,10 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::pallet_prelude::DispatchResult;
     use frame_support::traits::{
         fungibles::metadata::Mutate as MetaMutate, fungibles::Create, fungibles::Inspect,
-        fungibles::Mutate, Time,
+        fungibles::Mutate, nonfungibles::Mutate as NftMutate, Time,
     };
     use frame_support::{
         dispatch::RawOrigin, pallet_prelude::*, transactional, weights::Weight, PalletId,
@@ -232,20 +233,7 @@ pub mod pallet {
             AdstStakers::<T>::insert(&account_id, period);
             AdstNfts::<T>::insert(&account_id, (collection_id, item_id));
 
-            pallet_uniques::Pallet::<T>::do_mint(
-                collection_id,
-                item_id,
-                account_id.clone(),
-                |_| Ok(()),
-            )?;
-            let data = BoundedVec::truncate_from(data.to_vec());
-            pallet_uniques::Pallet::<T>::set_metadata(
-                RawOrigin::Signed(account_id.clone()).into(),
-                collection_id,
-                item_id,
-                data,
-                false,
-            )?;
+            Self::add_nft(collection_id, item_id, account_id.clone(), &data)?;
 
             Self::deposit_event(Event::AdstStakerAddNft(
                 account_id,
@@ -367,8 +355,7 @@ pub mod pallet {
             for account in to_be_removed {
                 AdstStakers::<T>::remove(&account);
                 if let Some((collection_id, item_id)) = AdstNfts::<T>::take(&account) {
-                    let _ =
-                        pallet_uniques::Pallet::<T>::do_burn(collection_id, item_id, |_, _| Ok(()));
+                    let _ = Self::remove_nft(collection_id, item_id);
                 }
 
                 weight += T::DbWeight::get().writes(1 as u64);
@@ -382,6 +369,43 @@ pub mod pallet {
                 });
             }
             weight
+        }
+
+        pub(crate) fn remove_nft(
+            collection_id: ClassIdOf<T>,
+            item_id: InstanceIdOf<T>,
+        ) -> DispatchResult {
+            <pallet_uniques::Pallet<T> as NftMutate<T::AccountId>>::burn(
+                &collection_id,
+                &item_id,
+                None,
+            )?;
+            pallet_uniques::Pallet::<T>::clear_metadata(
+                RawOrigin::Root.into(),
+                collection_id,
+                item_id,
+            )
+        }
+
+        pub(crate) fn add_nft(
+            collection_id: ClassIdOf<T>,
+            item_id: InstanceIdOf<T>,
+            account_id: T::AccountId,
+            data: &[u8],
+        ) -> DispatchResult {
+            <pallet_uniques::Pallet<T> as NftMutate<T::AccountId>>::mint_into(
+                &collection_id,
+                &item_id,
+                &account_id,
+            )?;
+            let data = BoundedVec::truncate_from(data.to_vec());
+            pallet_uniques::Pallet::<T>::set_metadata(
+                RawOrigin::Root.into(),
+                collection_id,
+                item_id,
+                data,
+                false,
+            )
         }
     }
 }

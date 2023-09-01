@@ -17,7 +17,9 @@
 
 //! Macro for creating the tests for the module.
 
-use frame_support::traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, Hooks};
+use frame_support::traits::{
+    nonfungibles::Inspect, AsEnsureOriginWithArg, ConstU32, ConstU64, Hooks,
+};
 use frame_support::{assert_ok, parameter_types, weights::Weight, PalletId};
 use pallet_user_privileges::H160;
 use sp_core::H256;
@@ -47,6 +49,7 @@ frame_support::construct_runtime!(
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Adst: pallet_adst::{Pallet, Call, Storage, Event<T>},
         Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -130,6 +133,31 @@ impl pallet_assets::Config for Test {
     type RemoveItemsLimit = ConstU32<5>;
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
+}
+
+parameter_types! {
+    pub const KeyLimit: u32 = 32;
+    pub const ValueLimit: u32 = 256;
+    pub const StringLimit: u32 = 50;
+}
+
+impl pallet_uniques::Config for Test {
+    type RuntimeEvent = RuntimeEvent;
+    type CollectionId = u32;
+    type ItemId = u32;
+    type Currency = Balances;
+    type ForceOrigin = frame_system::EnsureRoot<u64>;
+    type CollectionDeposit = ConstU64<0>;
+    type ItemDeposit = ConstU64<0>;
+    type MetadataDepositBase = ConstU64<0>;
+    type AttributeDepositBase = ConstU64<0>;
+    type DepositPerByte = ConstU64<0>;
+    type StringLimit = ConstU32<50>;
+    type KeyLimit = ConstU32<50>;
+    type ValueLimit = ConstU32<50>;
+    type WeightInfo = ();
+    type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<u64>>;
+    type Locker = ();
 }
 
 pub const MILLISECS_PER_BLOCK: u64 = 5000;
@@ -249,6 +277,31 @@ fn adst_half_reward() {
 
         run_to_block(3 * BLOCKS_PER_ERA + 3);
         assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
+    });
+}
+
+#[test]
+fn adst_add_nft() {
+    new_test_ext().execute_with(|| {
+        Adst::on_runtime_upgrade();
+
+        assert_ok!(Uniques::create(RuntimeOrigin::signed(1), 1, 1));
+
+        assert_ok!(Adst::add_adst_staking_account_with_nft(
+            RuntimeOrigin::signed(1),
+            2,
+            1,
+            1,
+            b"aa".to_vec()
+        ));
+
+        assert_eq!(Uniques::owner(1, 1), Some(2));
+        assert_eq!(Uniques::attribute(&1, &1, &[]), Some(b"aa".to_vec()));
+
+        assert_ok!(Adst::remove_nft(1, 1));
+
+        assert_eq!(Uniques::owner(1, 1), None);
+        assert_eq!(Uniques::attribute(&1, &1, &[]), None);
     });
 }
 
