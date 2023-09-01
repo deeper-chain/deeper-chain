@@ -141,6 +141,8 @@ pub mod pallet {
         HalfRewardTarget(AssetBalanceOf<T>),
         BaseReward(AssetBalanceOf<T>),
         AdstReward(T::AccountId, AssetBalanceOf<T>),
+        BridgeBurned(T::AccountId, AssetBalanceOf<T>),
+        BridgeMinted(T::AccountId, AssetBalanceOf<T>),
     }
 
     #[pallet::error]
@@ -284,6 +286,38 @@ pub mod pallet {
             );
             CurrentAdstBaseReward::<T>::put(base_reward);
             Self::deposit_event(Event::BaseReward(base_reward));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn burn_adst(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            T::AdstCurrency::burn_from(T::AdstId::get(), &account_id, amount)?;
+            Self::deposit_event(Event::BridgeBurned(account_id, amount));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn mint_adst(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            T::AdstCurrency::mint_into(T::AdstId::get(), &account_id, amount)?;
+            Self::deposit_event(Event::BridgeMinted(account_id, amount));
             Ok(())
         }
     }
