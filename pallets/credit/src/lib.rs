@@ -440,22 +440,6 @@ pub mod pallet {
             }
             weight
         }
-
-        fn on_runtime_upgrade() -> Weight {
-            let settings = credit_setting::new_genesis_credit_settings::<T>();
-            let len = settings.len();
-            for setting in settings {
-                Self::_update_credit_setting(setting.clone());
-            }
-            let cur_era = Self::get_current_era();
-            // operating change in next era
-            GenesisChangeRewardEra::<T>::put(cur_era);
-            CampaignIdSwitch::<T>::insert(0, 6);
-            CampaignIdSwitch::<T>::insert(1, 6);
-            T::DbWeight::get()
-                .writes(2 as u64)
-                .saturating_mul(len as u64)
-        }
     }
 
     // Dispatchable functions allows users to interact with the pallet and invoke state changes.
