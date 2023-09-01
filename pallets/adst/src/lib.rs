@@ -140,6 +140,7 @@ pub mod pallet {
         RewardPeriod(u32),
         HalfRewardTarget(AssetBalanceOf<T>),
         BaseReward(AssetBalanceOf<T>),
+        AdstReward(T::AccountId, AssetBalanceOf<T>),
     }
 
     #[pallet::error]
@@ -301,6 +302,7 @@ pub mod pallet {
             let portion = Perbill::from_rational(day, CurrentRewardPeriod::<T>::get());
             let real_pay = portion * cur_base_val;
             T::AdstCurrency::mint_into(T::AdstId::get(), account, real_pay)?;
+            Self::deposit_event(Event::AdstReward(account.clone(), real_pay));
             let cur_minted = CurrentMintedAdst::<T>::mutate(|num| {
                 *num += real_pay;
                 *num
