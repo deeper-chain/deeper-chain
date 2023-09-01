@@ -24,29 +24,29 @@ impl<Account> UserPrivilegeInterface<Account> for () {
 #[derive(Clone, Copy, PartialEq, Eq, Encode, Decode, TypeInfo, RuntimeDebug)]
 pub enum Privilege {
     #[codec(index = 0)]
-    LockerMember = 1 << 0,
+    LockerMember = 1 << 0, // 1
     #[codec(index = 1)]
-    ReleaseSetter = 1 << 1,
+    ReleaseSetter = 1 << 1, // 2
     #[codec(index = 2)]
-    EvmAddressSetter = 1 << 2,
+    EvmAddressSetter = 1 << 2, // 4
     #[codec(index = 3)]
-    EvmCreditOperation = 1 << 3,
+    EvmCreditOperation = 1 << 3, // 8
     #[codec(index = 4)]
-    NpowMint = 1 << 4,
+    NpowMint = 1 << 4, // 16
     #[codec(index = 5)]
-    CreditAdmin = 1 << 5,
+    CreditAdmin = 1 << 5, // 32
     #[codec(index = 6)]
-    TipPayer = 1 << 6,
+    TipPayer = 1 << 6, // 64
     #[codec(index = 7)]
-    BridgeAdmin = 1 << 7,
+    BridgeAdmin = 1 << 7, // 128
     #[codec(index = 8)]
-    OracleWorker = 1 << 8,
+    OracleWorker = 1 << 8, // 256
     #[codec(index = 9)]
-    DeviceAdmin = 1 << 9,
+    DeviceAdmin = 1 << 9, // 512
     #[codec(index = 10)]
-    BlackListAdmin = 1 << 10,
+    BlackListAdmin = 1 << 10, // 1024
     #[codec(index = 11)]
-    AdstAdmin = 1 << 11,
+    AdstAdmin = 1 << 11, // 2048
 }
 
 /// Wrapper type for `BitFlags<Privilege>` that implements `Codec`.
