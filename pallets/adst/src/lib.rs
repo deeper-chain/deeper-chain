@@ -29,17 +29,21 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
+    use frame_support::pallet_prelude::DispatchResult;
     use frame_support::traits::{
         fungibles::metadata::Mutate as MetaMutate, fungibles::Create, fungibles::Inspect,
-        fungibles::Mutate, Time,
+        fungibles::Mutate, nonfungibles::Mutate as NftMutate, Time,
     };
-    use frame_support::{pallet_prelude::*, weights::Weight, PalletId};
+    use frame_support::{
+        dispatch::RawOrigin, pallet_prelude::*, transactional, weights::Weight, PalletId,
+    };
     use frame_system::pallet_prelude::*;
     use node_primitives::{
         user_privileges::{Privilege, UserPrivilegeInterface},
         DPR,
     };
 
+    use sp_core::H160;
     use sp_runtime::{
         traits::{AccountIdConversion, Saturating, UniqueSaturatedFrom, UniqueSaturatedInto},
         Perbill,
@@ -48,7 +52,7 @@ pub mod pallet {
 
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_uniques::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Currency
@@ -59,8 +63,6 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
         /// query user prvileges
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
-
-        // type Nft: NftInspect<Self::AccountId>;
 
         type Time: Time;
 
@@ -77,11 +79,8 @@ pub mod pallet {
     pub(crate) type AssetBalanceOf<T> =
         <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
-    // pub(crate) type CollectionIdOf<T> =
-    //     <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::CollectionId;
-
-    // pub(crate) type ItemIdOf<T> =
-    //     <<T as Config>::Nft as NftInspect<<T as frame_system::Config>::AccountId>>::ItemId;
+    pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
+    pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -92,6 +91,11 @@ pub mod pallet {
     #[pallet::getter(fn adst_stakers)]
     pub type AdstStakers<T: Config> =
         CountedStorageMap<_, Blake2_128Concat, T::AccountId, u32, OptionQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn adst_nfts)]
+    pub type AdstNfts<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, (ClassIdOf<T>, InstanceIdOf<T>), OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn adst_staker_last_key)]
@@ -133,9 +137,13 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         AdstStakerAdd(T::AccountId, u32),
+        AdstStakerAddNft(T::AccountId, u32, ClassIdOf<T>, InstanceIdOf<T>),
         RewardPeriod(u32),
         HalfRewardTarget(AssetBalanceOf<T>),
         BaseReward(AssetBalanceOf<T>),
+        AdstReward(T::AccountId, AssetBalanceOf<T>),
+        BridgeBurned(T::AccountId, H160, AssetBalanceOf<T>),
+        BridgeMinted(T::AccountId, H160, AssetBalanceOf<T>),
     }
 
     #[pallet::error]
@@ -210,6 +218,36 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::weight(Weight::from_ref_time(20_000u64))]
+        #[transactional]
+        pub fn add_adst_staking_account_with_nft(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+            collection_id: ClassIdOf<T>,
+            item_id: InstanceIdOf<T>,
+            data: Vec<u8>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            let period = CurrentRewardPeriod::<T>::get();
+
+            AdstStakers::<T>::insert(&account_id, period);
+            AdstNfts::<T>::insert(&account_id, (collection_id, item_id));
+
+            Self::add_nft(collection_id, item_id, account_id.clone(), &data)?;
+
+            Self::deposit_event(Event::AdstStakerAddNft(
+                account_id,
+                period,
+                collection_id,
+                item_id,
+            ));
+            Ok(())
+        }
+
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
         pub fn set_reward_period(origin: OriginFor<T>, period: u32) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -251,6 +289,40 @@ pub mod pallet {
             Self::deposit_event(Event::BaseReward(base_reward));
             Ok(())
         }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn bridge_burn_adst(
+            origin: OriginFor<T>,
+            from: T::AccountId,
+            to: H160,
+            amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            T::AdstCurrency::burn_from(T::AdstId::get(), &from, amount)?;
+            Self::deposit_event(Event::BridgeBurned(from, to, amount));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn bridge_mint_adst(
+            origin: OriginFor<T>,
+            from: H160,
+            to: T::AccountId,
+            amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            T::AdstCurrency::mint_into(T::AdstId::get(), &to, amount)?;
+            Self::deposit_event(Event::BridgeMinted(to, from, amount));
+            Ok(())
+        }
     }
 
     impl<T: Config> pallet::Pallet<T> {
@@ -267,6 +339,7 @@ pub mod pallet {
             let portion = Perbill::from_rational(day, CurrentRewardPeriod::<T>::get());
             let real_pay = portion * cur_base_val;
             T::AdstCurrency::mint_into(T::AdstId::get(), account, real_pay)?;
+            Self::deposit_event(Event::AdstReward(account.clone(), real_pay));
             let cur_minted = CurrentMintedAdst::<T>::mutate(|num| {
                 *num += real_pay;
                 *num
@@ -320,6 +393,10 @@ pub mod pallet {
             weight += T::DbWeight::get().writes(1 as u64);
             for account in to_be_removed {
                 AdstStakers::<T>::remove(&account);
+                if let Some((collection_id, item_id)) = AdstNfts::<T>::take(&account) {
+                    let _ = Self::remove_nft(collection_id, item_id);
+                }
+
                 weight += T::DbWeight::get().writes(1 as u64);
             }
             for account in to_be_sub {
@@ -331,6 +408,43 @@ pub mod pallet {
                 });
             }
             weight
+        }
+
+        pub(crate) fn remove_nft(
+            collection_id: ClassIdOf<T>,
+            item_id: InstanceIdOf<T>,
+        ) -> DispatchResult {
+            <pallet_uniques::Pallet<T> as NftMutate<T::AccountId>>::burn(
+                &collection_id,
+                &item_id,
+                None,
+            )?;
+            pallet_uniques::Pallet::<T>::clear_metadata(
+                RawOrigin::Root.into(),
+                collection_id,
+                item_id,
+            )
+        }
+
+        pub(crate) fn add_nft(
+            collection_id: ClassIdOf<T>,
+            item_id: InstanceIdOf<T>,
+            account_id: T::AccountId,
+            data: &[u8],
+        ) -> DispatchResult {
+            <pallet_uniques::Pallet<T> as NftMutate<T::AccountId>>::mint_into(
+                &collection_id,
+                &item_id,
+                &account_id,
+            )?;
+            let data = BoundedVec::truncate_from(data.to_vec());
+            pallet_uniques::Pallet::<T>::set_metadata(
+                RawOrigin::Root.into(),
+                collection_id,
+                item_id,
+                data,
+                false,
+            )
         }
     }
 }
