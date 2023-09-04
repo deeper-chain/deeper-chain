@@ -144,6 +144,7 @@ pub mod pallet {
         AdstReward(T::AccountId, AssetBalanceOf<T>),
         BridgeBurned(T::AccountId, H160, AssetBalanceOf<T>),
         BridgeMinted(T::AccountId, H160, AssetBalanceOf<T>),
+        BridgeResult { bridge_result: DispatchResult },
     }
 
     #[pallet::error]
@@ -297,13 +298,12 @@ pub mod pallet {
             to: H160,
             amount: AssetBalanceOf<T>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            ensure!(
-                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
-                Error::<T>::NotAdmin
-            );
-            T::AdstCurrency::burn_from(T::AdstId::get(), &from, amount)?;
-            Self::deposit_event(Event::BridgeBurned(from, to, amount));
+            let res = Self::do_bridge_burn_adst(origin, from.clone(), amount);
+
+            Self::deposit_event(Event::BridgeResult { bridge_result: res });
+            if res.is_ok() {
+                Self::deposit_event(Event::BridgeBurned(from, to, amount));
+            }
             Ok(())
         }
 
@@ -314,13 +314,12 @@ pub mod pallet {
             to: T::AccountId,
             amount: AssetBalanceOf<T>,
         ) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            ensure!(
-                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
-                Error::<T>::NotAdmin
-            );
-            T::AdstCurrency::mint_into(T::AdstId::get(), &to, amount)?;
-            Self::deposit_event(Event::BridgeMinted(to, from, amount));
+            let res = Self::do_bridge_mint_adst(origin, to.clone(), amount);
+
+            Self::deposit_event(Event::BridgeResult { bridge_result: res });
+            if res.is_ok() {
+                Self::deposit_event(Event::BridgeMinted(to, from, amount));
+            }
             Ok(())
         }
     }
@@ -445,6 +444,34 @@ pub mod pallet {
                 data,
                 false,
             )
+        }
+
+        pub(crate) fn do_bridge_burn_adst(
+            origin: OriginFor<T>,
+            from: T::AccountId,
+            amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            T::AdstCurrency::burn_from(T::AdstId::get(), &from, amount)?;
+            Ok(())
+        }
+
+        pub(crate) fn do_bridge_mint_adst(
+            origin: OriginFor<T>,
+            to: T::AccountId,
+            amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            T::AdstCurrency::mint_into(T::AdstId::get(), &to, amount)?;
+            Ok(())
         }
     }
 }
