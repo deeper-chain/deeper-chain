@@ -1,9 +1,9 @@
 [package]
 authors = ['deeper.network dev']
-description = 'adst pallet in deeper-chain.'
+description = 'adsc pallet in deeper-chain.'
 edition = '2021'
 homepage = 'https://deeper.network'
-name = 'pallet-adst'
+name = 'pallet-adsc'
 repository = 'https://github.com/deeper-chain/deeper-chain'
 version = '3.0.0'
 

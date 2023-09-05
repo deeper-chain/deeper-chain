@@ -30,7 +30,7 @@ use sp_runtime::{
 };
 
 use super::*;
-use crate::{self as pallet_adst};
+use crate::{self as pallet_adsc};
 use node_primitives::{
     user_privileges::{Privilege, UserPrivilegeInterface},
     Moment, DPR,
@@ -47,7 +47,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Adst: pallet_adst::{Pallet, Call, Storage, Event<T>},
+        Adsc: pallet_adsc::{Pallet, Call, Storage, Event<T>},
         Assets: pallet_assets::{Pallet, Call, Storage, Config<T>, Event<T>},
         Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
     }
@@ -166,17 +166,17 @@ pub const EPOCH_DURATION_IN_BLOCKS: u64 = 60 / SECS_PER_BLOCK;
 pub const BLOCKS_PER_ERA: u64 = (1 * EPOCH_DURATION_IN_BLOCKS) as u64;
 
 parameter_types! {
-    pub const AdstPalletId: PalletId = PalletId(*b"dep/adst");
+    pub const AdscPalletId: PalletId = PalletId(*b"dep/adsc");
 }
 
 impl Config for Test {
     type RuntimeEvent = RuntimeEvent;
 
-    type AdstCurrency = Assets;
+    type AdscCurrency = Assets;
     type WeightInfo = ();
     type Time = Timestamp;
-    type AdstId = ConstU32<1>;
-    type PalletId = AdstPalletId;
+    type AdscId = ConstU32<1>;
+    type PalletId = AdscPalletId;
     type UserPrivilegeInterface = U128FakeUserPrivilege;
 }
 
@@ -196,7 +196,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
         Timestamp::set_timestamp(System::block_number() * 1440 * 5000);
-        Adst::on_initialize(System::block_number());
+        Adsc::on_initialize(System::block_number());
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
@@ -204,24 +204,24 @@ pub fn run_to_block(n: u64) {
 }
 
 #[test]
-fn adst_pay_reward() {
+fn adsc_pay_reward() {
     new_test_ext().execute_with(|| {
-        Adst::on_runtime_upgrade();
+        Adsc::on_runtime_upgrade();
         // start day is day 0
-        CurrentAdstBaseReward::<Test>::put(1560 * DPR);
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
+        CurrentAdscBaseReward::<Test>::put(1560 * DPR);
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
 
         // 8,9 only check when 365
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 8));
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 9));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 8));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 9));
 
         run_to_block(BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(1, &2), 1560 * DPR);
 
-        assert_eq!(CurrentMintedAdst::<Test>::get(), 1560 * 3 * DPR);
+        assert_eq!(CurrentMintedAdsc::<Test>::get(), 1560 * 3 * DPR);
         assert_eq!(Assets::total_supply(1), 1560 * 3 * DPR);
 
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(1, &2), 3115726025880000000000);
@@ -231,10 +231,10 @@ fn adst_pay_reward() {
         assert_eq!(Assets::balance(1, &2), 285479999719200000000000);
         assert_eq!(Assets::balance(1, &3), 285475725746640000000000);
 
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
-        assert_eq!(AdstStakers::<Test>::get(3), Some(365));
-        assert_eq!(AdstStakers::<Test>::get(2), Some(0));
+        assert_eq!(AdscStakers::<Test>::get(3), Some(365));
+        assert_eq!(AdscStakers::<Test>::get(2), Some(0));
 
         run_to_block(366 * BLOCKS_PER_ERA + 3);
         assert_eq!(
@@ -242,7 +242,7 @@ fn adst_pay_reward() {
             285475725746640000000000 + 1560 * DPR
         );
 
-        assert_eq!(AdstStakers::<Test>::get(2), None);
+        assert_eq!(AdscStakers::<Test>::get(2), None);
         assert_eq!(Assets::balance(1, &2), 285479999719200000000000);
         assert_eq!(Assets::balance(1, &8), 285479999719200000000000);
         assert_eq!(Assets::balance(1, &9), 285479999719200000000000);
@@ -250,13 +250,13 @@ fn adst_pay_reward() {
 }
 
 #[test]
-fn adst_half_reward() {
+fn adsc_half_reward() {
     new_test_ext().execute_with(|| {
-        Adst::on_runtime_upgrade();
-        CurrentAdstBaseReward::<Test>::put(1560 * DPR);
+        Adsc::on_runtime_upgrade();
+        CurrentAdscBaseReward::<Test>::put(1560 * DPR);
 
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
-        assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
         CurrentHalfTarget::<Test>::put(1560 * 2 * DPR);
 
@@ -269,7 +269,7 @@ fn adst_half_reward() {
             1560 * 2 * DPR + 10_000_000_000 * DPR
         );
         //half base reward
-        assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 * DPR);
+        assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 * DPR);
         CurrentHalfTarget::<Test>::put(1560 * 3 * DPR);
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
@@ -278,18 +278,18 @@ fn adst_half_reward() {
         assert_eq!(Assets::balance(1, &3), 2337863012940000000000);
 
         run_to_block(3 * BLOCKS_PER_ERA + 3);
-        assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
+        assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
     });
 }
 
 #[test]
-fn adst_add_nft() {
+fn adsc_add_nft() {
     new_test_ext().execute_with(|| {
-        Adst::on_runtime_upgrade();
+        Adsc::on_runtime_upgrade();
 
         assert_ok!(Uniques::create(RuntimeOrigin::signed(1), 1, 1));
 
-        assert_ok!(Adst::add_adst_staking_account_with_nft(
+        assert_ok!(Adsc::add_adsc_staking_account_with_nft(
             RuntimeOrigin::signed(1),
             2,
             1,
@@ -300,7 +300,7 @@ fn adst_add_nft() {
         assert_eq!(Uniques::owner(1, 1), Some(2));
         assert_eq!(Uniques::attribute(&1, &1, &[]), Some(b"aa".to_vec()));
 
-        assert_ok!(Adst::remove_nft(1, 1));
+        assert_ok!(Adsc::remove_nft(1, 1));
 
         assert_eq!(Uniques::owner(1, 1), None);
         assert_eq!(Uniques::attribute(&1, &1, &[]), None);

@@ -56,7 +56,7 @@ pub mod pallet {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Currency
-        type AdstCurrency: MetaMutate<Self::AccountId>
+        type AdscCurrency: MetaMutate<Self::AccountId>
             + Mutate<Self::AccountId>
             + Create<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
@@ -67,17 +67,17 @@ pub mod pallet {
         type Time: Time;
 
         #[pallet::constant]
-        type AdstId: Get<AssetIdOf<Self>>;
+        type AdscId: Get<AssetIdOf<Self>>;
 
         #[pallet::constant]
         type PalletId: Get<PalletId>;
     }
 
     pub(crate) type AssetIdOf<T> =
-        <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
+        <<T as Config>::AdscCurrency as Inspect<<T as frame_system::Config>::AccountId>>::AssetId;
 
     pub(crate) type AssetBalanceOf<T> =
-        <<T as Config>::AdstCurrency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
+        <<T as Config>::AdscCurrency as Inspect<<T as frame_system::Config>::AccountId>>::Balance;
 
     pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
     pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
@@ -88,37 +88,37 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    #[pallet::getter(fn adst_stakers)]
-    pub type AdstStakers<T: Config> =
+    #[pallet::getter(fn adsc_stakers)]
+    pub type AdscStakers<T: Config> =
         CountedStorageMap<_, Blake2_128Concat, T::AccountId, u32, OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn adst_nfts)]
-    pub type AdstNfts<T: Config> =
+    #[pallet::getter(fn adsc_nfts)]
+    pub type AdscNfts<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, (ClassIdOf<T>, InstanceIdOf<T>), OptionQuery>;
 
     #[pallet::storage]
-    #[pallet::getter(fn adst_staker_last_key)]
-    pub(crate) type AdstStakerLastKey<T> = StorageValue<_, Vec<u8>, ValueQuery>;
+    #[pallet::getter(fn adsc_staker_last_key)]
+    pub(crate) type AdscStakerLastKey<T> = StorageValue<_, Vec<u8>, ValueQuery>;
 
     #[pallet::storage]
-    pub type CurrentAdstBaseReward<T: Config> =
-        StorageValue<_, AssetBalanceOf<T>, ValueQuery, AdstInitReward<T>>;
+    pub type CurrentAdscBaseReward<T: Config> =
+        StorageValue<_, AssetBalanceOf<T>, ValueQuery, AdscInitReward<T>>;
 
     #[pallet::type_value]
-    pub fn AdstInitReward<T: Config>() -> AssetBalanceOf<T> {
+    pub fn AdscInitReward<T: Config>() -> AssetBalanceOf<T> {
         UniqueSaturatedFrom::unique_saturated_from(8235 * DPR)
     }
 
     #[pallet::storage]
-    pub type CurrentMintedAdst<T: Config> = StorageValue<_, AssetBalanceOf<T>, ValueQuery>;
+    pub type CurrentMintedAdsc<T: Config> = StorageValue<_, AssetBalanceOf<T>, ValueQuery>;
 
     #[pallet::storage]
     pub type CurrentHalfTarget<T: Config> =
-        StorageValue<_, AssetBalanceOf<T>, ValueQuery, AdstInitTarget<T>>;
+        StorageValue<_, AssetBalanceOf<T>, ValueQuery, AdscInitTarget<T>>;
 
     #[pallet::type_value]
-    pub fn AdstInitTarget<T: Config>() -> AssetBalanceOf<T> {
+    pub fn AdscInitTarget<T: Config>() -> AssetBalanceOf<T> {
         UniqueSaturatedFrom::unique_saturated_from(10_000_000_000 * DPR)
     }
 
@@ -136,12 +136,12 @@ pub mod pallet {
     //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        AdstStakerAdd(T::AccountId, u32),
-        AdstStakerAddNft(T::AccountId, u32, ClassIdOf<T>, InstanceIdOf<T>),
+        AdscStakerAdd(T::AccountId, u32),
+        AdscStakerAddNft(T::AccountId, u32, ClassIdOf<T>, InstanceIdOf<T>),
         RewardPeriod(u32),
         HalfRewardTarget(AssetBalanceOf<T>),
         BaseReward(AssetBalanceOf<T>),
-        AdstReward(T::AccountId, AssetBalanceOf<T>),
+        AdscReward(T::AccountId, AssetBalanceOf<T>),
         BridgeBurned(T::AccountId, H160, AssetBalanceOf<T>),
         BridgeMinted(T::AccountId, H160, AssetBalanceOf<T>),
         BridgeResult { bridge_result: DispatchResult },
@@ -156,18 +156,18 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            let _ = T::AdstCurrency::create(
-                T::AdstId::get(),
+            let _ = T::AdscCurrency::create(
+                T::AdscId::get(),
                 Self::account_id(),
                 true,
                 1_000_000_000u32.into(),
             );
 
-            let _ = T::AdstCurrency::set(
-                T::AdstId::get(),
+            let _ = T::AdscCurrency::set(
+                T::AdscId::get(),
                 &Self::account_id(),
-                b"Adst".to_vec(),
-                b"Adst".to_vec(),
+                b"Adsc".to_vec(),
+                b"Adsc".to_vec(),
                 18,
             );
 
@@ -186,14 +186,14 @@ pub mod pallet {
             if cur_day > saved_day {
                 SavedDay::<T>::put(cur_day);
                 let prefix = Self::get_staker_prefix_hash();
-                let staker_num = AdstStakers::<T>::count();
-                AdstStakerLastKey::<T>::put(prefix);
+                let staker_num = AdscStakers::<T>::count();
+                AdscStakerLastKey::<T>::put(prefix);
                 BlocklyRewardNum::<T>::put(staker_num / BLOCK_PER_DAY + 2);
                 weight += T::DbWeight::get()
                     .reads(2 as u64)
                     .saturating_add(T::DbWeight::get().writes(3 as u64));
             } else {
-                weight += Self::adst_reward(cur_day);
+                weight += Self::adsc_reward(cur_day);
             }
 
             weight
@@ -203,7 +203,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        pub fn add_adst_staking_account(
+        pub fn add_adsc_staking_account(
             origin: OriginFor<T>,
             account_id: T::AccountId,
         ) -> DispatchResult {
@@ -214,14 +214,14 @@ pub mod pallet {
             );
             let period = CurrentRewardPeriod::<T>::get();
 
-            AdstStakers::<T>::insert(&account_id, period);
-            Self::deposit_event(Event::AdstStakerAdd(account_id, period));
+            AdscStakers::<T>::insert(&account_id, period);
+            Self::deposit_event(Event::AdscStakerAdd(account_id, period));
             Ok(())
         }
 
         #[pallet::weight(Weight::from_ref_time(20_000u64))]
         #[transactional]
-        pub fn add_adst_staking_account_with_nft(
+        pub fn add_adsc_staking_account_with_nft(
             origin: OriginFor<T>,
             account_id: T::AccountId,
             collection_id: ClassIdOf<T>,
@@ -235,12 +235,12 @@ pub mod pallet {
             );
             let period = CurrentRewardPeriod::<T>::get();
 
-            AdstStakers::<T>::insert(&account_id, period);
-            AdstNfts::<T>::insert(&account_id, (collection_id, item_id));
+            AdscStakers::<T>::insert(&account_id, period);
+            AdscNfts::<T>::insert(&account_id, (collection_id, item_id));
 
             Self::add_nft(collection_id, item_id, account_id.clone(), &data)?;
 
-            Self::deposit_event(Event::AdstStakerAddNft(
+            Self::deposit_event(Event::AdscStakerAddNft(
                 account_id,
                 period,
                 collection_id,
@@ -286,19 +286,19 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-            CurrentAdstBaseReward::<T>::put(base_reward);
+            CurrentAdscBaseReward::<T>::put(base_reward);
             Self::deposit_event(Event::BaseReward(base_reward));
             Ok(())
         }
 
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        pub fn bridge_burn_adst(
+        pub fn bridge_burn_adsc(
             origin: OriginFor<T>,
             from: T::AccountId,
             to: H160,
             amount: AssetBalanceOf<T>,
         ) -> DispatchResult {
-            let res = Self::do_bridge_burn_adst(origin, from.clone(), amount);
+            let res = Self::do_bridge_burn_adsc(origin, from.clone(), amount);
 
             Self::deposit_event(Event::BridgeResult { bridge_result: res });
             if res.is_ok() {
@@ -308,13 +308,13 @@ pub mod pallet {
         }
 
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        pub fn bridge_mint_adst(
+        pub fn bridge_mint_adsc(
             origin: OriginFor<T>,
             from: H160,
             to: T::AccountId,
             amount: AssetBalanceOf<T>,
         ) -> DispatchResult {
-            let res = Self::do_bridge_mint_adst(origin, to.clone(), amount);
+            let res = Self::do_bridge_mint_adsc(origin, to.clone(), amount);
 
             Self::deposit_event(Event::BridgeResult { bridge_result: res });
             if res.is_ok() {
@@ -330,31 +330,31 @@ pub mod pallet {
         }
 
         fn get_staker_prefix_hash() -> Vec<u8> {
-            AdstStakers::<T>::map_storage_final_prefix()
+            AdscStakers::<T>::map_storage_final_prefix()
         }
 
         fn pay_reward(account: &T::AccountId, day: u32) -> DispatchResult {
-            let cur_base_val = CurrentAdstBaseReward::<T>::get();
+            let cur_base_val = CurrentAdscBaseReward::<T>::get();
             let portion = Perbill::from_rational(day, CurrentRewardPeriod::<T>::get());
             let real_pay = portion * cur_base_val;
-            T::AdstCurrency::mint_into(T::AdstId::get(), account, real_pay)?;
-            Self::deposit_event(Event::AdstReward(account.clone(), real_pay));
-            let cur_minted = CurrentMintedAdst::<T>::mutate(|num| {
+            T::AdscCurrency::mint_into(T::AdscId::get(), account, real_pay)?;
+            Self::deposit_event(Event::AdscReward(account.clone(), real_pay));
+            let cur_minted = CurrentMintedAdsc::<T>::mutate(|num| {
                 *num += real_pay;
                 *num
             });
             let cur_hf_target = CurrentHalfTarget::<T>::get();
             if cur_minted >= cur_hf_target {
                 CurrentHalfTarget::<T>::put(
-                    cur_hf_target.saturating_add(AdstInitTarget::<T>::get()),
+                    cur_hf_target.saturating_add(AdscInitTarget::<T>::get()),
                 );
-                CurrentAdstBaseReward::<T>::mutate(|base| *base = *base / 2u32.into());
+                CurrentAdscBaseReward::<T>::mutate(|base| *base = *base / 2u32.into());
             }
             Ok(())
         }
 
-        fn adst_reward(_cur_day: u32) -> Weight {
-            let last_key = Self::adst_staker_last_key();
+        fn adsc_reward(_cur_day: u32) -> Weight {
+            let last_key = Self::adsc_staker_last_key();
             let mut weight = T::DbWeight::get().reads(1 as u64);
 
             if last_key.is_empty() {
@@ -363,13 +363,13 @@ pub mod pallet {
             let mut to_be_removed = Vec::new();
             let mut to_be_sub = Vec::new();
             let mut counter: u32 = 0;
-            let mut adst_iter = AdstStakers::<T>::iter_from(last_key);
+            let mut adsc_iter = AdscStakers::<T>::iter_from(last_key);
             let blockly_num = BlocklyRewardNum::<T>::get();
             let mut last_key = Vec::new();
             weight += T::DbWeight::get().reads(1 as u64);
             loop {
-                if let Some((account, period)) = adst_iter.next() {
-                    last_key = AdstStakers::<T>::hashed_key_for(&account);
+                if let Some((account, period)) = adsc_iter.next() {
+                    last_key = AdscStakers::<T>::hashed_key_for(&account);
                     if period == 0 {
                         to_be_removed.push(account);
                     } else {
@@ -388,11 +388,11 @@ pub mod pallet {
                     break;
                 }
             }
-            AdstStakerLastKey::<T>::put(last_key);
+            AdscStakerLastKey::<T>::put(last_key);
             weight += T::DbWeight::get().writes(1 as u64);
             for account in to_be_removed {
-                AdstStakers::<T>::remove(&account);
-                if let Some((collection_id, item_id)) = AdstNfts::<T>::take(&account) {
+                AdscStakers::<T>::remove(&account);
+                if let Some((collection_id, item_id)) = AdscNfts::<T>::take(&account) {
                     let _ = Self::remove_nft(collection_id, item_id);
                 }
 
@@ -400,7 +400,7 @@ pub mod pallet {
             }
             for account in to_be_sub {
                 weight += T::DbWeight::get().writes(1 as u64);
-                AdstStakers::<T>::mutate_exists(&account, |period| {
+                AdscStakers::<T>::mutate_exists(&account, |period| {
                     if let Some(ref mut p) = period {
                         *p = p.saturating_sub(1);
                     }
@@ -446,7 +446,7 @@ pub mod pallet {
             )
         }
 
-        pub(crate) fn do_bridge_burn_adst(
+        pub(crate) fn do_bridge_burn_adsc(
             origin: OriginFor<T>,
             from: T::AccountId,
             amount: AssetBalanceOf<T>,
@@ -456,11 +456,11 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-            T::AdstCurrency::burn_from(T::AdstId::get(), &from, amount)?;
+            T::AdscCurrency::burn_from(T::AdscId::get(), &from, amount)?;
             Ok(())
         }
 
-        pub(crate) fn do_bridge_mint_adst(
+        pub(crate) fn do_bridge_mint_adsc(
             origin: OriginFor<T>,
             to: T::AccountId,
             amount: AssetBalanceOf<T>,
@@ -470,7 +470,7 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-            T::AdstCurrency::mint_into(T::AdstId::get(), &to, amount)?;
+            T::AdscCurrency::mint_into(T::AdscId::get(), &to, amount)?;
             Ok(())
         }
     }
