@@ -4530,7 +4530,7 @@ dependencies = [
  "libsecp256k1 0.6.0",
  "log",
  "node-primitives",
- "pallet-adst",
+ "pallet-adsc",
  "pallet-assets",
  "pallet-authority-discovery",
  "pallet-authorship",
@@ -4857,7 +4857,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-adst"
+name = "pallet-adsc"
 version = "3.0.0"
 dependencies = [
  "frame-benchmarking",

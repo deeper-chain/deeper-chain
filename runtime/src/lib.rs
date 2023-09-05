@@ -1395,17 +1395,17 @@ impl pallet_base_fee::Config for Runtime {
 }
 
 parameter_types! {
-    pub const AdstPalletId: PalletId = PalletId(*b"dep/adst");
+    pub const AdscPalletId: PalletId = PalletId(*b"dep/adst");
 }
 
-impl pallet_adst::Config for Runtime {
+impl pallet_adsc::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
-    type AdstCurrency = Assets;
+    type AdscCurrency = Assets;
     type WeightInfo = ();
     type UserPrivilegeInterface = UserPrivileges;
     type Time = Timestamp;
-    type AdstId = ConstU32<1>;
-    type PalletId = AdstPalletId;
+    type AdscId = ConstU32<1>;
+    type PalletId = AdscPalletId;
 }
 
 construct_runtime!(
@@ -1476,7 +1476,7 @@ construct_runtime!(
 
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
         UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
-        Adst: pallet_adst::{Pallet, Call, Storage,Event<T>} = 92,
+        Adsc: pallet_adsc::{Pallet, Call, Storage,Event<T>} = 92,
 
     }
 );
