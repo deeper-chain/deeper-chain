@@ -208,6 +208,7 @@ fn adst_pay_reward() {
     new_test_ext().execute_with(|| {
         Adst::on_runtime_upgrade();
         // start day is day 0
+        CurrentAdstBaseReward::<Test>::put(1560 * DPR);
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
 
         // 8,9 only check when 365
@@ -252,6 +253,7 @@ fn adst_pay_reward() {
 fn adst_half_reward() {
     new_test_ext().execute_with(|| {
         Adst::on_runtime_upgrade();
+        CurrentAdstBaseReward::<Test>::put(1560 * DPR);
 
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 2));
         assert_ok!(Adst::add_adst_staking_account(RuntimeOrigin::signed(1), 3));

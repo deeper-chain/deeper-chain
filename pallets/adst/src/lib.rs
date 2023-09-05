@@ -107,7 +107,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn AdstInitReward<T: Config>() -> AssetBalanceOf<T> {
-        UniqueSaturatedFrom::unique_saturated_from(1560 * DPR)
+        UniqueSaturatedFrom::unique_saturated_from(8235 * DPR)
     }
 
     #[pallet::storage]
