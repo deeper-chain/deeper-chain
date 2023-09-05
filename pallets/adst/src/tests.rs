@@ -266,7 +266,7 @@ fn adst_half_reward() {
 
         assert_eq!(
             CurrentHalfTarget::<Test>::get(),
-            1560 * 2 * DPR + 5_000_000_000 * DPR
+            1560 * 2 * DPR + 10_000_000_000 * DPR
         );
         //half base reward
         assert_eq!(CurrentAdstBaseReward::<Test>::get(), 1560 / 2 * DPR);

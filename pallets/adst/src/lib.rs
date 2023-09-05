@@ -119,7 +119,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn AdstInitTarget<T: Config>() -> AssetBalanceOf<T> {
-        UniqueSaturatedFrom::unique_saturated_from(5_000_000_000 * DPR)
+        UniqueSaturatedFrom::unique_saturated_from(10_000_000_000 * DPR)
     }
 
     #[pallet::storage]
