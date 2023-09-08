@@ -2124,6 +2124,20 @@ pub mod pallet {
 
             Ok(())
         }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        pub fn unset_delegate_balance(
+            origin: OriginFor<T>,
+            account_id: T::AccountId,
+        ) -> DispatchResult {
+            let admin = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&admin, Privilege::CreditAdmin),
+                Error::<T>::UnauthorizedAccounts
+            );
+            DelegatorBalances::<T>::remove(&account_id);
+            Ok(())
+        }
     }
 
     #[pallet::hooks]
