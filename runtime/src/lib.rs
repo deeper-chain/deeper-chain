@@ -1419,6 +1419,7 @@ parameter_types! {
 impl pallet_adsc::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type AdscCurrency = Assets;
+    type DprCurrency = Balances;
     type WeightInfo = ();
     type UserPrivilegeInterface = UserPrivileges;
     type Time = Timestamp;

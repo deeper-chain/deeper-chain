@@ -173,6 +173,7 @@ impl Config for Test {
     type RuntimeEvent = RuntimeEvent;
 
     type AdscCurrency = Assets;
+    type DprCurrency = Balances;
     type WeightInfo = ();
     type Time = Timestamp;
     type AdscId = ConstU32<1>;
@@ -206,7 +207,8 @@ pub fn run_to_block(n: u64) {
 #[test]
 fn adsc_pay_reward() {
     new_test_ext().execute_with(|| {
-        Adsc::on_runtime_upgrade();
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+
         // start day is day 0
         CurrentAdscBaseReward::<Test>::put(1560 * DPR);
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
@@ -252,7 +254,8 @@ fn adsc_pay_reward() {
 #[test]
 fn adsc_half_reward() {
     new_test_ext().execute_with(|| {
-        Adsc::on_runtime_upgrade();
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+
         CurrentAdscBaseReward::<Test>::put(1560 * DPR);
 
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
@@ -285,7 +288,7 @@ fn adsc_half_reward() {
 #[test]
 fn adsc_add_nft() {
     new_test_ext().execute_with(|| {
-        Adsc::on_runtime_upgrade();
+        assert_ok!(Assets::create(RuntimeOrigin::signed(1), 1, 1, 1));
 
         assert_ok!(Uniques::create(RuntimeOrigin::signed(1), 1, 1));
 
