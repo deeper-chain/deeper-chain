@@ -347,7 +347,7 @@ pub mod pallet {
         #[transactional]
         pub fn swap_adsc_to_dpr(origin: OriginFor<T>, amount: AssetBalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            T::AdscCurrency::transfer(T::AdscId::get(), &who, &Self::account_id(), amount, true)?;
+            T::AdscCurrency::transfer(T::AdscId::get(), &who, &Self::account_id(), amount, false)?;
             let (adsc_rate, dpr_rate) = AdscExchangeRate::<T>::get();
             let dpr_amount = amount.saturating_mul(dpr_rate.into()) / adsc_rate.into();
             let dpr_amount: u128 = dpr_amount.unique_saturated_into();
@@ -356,7 +356,7 @@ pub mod pallet {
                 &Self::account_id(),
                 &who,
                 dpr_amount,
-                ExistenceRequirement::KeepAlive,
+                ExistenceRequirement::AllowDeath,
             );
             if res.is_err() {
                 Self::deposit_event(Event::PoolNotEnough {
@@ -386,7 +386,7 @@ pub mod pallet {
                 &Self::account_id(),
                 &who,
                 adsc_amount,
-                true,
+                false,
             )
             .map(|_| ());
             if res.is_err() {

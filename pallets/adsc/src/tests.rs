@@ -17,8 +17,9 @@
 
 //! Macro for creating the tests for the module.
 
+use frame_support::traits::fungibles::Mutate;
 use frame_support::traits::{
-    nonfungibles::Inspect, AsEnsureOriginWithArg, ConstU32, ConstU64, Hooks,
+    nonfungibles::Inspect, AsEnsureOriginWithArg, ConstU128, ConstU32, Hooks,
 };
 use frame_support::{assert_ok, parameter_types, weights::Weight, PalletId};
 use pallet_user_privileges::H160;
@@ -77,7 +78,7 @@ impl frame_system::Config for Test {
     type BlockHashCount = BlockHashCount;
     type Version = ();
     type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u64>;
+    type AccountData = pallet_balances::AccountData<u128>;
     type OnNewAccount = ();
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
@@ -92,7 +93,7 @@ parameter_types! {
 }
 impl pallet_balances::Config for Test {
     type MaxLocks = ();
-    type Balance = u64;
+    type Balance = u128;
     type RuntimeEvent = RuntimeEvent;
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
@@ -121,11 +122,11 @@ impl pallet_assets::Config for Test {
     type Currency = Balances;
     type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<u64>>;
     type ForceOrigin = frame_system::EnsureRoot<u64>;
-    type AssetDeposit = ConstU64<1>;
-    type AssetAccountDeposit = ConstU64<10>;
-    type MetadataDepositBase = ConstU64<1>;
-    type MetadataDepositPerByte = ConstU64<1>;
-    type ApprovalDeposit = ConstU64<1>;
+    type AssetDeposit = ConstU128<1>;
+    type AssetAccountDeposit = ConstU128<10>;
+    type MetadataDepositBase = ConstU128<1>;
+    type MetadataDepositPerByte = ConstU128<1>;
+    type ApprovalDeposit = ConstU128<1>;
     type StringLimit = ConstU32<50>;
     type Freezer = ();
     type WeightInfo = ();
@@ -147,11 +148,11 @@ impl pallet_uniques::Config for Test {
     type ItemId = u32;
     type Currency = Balances;
     type ForceOrigin = frame_system::EnsureRoot<u64>;
-    type CollectionDeposit = ConstU64<0>;
-    type ItemDeposit = ConstU64<0>;
-    type MetadataDepositBase = ConstU64<0>;
-    type AttributeDepositBase = ConstU64<0>;
-    type DepositPerByte = ConstU64<0>;
+    type CollectionDeposit = ConstU128<0>;
+    type ItemDeposit = ConstU128<0>;
+    type MetadataDepositBase = ConstU128<0>;
+    type AttributeDepositBase = ConstU128<0>;
+    type DepositPerByte = ConstU128<0>;
     type StringLimit = ConstU32<50>;
     type KeyLimit = ConstU32<50>;
     type ValueLimit = ConstU32<50>;
@@ -307,6 +308,45 @@ fn adsc_add_nft() {
 
         assert_eq!(Uniques::owner(1, 1), None);
         assert_eq!(Uniques::attribute(&1, &1, &[]), None);
+    });
+}
+
+#[test]
+fn swap_adsc() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+
+        assert_ok!(Assets::mint_into(1, &3, 2 * DPR));
+        assert_ok!(Balances::set_balance(
+            RuntimeOrigin::root(),
+            Adsc::account_id(),
+            100 * DPR,
+            0
+        ));
+        assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR));
+        assert_eq!(Balances::free_balance(&3), DPR);
+
+        AdscExchangeRate::<Test>::put((6, 4));
+        assert_ok!(Assets::mint_into(1, &4, 3 * DPR));
+        assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(4), 3 * DPR));
+        assert_eq!(Balances::free_balance(&4), 2 * DPR);
+
+        AdscExchangeRate::<Test>::put((3, 7));
+        assert_ok!(Assets::mint_into(1, &5, 3 * DPR));
+        assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(5), 3 * DPR));
+        assert_eq!(Balances::free_balance(&5), 7 * DPR);
+    });
+}
+
+#[test]
+fn swap_dpr() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 3, DPR, 0));
+        assert_ok!(Assets::mint_into(1, &Adsc::account_id(), 2 * DPR));
+
+        assert_ok!(Adsc::swap_dpr_to_adsc(RuntimeOrigin::signed(3), DPR));
+        assert_eq!(Assets::balance(1, &3), 2 * DPR);
     });
 }
 
