@@ -57,8 +57,8 @@ use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_mmr_primitives as mmr;
 use sp_runtime::traits::{
     self, BlakeTwo256, Block as BlockT, Bounded, Convert, ConvertInto, DispatchInfoOf,
-    Dispatchable, NumberFor, OpaqueKeys, PostDispatchInfoOf, SaturatedConversion, StaticLookup,
-    UniqueSaturatedInto,
+    Dispatchable, Identity as AssetDprIdentity, NumberFor, OpaqueKeys, PostDispatchInfoOf,
+    SaturatedConversion, StaticLookup, UniqueSaturatedInto,
 };
 use sp_runtime::transaction_validity::{
     TransactionPriority, TransactionSource, TransactionValidity, TransactionValidityError,
@@ -1414,6 +1414,7 @@ impl pallet_base_fee::Config for Runtime {
 
 parameter_types! {
     pub const AdscPalletId: PalletId = PalletId(*b"dep/adst");
+    pub const DexPalletId: PalletId = PalletId(*b"dex/deep");
 }
 
 impl pallet_adsc::Config for Runtime {
@@ -1424,6 +1425,23 @@ impl pallet_adsc::Config for Runtime {
     type Time = Timestamp;
     type AdscId = ConstU32<1>;
     type PalletId = AdscPalletId;
+}
+
+impl pallet_dex::Config for Runtime {
+    type PalletId = DexPalletId;
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type AssetBalance = Balance;
+    type AssetToCurrencyBalance = AssetDprIdentity;
+    type CurrencyToAssetBalance = AssetDprIdentity;
+    type AssetId = u32;
+    type Assets = Assets;
+    type AssetRegistry = Assets;
+    type WeightInfo = ();
+    // Provider fee is 0.3%
+    type ProviderFeeNumerator = ConstU128<3>;
+    type ProviderFeeDenominator = ConstU128<1000>;
+    type MinDeposit = ConstU128<1>;
 }
 
 construct_runtime!(
@@ -1494,7 +1512,8 @@ construct_runtime!(
 
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
         UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
-        Adsc: pallet_adsc::{Pallet, Call, Storage,Event<T>} = 92,
+        Adsc: pallet_adsc::{Pallet, Call, Storage,Event<T>,Config} = 92,
+        Dex: pallet_dex::{Pallet, Call, Storage,Event<T>} = 93,
 
     }
 );

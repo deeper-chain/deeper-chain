@@ -82,6 +82,40 @@ pub mod pallet {
     pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
     pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
 
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        phantom: PhantomData<T>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> GenesisConfig<T> {
+            GenesisConfig {
+                phantom: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            let _ = T::AdscCurrency::create(
+                T::AdscId::get(),
+                T::PalletId::get().into_account_truncating(),
+                true,
+                1_000_000_000u32.into(),
+            );
+
+            let _ = T::AdscCurrency::set(
+                T::AdscId::get(),
+                &T::PalletId::get().into_account_truncating(),
+                b"Adst".to_vec(),
+                b"Adst".to_vec(),
+                18,
+            );
+        }
+    }
+
     #[pallet::pallet]
     #[pallet::without_storage_info]
     #[pallet::generate_store(pub(super) trait Store)]

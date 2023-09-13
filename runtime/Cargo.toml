@@ -93,6 +93,8 @@ pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
+pallet-dex = { git = "https://github.com/jerry-yu/substrate-dex", branch = "polkadot-v0.9.34", default-features = false }
+
 pallet-micropayment = { version = "3.0.0", default-features = false, path = "../pallets/micropayment" }
 pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
 pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
@@ -192,6 +194,7 @@ std = [
 	"pallet-society/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
+	"pallet-dex/std",
 	"pallet-micropayment/std",
 	"pallet-credit/std",
 	"pallet-deeper-node/std",
@@ -240,6 +243,7 @@ runtime-benchmarks = [
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
+	"pallet-dex/runtime-benchmarks",
 	"pallet-credit/runtime-benchmarks",
 	"pallet-deeper-node/runtime-benchmarks",
 	"pallet-micropayment/runtime-benchmarks",

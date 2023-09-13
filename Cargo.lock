@@ -4546,6 +4546,7 @@ dependencies = [
  "pallet-credit-accumulation",
  "pallet-deeper-node",
  "pallet-democracy",
+ "pallet-dex",
  "pallet-dynamic-fee",
  "pallet-elections-phragmen 5.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.34)",
  "pallet-ethereum",
@@ -5187,6 +5188,20 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-dex"
+version = "0.0.1"
+source = "git+https://github.com/jerry-yu/substrate-dex?branch=polkadot-v0.9.34#3c1fc27e6187935d1516707b09590c2df71cecb7"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-assets",
+ "parity-scale-codec",
+ "scale-info",
  "sp-std",
 ]
 
