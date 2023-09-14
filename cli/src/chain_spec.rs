@@ -357,6 +357,7 @@ pub fn testnet_genesis(
         dynamic_fee: Default::default(),
         base_fee: Default::default(),
         council: Default::default(),
+        adsc: Default::default(),
     }
 }
 

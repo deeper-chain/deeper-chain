@@ -5194,7 +5194,7 @@ dependencies = [
 [[package]]
 name = "pallet-dex"
 version = "0.0.1"
-source = "git+https://github.com/jerry-yu/substrate-dex?branch=polkadot-v0.9.34#3c1fc27e6187935d1516707b09590c2df71cecb7"
+source = "git+https://github.com/jerry-yu/substrate-dex?branch=polkadot-v0.9.34#9c398f0dbcc18aa0a394ad4015da42cc3ff1e159"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5202,6 +5202,7 @@ dependencies = [
  "pallet-assets",
  "parity-scale-codec",
  "scale-info",
+ "sp-core",
  "sp-std",
 ]
 

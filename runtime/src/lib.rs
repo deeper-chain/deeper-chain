@@ -1512,7 +1512,7 @@ construct_runtime!(
 
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
         UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
-        Adsc: pallet_adsc::{Pallet, Call, Storage,Event<T>,Config} = 92,
+        Adsc: pallet_adsc::{Pallet, Call, Storage,Event<T>,Config<T>} = 92,
         Dex: pallet_dex::{Pallet, Call, Storage,Event<T>} = 93,
 
     }
