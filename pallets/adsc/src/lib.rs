@@ -241,6 +241,9 @@ pub mod pallet {
             let period = CurrentRewardPeriod::<T>::get();
 
             AdscStakers::<T>::insert(&account_id, period);
+            if let Some((collection_id, item_id)) = AdscNfts::<T>::take(&account_id) {
+                Self::remove_nft(collection_id, item_id)?;
+            }
             AdscNfts::<T>::insert(&account_id, (collection_id, item_id));
 
             Self::add_nft(collection_id, item_id, account_id.clone(), &data)?;
