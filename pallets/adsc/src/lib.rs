@@ -31,8 +31,9 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::DispatchResult;
     use frame_support::traits::{
-        fungibles::metadata::Mutate as MetaMutate, fungibles::Create, fungibles::Inspect,
-        fungibles::Mutate, nonfungibles::Mutate as NftMutate, Time,
+        fungibles::{metadata::Mutate as MetaMutate, Create, Inspect, Mutate, Transfer},
+        nonfungibles::Mutate as NftMutate,
+        Currency, ExistenceRequirement, Time,
     };
     use frame_support::{
         dispatch::RawOrigin, pallet_prelude::*, transactional, weights::Weight, PalletId,
@@ -58,13 +59,16 @@ pub mod pallet {
         /// Currency
         type AdscCurrency: MetaMutate<Self::AccountId>
             + Mutate<Self::AccountId>
-            + Create<Self::AccountId>;
+            + Create<Self::AccountId>
+            + Transfer<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
         /// query user prvileges
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
 
         type Time: Time;
+
+        type DprCurrency: Currency<Self::AccountId>;
 
         #[pallet::constant]
         type AdscId: Get<AssetIdOf<Self>>;
@@ -81,6 +85,9 @@ pub mod pallet {
 
     pub type ClassIdOf<T> = <T as pallet_uniques::Config>::CollectionId;
     pub type InstanceIdOf<T> = <T as pallet_uniques::Config>::ItemId;
+
+    pub type BalanceOf<T> =
+        <<T as Config>::DprCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -132,6 +139,16 @@ pub mod pallet {
     #[pallet::getter(fn saved_day)]
     pub(crate) type SavedDay<T> = StorageValue<_, u32, ValueQuery>;
 
+    #[pallet::storage]
+    pub type AdscExchangeRate<T: Config> =
+        StorageValue<_, (u32, u32), ValueQuery, InitExchangeRate>;
+
+    #[pallet::type_value]
+    pub fn InitExchangeRate() -> (u32, u32) {
+        // 2 Adst's value = 1 DPR
+        (2, 1)
+    }
+
     #[pallet::event]
     //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -144,7 +161,14 @@ pub mod pallet {
         AdscReward(T::AccountId, AssetBalanceOf<T>),
         BridgeBurned(T::AccountId, H160, AssetBalanceOf<T>),
         BridgeMinted(T::AccountId, H160, AssetBalanceOf<T>),
-        BridgeResult { bridge_result: DispatchResult },
+        AdscDprRate(u32, u32),
+        BridgeResult {
+            bridge_result: DispatchResult,
+        },
+        PoolNotEnough {
+            adsc: AssetBalanceOf<T>,
+            dpr: BalanceOf<T>,
+        },
     }
 
     #[pallet::error]
@@ -155,25 +179,6 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_runtime_upgrade() -> Weight {
-            let _ = T::AdscCurrency::create(
-                T::AdscId::get(),
-                Self::account_id(),
-                true,
-                1_000_000_000u32.into(),
-            );
-
-            let _ = T::AdscCurrency::set(
-                T::AdscId::get(),
-                &Self::account_id(),
-                b"Adsc".to_vec(),
-                b"Adsc".to_vec(),
-                18,
-            );
-
-            T::DbWeight::get().writes(2u64)
-        }
-
         fn on_initialize(_: T::BlockNumber) -> Weight {
             const MILLISECS_PER_DAY: u64 = 1000 * 3600 * 24;
             const BLOCK_PER_DAY: u32 = 17000;
@@ -321,6 +326,76 @@ pub mod pallet {
                 Self::deposit_event(Event::BridgeMinted(to, from, amount));
             }
             Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn set_exchange_rate(
+            origin: OriginFor<T>,
+            adsc_dpr_rate: (u32, u32),
+        ) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(
+                T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
+                Error::<T>::NotAdmin
+            );
+            AdscExchangeRate::<T>::put(adsc_dpr_rate);
+            Self::deposit_event(Event::AdscDprRate(adsc_dpr_rate.0, adsc_dpr_rate.1));
+            Ok(())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[transactional]
+        pub fn swap_adsc_to_dpr(origin: OriginFor<T>, amount: AssetBalanceOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            T::AdscCurrency::transfer(T::AdscId::get(), &who, &Self::account_id(), amount, false)?;
+            let (adsc_rate, dpr_rate) = AdscExchangeRate::<T>::get();
+            let dpr_amount = amount.saturating_mul(dpr_rate.into()) / adsc_rate.into();
+            let dpr_amount: u128 = dpr_amount.unique_saturated_into();
+            let dpr_amount = dpr_amount.unique_saturated_into();
+            let res = T::DprCurrency::transfer(
+                &Self::account_id(),
+                &who,
+                dpr_amount,
+                ExistenceRequirement::AllowDeath,
+            );
+            if res.is_err() {
+                Self::deposit_event(Event::PoolNotEnough {
+                    adsc: 0u32.into(),
+                    dpr: dpr_amount,
+                });
+            }
+            res
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[transactional]
+        pub fn swap_dpr_to_adsc(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+            T::DprCurrency::transfer(
+                &who,
+                &Self::account_id(),
+                amount,
+                ExistenceRequirement::AllowDeath,
+            )?;
+            let (adsc_rate, dpr_rate) = AdscExchangeRate::<T>::get();
+            let adsc_amount = amount.saturating_mul(adsc_rate.into()) / dpr_rate.into();
+            let adsc_amount: u128 = adsc_amount.unique_saturated_into();
+            let adsc_amount = adsc_amount.unique_saturated_into();
+            let res = T::AdscCurrency::transfer(
+                T::AdscId::get(),
+                &Self::account_id(),
+                &who,
+                adsc_amount,
+                false,
+            )
+            .map(|_| ());
+            if res.is_err() {
+                Self::deposit_event(Event::PoolNotEnough {
+                    adsc: adsc_amount,
+                    dpr: 0u32.into(),
+                });
+            }
+            res
         }
     }
 
