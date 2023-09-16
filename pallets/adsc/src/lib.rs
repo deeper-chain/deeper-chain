@@ -175,6 +175,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Not Admin
         NotAdmin,
+        /// same nft
+        SameNft,
     }
 
     #[pallet::hooks]
@@ -241,10 +243,15 @@ pub mod pallet {
             let period = CurrentRewardPeriod::<T>::get();
 
             AdscStakers::<T>::insert(&account_id, period);
+            if let Some((old_collection_id, old_item_id)) = AdscNfts::<T>::get(&account_id) {
+                ensure!(
+                    old_collection_id != collection_id || old_item_id != item_id,
+                    Error::<T>::SameNft
+                );
+                Self::remove_nft(old_collection_id, old_item_id)?;
+            }
             AdscNfts::<T>::insert(&account_id, (collection_id, item_id));
-
             Self::add_nft(collection_id, item_id, account_id.clone(), &data)?;
-
             Self::deposit_event(Event::AdscStakerAddNft(
                 account_id,
                 period,
@@ -484,6 +491,7 @@ pub mod pallet {
             weight
         }
 
+        #[transactional]
         pub(crate) fn remove_nft(
             collection_id: ClassIdOf<T>,
             item_id: InstanceIdOf<T>,
@@ -500,6 +508,7 @@ pub mod pallet {
             )
         }
 
+        #[transactional]
         pub(crate) fn add_nft(
             collection_id: ClassIdOf<T>,
             item_id: InstanceIdOf<T>,

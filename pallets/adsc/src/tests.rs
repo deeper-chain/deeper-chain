@@ -304,10 +304,19 @@ fn adsc_add_nft() {
         assert_eq!(Uniques::owner(1, 1), Some(2));
         assert_eq!(Uniques::attribute(&1, &1, &[]), Some(b"aa".to_vec()));
 
-        assert_ok!(Adsc::remove_nft(1, 1));
+        assert_ok!(Adsc::add_adsc_staking_account_with_nft(
+            RuntimeOrigin::signed(1),
+            2,
+            1,
+            2,
+            b"other_aa".to_vec()
+        ));
 
         assert_eq!(Uniques::owner(1, 1), None);
         assert_eq!(Uniques::attribute(&1, &1, &[]), None);
+
+        assert_eq!(Uniques::owner(1, 2), Some(2));
+        assert_eq!(Uniques::attribute(&1, &2, &[]), Some(b"other_aa".to_vec()));
     });
 }
 
