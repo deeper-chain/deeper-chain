@@ -38,7 +38,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::RawOrigin, pallet_prelude::*, transactional, weights::Weight, PalletId,
     };
-    use frame_system::pallet_prelude::*;
+    use frame_system::{ensure_root, pallet_prelude::*};
     use node_primitives::{
         user_privileges::{Privilege, UserPrivilegeInterface},
         DPR,
@@ -89,9 +89,12 @@ pub mod pallet {
     pub type BalanceOf<T> =
         <<T as Config>::DprCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
     #[pallet::pallet]
     #[pallet::without_storage_info]
     #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
@@ -149,6 +152,12 @@ pub mod pallet {
         (2, 1)
     }
 
+    #[pallet::storage]
+    pub type TotalPoolAdsc<T: Config> = StorageValue<_, AssetBalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    pub type TotalPoolDpr<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
     #[pallet::event]
     //#[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -168,6 +177,18 @@ pub mod pallet {
         PoolNotEnough {
             adsc: AssetBalanceOf<T>,
             dpr: BalanceOf<T>,
+        },
+        PoolNewAdded {
+            adsc: AssetBalanceOf<T>,
+            dpr: BalanceOf<T>,
+        },
+        SwapAdscToDpr {
+            adsc: AssetBalanceOf<T>,
+            dpr: BalanceOf<T>,
+        },
+        SwapDprToAdsc {
+            dpr: BalanceOf<T>,
+            adsc: AssetBalanceOf<T>,
         },
     }
 
@@ -201,6 +222,20 @@ pub mod pallet {
                     .saturating_add(T::DbWeight::get().writes(3 as u64));
             } else {
                 weight += Self::adsc_reward(cur_day);
+            }
+
+            weight
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads(1);
+            if StorageVersion::get::<Pallet<T>>() == 0 {
+                let _ = Self::do_add_pool_dpr_adsc(
+                    (100_000_000 * DPR).unique_saturated_into(),
+                    (100_000_000 * DPR).unique_saturated_into(),
+                );
+                StorageVersion::new(1).put::<Pallet<T>>();
+                weight += T::DbWeight::get().writes(1)
             }
 
             weight
@@ -370,6 +405,11 @@ pub mod pallet {
                     adsc: 0u32.into(),
                     dpr: dpr_amount,
                 });
+            } else {
+                Self::deposit_event(Event::SwapDprToAdsc {
+                    adsc: amount,
+                    dpr: dpr_amount,
+                });
             }
             res
         }
@@ -401,12 +441,44 @@ pub mod pallet {
                     adsc: adsc_amount,
                     dpr: 0u32.into(),
                 });
+            } else {
+                Self::deposit_event(Event::SwapAdscToDpr {
+                    adsc: adsc_amount,
+                    dpr: amount,
+                });
             }
             res
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        pub fn add_pool_dpr_adsc(
+            origin: OriginFor<T>,
+            dpr_amount: BalanceOf<T>,
+            adsc_amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+
+            Self::do_add_pool_dpr_adsc(dpr_amount, adsc_amount)?;
+            Ok(())
         }
     }
 
     impl<T: Config> pallet::Pallet<T> {
+        pub(crate) fn do_add_pool_dpr_adsc(
+            dpr_amount: BalanceOf<T>,
+            adsc_amount: AssetBalanceOf<T>,
+        ) -> DispatchResult {
+            T::AdscCurrency::mint_into(T::AdscId::get(), &Self::account_id(), adsc_amount)?;
+            T::DprCurrency::deposit_creating(&Self::account_id(), dpr_amount);
+            TotalPoolAdsc::<T>::mutate(|adsc| *adsc = adsc.saturating_add(adsc_amount));
+            TotalPoolDpr::<T>::mutate(|dpr| *dpr = dpr.saturating_add(dpr_amount));
+            Self::deposit_event(Event::PoolNewAdded {
+                adsc: adsc_amount,
+                dpr: dpr_amount,
+            });
+            Ok(())
+        }
+
         pub(crate) fn account_id() -> T::AccountId {
             T::PalletId::get().into_account_truncating()
         }

@@ -27,17 +27,18 @@ sp-runtime = { default-features = false, git = "https://github.com/paritytech/su
 sp-std = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 node-primitives = { version = '2.0.0', default-features = false, path = "../../primitives" }
 pallet-uniques = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
 serde = { version = "1.0.101", optional = true, features = ["derive"] }
 pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 pallet-user-privileges = { default-features = false, path = "../user-privileges" }
-pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
 
 # Optional imports for benchmarking
 frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", optional = true }
 
 [dev-dependencies]
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34", default-features = false }
+pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
+
 
 [features]
 default = ['std']
