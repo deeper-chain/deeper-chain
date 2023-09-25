@@ -61,40 +61,40 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn force_reserve_by_member() -> Weight {
-        Weight::from_ref_time(26_157_000 as u64)
+        Weight::from_all(26_157_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn force_remove_lock() -> Weight {
-        Weight::from_ref_time(25_417_000 as u64)
+        Weight::from_all(25_417_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn set_release_limit_parameter() -> Weight {
-        Weight::from_ref_time(1_870_000 as u64).saturating_add(T::DbWeight::get().writes(2 as u64))
+        Weight::from_all(1_870_000 as u64).saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn unstaking_release() -> Weight {
-        Weight::from_ref_time(43_540_000 as u64)
+        Weight::from_all(43_540_000 as u64)
             .saturating_add(T::DbWeight::get().reads(6 as u64))
             .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     fn burn_for_ezc() -> Weight {
-        Weight::from_ref_time(41_285_000 as u64)
+        Weight::from_all(41_285_000 as u64)
             .saturating_add(T::DbWeight::get().reads(3 as u64))
             .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     fn npow_mint() -> Weight {
-        Weight::from_ref_time(33_965_000 as u64)
+        Weight::from_all(33_965_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn bridge_deeper_to_other() -> Weight {
-        Weight::from_ref_time(35_279_000 as u64)
+        Weight::from_all(35_279_000 as u64)
             .saturating_add(T::DbWeight::get().reads(4 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn bridge_other_to_deeper() -> Weight {
-        Weight::from_ref_time(35_334_000 as u64)
+        Weight::from_all(35_334_000 as u64)
             .saturating_add(T::DbWeight::get().reads(4 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
@@ -103,41 +103,40 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn force_reserve_by_member() -> Weight {
-        Weight::from_ref_time(26_157_000 as u64)
+        Weight::from_all(26_157_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn force_remove_lock() -> Weight {
-        Weight::from_ref_time(25_417_000 as u64)
+        Weight::from_all(25_417_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn set_release_limit_parameter() -> Weight {
-        Weight::from_ref_time(1_870_000 as u64)
-            .saturating_add(RocksDbWeight::get().writes(2 as u64))
+        Weight::from_all(1_870_000 as u64).saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn unstaking_release() -> Weight {
-        Weight::from_ref_time(43_540_000 as u64)
+        Weight::from_all(43_540_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(6 as u64))
             .saturating_add(RocksDbWeight::get().writes(3 as u64))
     }
     fn burn_for_ezc() -> Weight {
-        Weight::from_ref_time(41_285_000 as u64)
+        Weight::from_all(41_285_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(3 as u64))
             .saturating_add(RocksDbWeight::get().writes(3 as u64))
     }
     fn npow_mint() -> Weight {
-        Weight::from_ref_time(33_965_000 as u64)
+        Weight::from_all(33_965_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn bridge_deeper_to_other() -> Weight {
-        Weight::from_ref_time(35_279_000 as u64)
+        Weight::from_all(35_279_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(4 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn bridge_other_to_deeper() -> Weight {
-        Weight::from_ref_time(35_334_000 as u64)
+        Weight::from_all(35_334_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(4 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }

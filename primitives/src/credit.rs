@@ -5,9 +5,6 @@ use scale_info::TypeInfo;
 pub use sp_core::H160;
 use sp_runtime::{DispatchResult, Percent};
 
-#[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
-
 /// Counter for the number of eras that have passed.
 pub type EraIndex = u32;
 
@@ -22,8 +19,18 @@ pub const OLD_REWARD_ERAS: EraIndex = 270;
 pub const CREDIT_CAP_ONE_ERAS: u64 = 1;
 
 /// settings for a specific campaign_id and credit level
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(
+    Decode,
+    Encode,
+    Default,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    TypeInfo,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 pub struct CreditSetting<Balance> {
     pub campaign_id: CampaignId,
     pub credit_level: CreditLevel,
@@ -36,8 +43,20 @@ pub struct CreditSetting<Balance> {
     pub reward_per_referee: Balance,
 }
 
-#[derive(Decode, Encode, Default, Clone, Debug, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(
+    Decode,
+    Encode,
+    Default,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Ord,
+    PartialOrd,
+    serde::Serialize,
+    serde::Deserialize,
+    TypeInfo,
+)]
 pub struct CreditData {
     pub campaign_id: CampaignId,
     pub credit: u64,
@@ -72,8 +91,20 @@ impl CreditData {
     }
 }
 
-#[derive(Decode, Encode, Clone, Debug, PartialEq, Eq, Copy, Ord, PartialOrd, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(
+    Decode,
+    Encode,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    Copy,
+    Ord,
+    PartialOrd,
+    serde::Serialize,
+    serde::Deserialize,
+    TypeInfo,
+)]
 pub enum CreditLevel {
     Zero,
     One,
@@ -190,7 +221,7 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
         false
     }
     fn slash_credit(_account_id: &AccountId, _score: Option<u64>) -> Weight {
-        Weight::from_ref_time(0)
+        Weight::from_parts(0, 0)
     }
     fn get_credit_level(_credit_score: u64) -> CreditLevel {
         CreditLevel::Zero
@@ -200,7 +231,7 @@ impl<AccountId, Balance: From<u32>> CreditInterface<AccountId, Balance> for () {
         _from: EraIndex,
         _to: EraIndex,
     ) -> (Option<Balance>, Weight) {
-        (None, Weight::from_ref_time(0))
+        (None, Weight::from_parts(0, 0))
     }
     fn update_credit_by_traffic(_server: AccountId) {}
     fn get_current_era() -> EraIndex {

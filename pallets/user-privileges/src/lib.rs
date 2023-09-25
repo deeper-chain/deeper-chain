@@ -32,10 +32,8 @@ pub mod pallet {
     use super::*;
     use codec::{Decode, Encode, MaxEncodedLen};
     use enumflags2::BitFlags;
-    use frame_support::storage::migration::get_storage_value;
-    use frame_support::{ensure, pallet_prelude::*};
-    use frame_system::pallet_prelude::*;
-    use frame_system::{self, ensure_signed};
+    use frame_support::{ensure, pallet_prelude::*, storage::migration::get_storage_value};
+    use frame_system::{self, ensure_signed, pallet_prelude::*};
     use node_primitives::user_privileges::{Privilege, Privileges, UserPrivilegeInterface};
     pub use sp_core::H160;
     use sp_runtime::{traits::StaticLookup, RuntimeDebug};
@@ -54,7 +52,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     //#[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -94,8 +91,7 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
         fn on_runtime_upgrade() -> Weight {
-            use frame_support::traits::ConstU32;
-            use frame_support::WeakBoundedVec;
+            use frame_support::{traits::ConstU32, WeakBoundedVec};
 
             let version = StorageVersion::<T>::get();
             if version.is_none() {
@@ -147,6 +143,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::set_user_privilege())]
         pub fn set_user_privilege(
             origin: OriginFor<T>,
@@ -169,6 +166,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::set_user_privilege())]
         pub fn unset_user_privilege(
             origin: OriginFor<T>,
@@ -189,6 +187,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::clear_user_privilege())]
         pub fn clear_user_privilege(
             origin: OriginFor<T>,
@@ -201,6 +200,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::set_evm_privilege())]
         pub fn set_evm_privilege(
             origin: OriginFor<T>,
@@ -224,6 +224,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::set_evm_privilege())]
         pub fn unset_evm_privilege(
             origin: OriginFor<T>,
@@ -247,6 +248,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::clear_evm_privilege())]
         pub fn clear_evm_privilege(origin: OriginFor<T>, who: H160) -> DispatchResult {
             let sender = ensure_signed(origin)?;

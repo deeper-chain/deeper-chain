@@ -57,20 +57,20 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn set_user_privilege() -> Weight {
-        Weight::from_ref_time(12_587_000 as u64)
+        Weight::from_all(12_587_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn clear_user_privilege() -> Weight {
-        Weight::from_ref_time(10_284_000 as u64).saturating_add(T::DbWeight::get().writes(1 as u64))
+        Weight::from_all(10_284_000 as u64).saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn set_evm_privilege() -> Weight {
-        Weight::from_ref_time(15_449_000 as u64)
+        Weight::from_all(15_449_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn clear_evm_privilege() -> Weight {
-        Weight::from_ref_time(13_210_000 as u64)
+        Weight::from_all(13_210_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
@@ -79,21 +79,20 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn set_user_privilege() -> Weight {
-        Weight::from_ref_time(12_587_000 as u64)
+        Weight::from_all(12_587_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn clear_user_privilege() -> Weight {
-        Weight::from_ref_time(10_284_000 as u64)
-            .saturating_add(RocksDbWeight::get().writes(1 as u64))
+        Weight::from_all(10_284_000 as u64).saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn set_evm_privilege() -> Weight {
-        Weight::from_ref_time(15_449_000 as u64)
+        Weight::from_all(15_449_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn clear_evm_privilege() -> Weight {
-        Weight::from_ref_time(13_210_000 as u64)
+        Weight::from_all(13_210_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }

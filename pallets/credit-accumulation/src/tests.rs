@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::{mock::*, testing_utils::*, AtmosNonce, Error};
-use frame_support::codec::Encode;
+use codec::Encode;
 use frame_support::{
     assert_noop, assert_ok, dispatch::DispatchErrorWithPostInfo, error::BadOrigin,
 };

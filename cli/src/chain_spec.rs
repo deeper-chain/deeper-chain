@@ -21,13 +21,12 @@
 use grandpa_primitives::AuthorityId as GrandpaId;
 use hex_literal::hex;
 use node_primitives::credit::{CreditData, CreditLevel, CreditSetting};
-use node_runtime::constants::currency::*;
-use node_runtime::Block;
 use node_runtime::{
-    wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CreditConfig,
-    DeeperNodeConfig, DemocracyConfig, EVMConfig, ElectionsConfig, EthereumConfig, GrandpaConfig,
-    ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, SocietyConfig, StakerStatus,
-    StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+    constants::currency::*, wasm_binary_unwrap, AuthorityDiscoveryConfig, BabeConfig,
+    BalancesConfig, Block, CreditConfig, DeeperNodeConfig, DemocracyConfig, EVMConfig,
+    ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, RuntimeGenesisConfig,
+    SessionConfig, SessionKeys, SocietyConfig, StakerStatus, StakingConfig, SudoConfig,
+    SystemConfig, TechnicalCommitteeConfig,
 };
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sc_chain_spec::ChainSpecExtension;
@@ -35,8 +34,7 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_consensus_babe::AuthorityId as BabeId;
-use sp_core::{sr25519, Pair, Public};
-use sp_core::{H160, U256};
+use sp_core::{sr25519, Pair, Public, H160, U256};
 use sp_runtime::{
     traits::{IdentifyAccount, Verify},
     Perbill, Percent,
@@ -47,7 +45,6 @@ use std::{
 };
 
 pub use node_primitives::{AccountId, Balance, BlockNumber, Signature};
-pub use node_runtime::GenesisConfig;
 use serde_json as json;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -68,7 +65,7 @@ pub struct Extensions {
 }
 
 /// Specialized `ChainSpec`.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig, Extensions>;
 
 fn session_keys(
     grandpa: GrandpaId,
@@ -120,7 +117,7 @@ pub fn authority_keys_from_seed(
     )
 }
 
-/// Helper function to create GenesisConfig for testing
+/// Helper function to create RuntimeGenesisConfig for testing
 pub fn testnet_genesis(
     initial_authorities: Vec<(
         AccountId,
@@ -138,7 +135,7 @@ pub fn testnet_genesis(
     credit_settings: Vec<CreditSetting<Balance>>,
     user_credit_data: Vec<(AccountId, CreditData)>,
     _enable_println: bool,
-) -> GenesisConfig {
+) -> RuntimeGenesisConfig {
     let mut accounts: BTreeSet<AccountId> = BTreeSet::new();
     let mut balances: Vec<(AccountId, Balance)> = vec![];
     for account in endowed_accounts.clone() {
@@ -157,9 +154,10 @@ pub fn testnet_genesis(
             accounts.insert(authority.1.clone());
         }
     }
-    GenesisConfig {
+    RuntimeGenesisConfig {
         system: SystemConfig {
             code: wasm_binary_unwrap().to_vec(),
+            ..Default::default()
         },
         balances: BalancesConfig { balances },
         indices: IndicesConfig { indices: vec![] },
@@ -210,23 +208,20 @@ pub fn testnet_genesis(
         babe: BabeConfig {
             authorities: vec![],
             epoch_config: Some(node_runtime::BABE_GENESIS_EPOCH_CONFIG),
+            ..Default::default()
         },
         im_online: ImOnlineConfig { keys: vec![] },
-        authority_discovery: AuthorityDiscoveryConfig { keys: vec![] },
+        authority_discovery: AuthorityDiscoveryConfig {
+            keys: vec![],
+            ..Default::default()
+        },
         grandpa: GrandpaConfig {
             authorities: vec![],
+            ..Default::default()
         },
         technical_membership: Default::default(),
         treasury: Default::default(),
-        society: SocietyConfig {
-            members: endowed_accounts
-                .iter()
-                .take((endowed_accounts.len() + 1) / 2)
-                .cloned()
-                .collect(),
-            pot: 0,
-            max_members: 999,
-        },
+        society: SocietyConfig { pot: 0 },
         vesting: Default::default(),
         deeper_node: DeeperNodeConfig {
             reward_setting: vec![
@@ -259,39 +254,43 @@ pub fn testnet_genesis(
         evm: EVMConfig {
             account_pairs: {
                 let mut map = BTreeMap::new();
-                // Alice's deeper chain address: 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d
-                // H160 address of Alice mapping eth account
-                // eth address: 0x7a5b2024e179b312B924Ff02F4c27b5DF5326601
-                // eth privete key: 0xb52e6d24f6caacc1961d3cedf04ed3a11a7f4a27a6ce85eeea5dbea6c694f53a
+                // Alice's deeper chain address:
+                // 0xd43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d H160 address
+                // of Alice mapping eth account eth address:
+                // 0x7a5b2024e179b312B924Ff02F4c27b5DF5326601 eth privete key:
+                // 0xb52e6d24f6caacc1961d3cedf04ed3a11a7f4a27a6ce85eeea5dbea6c694f53a
 
                 map.insert(
                     H160::from_str("7a5b2024e179b312B924Ff02F4c27b5DF5326601")
                         .expect("internal H160 is valid; qed"),
                     hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d").into(),
                 );
-                // Bob's deeper chain address: 0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48
-                // H160 address of Bob mapping eth account
-                // eth address: 0x120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581
-                // eth privete key: 0xd2d7f189142e7a0468f97e5f16ef7762bf199a4c6c31b3e38fbf43f38f7d8f30
+                // Bob's deeper chain address:
+                // 0x8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48 H160 address
+                // of Bob mapping eth account eth address:
+                // 0x120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581 eth privete key:
+                // 0xd2d7f189142e7a0468f97e5f16ef7762bf199a4c6c31b3e38fbf43f38f7d8f30
 
                 map.insert(
                     H160::from_str("120CF1Df8D02f6b1Aa4F2Dc9BF8FD7Cec63d8581")
                         .expect("internal H160 is valid; qed"),
                     hex!("8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48").into(),
                 );
-                // Dave's deeper chain address: 0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20
-                // H160 address of Dave mapping eth account
-                // eth address: 0x843AFB0DC3aD56696800C0d61C76Ac2A147AD48C
-                // eth privete key: 0xc32a1b133e8164ce6f63441090c29bd41e8ad0af1bf307c49ff3d40b1916db03
+                // Dave's deeper chain address:
+                // 0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20 H160 address
+                // of Dave mapping eth account eth address:
+                // 0x843AFB0DC3aD56696800C0d61C76Ac2A147AD48C eth privete key:
+                // 0xc32a1b133e8164ce6f63441090c29bd41e8ad0af1bf307c49ff3d40b1916db03
                 map.insert(
                     H160::from_str("843AFB0DC3aD56696800C0d61C76Ac2A147AD48C")
                         .expect("internal H160 is valid; qed"),
                     hex!("306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20").into(),
                 );
-                // Eve deeper chain address: 0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e
-                // H160 address of Eve mapping eth account
-                // eth address: 0xe1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B
-                // eth privete key: 0x828f8cdc56b6a78c5e9698900a00d7212780892da3486062d70092e3e9f6a37e
+                // Eve deeper chain address:
+                // 0xe659a7a1628cdd93febc04a4e0646ea20e9f5f0ce097d9a05290d4a9e054df4e H160 address
+                // of Eve mapping eth account eth address:
+                // 0xe1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B eth privete key:
+                // 0x828f8cdc56b6a78c5e9698900a00d7212780892da3486062d70092e3e9f6a37e
                 map.insert(
                     H160::from_str("e1bA6c4568D7ae1b87B9fF59eeB1d1Ff3c0C4f5B")
                         .expect("internal H160 is valid; qed"),
@@ -353,7 +352,7 @@ pub fn testnet_genesis(
                 map
             },
         },
-        ethereum: EthereumConfig {},
+        ethereum: Default::default(),
         dynamic_fee: Default::default(),
         base_fee: Default::default(),
         council: Default::default(),
@@ -464,7 +463,7 @@ fn campaign_0_credit_settings() -> Vec<CreditSetting<Balance>> {
     ]
 }
 
-fn development_config_genesis() -> GenesisConfig {
+fn development_config_genesis() -> RuntimeGenesisConfig {
     let endowed_accounts: Vec<AccountId> = vec![
         get_account_id_from_seed::<sr25519::Public>("Alice"),
         get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -528,7 +527,7 @@ pub fn development_config() -> ChainSpec {
     )
 }
 
-fn local_testnet_genesis() -> GenesisConfig {
+fn local_testnet_genesis() -> RuntimeGenesisConfig {
     let authorities: Vec<(
         AccountId,
         AccountId,
@@ -627,13 +626,14 @@ pub fn local_testnet_config() -> ChainSpec {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use crate::cli::Cli;
-    use crate::service::{new_full_base, NewFullBase};
-    use sc_cli::SubstrateCli;
-    use sc_service_test;
+    // use crate::{
+    //     cli::Cli,
+    //     service::{new_full_base, NewFullBase},
+    // };
+    //use sc_cli::SubstrateCli;
     use sp_runtime::BuildStorage;
 
-    fn local_testnet_genesis_instant_single() -> GenesisConfig {
+    fn local_testnet_genesis_instant_single() -> RuntimeGenesisConfig {
         let endowed_accounts: Vec<AccountId> = vec![];
         let credit_settings: Vec<CreditSetting<Balance>> = vec![];
         let user_credit_data: Vec<(AccountId, CreditData)> = vec![];
@@ -680,29 +680,6 @@ pub(crate) mod tests {
             None,
             Default::default(),
         )
-    }
-
-    #[test]
-    #[ignore]
-    fn test_connectivity() {
-        sp_tracing::try_init_simple();
-
-        sc_service_test::connectivity(integration_test_config_with_two_authorities(), |config| {
-            let cli = Cli::from_args();
-            let NewFullBase {
-                task_manager,
-                client,
-                network,
-                transaction_pool,
-                ..
-            } = new_full_base(config, |_, _| (), &cli)?;
-            Ok(sc_service_test::TestNetComponents::new(
-                task_manager,
-                client,
-                network,
-                transaction_pool,
-            ))
-        });
     }
 
     #[test]

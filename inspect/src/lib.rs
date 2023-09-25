@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 //
-// Copyright (C) 2020-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 //
 // This program is free software: you can redistribute it and/or modify
@@ -33,13 +33,13 @@ use sp_blockchain::HeaderBackend;
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::{
     generic::BlockId,
-    traits::{Block, Hash, HashFor, NumberFor},
+    traits::{Block, Hash, HashingFor, NumberFor},
 };
 use std::{fmt, fmt::Debug, marker::PhantomData, str::FromStr};
 
 /// A helper type for a generic block input.
 pub type BlockAddressFor<TBlock> =
-    BlockAddress<<HashFor<TBlock> as Hash>::Output, NumberFor<TBlock>>;
+    BlockAddress<<HashingFor<TBlock> as Hash>::Output, NumberFor<TBlock>>;
 
 /// A Pretty formatter implementation.
 pub trait PrettyPrinter<TBlock: Block> {
@@ -78,24 +78,17 @@ impl<TBlock: Block> PrettyPrinter<TBlock> for DebugPrinter {
 }
 
 /// Aggregated error for `Inspector` operations.
-#[derive(Debug, derive_more::From, derive_more::Display)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Could not decode Block or Extrinsic.
-    Codec(codec::Error),
+    #[error(transparent)]
+    Codec(#[from] codec::Error),
     /// Error accessing blockchain DB.
-    Blockchain(sp_blockchain::Error),
+    #[error(transparent)]
+    Blockchain(#[from] sp_blockchain::Error),
     /// Given block has not been found.
+    #[error("{0}")]
     NotFound(String),
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            Self::Codec(ref e) => Some(e),
-            Self::Blockchain(ref e) => Some(e),
-            Self::NotFound(_) => None,
-        }
-    }
 }
 
 /// A helper trait to access block headers and bodies.
@@ -151,32 +144,27 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
             BlockAddress::Bytes(bytes) => TBlock::decode(&mut &*bytes)?,
             BlockAddress::Number(number) => {
                 let id = BlockId::number(number);
+                let hash = self.chain.expect_block_hash_from_id(&id)?;
                 let not_found = format!("Could not find block {:?}", id);
-                let hash = self
-                    .chain
-                    .block_hash(number)?
-                    .ok_or_else(|| Error::NotFound(not_found.clone()))?;
-
                 let body = self
                     .chain
                     .block_body(hash)?
                     .ok_or_else(|| Error::NotFound(not_found.clone()))?;
                 let header = self
                     .chain
-                    .header(id)?
+                    .header(hash)?
                     .ok_or_else(|| Error::NotFound(not_found.clone()))?;
                 TBlock::new(header, body)
             }
             BlockAddress::Hash(hash) => {
-                let id = BlockId::hash(hash);
-                let not_found = format!("Could not find block {:?}", id);
+                let not_found = format!("Could not find block {:?}", BlockId::<TBlock>::Hash(hash));
                 let body = self
                     .chain
                     .block_body(hash)?
                     .ok_or_else(|| Error::NotFound(not_found.clone()))?;
                 let header = self
                     .chain
-                    .header(id)?
+                    .header(hash)?
                     .ok_or_else(|| Error::NotFound(not_found.clone()))?;
                 TBlock::new(header, body)
             }
@@ -186,7 +174,7 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
     /// Get a pretty-printed extrinsic.
     pub fn extrinsic(
         &self,
-        input: ExtrinsicAddress<<HashFor<TBlock> as Hash>::Output, NumberFor<TBlock>>,
+        input: ExtrinsicAddress<<HashingFor<TBlock> as Hash>::Output, NumberFor<TBlock>>,
     ) -> Result<String, Error> {
         struct ExtrinsicPrinter<'a, A: Block, B>(A::Extrinsic, &'a B);
         impl<'a, A: Block, B: PrettyPrinter<A>> fmt::Display for ExtrinsicPrinter<'a, A, B> {
@@ -274,7 +262,7 @@ impl<Hash: FromStr + Debug, Number: FromStr + Debug> FromStr for ExtrinsicAddres
 
         let index = it
             .next()
-            .ok_or_else(|| "Extrinsic index missing: example \"5:0\"".to_string())?
+            .ok_or("Extrinsic index missing: example \"5:0\"")?
             .parse()
             .map_err(|e| format!("Invalid index format: {}", e))?;
 
@@ -308,7 +296,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn should_parse_extrinsic_address() {
         type BlockAddress = super::BlockAddress<Hash, u64>;
         type ExtrinsicAddress = super::ExtrinsicAddress<Hash, u64>;
@@ -319,7 +306,7 @@ mod tests {
         let b2 = ExtrinsicAddress::from_str("0 0");
         let b3 = ExtrinsicAddress::from_str("0x0012345f");
 
-        assert_eq!(e0, Err("Extrinsic index missing: example \"5:0\"".into()));
+        assert_eq!(e0, Ok(ExtrinsicAddress::Bytes(vec![0x12, 0x34])));
         assert_eq!(
             b0,
             Ok(ExtrinsicAddress::Block(
@@ -331,7 +318,7 @@ mod tests {
             b1,
             Ok(ExtrinsicAddress::Block(BlockAddress::Number(1234), 0))
         );
-        assert_eq!(b2, Ok(ExtrinsicAddress::Block(BlockAddress::Number(0), 0)));
+        assert_eq!(b2, Ok(ExtrinsicAddress::Bytes(vec![0, 0])));
         assert_eq!(b3, Ok(ExtrinsicAddress::Bytes(vec![0, 0x12, 0x34, 0x5f])));
     }
 }

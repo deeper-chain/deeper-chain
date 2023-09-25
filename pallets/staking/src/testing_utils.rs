@@ -18,8 +18,7 @@
 //! Testing utils for staking. Provides some common functions to setup staking state, such as
 //! bonding validators, nominators, and generating different types of solutions.
 
-use crate::*;
-use crate::{Config as StakingConfig, Pallet as Staking};
+use crate::{Config as StakingConfig, Pallet as Staking, *};
 use frame_benchmarking::account;
 use frame_system::RawOrigin;
 use node_primitives::credit::{CreditData, CreditLevel};
@@ -159,8 +158,8 @@ pub fn create_validators_is_accountid<T: Config>(
 /// - `delegators`: number of bonded delegators.
 /// - `edge_per_delegator`: number of edge (vote) per delegator.
 /// - `randomize_stake`: whether to randomize the stakes.
-/// - `to_delegate`: if `Some(n)`, only the first `n` bonded validator are voted upon.
-///    Else, all of them are considered and `edge_per_delegator` random validators are voted for.
+/// - `to_delegate`: if `Some(n)`, only the first `n` bonded validator are voted upon. Else, all of
+///   them are considered and `edge_per_delegator` random validators are voted for.
 ///
 /// Return the validators choosen to be delegated.
 pub fn create_validators_with_delegators_for_era<T: Config + pallet_credit::Config>(

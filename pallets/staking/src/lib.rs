@@ -45,10 +45,7 @@ use frame_support::{
         LockableCurrency, OnUnbalanced, UnixTime, WithdrawReasons,
     },
     transactional,
-    weights::{
-        constants::{WEIGHT_PER_MICROS, WEIGHT_PER_NANOS},
-        Weight,
-    },
+    weights::Weight,
     PalletId,
 };
 use frame_system::{ensure_root, ensure_signed, offchain::SendTransactionTypes, pallet_prelude::*};
@@ -69,8 +66,7 @@ use sp_runtime::{
     },
     Perbill, Percent, RuntimeDebug,
 };
-#[cfg(feature = "std")]
-use sp_runtime::{Deserialize, Serialize};
+
 use sp_staking::{
     offence::{
         DisableStrategy, Offence, OffenceDetails, OffenceError, OnOffenceHandler, ReportOffence,
@@ -78,8 +74,11 @@ use sp_staking::{
     SessionIndex,
 };
 use sp_std::{
-    cmp, cmp::Ordering, collections::btree_map::BTreeMap, collections::btree_set::BTreeSet,
-    convert::From, convert::TryInto, prelude::*,
+    cmp,
+    cmp::Ordering,
+    collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+    convert::{From, TryInto},
+    prelude::*,
 };
 pub use weights::WeightInfo;
 
@@ -149,8 +148,7 @@ impl<AccountId: Ord> Default for EraRewardPoints<AccountId> {
 }
 
 /// Indicates the initial status of the staker.
-#[derive(RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize, Clone))]
+#[derive(RuntimeDebug, serde::Serialize, serde::Deserialize, Clone)]
 pub enum StakerStatus {
     /// Chilling.
     Idle,
@@ -537,8 +535,18 @@ impl<AccountId: Ord> Default for ValidatorData<AccountId> {
 }
 
 /// Mode of era-forcing.
-#[derive(Copy, Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[derive(
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Encode,
+    Decode,
+    RuntimeDebug,
+    TypeInfo,
+    serde::Serialize,
+    serde::Deserialize,
+)]
 pub enum Forcing {
     /// Not forcing anything - just let whatever happen.
     NotForcing,
@@ -580,16 +588,15 @@ pub mod pallet {
     use super::*;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
     #[pallet::config]
     pub trait Config: frame_system::Config + SendTransactionTypes<Call<Self>> {
         /// Number of blocks per era.
-        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
+        type BlocksPerEra: Get<BlockNumberFor<Self>>;
         /// The staking balance.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>;
 
         /// CreditInterface of credit pallet
         type CreditInterface: CreditInterface<Self::AccountId, BalanceOf<Self>>;
@@ -600,15 +607,15 @@ pub mod pallet {
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
 
         /// NodeInterface of deeper-node pallet
-        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
+        type NodeInterface: NodeInterface<Self::AccountId, BlockNumberFor<Self>>;
 
         /// max delegates can be selected by one delegator
         type MaxDelegates: Get<usize>;
 
         /// Time used for computing era duration.
         ///
-        /// It is guaranteed to start being called from the first `on_finalize`. Thus value at genesis
-        /// is not used.
+        /// It is guaranteed to start being called from the first `on_finalize`. Thus value at
+        /// genesis is not used.
         type UnixTime: UnixTime;
 
         type NumberToCurrency: Convert<u128, BalanceOf<Self>>;
@@ -865,7 +872,7 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn era_election_status)]
     pub type EraElectionStatus<T: Config> =
-        StorageValue<_, ElectionStatus<T::BlockNumber>, ValueQuery>;
+        StorageValue<_, ElectionStatus<BlockNumberFor<T>>, ValueQuery>;
 
     /// True if the current **planned** session is final. Note that this does not take era
     /// forcing into account.
@@ -989,7 +996,6 @@ pub mod pallet {
         pub delegations: Vec<(T::AccountId, Vec<T::AccountId>)>,
     }
 
-    #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             GenesisConfig {
@@ -1007,7 +1013,7 @@ pub mod pallet {
     }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             HistoryDepth::<T>::put(self.history_depth);
             ValidatorCount::<T>::put(self.validator_count);
@@ -1048,6 +1054,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::staking_delegate())]
         pub fn staking_delegate(
             origin: OriginFor<T>,
@@ -1064,6 +1071,7 @@ pub mod pallet {
             Self::do_staking_delegate(who, dst_level)
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::usdt_staking_delegate())]
         #[transactional]
         pub fn usdt_staking_delegate(
@@ -1102,6 +1110,7 @@ pub mod pallet {
         /// - Read: Bonded, Ledger, [Origin Account], Current Era, History Depth, Locks
         /// - Write: Bonded, Payee, [Origin Account], Locks, Ledger
         /// # </weight>
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::bond())]
         pub fn bond(
             origin: OriginFor<T>,
@@ -1150,7 +1159,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1, 1))]
+        #[pallet::call_index(3)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1, 1))]
         pub fn set_existential_deposit(
             origin: OriginFor<T>,
             #[pallet::compact] value: BalanceOf<T>,
@@ -1187,6 +1197,7 @@ pub mod pallet {
         /// - Read: Era Election Status, Bonded, Ledger, [Origin Account], Locks
         /// - Write: [Origin Account], Locks, Ledger
         /// # </weight>
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::bond_extra())]
         pub fn bond_extra(
             origin: OriginFor<T>,
@@ -1240,9 +1251,9 @@ pub mod pallet {
         /// - Independent of the arguments. Limited but potentially exploitable complexity.
         /// - Contains a limited number of reads.
         /// - Each call (requires the remainder of the bonded balance to be above `minimum_balance`)
-        ///   will cause a new entry to be inserted into a vector (`Ledger.unlocking`) kept in storage.
-        ///   The only way to clean the aforementioned storage item is also user-controlled via
-        ///   `withdraw_unbonded`.
+        ///   will cause a new entry to be inserted into a vector (`Ledger.unlocking`) kept in
+        ///   storage. The only way to clean the aforementioned storage item is also user-controlled
+        ///   via `withdraw_unbonded`.
         /// - One DB entry.
         /// ----------
         /// Weight: O(1)
@@ -1250,6 +1261,7 @@ pub mod pallet {
         /// - Read: EraElectionStatus, Ledger, CurrentEra, Locks, BalanceOf Stash,
         /// - Write: Locks, Ledger, BalanceOf Stash,
         /// </weight>
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::unbond())]
         pub fn unbond(
             origin: OriginFor<T>,
@@ -1302,7 +1314,8 @@ pub mod pallet {
         /// - Could be dependent on the `origin` argument and how much `unlocking` chunks exist.
         ///  It implies `consolidate_unlocked` which loops over `Ledger.unlocking`, which is
         ///  indirectly user-controlled. See [`unbond`] for more detail.
-        /// - Contains a limited number of reads, yet the size of which could be large based on `ledger`.
+        /// - Contains a limited number of reads, yet the size of which could be large based on
+        ///   `ledger`.
         /// - Writes are limited to the `origin` account key.
         /// ---------------
         /// Complexity O(S) where S is the number of slashing spans to remove
@@ -1312,11 +1325,12 @@ pub mod pallet {
         /// Kill:
         /// - Reads: EraElectionStatus, Ledger, Current Era, Bonded, Slashing Spans, [Origin
         ///   Account], Locks, BalanceOf stash
-        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators,
-        ///   [Origin Account], Locks, BalanceOf stash.
+        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, [Origin
+        ///   Account], Locks, BalanceOf stash.
         /// - Writes Each: SpanSlash * S
         /// NOTE: Weight annotation is the kill scenario, we refund otherwise.
         /// # </weight>
+        #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::withdraw_unbonded_kill(*num_slashing_spans))]
         pub fn withdraw_unbonded(
             origin: OriginFor<T>,
@@ -1379,6 +1393,7 @@ pub mod pallet {
         /// - Read: Era Election Status, Ledger
         /// - Write: Validators
         /// # </weight>
+        #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::validate())]
         pub fn validate(origin: OriginFor<T>, prefs: ValidatorPrefs) -> DispatchResult {
             ensure!(
@@ -1409,6 +1424,7 @@ pub mod pallet {
         /// - Read: EraElectionStatus, Ledger
         /// - Write: Validators
         /// # </weight>
+        #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::chill())]
         pub fn chill(origin: OriginFor<T>) -> DispatchResult {
             ensure!(
@@ -1437,6 +1453,7 @@ pub mod pallet {
         ///     - Read: Ledger
         ///     - Write: Payee
         /// # </weight>
+        #[pallet::call_index(9)]
         #[pallet::weight(T::WeightInfo::set_payee())]
         pub fn set_payee(
             origin: OriginFor<T>,
@@ -1465,6 +1482,7 @@ pub mod pallet {
         /// - Read: Bonded, Ledger New Controller, Ledger Old Controller
         /// - Write: Bonded, Ledger New Controller, Ledger Old Controller
         /// # </weight>
+        #[pallet::call_index(10)]
         #[pallet::weight(T::WeightInfo::set_controller())]
         pub fn set_controller(
             origin: OriginFor<T>,
@@ -1493,6 +1511,7 @@ pub mod pallet {
         /// Weight: O(1)
         /// Write: EraValidatorReward
         /// # </weight>
+        #[pallet::call_index(11)]
         #[pallet::weight(T::WeightInfo::set_era_validator_reward())]
         pub fn set_era_validator_reward(
             origin: OriginFor<T>,
@@ -1511,6 +1530,7 @@ pub mod pallet {
         /// Weight: O(1)
         /// Write: Validator Count
         /// # </weight>
+        #[pallet::call_index(12)]
         #[pallet::weight(T::WeightInfo::set_validator_count())]
         pub fn set_validator_count(
             origin: OriginFor<T>,
@@ -1528,6 +1548,7 @@ pub mod pallet {
         /// # <weight>
         /// Same as [`set_validator_count`].
         /// # </weight>
+        #[pallet::call_index(13)]
         #[pallet::weight(T::WeightInfo::set_validator_count())]
         pub fn increase_validator_count(
             origin: OriginFor<T>,
@@ -1545,6 +1566,7 @@ pub mod pallet {
         /// # <weight>
         /// Same as [`set_validator_count`].
         /// # </weight>
+        #[pallet::call_index(14)]
         #[pallet::weight(T::WeightInfo::set_validator_count())]
         pub fn scale_validator_count(origin: OriginFor<T>, factor: Percent) -> DispatchResult {
             ensure_root(origin)?;
@@ -1561,6 +1583,7 @@ pub mod pallet {
         /// - Weight: O(1)
         /// - Write: ForceEra
         /// # </weight>
+        #[pallet::call_index(15)]
         #[pallet::weight(T::WeightInfo::force_no_eras())]
         pub fn force_no_eras(origin: OriginFor<T>) -> DispatchResult {
             ensure_root(origin)?;
@@ -1578,6 +1601,7 @@ pub mod pallet {
         /// - Weight: O(1)
         /// - Write ForceEra
         /// # </weight>
+        #[pallet::call_index(16)]
         #[pallet::weight(T::WeightInfo::force_new_era())]
         pub fn force_new_era(origin: OriginFor<T>) -> DispatchResult {
             ensure_root(origin)?;
@@ -1593,6 +1617,7 @@ pub mod pallet {
         /// - O(V)
         /// - Write: Invulnerables
         /// # </weight>
+        #[pallet::call_index(17)]
         #[pallet::weight(T::WeightInfo::set_invulnerables(invulnerables.len() as u32))]
         pub fn set_invulnerables(
             origin: OriginFor<T>,
@@ -1604,13 +1629,14 @@ pub mod pallet {
         }
 
         /// Set the validator white list.
-        /// null , any validators can come up for election; not null, only validators in whitelist can come up for election
-        /// The dispatch origin must be Root.
+        /// null , any validators can come up for election; not null, only validators in whitelist
+        /// can come up for election The dispatch origin must be Root.
         ///
         /// # <weight>
         /// - O(V)
         /// - Write: ValidatorWhiteList
         /// # </weight>
+        #[pallet::call_index(18)]
         #[pallet::weight(T::WeightInfo::set_validator_whitelist(whitelist.len() as u32))]
         pub fn set_validator_whitelist(
             origin: OriginFor<T>,
@@ -1632,6 +1658,7 @@ pub mod pallet {
         /// Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Account, Locks
         /// Writes Each: SpanSlash * S
         /// # </weight>
+        #[pallet::call_index(19)]
         #[pallet::weight(T::WeightInfo::force_unstake(*num_slashing_spans))]
         pub fn force_unstake(
             origin: OriginFor<T>,
@@ -1656,6 +1683,7 @@ pub mod pallet {
         /// - Weight: O(1)
         /// - Write: ForceEra
         /// # </weight>
+        #[pallet::call_index(20)]
         #[pallet::weight(T::WeightInfo::force_new_era_always())]
         pub fn force_new_era_always(origin: OriginFor<T>) -> DispatchResult {
             ensure_root(origin)?;
@@ -1663,6 +1691,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(21)]
         #[pallet::weight(T::WeightInfo::increase_mining_reward(1))]
         pub fn increase_mining_reward(
             origin: OriginFor<T>,
@@ -1688,6 +1717,7 @@ pub mod pallet {
         /// - Read: Unapplied Slashes
         /// - Write: Unapplied Slashes
         /// # </weight>
+        #[pallet::call_index(22)]
         #[pallet::weight(T::WeightInfo::cancel_deferred_slash(slash_indices.len() as u32))]
         pub fn cancel_deferred_slash(
             origin: OriginFor<T>,
@@ -1702,7 +1732,7 @@ pub mod pallet {
                 Error::<T>::NotSortedAndUnique
             );
 
-            let mut unapplied = <Self as Store>::UnappliedSlashes::get(&era);
+            let mut unapplied = UnappliedSlashes::<T>::get(&era);
             let last_item = slash_indices[slash_indices.len() - 1];
             ensure!(
                 (last_item as usize) < unapplied.len(),
@@ -1714,7 +1744,7 @@ pub mod pallet {
                 unapplied.remove(index);
             }
 
-            <Self as Store>::UnappliedSlashes::insert(&era, &unapplied);
+            UnappliedSlashes::<T>::insert(&era, &unapplied);
             Ok(())
         }
 
@@ -1732,6 +1762,7 @@ pub mod pallet {
         ///     - Reads: EraElectionStatus, Ledger, Locks, [Origin Account]
         ///     - Writes: [Origin Account], Locks, Ledger
         /// # </weight>
+        #[pallet::call_index(23)]
         #[pallet::weight(T::WeightInfo::rebond(MAX_UNLOCKING_CHUNKS as u32))]
         pub fn rebond(
             origin: OriginFor<T>,
@@ -1753,14 +1784,7 @@ pub mod pallet {
             );
 
             Self::update_ledger(&controller, &ledger);
-            Ok(Some(
-                WEIGHT_PER_MICROS.saturating_mul(35u64)
-                    + WEIGHT_PER_NANOS
-                        .saturating_mul(50u64)
-                        .saturating_mul(ledger.unlocking.len().try_into().unwrap())
-                    + T::DbWeight::get().reads_writes(3, 2),
-            )
-            .into())
+            Ok(Some(T::WeightInfo::rebond(1)).into())
         }
 
         /// Set `HistoryDepth` value. This function will delete any history information
@@ -1768,10 +1792,10 @@ pub mod pallet {
         ///
         /// Parameters:
         /// - `new_history_depth`: The new history depth you would like to set.
-        /// - `era_items_deleted`: The number of items that will be deleted by this dispatch.
-        ///    This should report all the storage items that will be deleted by clearing old
-        ///    era history. Needed to report an accurate weight for the dispatch. Trusted by
-        ///    `Root` to report an accurate number.
+        /// - `era_items_deleted`: The number of items that will be deleted by this dispatch. This
+        ///   should report all the storage items that will be deleted by clearing old era history.
+        ///   Needed to report an accurate weight for the dispatch. Trusted by `Root` to report an
+        ///   accurate number.
         ///
         /// Origin must be root.
         ///
@@ -1784,6 +1808,7 @@ pub mod pallet {
         ///     - Clear Prefix Each: Era Stakers, EraStakersClipped, ErasValidatorPrefs
         ///     - Writes Each: ErasRewardPoints, ErasTotalStake, ErasStartSessionIndex
         /// # </weight>
+        #[pallet::call_index(24)]
         #[pallet::weight(T::WeightInfo::set_history_depth(*_era_items_deleted))]
         pub fn set_history_depth(
             origin: OriginFor<T>,
@@ -1816,9 +1841,11 @@ pub mod pallet {
         /// Complexity: O(S) where S is the number of slashing spans on the account.
         /// DB Weight:
         /// - Reads: Stash Account, Bonded, Slashing Spans, Locks
-        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Stash Account, Locks
+        /// - Writes: Bonded, Slashing Spans (if S > 0), Ledger, Payee, Validators, Stash Account,
+        ///   Locks
         /// - Writes Each: SpanSlash * S
         /// # </weight>
+        #[pallet::call_index(25)]
         #[pallet::weight(T::WeightInfo::reap_stash(*num_slashing_spans))]
         pub fn reap_stash(
             _origin: OriginFor<T>,
@@ -1833,6 +1860,7 @@ pub mod pallet {
         }
 
         /// delegate credit to a set of validators
+        #[pallet::call_index(26)]
         #[pallet::weight(T::WeightInfo::delegate(1))]
         pub fn delegate(origin: OriginFor<T>, validators: Vec<T::AccountId>) -> DispatchResult {
             ensure!(
@@ -1865,6 +1893,7 @@ pub mod pallet {
         }
 
         /// undelegate credit from the validators
+        #[pallet::call_index(27)]
         #[pallet::weight(T::WeightInfo::undelegate())]
         pub fn undelegate(origin: OriginFor<T>) -> DispatchResult {
             let delegator = ensure_signed(origin)?;
@@ -1878,6 +1907,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(28)]
         #[pallet::weight(T::WeightInfo::undelegate())]
         pub fn force_undelegate(
             origin: OriginFor<T>,
@@ -1892,7 +1922,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().writes(1))]
+        #[pallet::call_index(29)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().writes(1))]
         pub fn add_account_to_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -1907,7 +1938,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().writes(1))]
+        #[pallet::call_index(30)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().writes(1))]
         pub fn remove_account_from_blacklist(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -1921,7 +1953,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
+        #[pallet::call_index(31)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
         pub fn difference_compensation(
             origin: OriginFor<T>,
             delegator: T::AccountId,
@@ -1954,9 +1987,9 @@ pub mod pallet {
                 let reward_data = RewardData::<BalanceOf<T>> {
                     total_referee_reward: 0u32.into(),
                     received_referee_reward: referee_reward,
-                    referee_reward: referee_reward,
+                    referee_reward,
                     received_pocr_reward: poc_reward,
-                    poc_reward: poc_reward,
+                    poc_reward,
                 };
                 Reward::<T>::insert(&delegator, reward_data);
             }
@@ -1979,14 +2012,16 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::call_index(32)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
         pub fn set_minimum_validator_count(origin: OriginFor<T>, count: u32) -> DispatchResult {
             ensure_root(origin)?;
             MinimumValidatorCount::<T>::put(count);
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(2,2))]
+        #[pallet::call_index(33)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(2,2))]
         pub fn set_user_referer(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -2012,7 +2047,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,2))]
+        #[pallet::call_index(34)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1,2))]
         pub fn unset_user_referer(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -2032,6 +2068,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(35)]
         #[pallet::weight(T::WeightInfo::npow_mint())]
         pub fn set_npow_mint_limit(
             origin: OriginFor<T>,
@@ -2043,6 +2080,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(36)]
         #[pallet::weight(T::WeightInfo::npow_mint())]
         pub fn npow_mint(
             origin: OriginFor<T>,
@@ -2094,6 +2132,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(37)]
         #[pallet::weight(T::WeightInfo::npow_mint())]
         pub fn validator_burn(
             origin: OriginFor<T>,
@@ -2109,7 +2148,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
+        #[pallet::call_index(38)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
         pub fn force_unstaking_delegate(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -2125,7 +2165,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(39)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn unset_delegate_balance(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -2142,21 +2183,22 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_initialize(now: T::BlockNumber) -> Weight {
+        fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             // payout delegators only after the first era
             let mut weight = T::DbWeight::get().reads_writes(1, 0);
             if CurrentEra::<T>::get().unwrap_or(0) > 0 {
                 let remainder = now % T::BlocksPerEra::get();
-                if remainder == T::BlockNumber::default() {
+                if remainder == BlockNumberFor::<T>::default() {
                     // first block of the era
                     let blocks_per_era = TryInto::<u32>::try_into(T::BlocksPerEra::get())
                         .ok()
                         .unwrap();
-                    // figure out how many payouts to make per block, excluding the first and last block of each era
+                    // figure out how many payouts to make per block, excluding the first and last
+                    // block of each era
                     let paying_blocks_num = blocks_per_era - 2;
-                    // here +1 for handling edge cases such as when paying_blocks_num is equal to delegator_count,
-                    // then delegator_payouts_per_block is equal to 1. But within the scope of this era,
-                    // the number of delegator_count has increased,
+                    // here +1 for handling edge cases such as when paying_blocks_num is equal to
+                    // delegator_count, then delegator_payouts_per_block is equal to 1. But within
+                    // the scope of this era, the number of delegator_count has increased,
                     // which will lead to some delegators would not getting reward
                     let delegator_payouts_per_block =
                         (Self::delegator_count() + paying_blocks_num - 1) / paying_blocks_num + 1;
@@ -2178,13 +2220,14 @@ pub mod pallet {
             weight.saturating_add(finalize_weight)
         }
 
-        fn on_finalize(_: T::BlockNumber) {
+        fn on_finalize(_: BlockNumberFor<T>) {
             // Set the start of the first era.
             if let Some(mut active_era) = Self::active_era() {
                 if active_era.start.is_none() {
                     let now_as_millis_u64 = T::UnixTime::now().as_millis().saturated_into::<u64>();
                     active_era.start = Some(now_as_millis_u64);
-                    // This write only ever happens once, we don't include it in the weight in general
+                    // This write only ever happens once, we don't include it in the weight in
+                    // general
                     ActiveEra::<T>::put(active_era);
                 }
             }
@@ -2216,8 +2259,8 @@ pub mod pallet {
         Bonded(T::AccountId, BalanceOf<T>),
         /// An account has unbonded this amount. \[stash, amount\]
         Unbonded(T::AccountId, BalanceOf<T>),
-        /// An account has called `withdraw_unbonded` and removed unbonding chunks worth `BalanceOf<T>`
-        /// from the unlocking queue. \[stash, amount\]
+        /// An account has called `withdraw_unbonded` and removed unbonding chunks worth
+        /// `BalanceOf<T>` from the unlocking queue. \[stash, amount\]
         Withdrawn(T::AccountId, BalanceOf<T>),
         /// Delegated to a set of validators
         Delegated(T::AccountId, Vec<T::AccountId>),
@@ -2226,9 +2269,9 @@ pub mod pallet {
         /// The delegator  has been rewarded by this amount. \[account_id, amount\]
         DelegatorReward(T::AccountId, BalanceOf<T>),
         /// Mining Pool Empty Alert
-        PoolEmpty(T::BlockNumber),
+        PoolEmpty(BlockNumberFor<T>),
         /// Mining Pool Insufficient Funds Alert
-        InsufficientMiningRewards(T::BlockNumber, BalanceOf<T>),
+        InsufficientMiningRewards(BlockNumberFor<T>, BalanceOf<T>),
         /// The delegator  has been compensation_rewarded by this amount. \[account_id, amount\]
         CompensationDelegatorReward(T::AccountId, BalanceOf<T>),
         /// The validator  has been rewarded by this amount. \[account_id, amount\]
@@ -2502,8 +2545,8 @@ impl<T: Config> pallet::Pallet<T> {
                     if era_length + 1 == T::SessionsPerEra::get() {
                         IsCurrentSessionFinal::<T>::put(true);
                     } else if era_length >= T::SessionsPerEra::get() {
-                        // Should only happen when we are ready to trigger an era but we have ForceNone,
-                        // otherwise previous arm would short circuit.
+                        // Should only happen when we are ready to trigger an era but we have
+                        // ForceNone, otherwise previous arm would short circuit.
                         Self::close_election_window();
                     }
                     return None;
@@ -2760,7 +2803,7 @@ impl<T: Config> pallet::Pallet<T> {
                     received_referee_reward: 0u32.into(),
                     referee_reward: 0u32.into(),
                     received_pocr_reward: poc_reward,
-                    poc_reward: poc_reward,
+                    poc_reward,
                 };
                 Reward::<T>::insert(delegator, reward_data); // 1 write
                 weight = weight.saturating_add(T::DbWeight::get().reads_writes(0, 1));
@@ -3013,11 +3056,11 @@ impl<T: Config> pallet::Pallet<T> {
     /// Apply previously-unapplied slashes on the beginning of a new era, after a delay.
     fn apply_unapplied_slashes(active_era: EraIndex) {
         let slash_defer_duration = T::SlashDeferDuration::get();
-        <Self as Store>::EarliestUnappliedSlash::mutate(|earliest| {
+        EarliestUnappliedSlash::<T>::mutate(|earliest| {
             if let Some(ref mut earliest) = earliest {
                 let keep_from = active_era.saturating_sub(slash_defer_duration);
                 for era in (*earliest)..keep_from {
-                    let era_slashes = <Self as Store>::UnappliedSlashes::take(&era);
+                    let era_slashes = UnappliedSlashes::<T>::take(&era);
                     for slash in era_slashes {
                         slashing::apply_slash::<T>(slash);
                     }
@@ -3070,7 +3113,7 @@ impl<T: Config> pallet::Pallet<T> {
     }
 
     #[cfg(feature = "runtime-benchmarks")]
-    pub fn put_election_status(status: ElectionStatus<T::BlockNumber>) {
+    pub fn put_election_status(status: ElectionStatus<BlockNumberFor<T>>) {
         <EraElectionStatus<T>>::put(status);
     }
 
@@ -3285,17 +3328,12 @@ impl<T: Config> historical::SessionManager<T::AccountId, Exposure<T::AccountId, 
 /// * 20 points to the block producer for producing a (non-uncle) block in the relay chain,
 /// * 2 points to the block producer for each reference to a previously unreferenced uncle, and
 /// * 1 point to the producer of each referenced uncle block.
-impl<T> pallet_authorship::EventHandler<T::AccountId, T::BlockNumber> for pallet::Pallet<T>
+impl<T> pallet_authorship::EventHandler<T::AccountId, BlockNumberFor<T>> for pallet::Pallet<T>
 where
     T: Config + pallet_authorship::Config + pallet_session::Config,
 {
     fn note_author(author: T::AccountId) {
         Self::reward_by_ids(vec![(author, 20)])
-    }
-    fn note_uncle(author: T::AccountId, _age: T::BlockNumber) {
-        if let Some(block_author) = <pallet_authorship::Pallet<T>>::author() {
-            Self::reward_by_ids(vec![(block_author, 2), (author, 1)])
-        }
     }
 }
 
@@ -3401,7 +3439,7 @@ where
             }
         };
 
-        <Self as Store>::EarliestUnappliedSlash::mutate(|earliest| {
+        EarliestUnappliedSlash::<T>::mutate(|earliest| {
             if earliest.is_none() {
                 *earliest = Some(active_era)
             }
@@ -3454,7 +3492,7 @@ where
                     }
                 } else {
                     // defer to end of some `slash_defer_duration` from now.
-                    <Self as Store>::UnappliedSlashes::mutate(active_era, move |for_later| {
+                    UnappliedSlashes::<T>::mutate(active_era, move |for_later| {
                         for_later.push(unapplied)
                     });
                     add_db_reads_writes(1, 1);

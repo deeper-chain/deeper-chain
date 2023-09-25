@@ -32,12 +32,15 @@ pub use weights::WeightInfo;
 pub mod pallet {
     use super::*;
     use codec::{Decode, Encode, MaxEncodedLen};
-    use frame_support::traits::{
-        Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
-        OnUnbalanced, ReservableCurrency, WithdrawReasons,
-    };
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, ensure, pallet_prelude::*, transactional,
+        dispatch::DispatchResultWithPostInfo,
+        ensure,
+        pallet_prelude::*,
+        traits::{
+            Currency, ExistenceRequirement, Get, Imbalance, LockIdentifier, LockableCurrency,
+            OnUnbalanced, ReservableCurrency, WithdrawReasons,
+        },
+        transactional,
     };
     use frame_system::{self, ensure_signed, pallet_prelude::*};
     use node_primitives::{
@@ -75,7 +78,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -232,7 +234,7 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_: T::BlockNumber) {
+        fn on_finalize(_: BlockNumberFor<T>) {
             let saved_day = Self::saved_day();
             let cur_time: u64 = <pallet_timestamp::Pallet<T>>::get().unique_saturated_into();
             let cur_day = (cur_time / MILLISECS_PER_DAY) as u32;
@@ -249,6 +251,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
         pub fn force_remove_lock(
             origin: OriginFor<T>,
@@ -262,6 +265,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(T::OPWeightInfo::force_reserve_by_member())]
         pub fn force_reserve_by_member(
             origin: OriginFor<T>,
@@ -279,26 +283,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
-        pub fn unlock_assets_via_democracy(
-            origin: OriginFor<T>,
-            from: <T::Lookup as StaticLookup>::Source,
-            to: <T::Lookup as StaticLookup>::Source,
-            amount: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            let from = T::Lookup::lookup(from)?;
-            let to = T::Lookup::lookup(to)?;
-            let id: LockIdentifier = *b"phrelect";
-
-            <T::Currency as LockableCurrency<_>>::remove_lock(id, &from);
-
-            T::Currency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
-
-            Self::deposit_event(Event::UnLocked(from));
-            Ok(().into())
-        }
-
+        #[pallet::call_index(2)]
         #[pallet::weight(T::OPWeightInfo::set_release_limit_parameter())]
         pub fn set_release_limit_parameter(
             origin: OriginFor<T>,
@@ -313,6 +298,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight(T::OPWeightInfo::unstaking_release())]
         #[transactional]
         pub fn unstaking_release(
@@ -371,6 +357,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(4)]
         #[pallet::weight(T::OPWeightInfo::unstaking_release())]
         pub fn remove_staking_release_info(
             origin: OriginFor<T>,
@@ -384,6 +371,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(5)]
         #[pallet::weight(T::OPWeightInfo::burn_for_ezc())]
         pub fn burn_for_ezc(
             origin: OriginFor<T>,
@@ -408,7 +396,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(6)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_fund_pool_address(
             origin: OriginFor<T>,
             funder: T::AccountId,
@@ -422,6 +411,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(7)]
         #[pallet::weight(T::OPWeightInfo::bridge_deeper_to_other())]
         pub fn bridge_deeper_to_other(
             origin: OriginFor<T>,
@@ -448,6 +438,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(8)]
         #[pallet::weight(T::OPWeightInfo::bridge_other_to_deeper())]
         pub fn bridge_other_to_deeper(
             origin: OriginFor<T>,
@@ -474,7 +465,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(9)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn pause_call(
             origin: OriginFor<T>,
             pallet_name: Vec<u8>,
@@ -511,7 +503,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(10)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn unpause_call(
             origin: OriginFor<T>,
             pallet_name: Vec<u8>,
@@ -533,6 +526,27 @@ pub mod pallet {
                 ));
             }
             Ok(())
+        }
+
+        #[pallet::call_index(11)]
+        #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
+        pub fn unlock_assets_via_democracy(
+            origin: OriginFor<T>,
+            from: <T::Lookup as StaticLookup>::Source,
+            to: <T::Lookup as StaticLookup>::Source,
+            amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            let from = T::Lookup::lookup(from)?;
+            let to = T::Lookup::lookup(to)?;
+            let id: LockIdentifier = *b"phrelect";
+
+            <T::Currency as LockableCurrency<_>>::remove_lock(id, &from);
+
+            T::Currency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
+
+            Self::deposit_event(Event::UnLocked(from));
+            Ok(().into())
         }
     }
 

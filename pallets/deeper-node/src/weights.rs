@@ -62,94 +62,93 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn register_device() -> Weight {
-        Weight::from_ref_time(46_751_000 as u64)
+        Weight::from_all(46_751_000 as u64)
             .saturating_add(T::DbWeight::get().reads(4 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn unregister_device() -> Weight {
-        Weight::from_ref_time(59_907_000 as u64)
+        Weight::from_all(59_907_000 as u64)
             .saturating_add(T::DbWeight::get().reads(7 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn register_server() -> Weight {
-        Weight::from_ref_time(58_101_000 as u64)
+        Weight::from_all(58_101_000 as u64)
             .saturating_add(T::DbWeight::get().reads(6 as u64))
             .saturating_add(T::DbWeight::get().writes(4 as u64))
     }
     fn update_server() -> Weight {
-        Weight::from_ref_time(19_626_000 as u64)
+        Weight::from_all(19_626_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn unregister_server() -> Weight {
-        Weight::from_ref_time(63_682_000 as u64)
+        Weight::from_all(63_682_000 as u64)
             .saturating_add(T::DbWeight::get().reads(6 as u64))
             .saturating_add(T::DbWeight::get().writes(4 as u64))
     }
     fn im_online() -> Weight {
-        Weight::from_ref_time(19_331_000 as u64)
+        Weight::from_all(19_331_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     fn report_credit_proof() -> Weight {
-        Weight::from_ref_time(77_938_000 as u64)
+        Weight::from_all(77_938_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn reward_mapping() -> Weight {
-        Weight::from_ref_time(89_803_000 as u64)
+        Weight::from_all(89_803_000 as u64)
             .saturating_add(T::DbWeight::get().reads(4 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn get_npow_reward() -> Weight {
-        Weight::from_ref_time(16_571_000 as u64).saturating_add(T::DbWeight::get().reads(1 as u64))
+        Weight::from_all(16_571_000 as u64).saturating_add(T::DbWeight::get().reads(1 as u64))
     }
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn register_device() -> Weight {
-        Weight::from_ref_time(46_751_000 as u64)
+        Weight::from_all(46_751_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(4 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn unregister_device() -> Weight {
-        Weight::from_ref_time(59_907_000 as u64)
+        Weight::from_all(59_907_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(7 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn register_server() -> Weight {
-        Weight::from_ref_time(58_101_000 as u64)
+        Weight::from_all(58_101_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(6 as u64))
             .saturating_add(RocksDbWeight::get().writes(4 as u64))
     }
     fn update_server() -> Weight {
-        Weight::from_ref_time(19_626_000 as u64)
+        Weight::from_all(19_626_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn unregister_server() -> Weight {
-        Weight::from_ref_time(63_682_000 as u64)
+        Weight::from_all(63_682_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(6 as u64))
             .saturating_add(RocksDbWeight::get().writes(4 as u64))
     }
     fn im_online() -> Weight {
-        Weight::from_ref_time(19_331_000 as u64)
+        Weight::from_all(19_331_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(3 as u64))
     }
     fn report_credit_proof() -> Weight {
-        Weight::from_ref_time(77_938_000 as u64)
+        Weight::from_all(77_938_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn reward_mapping() -> Weight {
-        Weight::from_ref_time(89_803_000 as u64)
+        Weight::from_all(89_803_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(4 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn get_npow_reward() -> Weight {
-        Weight::from_ref_time(16_571_000 as u64)
-            .saturating_add(RocksDbWeight::get().reads(1 as u64))
+        Weight::from_all(16_571_000 as u64).saturating_add(RocksDbWeight::get().reads(1 as u64))
     }
 }

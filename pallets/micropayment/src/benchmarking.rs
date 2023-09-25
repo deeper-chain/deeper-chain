@@ -14,19 +14,16 @@
 // limitations under the License.
 
 //! Micropayment pallet benchmarking.
-//!
 
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use crate::pallet::ChannelOf;
-use crate::Pallet as Micropayment;
+use crate::{pallet::ChannelOf, Pallet as Micropayment};
 pub use frame_benchmarking::{
     account, benchmarks, impl_benchmark_test_suite, whitelist_account, whitelisted_caller,
 };
 use frame_support::traits::Currency;
-use frame_system::Pallet as System;
-use frame_system::RawOrigin;
+use frame_system::{Pallet as System, RawOrigin};
 //use hex_literal::hex;
 use codec::Encode;
 use node_primitives::AccountCreator;

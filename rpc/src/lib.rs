@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2019-2021 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: Apache-2.0
 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,64 +28,44 @@
 //! are part of it. Therefore all node-runtime-specific RPCs can
 //! be placed here or imported from corresponding FRAME RPC definitions.
 
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
+//#![warn(unused_crate_dependencies)]
+pub mod eth;
+pub use eth::*;
+
+use std::sync::Arc;
 
 use jsonrpsee::RpcModule;
+use node_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Nonce};
 
-use fc_rpc::{
-    EthBlockDataCacheTask, OverrideHandle, RuntimeApiStorageOverride, SchemaV1Override,
-    SchemaV2Override, SchemaV3Override, SchemaV4Override, StorageOverride,
-};
-use fc_rpc_core::types::{FeeHistoryCache, FeeHistoryCacheLimit, FilterPool};
-use fp_storage::EthereumStorageSchema;
-use node_primitives::{AccountId, Balance, BlockNumber, Hash, Index};
-use node_runtime::opaque::Block;
 use sc_client_api::{
-    backend::{AuxStore, Backend, StateBackend, StorageProvider},
+    backend::{Backend, StorageProvider},
     client::BlockchainEvents,
+    AuxStore, UsageProvider,
 };
-use sc_consensus_babe::{BabeConfiguration, Epoch};
-
-use sc_consensus_epochs::SharedEpochChanges;
-use sc_finality_grandpa::{
+use sc_consensus_babe::BabeWorkerHandle;
+use sc_consensus_grandpa::{
     FinalityProofProvider, GrandpaJustificationStream, SharedAuthoritySet, SharedVoterState,
 };
-
-use sc_network::NetworkService;
 use sc_rpc::SubscriptionTaskExecutor;
 pub use sc_rpc_api::DenyUnsafe;
-use sc_service::TransactionPool;
-
-use sc_transaction_pool::{ChainApi, Pool};
-use sp_api::ProvideRuntimeApi;
+use sc_transaction_pool::ChainApi;
+use sc_transaction_pool_api::TransactionPool;
+use sp_api::{CallApiAt, ProvideRuntimeApi};
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_consensus::SelectChain;
 use sp_consensus_babe::BabeApi;
-use sp_keystore::SyncCryptoStorePtr;
-use sp_runtime::traits::BlakeTwo256;
-use std::collections::BTreeMap;
-use std::sync::Arc;
-
-/// Light client extra dependencies.
-#[allow(dead_code)]
-pub struct LightDeps<C, F, P> {
-    /// The client instance to use.
-    pub client: Arc<C>,
-    /// Transaction pool instance.
-    pub pool: Arc<P>,
-    /// Fetcher instance.
-    pub fetcher: Arc<F>,
-}
+use sp_inherents::CreateInherentDataProviders;
+use sp_keystore::KeystorePtr;
+use sp_runtime::traits::Block as BlockT;
 
 /// Extra dependencies for BABE.
 pub struct BabeDeps {
-    /// BABE protocol config.
-    pub babe_config: BabeConfiguration,
-    /// BABE pending epoch changes.
-    pub shared_epoch_changes: SharedEpochChanges<Block, Epoch>,
+    /// A handle to the BABE worker for issuing requests.
+    pub babe_worker_handle: BabeWorkerHandle<Block>,
     /// The keystore that manages the keys of the node.
-    pub keystore: SyncCryptoStorePtr,
+    pub keystore: KeystorePtr,
 }
 
 /// Extra dependencies for GRANDPA
@@ -103,7 +83,7 @@ pub struct GrandpaDeps<B> {
 }
 
 /// Full client dependencies.
-pub struct FullDeps<C, P, SC, B, A: ChainApi> {
+pub struct FullDeps<C, P, SC, A: ChainApi, B, CT, CIDP> {
     /// The client instance to use.
     pub client: Arc<C>,
     /// Transaction pool instance.
@@ -118,111 +98,29 @@ pub struct FullDeps<C, P, SC, B, A: ChainApi> {
     pub babe: BabeDeps,
     /// GRANDPA specific dependencies.
     pub grandpa: GrandpaDeps<B>,
-    /// Graph pool instance.
-    pub graph: Arc<Pool<A>>,
-    /// The Node authority flag
-    pub is_authority: bool,
-    /// Whether to enable dev signer
-    pub enable_dev_signer: bool,
-    /// Network service
-    pub network: Arc<NetworkService<Block, Hash>>,
-    /// EthFilterApi pool.
-    pub filter_pool: Option<FilterPool>,
-    /// Backend.
-    pub backend: Arc<fc_db::Backend<Block>>,
-    /// Maximum number of logs in a query.
-    pub max_past_logs: u32,
-    /// Fee history cache.
-    pub fee_history_cache: FeeHistoryCache,
-    /// Maximum fee history cache size.
-    pub fee_history_cache_limit: FeeHistoryCacheLimit,
-    /// Ethereum data access overrides.
-    pub overrides: Arc<OverrideHandle<Block>>,
-    /// Cache for Ethereum block data.
-    pub block_data_cache: Arc<EthBlockDataCacheTask<Block>>,
+    /// Shared statement store reference.
+    pub statement_store: Arc<dyn sp_statement_store::StatementStore>,
+    /// The backend used by the node.
+    pub backend: Arc<B>,
+
+    pub eth: EthDeps<Block, C, P, A, CT, CIDP>,
 }
 
-/// override handle
-pub fn overrides_handle<C, BE>(client: Arc<C>) -> Arc<OverrideHandle<Block>>
-where
-    C: ProvideRuntimeApi<Block> + StorageProvider<Block, BE> + AuxStore,
-    C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
-    C: Send + Sync + 'static,
-    C::Api: sp_api::ApiExt<Block>
-        + fp_rpc::EthereumRuntimeRPCApi<Block>
-        + fp_rpc::ConvertTransactionRuntimeApi<Block>,
-    BE: Backend<Block> + 'static,
-    BE::State: StateBackend<BlakeTwo256>,
-{
-    let mut overrides_map = BTreeMap::new();
-    overrides_map.insert(
-        EthereumStorageSchema::V1,
-        Box::new(SchemaV1Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
-    overrides_map.insert(
-        EthereumStorageSchema::V2,
-        Box::new(SchemaV2Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
-    overrides_map.insert(
-        EthereumStorageSchema::V3,
-        Box::new(SchemaV3Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
-    overrides_map.insert(
-        EthereumStorageSchema::V4,
-        Box::new(SchemaV4Override::new(client.clone()))
-            as Box<dyn StorageOverride<_> + Send + Sync>,
-    );
+pub struct DefaultEthConfig<C, BE>(std::marker::PhantomData<(C, BE)>);
 
-    Arc::new(OverrideHandle {
-        schemas: overrides_map,
-        fallback: Box::new(RuntimeApiStorageOverride::new(client)),
-    })
+impl<C, BE> fc_rpc::EthConfig<Block, C> for DefaultEthConfig<C, BE>
+where
+    C: StorageProvider<Block, BE> + Sync + Send + 'static,
+    BE: Backend<Block> + 'static,
+{
+    type EstimateGasAdapter = ();
+    type RuntimeStorageOverride =
+        fc_rpc::frontier_backend_client::SystemAccountId20StorageOverride<Block, C, BE>;
 }
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P, SC, B, A>(
-    deps: FullDeps<C, P, SC, B, A>,
-    subscription_task_executor: SubscriptionTaskExecutor,
-) -> Result<RpcModule<()>, Box<dyn std::error::Error + Send + Sync>>
-where
-    C: ProvideRuntimeApi<Block>
-        + HeaderBackend<Block>
-        + AuxStore
-        + StorageProvider<Block, B>
-        + BlockchainEvents<Block>
-        + HeaderMetadata<Block, Error = BlockChainError>
-        + Sync
-        + Send
-        + 'static,
-    C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
-    C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
-    C::Api: BabeApi<Block>,
-    C::Api: BlockBuilder<Block>,
-    C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
-    C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
-    C::Api: fp_rpc::TxPoolRuntimeRPCApi<Block>,
-    P: TransactionPool<Block = Block> + 'static,
-    SC: SelectChain<Block> + 'static,
-    B: sc_client_api::Backend<Block> + Send + Sync + 'static,
-    B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashFor<Block>>,
-    A: ChainApi<Block = Block> + 'static,
-{
-    use fc_rpc::{
-        Eth, EthApiServer, EthDevSigner, EthFilter, EthFilterApiServer, EthPubSub,
-        EthPubSubApiServer, EthSigner, Net, NetApiServer, TxPool, TxPoolApiServer, Web3,
-        Web3ApiServer,
-    };
-    use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
-    use sc_consensus_babe_rpc::{Babe, BabeApiServer};
-    use sc_finality_grandpa_rpc::{Grandpa, GrandpaApiServer};
-    use sc_sync_state_rpc::{SyncState, SyncStateApiServer};
-    use substrate_frame_rpc_system::{System, SystemApiServer};
-
-    let mut io = RpcModule::new(());
-    let FullDeps {
+pub fn create_full<C, P, SC, A, B, CT, CIDP, BE>(
+    FullDeps {
         client,
         pool,
         select_chain,
@@ -230,23 +128,63 @@ where
         deny_unsafe,
         babe,
         grandpa,
-        graph,
-        is_authority,
-        enable_dev_signer,
-        network,
-        filter_pool,
+        statement_store,
         backend,
-        max_past_logs,
-        fee_history_cache,
-        fee_history_cache_limit,
-        overrides,
-        block_data_cache,
-    } = deps;
+        eth,
+    }: FullDeps<C, P, SC, A, B, CT, CIDP>,
+    subscription_task_executor: SubscriptionTaskExecutor,
+    pubsub_notification_sinks: Arc<
+        fc_mapping_sync::EthereumBlockNotificationSinks<
+            fc_mapping_sync::EthereumBlockNotification<Block>,
+        >,
+    >,
+) -> Result<RpcModule<()>, Box<dyn std::error::Error + Send + Sync>>
+where
+    C: CallApiAt<Block>
+        + ProvideRuntimeApi<Block>
+        + sc_client_api::BlockBackend<Block>
+        + HeaderBackend<Block>
+        + AuxStore
+        + HeaderMetadata<Block, Error = BlockChainError>
+        + Sync
+        + Send
+        + 'static,
+    C: BlockchainEvents<Block> + UsageProvider<Block> + StorageProvider<Block, BE>,
+    BE: Backend<Block> + 'static,
+    C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+    C::Api: mmr_rpc::MmrRuntimeApi<Block, <Block as sp_runtime::traits::Block>::Hash, BlockNumber>,
+    C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+    C::Api: BabeApi<Block>,
+    C::Api: BlockBuilder<Block>,
+    C::Api: fp_rpc::ConvertTransactionRuntimeApi<Block>,
+    C::Api: fp_rpc::EthereumRuntimeRPCApi<Block>,
+    P: TransactionPool + 'static,
+    SC: SelectChain<Block> + 'static,
+    B: sc_client_api::Backend<Block> + Send + Sync + 'static,
+    B::State: sc_client_api::backend::StateBackend<sp_runtime::traits::HashingFor<Block>>,
+    P: TransactionPool<Block = Block> + 'static,
+    A: ChainApi<Block = Block> + 'static,
+    CIDP: CreateInherentDataProviders<Block, ()> + Send + 'static,
+    CT: fp_rpc::ConvertTransaction<<Block as BlockT>::Extrinsic> + Send + Sync + 'static,
+{
+    use mmr_rpc::{Mmr, MmrApiServer};
+    use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
+    use sc_consensus_babe_rpc::{Babe, BabeApiServer};
+    use sc_consensus_grandpa_rpc::{Grandpa, GrandpaApiServer};
+    use sc_rpc::{
+        dev::{Dev, DevApiServer},
+        statement::StatementApiServer,
+    };
+    use sc_rpc_spec_v2::chain_spec::{ChainSpec, ChainSpecApiServer};
+    use sc_sync_state_rpc::{SyncState, SyncStateApiServer};
+    use substrate_frame_rpc_system::{System, SystemApiServer};
+    use substrate_state_trie_migration_rpc::{StateMigration, StateMigrationApiServer};
+
+    let mut io = RpcModule::new(());
 
     let BabeDeps {
         keystore,
-        babe_config,
-        shared_epoch_changes,
+        babe_worker_handle,
     } = babe;
     let GrandpaDeps {
         shared_voter_state,
@@ -256,21 +194,39 @@ where
         finality_provider,
     } = grandpa;
 
-    io.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
-    io.merge(TransactionPayment::new(client.clone()).into_rpc())?;
+    let chain_name = chain_spec.name().to_string();
+    let genesis_hash = client
+        .block_hash(0)
+        .ok()
+        .flatten()
+        .expect("Genesis block exists; qed");
+    let properties = chain_spec.properties();
+    io.merge(ChainSpec::new(chain_name, genesis_hash, properties).into_rpc())?;
 
+    io.merge(System::new(client.clone(), pool, deny_unsafe).into_rpc())?;
+    // Making synchronous calls in light client freezes the browser currently,
+    // more context: https://github.com/paritytech/substrate/pull/3480
+    // These RPCs should use an asynchronous caller instead.
+    io.merge(
+        Mmr::new(
+            client.clone(),
+            backend
+                .offchain_storage()
+                .ok_or_else(|| "Backend doesn't provide an offchain storage")?,
+        )
+        .into_rpc(),
+    )?;
+    io.merge(TransactionPayment::new(client.clone()).into_rpc())?;
     io.merge(
         Babe::new(
             client.clone(),
-            shared_epoch_changes.clone(),
+            babe_worker_handle.clone(),
             keystore,
-            babe_config,
             select_chain,
             deny_unsafe,
         )
         .into_rpc(),
     )?;
-
     io.merge(
         Grandpa::new(
             subscription_executor,
@@ -287,74 +243,22 @@ where
             chain_spec,
             client.clone(),
             shared_authority_set,
-            shared_epoch_changes,
+            babe_worker_handle,
         )?
         .into_rpc(),
     )?;
 
-    let mut signers = Vec::new();
-    if enable_dev_signer {
-        signers.push(Box::new(EthDevSigner::new()) as Box<dyn EthSigner>);
-    }
+    io.merge(StateMigration::new(client.clone(), backend, deny_unsafe).into_rpc())?;
+    io.merge(Dev::new(client, deny_unsafe).into_rpc())?;
+    let statement_store =
+        sc_rpc::statement::StatementStore::new(statement_store, deny_unsafe).into_rpc();
+    io.merge(statement_store)?;
 
-    io.merge(
-        Eth::new(
-            client.clone(),
-            pool.clone(),
-            graph.clone(),
-            Some(node_runtime::TransactionConverter),
-            network.clone(),
-            signers,
-            overrides.clone(),
-            backend.clone(),
-            // Is authority.
-            is_authority,
-            block_data_cache.clone(),
-            fee_history_cache,
-            fee_history_cache_limit,
-            10,
-        )
-        .into_rpc(),
+    let io = create_eth::<_, _, _, _, _, _, _, DefaultEthConfig<C, BE>>(
+        io,
+        eth,
+        subscription_task_executor,
+        pubsub_notification_sinks,
     )?;
-
-    if let Some(filter_pool) = filter_pool {
-        io.merge(
-            EthFilter::new(
-                client.clone(),
-                backend,
-                filter_pool.clone(),
-                500_usize, // max stored filters
-                max_past_logs,
-                block_data_cache.clone(),
-            )
-            .into_rpc(),
-        )?;
-    }
-
-    io.merge(
-        Net::new(
-            client.clone(),
-            network.clone(),
-            // Whether to format the `peer_count` response as Hex (default) or not.
-            true,
-        )
-        .into_rpc(),
-    )?;
-
-    io.merge(Web3::new(client.clone()).into_rpc())?;
-
-    io.merge(
-        EthPubSub::new(
-            pool,
-            client.clone(),
-            network,
-            subscription_task_executor,
-            overrides,
-        )
-        .into_rpc(),
-    )?;
-
-    io.merge(TxPool::new(client, graph).into_rpc())?;
-
     Ok(io)
 }

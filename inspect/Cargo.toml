@@ -1,24 +1,22 @@
 [package]
 name = "node-inspect"
-version = "0.8.0"
-authors = ["Parity Technologies <admin@parity.io>"]
-edition = "2021"
+version = "0.9.0-dev"
+description = "Substrate node block inspection tool."
+edition = '2021'
 license = "GPL-3.0-or-later WITH Classpath-exception-2.0"
-homepage = "https://substrate.dev"
-repository = "https://github.com/paritytech/substrate/"
+homepage = "https://substrate.io"
+publish = false
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.0.0" }
-derive_more = "0.99"
-log = "0.4.8"
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sc-executor = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sc-service = { default-features = false, git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.34" }
-clap = { version = "4.0.9", features = ["derive"] }
+clap = { version = "4.4.2", features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "3.6.1" }
+thiserror = "1.0"
+sc-cli = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sc-client-api = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sc-service = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false}
+sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }

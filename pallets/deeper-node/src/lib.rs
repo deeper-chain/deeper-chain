@@ -15,7 +15,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::codec::{Decode, Encode};
+use codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use sp_core::H160;
 
@@ -62,11 +62,14 @@ impl<AccountId: Decode, BlockNumber: Default> Default for Node<AccountId, BlockN
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{Currency, Get, ReservableCurrency};
-    use frame_support::{dispatch::DispatchResult, ensure};
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
-    use frame_system::pallet_prelude::*;
-    use frame_system::{self, ensure_signed};
+    use frame_support::{
+        dispatch::{DispatchResult, DispatchResultWithPostInfo},
+        ensure,
+        pallet_prelude::*,
+        traits::{BuildGenesisConfig, Currency, Get, ReservableCurrency},
+    };
+
+    use frame_system::{self, ensure_signed, pallet_prelude::*};
     use node_primitives::{deeper_node::NodeInterface, VerifySignatureInterface};
     use sp_std::convert::TryInto;
 
@@ -79,7 +82,7 @@ pub mod pallet {
         type MinLockAmt: Get<u32>;
         type MaxDurationEras: Get<u8>;
         /// Number of blocks per era.
-        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
+        type BlocksPerEra: Get<BlockNumberFor<Self>>;
         type MaxIpLength: Get<usize>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -90,7 +93,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -109,7 +111,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         T::AccountId,
-        Node<T::AccountId, T::BlockNumber>,
+        Node<T::AccountId, BlockNumberFor<T>>,
         ValueQuery,
     >;
 
@@ -131,12 +133,12 @@ pub mod pallet {
     #[pallet::storage]
     #[pallet::getter(fn get_im_online)]
     pub(super) type ImOnline<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn onboard_time)]
     pub type OnboardTime<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, BlockNumberFor<T>, OptionQuery>;
 
     #[pallet::storage]
     #[pallet::getter(fn devices_onboard)]
@@ -155,21 +157,20 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AccountId, H160, OptionQuery>;
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub reward_setting: Vec<(T::AccountId, H160)>,
     }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            GenesisConfig {
-                reward_setting: Default::default(),
-            }
-        }
-    }
+    // #[cfg(feature = "std")]
+    // impl<T: Config> Default for GenesisConfig<T> {
+    // 	fn default() -> Self {
+    // 		GenesisConfig { reward_setting: Default::default() }
+    // 	}
+    // }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             Pallet::<T>::setup_region_map();
             for (account, evm) in self.reward_setting.clone().into_iter() {
@@ -180,7 +181,7 @@ pub mod pallet {
     }
 
     #[pallet::event]
-    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", BlockNumberFor<T> = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         // register node: AccountId, ipv4, country
@@ -188,16 +189,16 @@ pub mod pallet {
         UnregisterNode(T::AccountId),
 
         // add account into a country's server list
-        ServerCountryAdded(T::AccountId, CountryRegion, T::BlockNumber, u64),
+        ServerCountryAdded(T::AccountId, CountryRegion, BlockNumberFor<T>, u64),
         // remove account from a country's server list
         ServerCountryRemoved(T::AccountId, CountryRegion),
 
         // add account into a region's server list
-        ServerRegionAdded(T::AccountId, CountryRegion, T::BlockNumber, u64),
+        ServerRegionAdded(T::AccountId, CountryRegion, BlockNumberFor<T>, u64),
         // remove account from a region's server list
         ServerRegionRemoved(T::AccountId, CountryRegion),
 
-        ImOnline(T::AccountId, T::BlockNumber),
+        ImOnline(T::AccountId, BlockNumberFor<T>),
 
         DeviceCreditProof(T::AccountId, u32, u64, u32),
 
@@ -245,6 +246,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::register_device())]
         pub fn register_device(
             origin: OriginFor<T>,
@@ -282,6 +284,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::unregister_device())]
         pub fn unregister_device(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -296,6 +299,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::unregister_device())]
         pub fn register_server(
             origin: OriginFor<T>,
@@ -310,11 +314,12 @@ pub mod pallet {
                 duration_eras <= T::MaxDurationEras::get(),
                 Error::<T>::DurationOverflow
             );
-            let blocks = T::BlockNumber::from(duration_eras) * T::BlocksPerEra::get();
+            let blocks = BlockNumberFor::<T>::from(duration_eras) * T::BlocksPerEra::get();
             let _ = Self::try_add_server(&sender, blocks);
             Ok(().into())
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::update_server())]
         pub fn update_server(
             origin: OriginFor<T>,
@@ -329,13 +334,14 @@ pub mod pallet {
                 duration_eras <= T::MaxDurationEras::get(),
                 Error::<T>::DurationOverflow
             );
-            let blocks = T::BlockNumber::from(duration_eras) * T::BlocksPerEra::get();
+            let blocks = BlockNumberFor::<T>::from(duration_eras) * T::BlocksPerEra::get();
             <DeviceInfo<T>>::mutate(&sender, |node| {
                 node.expire = <frame_system::Pallet<T>>::block_number() + blocks;
             });
             Ok(().into())
         }
 
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::unregister_server())]
         pub fn unregister_server(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -347,6 +353,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(5)]
         #[pallet::weight(T::WeightInfo::im_online())]
         pub fn im_online(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -360,6 +367,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(6)]
         #[pallet::weight(T::WeightInfo::report_credit_proof())]
         pub fn report_credit_proof(
             origin: OriginFor<T>,
@@ -392,7 +400,9 @@ pub mod pallet {
             Ok(().into())
         }
 
-        // Mapped address, cannot get control of the mapped deper_address. Used only as a reward address
+        // Mapped address, cannot get control of the mapped deper_address. Used only as a reward
+        // address
+        #[pallet::call_index(7)]
         #[pallet::weight(T::WeightInfo::reward_mapping())]
         pub fn reward_mapping(
             origin: OriginFor<T>,
@@ -433,6 +443,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(8)]
         #[pallet::weight(T::WeightInfo::get_npow_reward())]
         pub fn get_npow_reward(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -475,7 +486,7 @@ pub mod pallet {
         }
 
         // try to add an account to a country's server list; no double add
-        fn try_add_server(sender: &T::AccountId, duration: T::BlockNumber) -> DispatchResult {
+        fn try_add_server(sender: &T::AccountId, duration: BlockNumberFor<T>) -> DispatchResult {
             let mut node = <DeviceInfo<T>>::get(&sender);
 
             let first_region = <RegionMap<T>>::get(&node.country);
@@ -519,7 +530,7 @@ pub mod pallet {
             servers: &mut Vec<T::AccountId>,
             account: &T::AccountId,
             country: &CountryRegion,
-            duration: &T::BlockNumber,
+            duration: &BlockNumberFor<T>,
         ) -> bool {
             match servers.binary_search(&account) {
                 Ok(_) => false,
@@ -560,7 +571,7 @@ pub mod pallet {
             servers: &mut Vec<T::AccountId>,
             account: &T::AccountId,
             region: &CountryRegion,
-            duration: &T::BlockNumber,
+            duration: &BlockNumberFor<T>,
         ) -> bool {
             match servers.binary_search(&account) {
                 Ok(_) => false,
@@ -907,8 +918,8 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> NodeInterface<T::AccountId, T::BlockNumber> for Pallet<T> {
-        fn get_onboard_time(account_id: &T::AccountId) -> Option<T::BlockNumber> {
+    impl<T: Config> NodeInterface<T::AccountId, BlockNumberFor<T>> for Pallet<T> {
+        fn get_onboard_time(account_id: &T::AccountId) -> Option<BlockNumberFor<T>> {
             Self::onboard_time(account_id)
         }
 
@@ -917,7 +928,7 @@ pub mod pallet {
         }
 
         fn get_eras_offline(account_id: &T::AccountId) -> u32 {
-            let block = Self::get_im_online(account_id).unwrap_or(T::BlockNumber::default());
+            let block = Self::get_im_online(account_id).unwrap_or(BlockNumberFor::<T>::default());
             let current_block = <frame_system::Pallet<T>>::block_number();
             let eras = (current_block - block) / T::BlocksPerEra::get();
             TryInto::<u32>::try_into(eras).ok().unwrap()

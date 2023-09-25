@@ -58,6 +58,7 @@ mod benchmarking;
 mod tests;
 pub mod weights;
 
+use frame_system::pallet_prelude::BlockNumberFor;
 use sp_runtime::{
     traits::{BadOrigin, Hash, TrailingZeroInput, Zero},
     Percent, RuntimeDebug,
@@ -116,7 +117,6 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -139,7 +139,7 @@ pub mod pallet {
 
         /// The period for which a tip remains open after is has achieved threshold tippers.
         #[pallet::constant]
-        type TipCountdown: Get<Self::BlockNumber>;
+        type TipCountdown: Get<BlockNumberFor<Self>>;
 
         /// The percent of the final tip which goes to the original reporter of the tip.
         #[pallet::constant]
@@ -171,7 +171,7 @@ pub mod pallet {
         _,
         Twox64Concat,
         T::Hash,
-        OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+        OpenTip<T::AccountId, BalanceOf<T>, BlockNumberFor<T>, T::Hash>,
         OptionQuery,
     >;
 
@@ -248,6 +248,7 @@ pub mod pallet {
         /// - DbReads: `Reasons`, `Tips`
         /// - DbWrites: `Reasons`, `Tips`
         /// # </weight>
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as Config>::WeightInfo::report_awesome(reason.len() as u32))]
         pub fn report_awesome(
             origin: OriginFor<T>,
@@ -308,6 +309,7 @@ pub mod pallet {
         /// - DbReads: `Tips`, `origin account`
         /// - DbWrites: `Reasons`, `Tips`, `origin account`
         /// # </weight>
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as Config>::WeightInfo::retract_tip())]
         pub fn retract_tip(origin: OriginFor<T>, hash: T::Hash) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -346,6 +348,7 @@ pub mod pallet {
         /// - DbReads: `Tippers`, `Reasons`
         /// - DbWrites: `Reasons`, `Tips`
         /// # </weight>
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as Config>::WeightInfo::tip_new(reason.len() as u32, T::Tippers::max_len() as u32))]
         pub fn tip_new(
             origin: OriginFor<T>,
@@ -403,6 +406,7 @@ pub mod pallet {
         /// - DbReads: `Tippers`, `Tips`
         /// - DbWrites: `Tips`
         /// # </weight>
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as Config>::WeightInfo::tip(T::Tippers::max_len() as u32))]
         pub fn tip(
             origin: OriginFor<T>,
@@ -436,6 +440,7 @@ pub mod pallet {
         /// - DbReads: `Tips`, `Tippers`, `tip finder`
         /// - DbWrites: `Reasons`, `Tips`, `Tippers`, `tip finder`
         /// # </weight>
+        #[pallet::call_index(4)]
         #[pallet::weight(<T as Config>::WeightInfo::close_tip(T::Tippers::max_len() as u32))]
         pub fn close_tip(origin: OriginFor<T>, hash: T::Hash) -> DispatchResult {
             ensure_signed(origin)?;
@@ -465,6 +470,7 @@ pub mod pallet {
         ///   `T` is charged as upper bound given by `ContainsLengthBound`.
         ///   The actual cost depends on the implementation of `T::Tippers`.
         /// # </weight>
+        #[pallet::call_index(5)]
         #[pallet::weight(<T as Config>::WeightInfo::slash_tip(T::Tippers::max_len() as u32))]
         pub fn slash_tip(origin: OriginFor<T>, hash: T::Hash) -> DispatchResult {
             T::RejectOrigin::ensure_origin(origin)?;
@@ -480,6 +486,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(6)]
         #[pallet::weight(<T as Config>::WeightInfo::slash_tip(T::Tippers::max_len() as u32))]
         pub fn credit_tip_new(
             origin: OriginFor<T>,
@@ -514,6 +521,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(7)]
         #[pallet::weight(<T as Config>::WeightInfo::tip(T::Tippers::max_len() as u32))]
         pub fn credit_tip(origin: OriginFor<T>, hash: T::Hash, add_credit: u64) -> DispatchResult {
             let tipper = ensure_signed(origin)?;
@@ -527,6 +535,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(8)]
         #[pallet::weight(<T as Config>::WeightInfo::close_tip(T::Tippers::max_len() as u32))]
         pub fn close_credit_tip(origin: OriginFor<T>, hash: T::Hash) -> DispatchResult {
             ensure_signed(origin)?;
@@ -544,7 +553,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(9)]
+        #[pallet::weight(Weight::from_all(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_tip_owner_address(origin: OriginFor<T>, owner: T::AccountId) -> DispatchResult {
             ensure_root(origin)?;
 
@@ -578,7 +588,7 @@ impl<T: Config> Pallet<T> {
     ///
     /// `O(T)` and one storage access.
     fn insert_tip_and_check_closing(
-        tip: &mut OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+        tip: &mut OpenTip<T::AccountId, BalanceOf<T>, BlockNumberFor<T>, T::Hash>,
         tipper: T::AccountId,
         tip_value: BalanceOf<T>,
     ) -> bool {
@@ -623,7 +633,7 @@ impl<T: Config> Pallet<T> {
     /// Plus `O(T)` (`T` is Tippers length).
     fn payout_tip(
         hash: T::Hash,
-        tip: OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+        tip: OpenTip<T::AccountId, BalanceOf<T>, BlockNumberFor<T>, T::Hash>,
     ) {
         let mut tips = tip.tips;
         Self::retain_active_tips(&mut tips);
@@ -654,7 +664,7 @@ impl<T: Config> Pallet<T> {
     }
 
     fn insert_credit_tip_and_check_closing(
-        tip: &mut OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+        tip: &mut OpenTip<T::AccountId, BalanceOf<T>, BlockNumberFor<T>, T::Hash>,
         tipper: T::AccountId,
         add_credit: u64,
     ) -> bool {
@@ -695,7 +705,7 @@ impl<T: Config> Pallet<T> {
     /// Execute the payout of a credit tip.
     fn payout_credit_tip(
         hash: T::Hash,
-        tip: OpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+        tip: OpenTip<T::AccountId, BalanceOf<T>, BlockNumberFor<T>, T::Hash>,
     ) {
         let mut tips = tip.credits;
         Self::retain_active_credit_tips(&mut tips);
@@ -740,7 +750,7 @@ impl<T: Config> Pallet<T> {
 
         for (hash, old_tip) in storage_key_iter::<
             T::Hash,
-            OldOpenTip<T::AccountId, BalanceOf<T>, T::BlockNumber, T::Hash>,
+            OldOpenTip<T::AccountId, BalanceOf<T>, BlockNumberFor<T>, T::Hash>,
             Twox64Concat,
         >(module, item)
         .drain()

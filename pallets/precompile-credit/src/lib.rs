@@ -30,10 +30,11 @@ use fp_evm::{
     ExitError, ExitSucceed, Precompile, PrecompileFailure, PrecompileHandle, PrecompileOutput,
     PrecompileResult,
 };
-use frame_support::dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo};
+use frame_support::dispatch::{GetDispatchInfo, PostDispatchInfo};
 use node_primitives::credit::CreditInterface;
 use pallet_credit::Call as CreditCall;
 use sp_core::{H160, U256};
+use sp_runtime::traits::Dispatchable;
 
 const BASIC_LEN: usize = 4 + 32;
 const SELECTOR_GET_CREDIT_SCORE: u32 = 0x87135d7d;

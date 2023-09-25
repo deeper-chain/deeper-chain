@@ -23,8 +23,7 @@ use super::*;
 use frame_benchmarking::{account, benchmarks, Zero};
 use frame_support::traits::{Currency, Get, LockableCurrency, WithdrawReasons};
 use frame_system::RawOrigin;
-use sp_runtime::traits::Saturating;
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::traits::{Saturating, StaticLookup};
 
 use node_primitives::{credit::CreditInterface, user_privileges::Privilege};
 use pallet_user_privileges::Pallet as UserPrivileges;

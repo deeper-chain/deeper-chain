@@ -19,13 +19,15 @@
 
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
+    BuildStorage, Perbill,
 };
 
-use frame_support::traits::{ConstU32, OnFinalize, OnInitialize};
-use frame_support::{assert_noop, assert_ok, parameter_types, weights::Weight};
+use frame_support::{
+    assert_noop, assert_ok, parameter_types,
+    traits::{ConstU32, OnFinalize, OnInitialize},
+    weights::Weight,
+};
 
 use super::*;
 use crate::{self as pallet_operation};
@@ -33,16 +35,12 @@ use node_primitives::{
     user_privileges::{Privilege, UserPrivilegeInterface},
     BlockNumber, Moment,
 };
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Operation: pallet_operation::{Pallet, Call, Storage, Event<T>},
@@ -51,7 +49,7 @@ frame_support::construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+    pub const MaximumBlockWeight: Weight = Weight::from_all(1024);
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
@@ -59,16 +57,15 @@ impl frame_system::Config for Test {
     type BaseCallFilter = frame_support::traits::Everything;
     type BlockWeights = ();
     type BlockLength = ();
+    type Nonce = u32;
+    type Block = Block;
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = u64;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -95,6 +92,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxHolds = ConstU32<1>;
 }
 
 parameter_types! {
@@ -130,8 +131,8 @@ impl Config for Test {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
     pallet_balances::GenesisConfig::<Test> {
         // Total issuance will be 200 with treasury account initialized at ED.
@@ -155,7 +156,7 @@ pub fn run_to_block(n: u64) {
 #[test]
 fn set_lock_members_works() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
+        assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), 2, 1_000));
         assert_ok!(Operation::force_reserve_by_member(Some(1).into(), 2, 500));
         assert_eq!(Balances::free_balance(&2), 500);
         assert_ok!(Balances::force_unreserve(RuntimeOrigin::root(), 2, 500));
@@ -189,7 +190,7 @@ fn set_staking_release_info() {
         let info2 = ReleaseInfo::<Test>::new(4, 2, 0, 2000);
         // start day is day 2
         let info3 = ReleaseInfo::<Test>::new(5, 1, 1000 * 3600 * 24 * 2 + 1, 1000);
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 10, 0));
+        assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), 2, 10));
         assert_eq!(Balances::free_balance(&3), 0);
 
         assert_ok!(Operation::unstaking_release(
@@ -256,7 +257,7 @@ impl UserPrivilegeInterface<u128> for U128FakeUserPrivilege {
 fn bridge_test() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
+        assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), 2, 1_000));
         assert_ok!(Operation::set_fund_pool_address(
             RuntimeOrigin::signed(1),
             2

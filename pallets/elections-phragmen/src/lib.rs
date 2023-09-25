@@ -101,8 +101,8 @@
 use codec::{Decode, Encode};
 use frame_support::{
     traits::{
-        defensive_prelude::*, ChangeMembers, Contains, ContainsLengthBound, Currency,
-        CurrencyToVote, Get, InitializeMembers, LockIdentifier, LockableCurrency, OnUnbalanced,
+        defensive_prelude::*, BuildGenesisConfig, ChangeMembers, Contains, ContainsLengthBound,
+        Currency, Get, InitializeMembers, LockIdentifier, LockableCurrency, OnUnbalanced,
         ReservableCurrency, SortedMembers, WithdrawReasons,
     },
     weights::Weight,
@@ -113,14 +113,12 @@ use sp_runtime::{
     traits::{Saturating, StaticLookup, Zero},
     DispatchError, Perbill, RuntimeDebug,
 };
+use sp_staking::currency_to_vote::CurrencyToVote;
 use sp_std::{cmp::Ordering, prelude::*};
 
 mod benchmarking;
 pub mod weights;
 pub use weights::WeightInfo;
-
-/// All migrations.
-pub mod migrations;
 
 /// The maximum votes allowed per voter.
 pub const MAXIMUM_VOTE: usize = 16;
@@ -193,7 +191,6 @@ pub mod pallet {
     const STORAGE_VERSION: StorageVersion = StorageVersion::new(4);
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::storage_version(STORAGE_VERSION)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(PhantomData<T>);
@@ -207,7 +204,7 @@ pub mod pallet {
         type PalletId: Get<LockIdentifier>;
 
         /// The currency that people are electing with.
-        type Currency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>
+        type Currency: LockableCurrency<Self::AccountId, Moment = BlockNumberFor<Self>>
             + ReservableCurrency<Self::AccountId>;
 
         /// What to do when the members change.
@@ -253,7 +250,7 @@ pub mod pallet {
         /// round will happen. If set to zero, no elections are ever triggered and the module will
         /// be in passive mode.
         #[pallet::constant]
-        type TermDuration: Get<Self::BlockNumber>;
+        type TermDuration: Get<BlockNumberFor<Self>>;
 
         /// The maximum number of candidates in a phragmen election.
         ///
@@ -279,7 +276,7 @@ pub mod pallet {
         /// What to do at the end of each block.
         ///
         /// Checks if an election needs to happen or not.
-        fn on_initialize(n: T::BlockNumber) -> Weight {
+        fn on_initialize(n: BlockNumberFor<T>) -> Weight {
             let term_duration = T::TermDuration::get();
             if !term_duration.is_zero() && (n % term_duration).is_zero() {
                 Self::do_phragmen()
@@ -314,6 +311,7 @@ pub mod pallet {
         /// # <weight>
         /// We assume the maximum weight among all 3 cases: vote_equal, vote_more and vote_less.
         /// # </weight>
+        #[pallet::call_index(0)]
         #[pallet::weight(
 			<T as pallet::Config>::WeightInfo::vote_more(votes.len() as u32)
 			.max(<T as pallet::Config>::WeightInfo::vote_less(votes.len() as u32))
@@ -398,6 +396,7 @@ pub mod pallet {
         /// This removes the lock and returns the deposit.
         ///
         /// The dispatch origin of this call must be signed and be a voter.
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::remove_voter())]
         pub fn remove_voter(origin: OriginFor<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
@@ -421,6 +420,7 @@ pub mod pallet {
         /// # <weight>
         /// The number of current candidates must be provided as witness data.
         /// # </weight>
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::submit_candidacy(*candidate_count))]
         pub fn submit_candidacy(
             origin: OriginFor<T>,
@@ -471,6 +471,7 @@ pub mod pallet {
         /// # <weight>
         /// The type of renouncing must be provided as witness data.
         /// # </weight>
+        #[pallet::call_index(3)]
         #[pallet::weight(match *renouncing {
 			Renouncing::Candidate(count) => <T as pallet::Config>::WeightInfo::renounce_candidacy_candidate(count),
 			Renouncing::Member => <T as pallet::Config>::WeightInfo::renounce_candidacy_members(),
@@ -536,6 +537,7 @@ pub mod pallet {
         /// If we have a replacement, we use a small weight. Else, since this is a root call and
         /// will go into phragmen, we assume full block for now.
         /// # </weight>
+        #[pallet::call_index(4)]
         #[pallet::weight(if *rerun_election {
 			<T as pallet::Config>::WeightInfo::remove_member_without_replacement()
 		} else {
@@ -571,6 +573,7 @@ pub mod pallet {
         /// # <weight>
         /// The total number of voters and those that are defunct must be provided as witness data.
         /// # </weight>
+        #[pallet::call_index(5)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::clean_defunct_voters(*_num_voters, *_num_defunct))]
         pub fn clean_defunct_voters(
             origin: OriginFor<T>,
@@ -707,21 +710,20 @@ pub mod pallet {
         StorageMap<_, Twox64Concat, T::AccountId, Voter<T::AccountId, BalanceOf<T>>, ValueQuery>;
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub members: Vec<(T::AccountId, BalanceOf<T>)>,
     }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            Self {
-                members: Default::default(),
-            }
-        }
-    }
+    // #[cfg(feature = "std")]
+    // impl<T: Config> Default for GenesisConfig<T> {
+    // 	fn default() -> Self {
+    // 		Self { members: Default::default() }
+    // 	}
+    // }
 
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             assert!(
                 self.members.len() as u32 <= T::DesiredMembers::get(),
@@ -1254,8 +1256,7 @@ mod tests {
         parameter_types,
         traits::{ConstU32, ConstU64, OnInitialize},
     };
-    use frame_system::ensure_signed;
-    use frame_system::EnsureRoot;
+    use frame_system::{ensure_signed, EnsureRoot};
     use pallet_identity::{Data, IdentityInfo};
     use sp_core::H256;
     use sp_runtime::{
@@ -1268,7 +1269,7 @@ mod tests {
     parameter_types! {
         pub BlockWeights: frame_system::limits::BlockWeights =
             frame_system::limits::BlockWeights::simple_max(
-                frame_support::weights::Weight::from_ref_time(1024).set_proof_size(u64::MAX),
+                frame_support::weights::Weight::from_all(1024).set_proof_size(u64::MAX),
             );
     }
 
@@ -1278,14 +1279,13 @@ mod tests {
         type BlockLength = ();
         type DbWeight = ();
         type RuntimeOrigin = RuntimeOrigin;
-        type Index = u64;
-        type BlockNumber = u64;
+        type Nonce = u32;
+        type Block = Block;
         type RuntimeCall = RuntimeCall;
         type Hash = H256;
         type Hashing = BlakeTwo256;
         type AccountId = u64;
         type Lookup = IdentityLookup<Self::AccountId>;
-        type Header = Header;
         type RuntimeEvent = RuntimeEvent;
         type BlockHashCount = ConstU64<250>;
         type Version = ();
@@ -1309,6 +1309,10 @@ mod tests {
         type MaxReserves = ();
         type ReserveIdentifier = [u8; 8];
         type WeightInfo = ();
+        type FreezeIdentifier = ();
+        type MaxFreezes = ();
+        type RuntimeHoldReason = RuntimeHoldReason;
+        type MaxHolds = ConstU32<1>;
     }
 
     frame_support::parameter_types! {
@@ -1380,7 +1384,7 @@ mod tests {
         type PalletId = ElectionsPhragmenPalletId;
         type RuntimeEvent = RuntimeEvent;
         type Currency = Balances;
-        type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
+        type CurrencyToVote = ();
         type ChangeMembers = TestChangeMembers;
         type InitializeMembers = ();
         type CandidacyBond = CandidacyBond;
@@ -1416,10 +1420,7 @@ mod tests {
         sp_runtime::generic::UncheckedExtrinsic<u32, u64, RuntimeCall, ()>;
 
     frame_support::construct_runtime!(
-        pub enum Test where
-            Block = Block,
-            NodeBlock = Block,
-            UncheckedExtrinsic = UncheckedExtrinsic
+        pub enum Test
         {
             System: frame_system::{Pallet, Call, Event<T>},
             Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
@@ -1481,7 +1482,7 @@ mod tests {
                     .map(|(m, _)| *m)
                     .collect::<Vec<_>>()
             });
-            let mut ext: sp_io::TestExternalities = GenesisConfig {
+            let mut ext: sp_io::TestExternalities = RuntimeGenesisConfig {
                 balances: pallet_balances::GenesisConfig::<Test> {
                     balances: vec![
                         (1, 10 * self.balance_factor),
@@ -2312,7 +2313,8 @@ mod tests {
             assert_ok!(submit_candidacy(RuntimeOrigin::signed(4)));
 
             // User has 100 free and 50 reserved.
-            assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 100, 50));
+            assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), 2, 150));
+            assert_ok!(Balances::reserve(&2, 50));
             // User tries to vote with 150 tokens.
             assert_ok!(vote(RuntimeOrigin::signed(2), vec![4, 5], 150));
             // We truncate to only their free balance, after reserving additional for voting.

@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: deeper-chain/integration-tests
+          ref: refs/heads/modify_port
           path: './integration-tests'
 
       - name: Setup rust toolchain

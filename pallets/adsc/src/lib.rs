@@ -29,14 +29,18 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::pallet_prelude::DispatchResult;
-    use frame_support::traits::{
-        fungibles::{metadata::Mutate as MetaMutate, Create, Destroy, Inspect, Mutate, Transfer},
-        nonfungibles::Mutate as NftMutate,
-        Currency, ExistenceRequirement, Time,
-    };
     use frame_support::{
-        dispatch::RawOrigin, pallet_prelude::*, transactional, weights::Weight, PalletId,
+        dispatch::RawOrigin,
+        pallet_prelude::{DispatchResult, *},
+        traits::{
+            fungibles::{metadata::Mutate as MetaMutate, Create, Destroy, Inspect, Mutate},
+            nonfungibles::Mutate as NftMutate,
+            tokens::{Fortitude, Precision, Preservation},
+            Currency, ExistenceRequirement, Time,
+        },
+        transactional,
+        weights::Weight,
+        PalletId,
     };
     use frame_system::{ensure_root, pallet_prelude::*};
     use node_primitives::{
@@ -61,7 +65,7 @@ pub mod pallet {
         type AdscCurrency: MetaMutate<Self::AccountId>
             + Mutate<Self::AccountId>
             + Create<Self::AccountId>
-            + Transfer<Self::AccountId>
+            // + Transfer<Self::AccountId>
             + Destroy<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
@@ -71,7 +75,7 @@ pub mod pallet {
         type Time: Time;
 
         /// NodeInterface of deeper-node pallet
-        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
+        type NodeInterface: NodeInterface<Self::AccountId, BlockNumberFor<Self>>;
 
         type DprCurrency: Currency<Self::AccountId>;
 
@@ -98,7 +102,6 @@ pub mod pallet {
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::storage_version(STORAGE_VERSION)]
     pub struct Pallet<T>(_);
 
@@ -202,7 +205,7 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_initialize(_: T::BlockNumber) -> Weight {
+        fn on_initialize(_: BlockNumberFor<T>) -> Weight {
             const MILLISECS_PER_DAY: u64 = 1000 * 3600 * 24;
             const BLOCK_PER_DAY: u32 = 17000;
 
@@ -256,7 +259,8 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(0)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn add_adsc_staking_account(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -273,7 +277,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(20_000u64))]
+        #[pallet::call_index(1)]
+        #[pallet::weight(Weight::from_parts(20_000u64, 0))]
         #[transactional]
         pub fn add_adsc_staking_account_with_nft(
             origin: OriginFor<T>,
@@ -297,8 +302,8 @@ pub mod pallet {
                 );
                 Self::remove_nft(old_collection_id, old_item_id)?;
             }
-            AdscNfts::<T>::insert(&account_id, (collection_id, item_id));
-            Self::add_nft(collection_id, item_id, account_id.clone(), &data)?;
+            AdscNfts::<T>::insert(&account_id, (collection_id.clone(), item_id));
+            Self::add_nft(collection_id.clone(), item_id, account_id.clone(), &data)?;
             Self::deposit_event(Event::AdscStakerAddNft(
                 account_id,
                 period,
@@ -308,7 +313,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(2)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn set_reward_period(origin: OriginFor<T>, period: u32) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
@@ -320,7 +326,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(3)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn set_half_reward_target(
             origin: OriginFor<T>,
             target: AssetBalanceOf<T>,
@@ -335,7 +342,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(4)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn set_base_reward(
             origin: OriginFor<T>,
             base_reward: AssetBalanceOf<T>,
@@ -350,7 +358,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(5)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn bridge_burn_adsc(
             origin: OriginFor<T>,
             from: T::AccountId,
@@ -366,7 +375,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(6)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn bridge_mint_adsc(
             origin: OriginFor<T>,
             from: H160,
@@ -382,7 +392,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(7)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn set_exchange_rate(
             origin: OriginFor<T>,
             adsc_dpr_rate: (u32, u32),
@@ -397,11 +408,18 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(8)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         #[transactional]
         pub fn swap_adsc_to_dpr(origin: OriginFor<T>, amount: AssetBalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            T::AdscCurrency::transfer(T::AdscId::get(), &who, &Self::account_id(), amount, false)?;
+            T::AdscCurrency::transfer(
+                T::AdscId::get(),
+                &who,
+                &Self::account_id(),
+                amount,
+                Preservation::Expendable,
+            )?;
             let (adsc_rate, dpr_rate) = AdscExchangeRate::<T>::get();
             let dpr_amount = amount.saturating_mul(dpr_rate.into()) / adsc_rate.into();
             let dpr_amount: u128 = dpr_amount.unique_saturated_into();
@@ -423,7 +441,8 @@ pub mod pallet {
             res
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
+        #[pallet::call_index(9)]
+        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
         pub fn add_pool_dpr_adsc(origin: OriginFor<T>, dpr_amount: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
 
@@ -579,7 +598,13 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::CreditAdmin),
                 Error::<T>::NotAdmin
             );
-            T::AdscCurrency::burn_from(T::AdscId::get(), &from, amount)?;
+            T::AdscCurrency::burn_from(
+                T::AdscId::get(),
+                &from,
+                amount,
+                Precision::Exact,
+                Fortitude::Polite,
+            )?;
             Ok(())
         }
 

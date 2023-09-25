@@ -9,6 +9,7 @@ use sp_runtime::{
 use sp_std::{vec, vec::Vec};
 
 use crate::BalanceOf;
+
 pub fn new_genesis_credit_settings<T: crate::Config>() -> Vec<CreditSetting<BalanceOf<T>>> {
     vec![
         CreditSetting {
@@ -115,7 +116,7 @@ pub fn new_genesis_credit_settings<T: crate::Config>() -> Vec<CreditSetting<Bala
 
 pub fn sub_genesis_apy<T: crate::Config>(subed: u8) -> Vec<CreditSetting<BalanceOf<T>>> {
     let mut tmp = new_genesis_credit_settings::<T>();
-    for mut setting in &mut tmp {
+    for setting in &mut tmp {
         if let Some(apy) = setting.base_apy.checked_sub(&Percent::from_percent(subed)) {
             setting.base_apy = apy;
         }

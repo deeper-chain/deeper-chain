@@ -19,20 +19,26 @@
 
 use crate as staking;
 use crate::*;
-use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
 use frame_support::{
     assert_ok, parameter_types,
-    traits::{Currency, FindAuthor, GenesisBuild, Get, Hooks, OneSessionHandler},
+    traits::{
+        AsEnsureOriginWithArg, ConstU128, ConstU32, Currency, FindAuthor, Get, Hooks,
+        OneSessionHandler,
+    },
     weights::constants::RocksDbWeight,
 };
-use node_primitives::credit::{CreditData, CreditLevel, CreditSetting};
-use node_primitives::Moment;
+use node_primitives::{
+    credit::{CreditData, CreditLevel, CreditSetting},
+    Moment,
+};
 use sp_core::H256;
 use sp_io;
 use sp_runtime::{
-    testing::{Header, TestXt, UintAuthorityId},
+    testing::{TestXt, UintAuthorityId},
     traits::{IdentityLookup, Zero},
+    BuildStorage,
 };
+
 use sp_staking::offence::{OffenceDetails, OnOffenceHandler};
 use std::{cell::RefCell, collections::HashSet};
 
@@ -41,7 +47,6 @@ pub const BLOCK_TIME: u64 = 5000;
 
 /// The AccountId alias in this test module.
 pub(crate) type AccountId = u64;
-pub(crate) type AccountIndex = u64;
 pub(crate) type BlockNumber = u64;
 pub(crate) type Balance = u128;
 
@@ -89,17 +94,13 @@ pub fn is_disabled(controller: AccountId) -> bool {
     SESSION.with(|d| d.borrow().1.contains(&stash))
 }
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
+        Authorship: pallet_authorship::{Pallet, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -127,10 +128,6 @@ impl FindAuthor<AccountId> for Author11 {
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub BlockWeights: frame_system::limits::BlockWeights =
-        frame_system::limits::BlockWeights::simple_max(
-            frame_support::weights::constants::WEIGHT_PER_SECOND * 2
-        );
     pub const MaxLocks: u32 = 1024;
     pub static SessionsPerEra: SessionIndex = 3;
     pub static ExistentialDeposit: Balance = 1;
@@ -145,14 +142,13 @@ impl frame_system::Config for Test {
     type BlockLength = ();
     type DbWeight = RocksDbWeight;
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = AccountIndex;
-    type BlockNumber = BlockNumber;
+    type Nonce = u32;
+    type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -165,6 +161,7 @@ impl frame_system::Config for Test {
     type OnSetCode = ();
     type MaxConsumers = ConstU32<16>;
 }
+
 impl pallet_balances::Config for Test {
     type MaxLocks = MaxLocks;
     type Balance = Balance;
@@ -175,6 +172,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxHolds = ();
 }
 
 parameter_types! {
@@ -319,8 +320,6 @@ impl pallet_session::historical::Config for Test {
 }
 impl pallet_authorship::Config for Test {
     type FindAuthor = Author11;
-    type UncleGenerations = UncleGenerations;
-    type FilterUncle = ();
     type EventHandler = Pallet<Test>;
 }
 parameter_types! {
@@ -490,8 +489,8 @@ impl ExtBuilder {
     }
     pub fn build(self) -> sp_io::TestExternalities {
         sp_tracing::try_init_simple();
-        let mut storage = frame_system::GenesisConfig::default()
-            .build_storage::<Test>()
+        let mut storage = frame_system::GenesisConfig::<Test>::default()
+            .build_storage()
             .unwrap();
         let balance_factor = if ExistentialDeposit::get() > 1 {
             256
@@ -708,7 +707,7 @@ impl ExtBuilder {
 
         staking::GenesisConfig::<Test> {
             stakers: stakers.clone(),
-            delegations: delegations,
+            delegations,
             validator_count: self.validator_count,
             era_validator_reward: TOTAL_MINING_REWARD / 100_000,
             minimum_validator_count: self.minimum_validator_count,

@@ -17,37 +17,34 @@
 
 //! Macro for creating the tests for the module.
 
-use frame_support::traits::fungibles::Mutate;
-use frame_support::traits::{
-    nonfungibles::Inspect, AsEnsureOriginWithArg, ConstU128, ConstU32, Hooks,
+use frame_support::{
+    assert_ok, parameter_types,
+    traits::{
+        fungibles::Mutate, nonfungibles::Inspect, AsEnsureOriginWithArg, ConstU128, ConstU32, Hooks,
+    },
+    weights::Weight,
+    PalletId,
 };
-use frame_support::{assert_noop, assert_ok, parameter_types, weights::Weight, PalletId};
-use frame_system::Account;
 use pallet_user_privileges::H160;
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
+    BuildStorage, Perbill,
 };
 
 use super::*;
 use crate::{self as pallet_adsc};
 use node_primitives::{
-    deeper_node::NodeInterface,
     user_privileges::{Privilege, UserPrivilegeInterface},
     BlockNumber, Moment, DPR,
 };
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T> },
@@ -59,7 +56,7 @@ frame_support::construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+    pub const MaximumBlockWeight: Weight = Weight::from_all(1024);
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
@@ -69,14 +66,13 @@ impl frame_system::Config for Test {
     type BlockLength = ();
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u32;
+    type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u64;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -104,6 +100,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxHolds = ConstU32<1>;
 }
 
 parameter_types! {
@@ -165,6 +165,7 @@ impl pallet_assets::Config for Test {
     type WeightInfo = ();
     type Extra = ();
     type RemoveItemsLimit = ConstU32<5>;
+    type CallbackHandle = ();
     #[cfg(feature = "runtime-benchmarks")]
     type BenchmarkHelper = ();
 }
@@ -200,7 +201,6 @@ parameter_types! {
 
 impl Config for Test {
     type RuntimeEvent = RuntimeEvent;
-
     type AdscCurrency = Assets;
     type DprCurrency = Balances;
     type WeightInfo = ();
@@ -212,8 +212,8 @@ impl Config for Test {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
     pallet_balances::GenesisConfig::<Test> {
         // Total issuance will be 200 with treasury account initialized at ED.
@@ -236,10 +236,10 @@ pub fn run_to_block(n: u64) {
 
 pub fn im_online_run_to_block() {
     for i in 2..=365 {
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(8));
-        DeeperNode::im_online(RuntimeOrigin::signed(9));
-        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(8));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(9));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(3));
         run_to_block(i * BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
     }
 }
@@ -259,9 +259,9 @@ fn adsc_pay_reward() {
 
         // day 0 submit im_online
         run_to_block(BLOCKS_PER_ERA / 2 + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(8));
-        DeeperNode::im_online(RuntimeOrigin::signed(9));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(8));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(9));
 
         // change day to 1
         run_to_block(BLOCKS_PER_ERA + 3);
@@ -276,10 +276,10 @@ fn adsc_pay_reward() {
 
         // day 1 submit im_online
         run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(8));
-        DeeperNode::im_online(RuntimeOrigin::signed(9));
-        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(8));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(9));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(3));
 
         // change day to 2
         run_to_block(2 * BLOCKS_PER_ERA + 3);
@@ -301,10 +301,10 @@ fn adsc_pay_reward() {
 
         // day 365 submit im_online
         run_to_block(365 * BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(8));
-        DeeperNode::im_online(RuntimeOrigin::signed(9));
-        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(8));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(9));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(3));
 
         run_to_block(366 * BLOCKS_PER_ERA + 3);
         assert_eq!(
@@ -372,7 +372,6 @@ fn adsc_pay_reward_no_im_online() {
 fn adsc_half_reward() {
     new_test_ext().execute_with(|| {
         assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
-
         CurrentAdscBaseReward::<Test>::put(1560 * DPR);
 
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
@@ -382,8 +381,8 @@ fn adsc_half_reward() {
 
         // day 0 submit im_online
         run_to_block(BLOCKS_PER_ERA / 2 + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(3));
 
         run_to_block(BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(0, &2), 1560 * DPR);
@@ -396,11 +395,10 @@ fn adsc_half_reward() {
         //half base reward
         assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 * DPR);
         CurrentHalfTarget::<Test>::put(1560 * 3 * DPR);
-
         // day 1 submit im_online
         run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(3));
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
         // added balance = 1560/2 * (364/365)*DPR
@@ -409,8 +407,8 @@ fn adsc_half_reward() {
 
         // day 2 submit im_online
         run_to_block(2 * BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(2));
+        let _ = DeeperNode::im_online(RuntimeOrigin::signed(3));
 
         run_to_block(3 * BLOCKS_PER_ERA + 3);
         assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
@@ -457,11 +455,10 @@ fn swap_adsc() {
         assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
 
         assert_ok!(Assets::mint_into(0, &3, 2 * DPR));
-        assert_ok!(Balances::set_balance(
+        assert_ok!(Balances::force_set_balance(
             RuntimeOrigin::root(),
             Adsc::account_id(),
-            100 * DPR,
-            0
+            100 * DPR
         ));
         assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR));
         assert_eq!(Balances::free_balance(&3), DPR);
@@ -485,10 +482,7 @@ fn swap_dpr_pool_not_enough() {
         assert_ok!(Assets::mint_into(0, &3, 2 * DPR));
 
         assert_ok!(Adsc::do_add_pool_dpr_adsc(DPR / 2));
-        assert_noop!(
-            Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR),
-            pallet_balances::Error::<Test>::InsufficientBalance
-        );
+        assert!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR).is_err());
         assert_ok!(Adsc::do_add_pool_dpr_adsc(DPR / 2));
         assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR));
 

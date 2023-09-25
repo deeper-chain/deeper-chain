@@ -43,18 +43,17 @@ pub mod weights;
 #[frame_support::pallet]
 pub mod pallet {
     use crate::weights::WeightInfo;
-    use frame_support::codec::{Decode, Encode};
-    use frame_support::traits::{
-        tokens::currency::Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
-    };
+    use codec::{Decode, Encode};
     use frame_support::{
-        dispatch::{DispatchError, DispatchResultWithPostInfo},
+        dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
+        traits::{
+            tokens::currency::Currency, ExistenceRequirement, Get, OnUnbalanced, WithdrawReasons,
+        },
     };
     use frame_system::pallet_prelude::*;
     use node_primitives::{credit::CreditInterface, deeper_node::NodeInterface};
-    use sp_core::crypto::UncheckedFrom;
-    use sp_core::sr25519;
+    use sp_core::{crypto::UncheckedFrom, sr25519};
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::Percent;
     use sp_std::prelude::Vec;
@@ -77,7 +76,7 @@ pub mod pallet {
         // Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
         /// NodeInterface of deeper-node pallet
-        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
+        type NodeInterface: NodeInterface<Self::AccountId, BlockNumberFor<Self>>;
 
         type MicropaymentBurn: Get<Percent>;
 
@@ -93,11 +92,8 @@ pub mod pallet {
         <T as frame_system::Config>::AccountId,
     >>::NegativeImbalance;
 
-    pub type ChannelOf<T> = Chan<
-        <T as frame_system::Config>::AccountId,
-        <T as frame_system::Config>::BlockNumber,
-        BalanceOf<T>,
-    >;
+    pub type ChannelOf<T> =
+        Chan<<T as frame_system::Config>::AccountId, BlockNumberFor<T>, BalanceOf<T>>;
 
     // struct to store micro-payment channel
     #[derive(Decode, Encode, Eq, PartialEq, Debug, scale_info::TypeInfo)]
@@ -128,7 +124,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -167,7 +162,7 @@ pub mod pallet {
     // Pallets use events to inform users when important changes are made.
     // https://substrate.dev/docs/en/knowledgebase/runtime/events
     #[pallet::event]
-    //#[pallet::metadata(T::AccountId = "AccountId", T::BlockNumber = "BlockNumber")]
+    //#[pallet::metadata(T::AccountId = "AccountId", BlockNumberFor<T> = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         ChannelOpened(
@@ -175,12 +170,12 @@ pub mod pallet {
             T::AccountId,
             BalanceOf<T>,
             u64,
-            T::BlockNumber,
-            T::BlockNumber,
+            BlockNumberFor<T>,
+            BlockNumberFor<T>,
         ),
-        ChannelClosed(T::AccountId, T::AccountId, T::BlockNumber),
+        ChannelClosed(T::AccountId, T::AccountId, BlockNumberFor<T>),
         ClaimPayment(T::AccountId, T::AccountId, BalanceOf<T>),
-        BalanceAdded(T::AccountId, T::AccountId, BalanceOf<T>, T::BlockNumber),
+        BalanceAdded(T::AccountId, T::AccountId, BalanceOf<T>, BlockNumberFor<T>),
     }
 
     #[pallet::error]
@@ -209,6 +204,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::open_channel())]
 
         /// Client opens a channel to the server by locking DPR tokens inside the channel.
@@ -228,7 +224,7 @@ pub mod pallet {
             let nonce = Nonce::<T>::get((&client, &server));
             let start_block = <frame_system::Pallet<T>>::block_number();
             let duration_blocks = duration / T::SecsPerBlock::get();
-            let expiration = start_block + T::BlockNumber::from(duration_blocks);
+            let expiration = start_block + BlockNumberFor::<T>::from(duration_blocks);
             let chan = ChannelOf::<T> {
                 client: client.clone(),
                 server: server.clone(),
@@ -262,6 +258,7 @@ pub mod pallet {
         }
 
         /// Close the channel and settle the payment
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::close_channel())]
         pub fn close_channel(
             origin: OriginFor<T>,
@@ -324,6 +321,7 @@ pub mod pallet {
 
         /// client close all expired channels.
         /// client can only close expired channel.
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::close_expired_channels())]
         pub fn close_expired_channels(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let client = ensure_signed(origin)?;
@@ -349,6 +347,7 @@ pub mod pallet {
         }
 
         /// Client adds more DPR tokens to the existing channel
+        #[pallet::call_index(3)]
         #[pallet::weight(T::WeightInfo::add_balance())]
         pub fn add_balance(
             origin: OriginFor<T>,
@@ -377,6 +376,7 @@ pub mod pallet {
         }
 
         /// Server claims payment from the channel
+        #[pallet::call_index(4)]
         #[pallet::weight(T::WeightInfo::claim_payment())]
         pub fn claim_payment(
             origin: OriginFor<T>,

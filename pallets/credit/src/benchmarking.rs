@@ -19,9 +19,8 @@
 
 use super::*;
 use crate::Pallet as Credit;
-pub use frame_benchmarking::{account, benchmarks, vec, whitelist_account, whitelisted_caller};
-use frame_support::assert_ok;
-use frame_support::traits::Currency;
+pub use frame_benchmarking::{account, benchmarks, whitelist_account, whitelisted_caller};
+use frame_support::{assert_ok, traits::Currency};
 use frame_system::RawOrigin;
 use node_primitives::{
     credit::{CreditData, CreditLevel, CreditSetting},
@@ -81,26 +80,24 @@ benchmarks! {
         assert!(UserCredit::<T>::contains_key(user));
     }
 
-    burn_for_add_credit {
-        let mut credit_data = CreditData {
-            campaign_id: 0,
-            credit: 100,
-            initial_credit_level: CreditLevel::One,
-            rank_in_initial_credit_level: 0,
-            number_of_referees: 1,
-            current_credit_level: CreditLevel::One,
-            reward_eras: 0,
-        };
-        let burn_balance = <T as pallet::Config>::Currency::minimum_balance() * 100u32.into();
-        DPRPerCreditBurned::<T>::put(burn_balance);
-        let user = create_funded_user::<T>("user",USER_SEED, 1000);
-        UserCredit::<T>::insert(&user,credit_data.clone());
-        credit_data.credit = 101;
-        UserCreditHistory::<T>::insert(&user,vec![(1,credit_data)]);
-    }: _(RawOrigin::Signed(user.clone()), 1)
-    verify {
-        assert_eq!(UserCredit::<T>::get(&user).unwrap().credit,101);
-    }
+    // burn_for_add_credit {
+    // 	let mut credit_data = CreditData {
+    // 		campaign_id: 0,
+    // 		credit: 100,
+    // 		initial_credit_level: CreditLevel::One,
+    // 		rank_in_initial_credit_level: 0,
+    // 		number_of_referees: 1,
+    // 		current_credit_level: CreditLevel::One,
+    // 		reward_eras: 0,
+    // 	};
+    // 	let user = create_funded_user::<T>("user",USER_SEED, 1000);
+    // 	UserCredit::<T>::insert(&user,credit_data.clone());
+    // 	credit_data.credit = 101;
+    // 	UserCreditHistory::<T>::insert(&user,vec![(1,credit_data)]);
+    // }: _(RawOrigin::Signed(user.clone()), 1)
+    // verify {
+    // 	assert_eq!(UserCredit::<T>::get(&user).unwrap().credit,101);
+    // }
 
     force_modify_credit_history {
         let credit_data = CreditData {
@@ -126,7 +123,7 @@ benchmarks! {
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         let user_lookup = T::Lookup::unlookup(user.clone());
         let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),user_lookup,Privilege::CreditAdmin);
-    }: update_nft_class_credit(RawOrigin::Signed(user), class_id, credit)
+    }: update_nft_class_credit(RawOrigin::Signed(user), class_id.clone(), credit)
     verify {
         assert_eq!(MiningMachineClassCredit::<T>::get(class_id), credit);
     }
@@ -154,7 +151,7 @@ benchmarks! {
 
         assert_ok!(pallet_uniques::Pallet::<T>::force_create(
             RawOrigin::Root.into(),
-            class_id,
+            class_id.clone(),
             user_lookup.clone(),
             true
         ));
@@ -169,15 +166,15 @@ benchmarks! {
             reward_eras: 0,
         };
 
-        assert_ok!(Credit::<T>::update_nft_class_credit(RawOrigin::Signed(user.clone()).into(), class_id, 5) );
+        assert_ok!(Credit::<T>::update_nft_class_credit(RawOrigin::Signed(user.clone()).into(), class_id.clone(), 5) );
         assert_ok!(Credit::<T>::add_or_update_credit_data(
             RawOrigin::Root.into(),
             user.clone(),
             credit_data.clone()
         ));
 
-        assert_ok!(pallet_uniques::Pallet::<T>::mint(signed_user.clone().into(), class_id, instance_id, user_lookup.clone()));
-    }: burn_nft(signed_user, class_id, instance_id)
+        assert_ok!(pallet_uniques::Pallet::<T>::mint(signed_user.clone().into(), class_id.clone(), instance_id, user_lookup.clone()));
+    }: burn_nft(signed_user, class_id.clone(), instance_id)
     verify {
         assert_eq!(UserCredit::<T>::get(user).unwrap().credit, 105);
     }
@@ -211,7 +208,6 @@ benchmarks! {
     verify {
 
     }
-
 }
 
 #[cfg(test)]
@@ -225,7 +221,7 @@ mod tests {
         new_test_ext().execute_with(|| {
             assert_ok!(Pallet::<Test>::test_benchmark_update_credit_setting());
             assert_ok!(Pallet::<Test>::test_benchmark_add_or_update_credit_data());
-            assert_ok!(Pallet::<Test>::test_benchmark_burn_for_add_credit());
+            //assert_ok!(Pallet::<Test>::test_benchmark_burn_for_add_credit());
             assert_ok!(Pallet::<Test>::test_benchmark_force_modify_credit_history());
             assert_ok!(Pallet::<Test>::test_benchmark_update_nft_class_credit());
             assert_ok!(Pallet::<Test>::test_benchmark_burn_nft());

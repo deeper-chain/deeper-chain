@@ -47,18 +47,23 @@ pub use weights::WeightInfo;
 #[frame_support::pallet]
 pub mod pallet {
     use super::*;
-    use frame_support::traits::{
-        Currency, ExistenceRequirement, OnUnbalanced, UnixTime, WithdrawReasons,
-    };
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, transactional, weights::Weight,
+        dispatch::DispatchResultWithPostInfo,
+        pallet_prelude::*,
+        traits::{
+            BuildGenesisConfig, Currency, ExistenceRequirement, OnUnbalanced, UnixTime,
+            WithdrawReasons,
+        },
+        transactional,
+        weights::Weight,
     };
+
     use frame_system::pallet_prelude::*;
-    use node_primitives::credit::{
-        CampaignId, CreditData, CreditInterface, CreditLevel, CreditSetting, EraIndex,
-        CREDIT_CAP_ONE_ERAS, DEFAULT_REWARD_ERAS, OLD_REWARD_ERAS,
-    };
     use node_primitives::{
+        credit::{
+            CampaignId, CreditData, CreditInterface, CreditLevel, CreditSetting, EraIndex,
+            CREDIT_CAP_ONE_ERAS, DEFAULT_REWARD_ERAS, OLD_REWARD_ERAS,
+        },
         deeper_node::NodeInterface,
         user_privileges::{Privilege, UserPrivilegeInterface},
         DPR,
@@ -71,16 +76,13 @@ pub mod pallet {
     };
     use sp_std::{cmp, collections::btree_map::BTreeMap, convert::TryInto, prelude::*};
 
-    #[cfg(feature = "std")]
-    use frame_support::traits::GenesisBuild;
-
     /// Configure the pallet by specifying the parameters and types on which it depends.
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_uniques::Config {
         /// Because this pallet emits events, it depends on the runtime's definition of an event.
         type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
         /// Number of blocks per era.
-        type BlocksPerEra: Get<<Self as frame_system::Config>::BlockNumber>;
+        type BlocksPerEra: Get<BlockNumberFor<Self>>;
         /// Currency
         type Currency: Currency<Self::AccountId>;
         /// credit attenuation step
@@ -90,7 +92,7 @@ pub mod pallet {
         /// mircropayment to credit factor:
         type MicropaymentToCreditFactor: Get<u128>;
         /// NodeInterface of deeper-node pallet
-        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
+        type NodeInterface: NodeInterface<Self::AccountId, BlockNumberFor<Self>>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
 
@@ -125,7 +127,6 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -325,23 +326,14 @@ pub mod pallet {
         StorageValue<_, BalanceOf<T>, ValueQuery, DefaultBurnDpr<T>>;
 
     #[pallet::genesis_config]
+    #[derive(frame_support::DefaultNoBound)]
     pub struct GenesisConfig<T: Config> {
         pub credit_settings: Vec<CreditSetting<BalanceOf<T>>>,
         pub user_credit_data: Vec<(T::AccountId, CreditData)>,
     }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T> {
-        fn default() -> Self {
-            GenesisConfig {
-                credit_settings: Default::default(),
-                user_credit_data: Default::default(),
-            }
-        }
-    }
-
     #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+    impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
         fn build(&self) {
             for cs in self.credit_settings.clone().into_iter() {
                 Pallet::<T>::_update_credit_setting(cs);
@@ -364,7 +356,8 @@ pub mod pallet {
         CreditDataAddedByTraffic(T::AccountId, u64),
         CreditDataAddedByTip(T::AccountId, u64),
         CreditDataAddedByBurnNft(T::AccountId, u64),
-        //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory; 5-ExpiryEra; 6-CreditMap is empty;
+        //Status: 1-Invalid Inputs; 2-InvalidCreditData; 3-NoReward; 4-InvalidCreditHistory;
+        // 5-ExpiryEra; 6-CreditMap is empty;
         GetRewardResult(T::AccountId, EraIndex, EraIndex, u8),
         CreditHistoryUpdateSuccess(T::AccountId, EraIndex),
         CreditHistoryUpdateFailed(T::AccountId, EraIndex),
@@ -414,15 +407,15 @@ pub mod pallet {
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-        fn on_finalize(_: T::BlockNumber) {
+        fn on_finalize(_: BlockNumberFor<T>) {
             Self::set_price();
         }
 
-        fn on_initialize(now: T::BlockNumber) -> Weight {
+        fn on_initialize(now: BlockNumberFor<T>) -> Weight {
             let remainder = now % T::BlocksPerEra::get();
             let mut weight = T::DbWeight::get().reads(1 as u64);
             const SIX_MOUNTH: u32 = 180;
-            if remainder == T::BlockNumber::default() {
+            if remainder == BlockNumberFor::<T>::default() {
                 let change_era = GenesisChangeRewardEra::<T>::get();
                 if change_era == 0 {
                     return weight;
@@ -455,6 +448,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// This operation requires sudo now and it will be decentralized in future
+        #[pallet::call_index(0)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::update_credit_setting())]
         pub fn update_credit_setting(
             origin: OriginFor<T>,
@@ -466,6 +460,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::force_modify_credit_history())]
         pub fn force_modify_credit_history(
             origin: OriginFor<T>,
@@ -482,7 +477,8 @@ pub mod pallet {
                                 && expected_era < history[i + 1].0)
                                 || (i + 1 == history.len() && expected_era >= history[i].0)
                             {
-                                // the first i records were creted before delegate, should be removed
+                                // the first i records were creted before delegate, should be
+                                // removed
                                 for _j in 0..i {
                                     history.remove(0);
                                 }
@@ -509,6 +505,7 @@ pub mod pallet {
 
         /// update credit data
         /// To be deprecated when external_set_credit_data used
+        #[pallet::call_index(2)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::add_or_update_credit_data())]
         pub fn add_or_update_credit_data(
             origin: OriginFor<T>,
@@ -521,6 +518,7 @@ pub mod pallet {
             Ok(())
         }
 
+        #[pallet::call_index(3)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_for_add_credit())]
         pub fn burn_for_add_credit(
             origin: OriginFor<T>,
@@ -556,7 +554,6 @@ pub mod pallet {
 
             let amount =
                 DPRPerCreditBurned::<T>::get().saturating_mul((credit_score as u32).into());
-
             let burned = <T as pallet::Config>::Currency::withdraw(
                 &sender,
                 amount.into(),
@@ -572,6 +569,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(4)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::update_nft_class_credit())]
         pub fn update_nft_class_credit(
             origin: OriginFor<T>,
@@ -581,12 +579,13 @@ pub mod pallet {
             let admin = ensure_signed(origin)?;
             ensure!(Self::is_admin(&admin), Error::<T>::NotAdmin);
 
-            MiningMachineClassCredit::<T>::insert(class_id, credit);
+            MiningMachineClassCredit::<T>::insert(&class_id, credit);
 
             Self::deposit_event(Event::UpdateNftCredit(class_id, credit));
             Ok(().into())
         }
 
+        #[pallet::call_index(5)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::update_sum_of_credit_nft_burn_history())]
         pub fn update_sum_of_credit_nft_burn_history(
             origin: OriginFor<T>,
@@ -602,6 +601,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(6)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::burn_nft())]
         #[transactional]
         pub fn burn_nft(
@@ -623,7 +623,7 @@ pub mod pallet {
                 Error::<T>::OutOfMaxBurnCreditPerAddress
             );
 
-            pallet_uniques::Pallet::<T>::burn(origin, class_id, instance_id, None)?;
+            pallet_uniques::Pallet::<T>::burn(origin, class_id.clone(), instance_id, None)?;
 
             Self::update_credit_by_burn_nft(sender.clone(), credit)?;
 
@@ -634,6 +634,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(7)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_switch_campaign())]
         pub fn set_switch_campaign(
             origin: OriginFor<T>,
@@ -653,6 +654,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(8)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_not_switch_accounts())]
         pub fn set_not_switch_accounts(
             origin: OriginFor<T>,
@@ -667,7 +669,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(9)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_credit_balances(
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
@@ -679,7 +682,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(10)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_usdt_credit_balances(
             origin: OriginFor<T>,
             credit_balances: Vec<BalanceOf<T>>,
@@ -691,7 +695,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::call_index(11)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(0,1))]
         pub fn set_default_campaign_id(
             origin: OriginFor<T>,
             id: u16,
@@ -703,7 +708,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(0,1))]
+        #[pallet::call_index(12)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(0,1))]
         pub fn set_user_staking_credit(
             origin: OriginFor<T>,
             user_scores: Vec<(T::AccountId, u64)>,
@@ -717,7 +723,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(3,1))]
+        #[pallet::call_index(13)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(3,1))]
         pub fn unstaking_slash_credit(origin: OriginFor<T>, user: T::AccountId) -> DispatchResult {
             let admin = ensure_signed(origin)?;
             if !Self::is_admin(&admin) {
@@ -730,6 +737,7 @@ pub mod pallet {
             Self::do_unstaking_slash_credit(&user)
         }
 
+        #[pallet::call_index(14)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::add_or_update_credit_data())]
         pub fn external_set_credit_data(
             origin: OriginFor<T>,
@@ -743,7 +751,8 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(15)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_price_diff_rate(
             origin: OriginFor<T>,
             price_diff_rate: Percent,
@@ -754,6 +763,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(16)]
         #[pallet::weight(<T as pallet::Config>::WeightInfo::set_dpr_price())]
         pub fn set_dpr_price(
             origin: OriginFor<T>,
@@ -788,7 +798,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(17)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn unset_staking_balance(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -799,7 +810,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(18)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_maintain_device(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -815,7 +827,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(19)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn unset_maintain_device(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -831,7 +844,8 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        #[pallet::call_index(20)]
+        #[pallet::weight(Weight::from_parts(10_000u64,0) + T::DbWeight::get().reads_writes(1,1))]
         pub fn set_burned_dpr_per_credit(
             origin: OriginFor<T>,
             amount: BalanceOf<T>,
@@ -895,7 +909,8 @@ pub mod pallet {
                             credit_data
                         }
                         None => {
-                            // do not init credit data, because entering the default campaign need some contition
+                            // do not init credit data, because entering the default campaign need
+                            // some contition
                             return false;
                         }
                     }
@@ -1023,7 +1038,7 @@ pub mod pallet {
             credit_data.credit >= T::MinCreditToDelegate::get()
         }
 
-        fn block_to_era(block_number: T::BlockNumber) -> EraIndex {
+        fn block_to_era(block_number: BlockNumberFor<T>) -> EraIndex {
             TryInto::<EraIndex>::try_into(block_number / T::BlocksPerEra::get())
                 .ok()
                 .unwrap()
@@ -1643,20 +1658,20 @@ pub mod pallet {
         }
     }
 
-    #[cfg(feature = "std")]
-    impl<T: Config> GenesisConfig<T> {
-        /// Direct implementation of `GenesisBuild::build_storage`.
-        ///
-        /// Kept in order not to break dependency.
-        pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
-            <Self as GenesisBuild<T>>::build_storage(self)
-        }
+    // #[cfg(feature = "std")]
+    // impl<T: Config> GenesisConfig<T> {
+    //     /// Direct implementation of `GenesisBuild::build_storage`.
+    //     ///
+    //     /// Kept in order not to break dependency.
+    //     pub fn build_storage(&self) -> Result<sp_runtime::Storage, String> {
+    //         <Self as GenesisBuild<T>>::build_storage(self)
+    //     }
 
-        /// Direct implementation of `GenesisBuild::assimilate_storage`.
-        ///
-        /// Kept in order not to break dependency.
-        pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String> {
-            <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
-        }
-    }
+    //     /// Direct implementation of `GenesisBuild::assimilate_storage`.
+    //     ///
+    //     /// Kept in order not to break dependency.
+    //     pub fn assimilate_storage(&self, storage: &mut sp_runtime::Storage) -> Result<(), String>
+    // {         <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+    //     }
+    // }
 }
