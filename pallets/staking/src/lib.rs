@@ -2169,7 +2169,7 @@ pub mod pallet {
                     DelegatorsKeyPrefix::<T>::put(prefix.clone());
                     DelegatorsLastKey::<T>::put(prefix);
                     NpowDayMintedDPR::<T>::put((era, default_dpr));
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 1));
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 4));
                 } else {
                     weight = weight.saturating_add(Self::pay_delegators());
                 }
