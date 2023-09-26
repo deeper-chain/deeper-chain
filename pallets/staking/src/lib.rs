@@ -2161,11 +2161,15 @@ pub mod pallet {
                     let delegator_payouts_per_block =
                         (Self::delegator_count() + paying_blocks_num - 1) / paying_blocks_num + 1;
 
+                    let era = T::CreditInterface::get_current_era();
+                    let default_dpr: BalanceOf<T> = Zero::zero();
+
                     DelegatorPayoutsPerBlock::<T>::put(delegator_payouts_per_block);
                     let prefix = Self::get_delegators_prefix_hash();
                     DelegatorsKeyPrefix::<T>::put(prefix.clone());
                     DelegatorsLastKey::<T>::put(prefix);
-                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 1));
+                    NpowDayMintedDPR::<T>::put((era, default_dpr));
+                    weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 4));
                 } else {
                     weight = weight.saturating_add(Self::pay_delegators());
                 }
