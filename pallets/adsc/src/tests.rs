@@ -17,7 +17,6 @@
 
 //! Macro for creating the tests for the module.
 
-use frame_support::traits::fungible::Mutate as TokenMutate;
 use frame_support::traits::fungibles::Mutate;
 use frame_support::traits::{
     nonfungibles::Inspect, AsEnsureOriginWithArg, ConstU128, ConstU32, Hooks,
@@ -349,41 +348,19 @@ fn swap_adsc() {
 }
 
 #[test]
-fn swap_dpr() {
-    new_test_ext().execute_with(|| {
-        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 3, DPR, 0));
-        assert_ok!(Assets::mint_into(1, &Adsc::account_id(), 2 * DPR));
-
-        assert_ok!(Adsc::swap_dpr_to_adsc(RuntimeOrigin::signed(3), DPR));
-        assert_eq!(Assets::balance(1, &3), 2 * DPR);
-    });
-}
-
-#[test]
 fn swap_dpr_pool_not_enough() {
     new_test_ext().execute_with(|| {
         assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 3, DPR, 0));
+        assert_ok!(Assets::mint_into(1, &3, 2 * DPR));
 
-        assert_ok!(Adsc::do_add_pool_dpr_adsc(0, DPR));
-        assert_noop!(
-            Adsc::swap_dpr_to_adsc(RuntimeOrigin::signed(3), DPR),
-            pallet_assets::Error::<Test>::BalanceLow
-        );
-        assert_ok!(Adsc::do_add_pool_dpr_adsc(0, DPR));
-        assert_ok!(Adsc::swap_dpr_to_adsc(RuntimeOrigin::signed(3), DPR));
-
-        assert_ok!(Balances::burn_from(&Adsc::account_id(), DPR));
-
+        assert_ok!(Adsc::do_add_pool_dpr_adsc(DPR / 2));
         assert_noop!(
             Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR),
             pallet_balances::Error::<Test>::InsufficientBalance
         );
-        assert_ok!(Adsc::do_add_pool_dpr_adsc(DPR, 0));
+        assert_ok!(Adsc::do_add_pool_dpr_adsc(DPR / 2));
         assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(3), 2 * DPR));
 
-        assert_eq!(TotalPoolAdsc::<Test>::get(), 2 * DPR);
         assert_eq!(TotalPoolDpr::<Test>::get(), DPR);
     });
 }
