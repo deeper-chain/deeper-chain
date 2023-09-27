@@ -61,8 +61,8 @@ Deeper-chain adopts a community-driven governance model. It empowers its users t
 
 ### 3.2 Hardware Requirements
 
-- **A minimum of 4 GB RAM**: Adequate memory is essential for smooth operation.
-- **At least 50 GB of free disk space**: Sufficient storage is necessary for holding the blockchain data.
+- **A minimum of 8 GB RAM**: Adequate memory is essential for smooth operation.
+- **At least 500 GB of free disk space**: Sufficient storage is necessary for holding the blockchain data.
 - **A stable internet connection**: A reliable internet connection is crucial for staying synced with the network.
 
 ## 4. Installation and Setup
