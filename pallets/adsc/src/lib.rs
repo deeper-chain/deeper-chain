@@ -153,9 +153,6 @@ pub mod pallet {
     }
 
     #[pallet::storage]
-    pub type TotalPoolAdsc<T: Config> = StorageValue<_, AssetBalanceOf<T>, ValueQuery>;
-
-    #[pallet::storage]
     pub type TotalPoolDpr<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
     #[pallet::event]
@@ -175,21 +172,19 @@ pub mod pallet {
             bridge_result: DispatchResult,
         },
         PoolNotEnough {
-            adsc: AssetBalanceOf<T>,
             dpr: BalanceOf<T>,
         },
         PoolNewAdded {
-            adsc: AssetBalanceOf<T>,
             dpr: BalanceOf<T>,
         },
         SwapAdscToDpr {
             adsc: AssetBalanceOf<T>,
             dpr: BalanceOf<T>,
         },
-        SwapDprToAdsc {
-            dpr: BalanceOf<T>,
-            adsc: AssetBalanceOf<T>,
-        },
+        // SwapDprToAdsc {
+        //     dpr: BalanceOf<T>,
+        //     adsc: AssetBalanceOf<T>,
+        // },
     }
 
     #[pallet::error]
@@ -230,10 +225,7 @@ pub mod pallet {
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads(1);
             if StorageVersion::get::<Pallet<T>>() == 0 {
-                let _ = Self::do_add_pool_dpr_adsc(
-                    (100_000_000 * DPR).unique_saturated_into(),
-                    (100_000_000 * DPR).unique_saturated_into(),
-                );
+                let _ = Self::do_add_pool_dpr_adsc((100_000_000 * DPR).unique_saturated_into());
                 StorageVersion::new(1).put::<Pallet<T>>();
                 weight += T::DbWeight::get().writes(1)
             }
@@ -401,12 +393,9 @@ pub mod pallet {
                 ExistenceRequirement::AllowDeath,
             );
             if res.is_err() {
-                Self::deposit_event(Event::PoolNotEnough {
-                    adsc: 0u32.into(),
-                    dpr: dpr_amount,
-                });
+                Self::deposit_event(Event::PoolNotEnough { dpr: dpr_amount });
             } else {
-                Self::deposit_event(Event::SwapDprToAdsc {
+                Self::deposit_event(Event::SwapAdscToDpr {
                     adsc: amount,
                     dpr: dpr_amount,
                 });
@@ -415,67 +404,19 @@ pub mod pallet {
         }
 
         #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        #[transactional]
-        pub fn swap_dpr_to_adsc(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
-            let who = ensure_signed(origin)?;
-            T::DprCurrency::transfer(
-                &who,
-                &Self::account_id(),
-                amount,
-                ExistenceRequirement::AllowDeath,
-            )?;
-            let (adsc_rate, dpr_rate) = AdscExchangeRate::<T>::get();
-            let adsc_amount = amount.saturating_mul(adsc_rate.into()) / dpr_rate.into();
-            let adsc_amount: u128 = adsc_amount.unique_saturated_into();
-            let adsc_amount = adsc_amount.unique_saturated_into();
-            let res = T::AdscCurrency::transfer(
-                T::AdscId::get(),
-                &Self::account_id(),
-                &who,
-                adsc_amount,
-                false,
-            )
-            .map(|_| ());
-            if res.is_err() {
-                Self::deposit_event(Event::PoolNotEnough {
-                    adsc: adsc_amount,
-                    dpr: 0u32.into(),
-                });
-            } else {
-                Self::deposit_event(Event::SwapAdscToDpr {
-                    adsc: adsc_amount,
-                    dpr: amount,
-                });
-            }
-            res
-        }
-
-        #[pallet::weight(Weight::from_ref_time(10_000u64))]
-        pub fn add_pool_dpr_adsc(
-            origin: OriginFor<T>,
-            dpr_amount: BalanceOf<T>,
-            adsc_amount: AssetBalanceOf<T>,
-        ) -> DispatchResult {
+        pub fn add_pool_dpr_adsc(origin: OriginFor<T>, dpr_amount: BalanceOf<T>) -> DispatchResult {
             ensure_root(origin)?;
 
-            Self::do_add_pool_dpr_adsc(dpr_amount, adsc_amount)?;
+            Self::do_add_pool_dpr_adsc(dpr_amount)?;
             Ok(())
         }
     }
 
     impl<T: Config> pallet::Pallet<T> {
-        pub(crate) fn do_add_pool_dpr_adsc(
-            dpr_amount: BalanceOf<T>,
-            adsc_amount: AssetBalanceOf<T>,
-        ) -> DispatchResult {
-            T::AdscCurrency::mint_into(T::AdscId::get(), &Self::account_id(), adsc_amount)?;
+        pub(crate) fn do_add_pool_dpr_adsc(dpr_amount: BalanceOf<T>) -> DispatchResult {
             T::DprCurrency::deposit_creating(&Self::account_id(), dpr_amount);
-            TotalPoolAdsc::<T>::mutate(|adsc| *adsc = adsc.saturating_add(adsc_amount));
             TotalPoolDpr::<T>::mutate(|dpr| *dpr = dpr.saturating_add(dpr_amount));
-            Self::deposit_event(Event::PoolNewAdded {
-                adsc: adsc_amount,
-                dpr: dpr_amount,
-            });
+            Self::deposit_event(Event::PoolNewAdded { dpr: dpr_amount });
             Ok(())
         }
 
