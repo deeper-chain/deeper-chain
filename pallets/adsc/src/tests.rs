@@ -177,7 +177,7 @@ impl Config for Test {
     type DprCurrency = Balances;
     type WeightInfo = ();
     type Time = Timestamp;
-    type AdscId = ConstU32<1>;
+    type AdscId = ConstU32<0>;
     type PalletId = AdscPalletId;
     type UserPrivilegeInterface = U128FakeUserPrivilege;
 }
@@ -208,7 +208,7 @@ pub fn run_to_block(n: u64) {
 #[test]
 fn adsc_pay_reward() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
 
         // start day is day 0
         CurrentAdscBaseReward::<Test>::put(1560 * DPR);
@@ -219,20 +219,20 @@ fn adsc_pay_reward() {
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 9));
 
         run_to_block(BLOCKS_PER_ERA + 3);
-        assert_eq!(Assets::balance(1, &2), 1560 * DPR);
+        assert_eq!(Assets::balance(0, &2), 1560 * DPR);
 
         assert_eq!(CurrentMintedAdsc::<Test>::get(), 1560 * 3 * DPR);
-        assert_eq!(Assets::total_supply(1), 1560 * 3 * DPR);
+        assert_eq!(Assets::total_supply(0), 1560 * 3 * DPR);
 
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
-        assert_eq!(Assets::balance(1, &2), 3115726025880000000000);
-        assert_eq!(Assets::balance(1, &3), 1560 * DPR);
+        assert_eq!(Assets::balance(0, &2), 3115726025880000000000);
+        assert_eq!(Assets::balance(0, &3), 1560 * DPR);
 
         run_to_block(365 * BLOCKS_PER_ERA + 3);
-        assert_eq!(Assets::balance(1, &2), 285479999719200000000000);
-        assert_eq!(Assets::balance(1, &3), 285475725746640000000000);
+        assert_eq!(Assets::balance(0, &2), 285479999719200000000000);
+        assert_eq!(Assets::balance(0, &3), 285475725746640000000000);
 
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
@@ -241,21 +241,21 @@ fn adsc_pay_reward() {
 
         run_to_block(366 * BLOCKS_PER_ERA + 3);
         assert_eq!(
-            Assets::balance(1, &3),
+            Assets::balance(0, &3),
             285475725746640000000000 + 1560 * DPR
         );
 
         assert_eq!(AdscStakers::<Test>::get(2), None);
-        assert_eq!(Assets::balance(1, &2), 285479999719200000000000);
-        assert_eq!(Assets::balance(1, &8), 285479999719200000000000);
-        assert_eq!(Assets::balance(1, &9), 285479999719200000000000);
+        assert_eq!(Assets::balance(0, &2), 285479999719200000000000);
+        assert_eq!(Assets::balance(0, &8), 285479999719200000000000);
+        assert_eq!(Assets::balance(0, &9), 285479999719200000000000);
     });
 }
 
 #[test]
 fn adsc_half_reward() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
 
         CurrentAdscBaseReward::<Test>::put(1560 * DPR);
 
@@ -265,8 +265,8 @@ fn adsc_half_reward() {
         CurrentHalfTarget::<Test>::put(1560 * 2 * DPR);
 
         run_to_block(BLOCKS_PER_ERA + 3);
-        assert_eq!(Assets::balance(1, &2), 1560 * DPR);
-        assert_eq!(Assets::balance(1, &3), 1560 * DPR);
+        assert_eq!(Assets::balance(0, &2), 1560 * DPR);
+        assert_eq!(Assets::balance(0, &3), 1560 * DPR);
 
         assert_eq!(
             CurrentHalfTarget::<Test>::get(),
@@ -278,8 +278,8 @@ fn adsc_half_reward() {
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
         // added balance = 1560/2 * (364/365)*DPR
-        assert_eq!(Assets::balance(1, &2), 2337863012940000000000);
-        assert_eq!(Assets::balance(1, &3), 2337863012940000000000);
+        assert_eq!(Assets::balance(0, &2), 2337863012940000000000);
+        assert_eq!(Assets::balance(0, &3), 2337863012940000000000);
 
         run_to_block(3 * BLOCKS_PER_ERA + 3);
         assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
@@ -323,9 +323,9 @@ fn adsc_add_nft() {
 #[test]
 fn swap_adsc() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
 
-        assert_ok!(Assets::mint_into(1, &3, 2 * DPR));
+        assert_ok!(Assets::mint_into(0, &3, 2 * DPR));
         assert_ok!(Balances::set_balance(
             RuntimeOrigin::root(),
             Adsc::account_id(),
@@ -336,12 +336,12 @@ fn swap_adsc() {
         assert_eq!(Balances::free_balance(&3), DPR);
 
         AdscExchangeRate::<Test>::put((6, 4));
-        assert_ok!(Assets::mint_into(1, &4, 3 * DPR));
+        assert_ok!(Assets::mint_into(0, &4, 3 * DPR));
         assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(4), 3 * DPR));
         assert_eq!(Balances::free_balance(&4), 2 * DPR);
 
         AdscExchangeRate::<Test>::put((3, 7));
-        assert_ok!(Assets::mint_into(1, &5, 3 * DPR));
+        assert_ok!(Assets::mint_into(0, &5, 3 * DPR));
         assert_ok!(Adsc::swap_adsc_to_dpr(RuntimeOrigin::signed(5), 3 * DPR));
         assert_eq!(Balances::free_balance(&5), 7 * DPR);
     });
@@ -350,8 +350,8 @@ fn swap_adsc() {
 #[test]
 fn swap_dpr_pool_not_enough() {
     new_test_ext().execute_with(|| {
-        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 1, 0, true, 10));
-        assert_ok!(Assets::mint_into(1, &3, 2 * DPR));
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
+        assert_ok!(Assets::mint_into(0, &3, 2 * DPR));
 
         assert_ok!(Adsc::do_add_pool_dpr_adsc(DPR / 2));
         assert_noop!(

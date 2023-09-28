@@ -1423,7 +1423,7 @@ impl pallet_adsc::Config for Runtime {
     type WeightInfo = ();
     type UserPrivilegeInterface = UserPrivileges;
     type Time = Timestamp;
-    type AdscId = ConstU32<1>;
+    type AdscId = ConstU32<0>;
     type PalletId = AdscPalletId;
 }
 

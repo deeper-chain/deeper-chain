@@ -31,7 +31,7 @@ pub mod pallet {
     use super::*;
     use frame_support::pallet_prelude::DispatchResult;
     use frame_support::traits::{
-        fungibles::{metadata::Mutate as MetaMutate, Create, Inspect, Mutate, Transfer},
+        fungibles::{metadata::Mutate as MetaMutate, Create, Destroy, Inspect, Mutate, Transfer},
         nonfungibles::Mutate as NftMutate,
         Currency, ExistenceRequirement, Time,
     };
@@ -60,7 +60,8 @@ pub mod pallet {
         type AdscCurrency: MetaMutate<Self::AccountId>
             + Mutate<Self::AccountId>
             + Create<Self::AccountId>
-            + Transfer<Self::AccountId>;
+            + Transfer<Self::AccountId>
+            + Destroy<Self::AccountId>;
         /// Weight information for extrinsics in this pallet.
         type WeightInfo: WeightInfo;
         /// query user prvileges
@@ -89,7 +90,7 @@ pub mod pallet {
     pub type BalanceOf<T> =
         <<T as Config>::DprCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -224,9 +225,24 @@ pub mod pallet {
 
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads(1);
-            if StorageVersion::get::<Pallet<T>>() == 0 {
+            if StorageVersion::get::<Pallet<T>>() < 2 {
+                let _ = T::AdscCurrency::create(
+                    T::AdscId::get(),
+                    Self::account_id(),
+                    true,
+                    1_000_000_000u32.into(),
+                );
+
+                let _ = T::AdscCurrency::set(
+                    T::AdscId::get(),
+                    &Self::account_id(),
+                    b"Adsc".to_vec(),
+                    b"Adsc".to_vec(),
+                    18,
+                );
+
                 let _ = Self::do_add_pool_dpr_adsc((100_000_000 * DPR).unique_saturated_into());
-                StorageVersion::new(1).put::<Pallet<T>>();
+                StorageVersion::new(2).put::<Pallet<T>>();
                 weight += T::DbWeight::get().writes(1)
             }
 
