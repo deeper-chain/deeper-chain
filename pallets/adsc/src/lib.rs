@@ -90,7 +90,7 @@ pub mod pallet {
     pub type BalanceOf<T> =
         <<T as Config>::DprCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(2);
 
     #[pallet::pallet]
     #[pallet::without_storage_info]
@@ -225,9 +225,7 @@ pub mod pallet {
 
         fn on_runtime_upgrade() -> Weight {
             let mut weight = T::DbWeight::get().reads(1);
-            if StorageVersion::get::<Pallet<T>>() == 0 {
-                let _ = T::AdscCurrency::start_destroy(T::AdscId::get(), None);
-                let _ = T::AdscCurrency::finish_destroy(T::AdscId::get());
+            if StorageVersion::get::<Pallet<T>>() < 2 {
                 let _ = T::AdscCurrency::create(
                     T::AdscId::get(),
                     Self::account_id(),
@@ -244,7 +242,7 @@ pub mod pallet {
                 );
 
                 let _ = Self::do_add_pool_dpr_adsc((100_000_000 * DPR).unique_saturated_into());
-                StorageVersion::new(1).put::<Pallet<T>>();
+                StorageVersion::new(2).put::<Pallet<T>>();
                 weight += T::DbWeight::get().writes(1)
             }
 
