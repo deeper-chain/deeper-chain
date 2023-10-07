@@ -1274,7 +1274,6 @@ parameter_types! {
     pub const MinCreditToDelegate: u64 = 100;
     pub const MicropaymentToCreditFactor: u128 = MICROPAYMENT_TO_CREDIT_FACTOR;
     pub const BlocksPerEra: BlockNumber = BLOCKS_PER_ERA;
-    pub const DPRPerCreditBurned: Balance = 50 * DPR;
 }
 
 parameter_types! {
@@ -1318,7 +1317,6 @@ impl pallet_credit::Config for Runtime {
     type WeightInfo = pallet_credit::weights::SubstrateWeight<Runtime>;
     type SecsPerBlock = SecsPerBlock;
     type UnixTime = Timestamp;
-    type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = Treasury;
     type UserPrivilegeInterface = UserPrivileges;
     type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;

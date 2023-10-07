@@ -165,7 +165,6 @@ parameter_types! {
     pub const MicropaymentToCreditFactor: u128 = 1_000_000_000_000_000;
     pub const BlocksPerEra: BlockNumber =  1 * EPOCH_DURATION_IN_BLOCKS;
     pub const SecsPerBlock: u32 = 5u32;
-    pub const DPRPerCreditBurned: u64 = 50;
 }
 
 parameter_types! {
@@ -231,7 +230,6 @@ impl pallet_credit::Config for Test {
     type WeightInfo = ();
     type UnixTime = Timestamp;
     type SecsPerBlock = SecsPerBlock;
-    type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = Treasury;
     type UserPrivilegeInterface = UserPrivileges;
     type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;

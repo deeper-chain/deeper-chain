@@ -98,8 +98,6 @@ pub mod pallet {
 
         type SecsPerBlock: Get<u32>;
 
-        type DPRPerCreditBurned: Get<BalanceOf<Self>>;
-
         type BurnedTo: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
         /// query user prvileges
@@ -316,6 +314,15 @@ pub mod pallet {
 
     #[pallet::storage]
     pub(crate) type GenesisChangeRewardEra<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+    #[pallet::type_value]
+    pub fn DefaultBurnDpr<T: Config>() -> BalanceOf<T> {
+        UniqueSaturatedFrom::unique_saturated_from(50 * DPR)
+    }
+
+    #[pallet::storage]
+    pub(crate) type DPRPerCreditBurned<T: Config> =
+        StorageValue<_, BalanceOf<T>, ValueQuery, DefaultBurnDpr<T>>;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
@@ -547,7 +554,8 @@ pub mod pallet {
                 Err(Error::<T>::CreditAddTooMuch)?
             }
 
-            let amount = T::DPRPerCreditBurned::get().saturating_mul((credit_score as u32).into());
+            let amount =
+                DPRPerCreditBurned::<T>::get().saturating_mul((credit_score as u32).into());
 
             let burned = <T as pallet::Config>::Currency::withdraw(
                 &sender,
@@ -820,6 +828,16 @@ pub mod pallet {
                     addrs.remove(index);
                 }
             });
+            Ok(().into())
+        }
+
+        #[pallet::weight(Weight::from_ref_time(10_000u64) + T::DbWeight::get().reads_writes(1,1))]
+        pub fn set_burned_dpr_per_credit(
+            origin: OriginFor<T>,
+            amount: BalanceOf<T>,
+        ) -> DispatchResult {
+            ensure_root(origin)?;
+            DPRPerCreditBurned::<T>::put(amount);
             Ok(().into())
         }
     }
