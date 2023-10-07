@@ -629,6 +629,7 @@ fn burn_dpr_add_credit() {
         );
         // run_to_block, era=1
         run_to_block(BLOCKS_PER_ERA * 3);
+        assert!(Credit::set_burned_dpr_per_credit(RuntimeOrigin::root(), 50).is_ok());
 
         assert!(Credit::burn_for_add_credit(RuntimeOrigin::signed(1), 100).is_ok());
         assert!(Credit::burn_for_add_credit(RuntimeOrigin::signed(3), 200).is_ok());

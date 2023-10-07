@@ -122,7 +122,6 @@ parameter_types! {
 
 parameter_types! {
     pub const MinimumPeriod: Moment = 5u64;
-    pub const DPRPerCreditBurned: Balance = 100;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -177,7 +176,6 @@ impl pallet_credit::Config for Test {
     type WeightInfo = ();
     type UnixTime = Timestamp;
     type SecsPerBlock = SecsPerBlock;
-    type DPRPerCreditBurned = DPRPerCreditBurned;
     type BurnedTo = ();
     type UserPrivilegeInterface = ();
     type MaxBurnCreditPerAddress = MaxBurnCreditPerAddress;

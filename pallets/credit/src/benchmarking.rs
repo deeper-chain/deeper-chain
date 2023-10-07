@@ -91,6 +91,8 @@ benchmarks! {
             current_credit_level: CreditLevel::One,
             reward_eras: 0,
         };
+        let burn_balance = <T as pallet::Config>::Currency::minimum_balance() * 100u32.into();
+        DPRPerCreditBurned::<T>::put(burn_balance);
         let user = create_funded_user::<T>("user",USER_SEED, 1000);
         UserCredit::<T>::insert(&user,credit_data.clone());
         credit_data.credit = 101;
