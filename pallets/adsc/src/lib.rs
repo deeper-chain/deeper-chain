@@ -40,6 +40,7 @@ pub mod pallet {
     };
     use frame_system::{ensure_root, pallet_prelude::*};
     use node_primitives::{
+        deeper_node::NodeInterface,
         user_privileges::{Privilege, UserPrivilegeInterface},
         DPR,
     };
@@ -68,6 +69,9 @@ pub mod pallet {
         type UserPrivilegeInterface: UserPrivilegeInterface<Self::AccountId>;
 
         type Time: Time;
+
+        /// NodeInterface of deeper-node pallet
+        type NodeInterface: NodeInterface<Self::AccountId, Self::BlockNumber>;
 
         type DprCurrency: Currency<Self::AccountId>;
 
@@ -480,6 +484,11 @@ pub mod pallet {
             weight += T::DbWeight::get().reads(1 as u64);
             loop {
                 if let Some((account, period)) = adsc_iter.next() {
+                    let eras = T::NodeInterface::get_eras_offline(&account);
+                    if eras != 0 {
+                        continue;
+                    }
+                    weight += T::DbWeight::get().reads(1 as u64);
                     last_key = AdscStakers::<T>::hashed_key_for(&account);
                     if period == 0 {
                         to_be_removed.push(account);
