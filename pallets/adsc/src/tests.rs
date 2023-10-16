@@ -240,7 +240,7 @@ pub fn im_online_run_to_block() {
         DeeperNode::im_online(RuntimeOrigin::signed(8));
         DeeperNode::im_online(RuntimeOrigin::signed(9));
         DeeperNode::im_online(RuntimeOrigin::signed(3));
-        run_to_block(i * BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        run_to_block(i * BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
     }
 }
 
@@ -258,7 +258,7 @@ fn adsc_pay_reward() {
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 9));
 
         // day 0 submit im_online
-        run_to_block(BLOCKS_PER_ERA/2 + 3);
+        run_to_block(BLOCKS_PER_ERA / 2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(8));
         DeeperNode::im_online(RuntimeOrigin::signed(9));
@@ -275,7 +275,7 @@ fn adsc_pay_reward() {
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
         // day 1 submit im_online
-        run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(8));
         DeeperNode::im_online(RuntimeOrigin::signed(9));
@@ -284,7 +284,7 @@ fn adsc_pay_reward() {
         // change day to 2
         run_to_block(2 * BLOCKS_PER_ERA + 3);
 
-        // check result 
+        // check result
         assert_eq!(Assets::balance(0, &2), 3115726025880000000000);
         assert_eq!(Assets::balance(0, &3), 1560 * DPR);
 
@@ -300,7 +300,7 @@ fn adsc_pay_reward() {
         assert_eq!(AdscStakers::<Test>::get(2), Some(0));
 
         // day 365 submit im_online
-        run_to_block(365 * BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        run_to_block(365 * BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(8));
         DeeperNode::im_online(RuntimeOrigin::signed(9));
@@ -346,7 +346,7 @@ fn adsc_pay_reward_no_im_online() {
         // change day to 2
         run_to_block(2 * BLOCKS_PER_ERA + 3);
 
-        // check result 
+        // check result
         assert_eq!(Assets::balance(0, &2), 0);
         assert_eq!(Assets::balance(0, &3), 0);
 
@@ -360,17 +360,13 @@ fn adsc_pay_reward_no_im_online() {
         assert_eq!(AdscStakers::<Test>::get(2), Some(365));
 
         run_to_block(366 * BLOCKS_PER_ERA + 3);
-        assert_eq!(
-            Assets::balance(0, &3),
-            0
-        );
+        assert_eq!(Assets::balance(0, &3), 0);
 
         assert_eq!(Assets::balance(0, &2), 0);
         assert_eq!(Assets::balance(0, &8), 0);
         assert_eq!(Assets::balance(0, &9), 0);
     });
 }
-
 
 #[test]
 fn adsc_half_reward() {
@@ -385,7 +381,7 @@ fn adsc_half_reward() {
         CurrentHalfTarget::<Test>::put(1560 * 2 * DPR);
 
         // day 0 submit im_online
-        run_to_block(BLOCKS_PER_ERA/2 + 3);
+        run_to_block(BLOCKS_PER_ERA / 2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(3));
 
@@ -402,7 +398,7 @@ fn adsc_half_reward() {
         CurrentHalfTarget::<Test>::put(1560 * 3 * DPR);
 
         // day 1 submit im_online
-        run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(3));
 
@@ -412,7 +408,7 @@ fn adsc_half_reward() {
         assert_eq!(Assets::balance(0, &3), 2337863012940000000000);
 
         // day 2 submit im_online
-        run_to_block(2 * BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        run_to_block(2 * BLOCKS_PER_ERA + BLOCKS_PER_ERA / 2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(3));
 
@@ -420,7 +416,6 @@ fn adsc_half_reward() {
         assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
     });
 }
-
 
 #[test]
 fn adsc_add_nft() {
