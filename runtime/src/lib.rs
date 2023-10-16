@@ -1419,6 +1419,7 @@ impl pallet_adsc::Config for Runtime {
     type AdscCurrency = Assets;
     type DprCurrency = Balances;
     type WeightInfo = ();
+    type NodeInterface = DeeperNode;
     type UserPrivilegeInterface = UserPrivileges;
     type Time = Timestamp;
     type AdscId = ConstU32<0>;
