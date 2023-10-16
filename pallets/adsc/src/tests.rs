@@ -34,9 +34,9 @@ use sp_runtime::{
 use super::*;
 use crate::{self as pallet_adsc};
 use node_primitives::{
-    user_privileges::{Privilege, UserPrivilegeInterface},
-    Moment, BlockNumber, DPR,
     deeper_node::NodeInterface,
+    user_privileges::{Privilege, UserPrivilegeInterface},
+    BlockNumber, Moment, DPR,
 };
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -105,7 +105,6 @@ impl pallet_balances::Config for Test {
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
-
 
 parameter_types! {
     pub const MinLockAmt: u32 = 100;
@@ -235,12 +234,14 @@ pub fn run_to_block(n: u64) {
     }
 }
 
-pub fn im_online_run_to_block(account_id : RuntimeOrigin, day: u64, block: u64) {
-    for i in 1..day {
-        DeeperNode::im_online(account_id.clone());
-        run_to_block(i * BLOCKS_PER_ERA - BLOCKS_PER_ERA/2);
+pub fn im_online_run_to_block() {
+    for i in 2..=365 {
+        DeeperNode::im_online(RuntimeOrigin::signed(2));
+        DeeperNode::im_online(RuntimeOrigin::signed(8));
+        DeeperNode::im_online(RuntimeOrigin::signed(9));
+        DeeperNode::im_online(RuntimeOrigin::signed(3));
+        run_to_block(i * BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
     }
-    run_to_block(day * BLOCKS_PER_ERA + block);
 }
 
 #[test]
@@ -252,39 +253,42 @@ fn adsc_pay_reward() {
         CurrentAdscBaseReward::<Test>::put(1560 * DPR);
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
 
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-
         // 8,9 only check when 365
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 8));
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 9));
 
-        //im_online_run_to_block(RuntimeOrigin::signed(2), 1, 3);
-
-        run_to_block(BLOCKS_PER_ERA / 2);
+        // day 0 submit im_online
+        run_to_block(BLOCKS_PER_ERA/2 + 3);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(8));
         DeeperNode::im_online(RuntimeOrigin::signed(9));
 
-        run_to_block(1 * BLOCKS_PER_ERA + 3);
+        // change day to 1
+        run_to_block(BLOCKS_PER_ERA + 3);
 
+        // check result
         assert_eq!(Assets::balance(0, &2), 1560 * DPR);
         assert_eq!(CurrentMintedAdsc::<Test>::get(), 1560 * 3 * DPR);
         assert_eq!(Assets::total_supply(0), 1560 * 3 * DPR);
 
-        run_to_block(2 * BLOCKS_PER_ERA + 3);
-
-/*
-        assert_eq!(Assets::balance(0, &2), 1560 * DPR);
-
-        assert_eq!(CurrentMintedAdsc::<Test>::get(), 1560 * 3 * DPR);
-        assert_eq!(Assets::total_supply(0), 1560 * 3 * DPR);
-*/
-/* 
+        // init 3
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
+        // day 1 submit im_online
+        run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        DeeperNode::im_online(RuntimeOrigin::signed(2));
+        DeeperNode::im_online(RuntimeOrigin::signed(8));
+        DeeperNode::im_online(RuntimeOrigin::signed(9));
+        DeeperNode::im_online(RuntimeOrigin::signed(3));
+
+        // change day to 2
         run_to_block(2 * BLOCKS_PER_ERA + 3);
+
+        // check result 
         assert_eq!(Assets::balance(0, &2), 3115726025880000000000);
         assert_eq!(Assets::balance(0, &3), 1560 * DPR);
+
+        im_online_run_to_block();
 
         run_to_block(365 * BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(0, &2), 285479999719200000000000);
@@ -295,6 +299,13 @@ fn adsc_pay_reward() {
         assert_eq!(AdscStakers::<Test>::get(3), Some(365));
         assert_eq!(AdscStakers::<Test>::get(2), Some(0));
 
+        // day 365 submit im_online
+        run_to_block(365 * BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        DeeperNode::im_online(RuntimeOrigin::signed(2));
+        DeeperNode::im_online(RuntimeOrigin::signed(8));
+        DeeperNode::im_online(RuntimeOrigin::signed(9));
+        DeeperNode::im_online(RuntimeOrigin::signed(3));
+
         run_to_block(366 * BLOCKS_PER_ERA + 3);
         assert_eq!(
             Assets::balance(0, &3),
@@ -304,11 +315,63 @@ fn adsc_pay_reward() {
         assert_eq!(AdscStakers::<Test>::get(2), None);
         assert_eq!(Assets::balance(0, &2), 285479999719200000000000);
         assert_eq!(Assets::balance(0, &8), 285479999719200000000000);
-        assert_eq!(Assets::balance(0, &9), 285479999719200000000000);*/
+        assert_eq!(Assets::balance(0, &9), 285479999719200000000000);
     });
 }
 
-/* 
+#[test]
+fn adsc_pay_reward_no_im_online() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(Assets::force_create(RuntimeOrigin::root(), 0, 0, true, 10));
+
+        // start day is day 0
+        CurrentAdscBaseReward::<Test>::put(1560 * DPR);
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 2));
+
+        // 8,9 only check when 365
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 8));
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 9));
+
+        // change day to 1
+        run_to_block(BLOCKS_PER_ERA + 3);
+
+        // check result
+        assert_eq!(Assets::balance(0, &2), 0);
+        assert_eq!(CurrentMintedAdsc::<Test>::get(), 0);
+        assert_eq!(Assets::total_supply(0), 0);
+
+        // init 3
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
+
+        // change day to 2
+        run_to_block(2 * BLOCKS_PER_ERA + 3);
+
+        // check result 
+        assert_eq!(Assets::balance(0, &2), 0);
+        assert_eq!(Assets::balance(0, &3), 0);
+
+        run_to_block(365 * BLOCKS_PER_ERA + 3);
+        assert_eq!(Assets::balance(0, &2), 0);
+        assert_eq!(Assets::balance(0, &3), 0);
+
+        assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
+
+        assert_eq!(AdscStakers::<Test>::get(3), Some(365));
+        assert_eq!(AdscStakers::<Test>::get(2), Some(365));
+
+        run_to_block(366 * BLOCKS_PER_ERA + 3);
+        assert_eq!(
+            Assets::balance(0, &3),
+            0
+        );
+
+        assert_eq!(Assets::balance(0, &2), 0);
+        assert_eq!(Assets::balance(0, &8), 0);
+        assert_eq!(Assets::balance(0, &9), 0);
+    });
+}
+
+
 #[test]
 fn adsc_half_reward() {
     new_test_ext().execute_with(|| {
@@ -320,6 +383,11 @@ fn adsc_half_reward() {
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 3));
 
         CurrentHalfTarget::<Test>::put(1560 * 2 * DPR);
+
+        // day 0 submit im_online
+        run_to_block(BLOCKS_PER_ERA/2 + 3);
+        DeeperNode::im_online(RuntimeOrigin::signed(2));
+        DeeperNode::im_online(RuntimeOrigin::signed(3));
 
         run_to_block(BLOCKS_PER_ERA + 3);
         assert_eq!(Assets::balance(0, &2), 1560 * DPR);
@@ -333,16 +401,26 @@ fn adsc_half_reward() {
         assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 * DPR);
         CurrentHalfTarget::<Test>::put(1560 * 3 * DPR);
 
+        // day 1 submit im_online
+        run_to_block(BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        DeeperNode::im_online(RuntimeOrigin::signed(2));
+        DeeperNode::im_online(RuntimeOrigin::signed(3));
+
         run_to_block(2 * BLOCKS_PER_ERA + 3);
         // added balance = 1560/2 * (364/365)*DPR
         assert_eq!(Assets::balance(0, &2), 2337863012940000000000);
         assert_eq!(Assets::balance(0, &3), 2337863012940000000000);
 
+        // day 2 submit im_online
+        run_to_block(2 * BLOCKS_PER_ERA + BLOCKS_PER_ERA/2 + 3);
+        DeeperNode::im_online(RuntimeOrigin::signed(2));
+        DeeperNode::im_online(RuntimeOrigin::signed(3));
+
         run_to_block(3 * BLOCKS_PER_ERA + 3);
         assert_eq!(CurrentAdscBaseReward::<Test>::get(), 1560 / 2 / 2 * DPR);
     });
 }
-*/
+
 
 #[test]
 fn adsc_add_nft() {

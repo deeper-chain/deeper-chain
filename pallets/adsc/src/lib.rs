@@ -484,9 +484,7 @@ pub mod pallet {
             weight += T::DbWeight::get().reads(1 as u64);
             loop {
                 if let Some((account, period)) = adsc_iter.next() {
-
                     let eras = T::NodeInterface::get_eras_offline(&account);
-
                     if eras != 0 {
                         continue;
                     }
