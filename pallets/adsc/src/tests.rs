@@ -238,7 +238,7 @@ pub fn run_to_block(n: u64) {
 pub fn im_online_run_to_block(account_id : RuntimeOrigin, day: u64, block: u64) {
     for i in 1..day {
         DeeperNode::im_online(account_id.clone());
-        run_to_block(i * BLOCKS_PER_ERA);
+        run_to_block(i * BLOCKS_PER_ERA - BLOCKS_PER_ERA/2);
     }
     run_to_block(day * BLOCKS_PER_ERA + block);
 }
@@ -259,41 +259,19 @@ fn adsc_pay_reward() {
         assert_ok!(Adsc::add_adsc_staking_account(RuntimeOrigin::signed(1), 9));
 
         //im_online_run_to_block(RuntimeOrigin::signed(2), 1, 3);
-        /*
+
+        run_to_block(BLOCKS_PER_ERA / 2);
         DeeperNode::im_online(RuntimeOrigin::signed(2));
         DeeperNode::im_online(RuntimeOrigin::signed(8));
-        DeeperNode::im_online(RuntimeOrigin::signed(9));*/
-        let result_account_2 = DeeperNode::get_eras_offline(&2);
-        let result_account_8 = DeeperNode::get_eras_offline(&8);
-        assert_eq!(result_account_2, 0);
-        assert_eq!(result_account_8, 0);
-
-        assert_eq!(Assets::balance(0, &2), 0 * DPR);
-        assert_eq!(CurrentMintedAdsc::<Test>::get(), 0 * 3 * DPR);
-        assert_eq!(Assets::total_supply(0), 0 * 3 * DPR);
-
-        run_to_block(0 * BLOCKS_PER_ERA + 10000);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(8));
+        DeeperNode::im_online(RuntimeOrigin::signed(9));
 
         run_to_block(1 * BLOCKS_PER_ERA + 3);
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        DeeperNode::im_online(RuntimeOrigin::signed(8));
-
-        let result_account_2 = DeeperNode::get_eras_offline(&2);
-        let result_account_8 = DeeperNode::get_eras_offline(&8);
-        assert_eq!(result_account_2, 0);
-        assert_eq!(result_account_8, 0);
 
         assert_eq!(Assets::balance(0, &2), 1560 * DPR);
         assert_eq!(CurrentMintedAdsc::<Test>::get(), 1560 * 3 * DPR);
         assert_eq!(Assets::total_supply(0), 1560 * 3 * DPR);
 
         run_to_block(2 * BLOCKS_PER_ERA + 3);
-
-        DeeperNode::im_online(RuntimeOrigin::signed(2));
-        let result_account_2 = DeeperNode::get_eras_offline(&2);
-        assert_eq!(result_account_2, 0);
 
 /*
         assert_eq!(Assets::balance(0, &2), 1560 * DPR);

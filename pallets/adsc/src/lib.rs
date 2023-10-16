@@ -487,7 +487,7 @@ pub mod pallet {
 
                     let eras = T::NodeInterface::get_eras_offline(&account);
 
-                    if eras > 0 {
+                    if eras != 0 {
                         continue;
                     }
 
