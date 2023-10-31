@@ -1230,7 +1230,7 @@ pub mod pallet {
 
         // both campaign id is dpr staking or usdt staking
         fn is_same_campaign_type(lhs: u16, rhs: u16) -> bool {
-            let dpr_campaign_ids = vec![0, 1, 2, 3, 4];
+            let dpr_campaign_ids = vec![0, 1, 2, 3, 4, 6];
             let usdt_campaign_ids = vec![5];
 
             if usdt_campaign_ids.contains(&lhs) && usdt_campaign_ids.contains(&rhs) {
