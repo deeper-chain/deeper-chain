@@ -293,7 +293,7 @@ pub mod pallet {
 
             <T::Currency as LockableCurrency<_>>::remove_lock(id, &from);
 
-            T::Currency::transfer(&from, &to, amount, ExistenceRequirement::KeepAlive)?;
+            T::Currency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
 
             Self::deposit_event(Event::UnLocked(from));
             Ok(().into())
