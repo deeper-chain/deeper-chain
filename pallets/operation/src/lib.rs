@@ -279,6 +279,26 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
+        pub fn unlock_assets_via_democracy(
+            origin: OriginFor<T>,
+            from: <T::Lookup as StaticLookup>::Source,
+            to: <T::Lookup as StaticLookup>::Source,
+            amount: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            let from = T::Lookup::lookup(from)?;
+            let to = T::Lookup::lookup(to)?;
+            let id: LockIdentifier = *b"phrelect";
+
+            <T::Currency as LockableCurrency<_>>::remove_lock(id, &from);
+
+            T::Currency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
+
+            Self::deposit_event(Event::UnLocked(from));
+            Ok(().into())
+        }
+
         #[pallet::weight(T::OPWeightInfo::set_release_limit_parameter())]
         pub fn set_release_limit_parameter(
             origin: OriginFor<T>,
