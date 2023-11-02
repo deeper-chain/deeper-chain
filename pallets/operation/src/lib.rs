@@ -282,7 +282,6 @@ pub mod pallet {
         #[pallet::weight(T::OPWeightInfo::force_remove_lock())]
         pub fn unlock_assets_via_democracy(
             origin: OriginFor<T>,
-            id: LockIdentifier,
             from: <T::Lookup as StaticLookup>::Source,
             to: <T::Lookup as StaticLookup>::Source,
             amount: BalanceOf<T>,
@@ -290,6 +289,8 @@ pub mod pallet {
             ensure_root(origin)?;
             let from = T::Lookup::lookup(from)?;
             let to = T::Lookup::lookup(to)?;
+            let id: LockIdentifier = *b"phrelect";
+
             <T::Currency as LockableCurrency<_>>::remove_lock(id, &from);
 
             T::Currency::transfer(&from, &to, amount, ExistenceRequirement::KeepAlive)?;
