@@ -28,6 +28,7 @@ use node_primitives::{
 };
 use sp_core::H160;
 use sp_runtime::{traits::StaticLookup, Percent};
+use sp_std::vec;
 
 const SEED: u32 = 0;
 const USER_SEED: u32 = 999666;
@@ -80,24 +81,24 @@ benchmarks! {
         assert!(UserCredit::<T>::contains_key(user));
     }
 
-    // burn_for_add_credit {
-    // 	let mut credit_data = CreditData {
-    // 		campaign_id: 0,
-    // 		credit: 100,
-    // 		initial_credit_level: CreditLevel::One,
-    // 		rank_in_initial_credit_level: 0,
-    // 		number_of_referees: 1,
-    // 		current_credit_level: CreditLevel::One,
-    // 		reward_eras: 0,
-    // 	};
-    // 	let user = create_funded_user::<T>("user",USER_SEED, 1000);
-    // 	UserCredit::<T>::insert(&user,credit_data.clone());
-    // 	credit_data.credit = 101;
-    // 	UserCreditHistory::<T>::insert(&user,vec![(1,credit_data)]);
-    // }: _(RawOrigin::Signed(user.clone()), 1)
-    // verify {
-    // 	assert_eq!(UserCredit::<T>::get(&user).unwrap().credit,101);
-    // }
+    burn_for_add_credit {
+        let mut credit_data = CreditData {
+            campaign_id: 0,
+            credit: 100,
+            initial_credit_level: CreditLevel::One,
+            rank_in_initial_credit_level: 0,
+            number_of_referees: 1,
+            current_credit_level: CreditLevel::One,
+            reward_eras: 0,
+        };
+        let user = create_funded_user::<T>("user",USER_SEED, 1000);
+        UserCredit::<T>::insert(&user,credit_data.clone());
+        credit_data.credit = 101;
+        UserCreditHistory::<T>::insert(&user,vec![(1,credit_data)]);
+    }: _(RawOrigin::Signed(user.clone()), 1)
+    verify {
+        assert_eq!(UserCredit::<T>::get(&user).unwrap().credit,101);
+    }
 
     force_modify_credit_history {
         let credit_data = CreditData {
@@ -201,7 +202,7 @@ benchmarks! {
        set_dpr_price {
         let user: T::AccountId = account("b", 1, USER_SEED);
         let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user.clone());
-        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::CreditAdmin);
+        let _ = pallet_user_privileges::Pallet::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::OracleWorker);
 
         let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
     }: _(RawOrigin::Signed(user),existential_deposit,H160::zero() )

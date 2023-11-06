@@ -45,8 +45,7 @@ sp-io = { default-features = false, git = "https://github.com/paritytech/polkado
 
 # frontier primitives
 fp-rpc = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0"}
-fp-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0"}
-
+fp-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0",features = ["serde"]}
 fp-self-contained = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0",features = ["serde"] }
 
 # frame dependencies
@@ -101,9 +100,6 @@ pallet-credit-accumulation = { version = "3.0.0", default-features = false, path
 pallet-operation = { version = "3.0.0", default-features = false, path = "../pallets/operation" }
 pallet-uniques = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
 pallet-statement = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-asset-conversion-tx-payment = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-asset-conversion = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-
 
 pallet-user-privileges = { version = "4.0.0", default-features = false, path = "../pallets/user-privileges" }
 pallet-adsc = { path = "../pallets/adsc", default-features = false }
@@ -218,16 +214,12 @@ std = [
 	"pallet-base-fee/std",
 	"sp-statement-store/std",
 	"pallet-statement/std",
-	"pallet-asset-conversion-tx-payment/std",
-	"pallet-asset-conversion/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"libsecp256k1/hmac",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"pallet-asset-conversion/try-runtime",
-	"pallet-asset-conversion-tx-payment/try-runtime",
 	"sp-runtime/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-babe/runtime-benchmarks",

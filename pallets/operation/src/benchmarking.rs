@@ -20,7 +20,7 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use super::*;
-use frame_benchmarking::{account, benchmarks, Zero};
+use frame_benchmarking::{account, benchmarks};
 use frame_support::traits::{Currency, Get, LockableCurrency, WithdrawReasons};
 use frame_system::RawOrigin;
 use sp_runtime::traits::{Saturating, StaticLookup};
@@ -48,10 +48,11 @@ benchmarks! {
         let source_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(source.clone());
         // Give some multiple of the existential deposit + creation fee + transfer fee
         let balance = existential_deposit.saturating_mul(ED_MULTIPLIER.into());
+        let balance_remaining = existential_deposit.saturating_mul((ED_MULTIPLIER -1).into());
         let _ = <T as pallet::Config>::Currency::make_free_balance_be(&source, balance);
-    }: force_reserve_by_member(RawOrigin::Signed(unlocker), source_lookup, balance)
+    }: force_reserve_by_member(RawOrigin::Signed(unlocker), source_lookup, existential_deposit)
     verify {
-        assert_eq!(pallet_balances::Account::<T>::get(&source).free, T::Balance::zero());
+        assert_eq!(<T as pallet::Config>::Currency::free_balance(&source), balance_remaining);
     }
 
     force_remove_lock {

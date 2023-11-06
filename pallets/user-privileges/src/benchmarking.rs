@@ -33,7 +33,7 @@ benchmarks! {
     set_user_privilege {
         let user: T::AccountId = account("user", 0, 2);
         let user_lookup = T::Lookup::unlookup(user.clone());
-        let origin = T::ForceOrigin::successful_origin();
+        let origin = T::ForceOrigin::try_successful_origin().expect("author user");
     }: _<T::RuntimeOrigin>(origin, user_lookup, Privilege::LockerMember)
     verify {
         assert_eq!(UserPriv::<T>::has_privilege(&user, Privilege::LockerMember),true);
@@ -42,7 +42,7 @@ benchmarks! {
     clear_user_privilege {
         let user: T::AccountId = account("user", 0, 2);
         let user_lookup = T::Lookup::unlookup(user.clone());
-        let origin = T::ForceOrigin::successful_origin();
+        let origin = T::ForceOrigin::try_successful_origin().expect("author user");
     }: _<T::RuntimeOrigin>(origin, user_lookup)
     verify {
         assert_eq!(UserPriv::<T>::has_privilege(&user, Privilege::LockerMember),false);
@@ -51,7 +51,7 @@ benchmarks! {
     set_evm_privilege {
         let user: T::AccountId = account("user", 0, 1);
         let user_lookup = T::Lookup::unlookup(user.clone());
-        let origin = T::ForceOrigin::successful_origin();
+        let origin = T::ForceOrigin::try_successful_origin().expect("author user");
         let _ = UserPriv::<T>::set_user_privilege(origin, user_lookup, Privilege::EvmAddressSetter);
     }: _(RawOrigin::Signed(user), H160::from_low_u64_be(88), Privilege::LockerMember)
     verify {
@@ -61,7 +61,7 @@ benchmarks! {
     clear_evm_privilege {
         let user: T::AccountId = account("user", 0, 1);
         let user_lookup = T::Lookup::unlookup(user.clone());
-        let origin = T::ForceOrigin::successful_origin();
+        let origin = T::ForceOrigin::try_successful_origin().expect("author user");
         let _ = UserPriv::<T>::set_user_privilege(origin, user_lookup, Privilege::EvmAddressSetter);
     }: _(RawOrigin::Signed(user), H160::from_low_u64_be(88))
     verify {

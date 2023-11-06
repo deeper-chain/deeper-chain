@@ -21,7 +21,6 @@ fc-rpc = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polka
 fc-rpc-core = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
 fp-rpc = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
 fp-storage = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-ethereum = { git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
 fc-storage = {default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
 fc-api = {default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
 fc-mapping-sync = {default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
