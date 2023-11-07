@@ -15,23 +15,25 @@
 
 use crate as pallet_credit_accumulation;
 use crate::testing_utils::*;
-use frame_support::parameter_types;
-use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, OnFinalize, OnInitialize};
+use frame_support::{
+    parameter_types,
+    traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, OnFinalize, OnInitialize},
+};
 
 use frame_system as system;
-use node_primitives::credit::{CreditData, CreditLevel};
-use node_primitives::{Balance, Moment};
-use sp_core::testing::SR25519;
-use sp_core::{crypto::AccountId32, H256};
-use sp_keystore::SyncCryptoStore;
-use sp_keystore::{testing::KeyStore, KeystoreExt};
+use node_primitives::{
+    credit::{CreditData, CreditLevel},
+    Balance, Moment,
+};
+use sp_core::{crypto::AccountId32, testing::SR25519, H256};
+use sp_keystore::{testing::MemoryKeystore, Keystore, KeystoreExt};
+
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
+    BuildStorage,
 };
 use std::sync::Arc;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 pub const INIT_TIMESTAMP: u64 = 30_000;
@@ -39,12 +41,9 @@ pub const BLOCK_TIME: u64 = 5000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -68,13 +67,12 @@ impl system::Config for Test {
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u32;
+    type Block = Block;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -103,6 +101,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxHolds = ConstU32<1>;
 }
 
 type BlockNumber = u64;
@@ -210,8 +212,8 @@ impl pallet_credit_accumulation::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut storage = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut storage = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
     let _ = pallet_balances::GenesisConfig::<Test> {
         balances: vec![(alice(), 500), (bob(), 500)],
@@ -252,7 +254,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let mut ext = sp_io::TestExternalities::from(storage);
     // initialize test keystore, we can access this key with
     // sp_io::crypto::sr25519_public_keys(SR25519)[0];
-    let keystore = KeyStore::new();
+    let keystore = MemoryKeystore::new();
     let _ = keystore
         .sr25519_generate_new(SR25519, Some("//Bob"))
         .unwrap();

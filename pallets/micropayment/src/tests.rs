@@ -17,8 +17,10 @@ use super::Chan;
 use crate::{mock::*, testing_utils::*, Error};
 use frame_support::{assert_ok, dispatch::DispatchErrorWithPostInfo};
 use hex_literal::hex;
-use sp_core::crypto::UncheckedFrom;
-use sp_core::sr25519::{Public, Signature};
+use sp_core::{
+    crypto::UncheckedFrom,
+    sr25519::{Public, Signature},
+};
 use sp_io::crypto::sr25519_verify;
 use sp_runtime::{DispatchError, ModuleError};
 
@@ -87,7 +89,8 @@ fn open_channel() {
             );
         }
 
-        // balance is 500, after open_channel alice should has at least 100 DPR in her account, so can't lock 400 DPR
+        // balance is 500, after open_channel alice should has at least 100 DPR in her account, so
+        // can't lock 400 DPR
         if let Err(dispatch_error_with_post_info) =
             Micropayment::open_channel(RuntimeOrigin::signed(alice.clone()), charlie(), 400, 3600)
         {

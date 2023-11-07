@@ -13,20 +13,18 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
-
-#![cfg_attr(not(feature = "std"), no_std)]
-
 extern crate alloc;
 
 use crate::alloc::borrow::ToOwned;
 use fp_evm::{Context, ExitError, ExitRevert, PrecompileFailure};
 use frame_support::{
-    dispatch::{Dispatchable, GetDispatchInfo, PostDispatchInfo},
+    dispatch::{GetDispatchInfo, PostDispatchInfo},
     traits::Get,
     weights::Weight,
 };
 use pallet_evm::{GasWeightMapping, Log};
 use sp_core::{H160, H256, U256};
+use sp_runtime::traits::Dispatchable;
 use sp_std::{marker::PhantomData, vec, vec::Vec};
 
 /// Alias for Result returning an EVM precompile error.
@@ -211,14 +209,14 @@ where
 {
     /// Cost of a Substrate DB write in gas.
     pub fn db_write_gas_cost() -> u64 {
-        <Runtime as pallet_evm::Config>::GasWeightMapping::weight_to_gas(Weight::from_ref_time(
+        <Runtime as pallet_evm::Config>::GasWeightMapping::weight_to_gas(Weight::from_all(
             <Runtime as frame_system::Config>::DbWeight::get().write,
         ))
     }
 
     /// Cost of a Substrate DB read in gas.
     pub fn db_read_gas_cost() -> u64 {
-        <Runtime as pallet_evm::Config>::GasWeightMapping::weight_to_gas(Weight::from_ref_time(
+        <Runtime as pallet_evm::Config>::GasWeightMapping::weight_to_gas(Weight::from_all(
             <Runtime as frame_system::Config>::DbWeight::get().read,
         ))
     }

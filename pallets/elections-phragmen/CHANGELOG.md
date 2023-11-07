@@ -9,7 +9,7 @@ and this crate adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ### Added
 
 ### Changed
-\[**Needs Migration**\] [migrate pallet-elections-phragmen to attribute macros](https://github.com/paritytech/substrate/pull/8044)
+\[**Needs Migration**\] [migrate pallet-elections-phragmen to attribute macros](https://github.com/paritytech/polkadot-sdk/pull/8044)
 
 ### Fixed
 
@@ -18,16 +18,16 @@ and this crate adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ## [3.0.0]
 
 ### Added
-[Add slashing events to elections-phragmen](https://github.com/paritytech/substrate/pull/7543)
+[Add slashing events to elections-phragmen](https://github.com/paritytech/polkadot-sdk/pull/7543)
 
 ### Changed
 
 ### Fixed
-[Don't slash all outgoing members](https://github.com/paritytech/substrate/pull/7394)
-[Fix wrong outgoing calculation in election](https://github.com/paritytech/substrate/pull/7384)
+[Don't slash all outgoing members](https://github.com/paritytech/polkadot-sdk/pull/7394)
+[Fix wrong outgoing calculation in election](https://github.com/paritytech/polkadot-sdk/pull/7384)
 
 ### Security
-\[**Needs Migration**\] [Fix elections-phragmen and proxy issue + Record deposits on-chain](https://github.com/paritytech/substrate/pull/7040)
+\[**Needs Migration**\] [Fix elections-phragmen and proxy issue + Record deposits on-chain](https://github.com/paritytech/polkadot-sdk/pull/7040)
 
 ## [2.0.0] - 2020-09-2020
 

@@ -25,6 +25,7 @@ pub mod currency {
     pub const CENTS: Balance = 1_000 * MILLICENTS; // assume this is worth about a cent.
     pub const DOLLARS: Balance = 100 * CENTS;
     pub const DPR: Balance = DOLLARS;
+    pub const QUID: Balance = DOLLARS / 50;
 
     // 2 DPR per account for 2158 accounts
     const GENESIS_ACCOUNTS_INITIAL_BALANCE: u128 = 2158 * 2 * DPR;

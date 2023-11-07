@@ -15,16 +15,14 @@
 
 #[cfg(test)]
 use crate::{mock::*, CampaignIdSwitch, Error, MaintainDevices, UserCredit, UserCreditHistory};
-use frame_support::traits::Currency;
-use frame_support::{assert_err, assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_err, assert_noop, assert_ok, traits::Currency};
 use frame_system::RawOrigin;
 use node_primitives::{
     credit::{CreditData, CreditInterface, CreditLevel, CreditSetting},
     user_privileges::Privilege,
 };
 use sp_core::H160;
-use sp_runtime::traits::BadOrigin;
-use sp_runtime::Percent;
+use sp_runtime::{traits::BadOrigin, DispatchError, Percent};
 
 #[test]
 fn get_credit_level() {
@@ -1115,7 +1113,7 @@ fn new_campaign_usdt_reward() {
 fn set_dpr_price_test() {
     new_test_ext().execute_with(|| {
         run_to_block(1);
-        assert_ok!(Balances::set_balance(RuntimeOrigin::root(), 2, 1_000, 0));
+        assert_ok!(Balances::force_set_balance(RuntimeOrigin::root(), 2, 1_000));
         assert_ok!(UserPrivileges::set_user_privilege(
             RuntimeOrigin::root(),
             1,

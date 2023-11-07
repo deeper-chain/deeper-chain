@@ -2,7 +2,7 @@
 
 ## User
 
-Since Deeper Chain is built on top of [Substrate](https://github.com/paritytech/substrate), [Polkadot JS extension](https://polkadot.js.org/extension/), which is a browser extension like Metamask, can be used to manage Deeper Chain accounts and sign transactions on Deeper Chain, and [Polkadot JS apps](https://polkadot.js.org/apps/) can be used to interact with Deeper Chain. You need to 
+Since Deeper Chain is built on top of [Substrate](https://github.com/paritytech/polkadot-sdk), [Polkadot JS extension](https://polkadot.js.org/extension/), which is a browser extension like Metamask, can be used to manage Deeper Chain accounts and sign transactions on Deeper Chain, and [Polkadot JS apps](https://polkadot.js.org/apps/) can be used to interact with Deeper Chain. You need to 
 
 1. specify a custom endpoint, e.g., wss://mainnet-deeper-chain.deeper.network in the Polkadot JS apps like below:
 

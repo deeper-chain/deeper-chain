@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,18 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use clap::Parser;
+/// An overarching CLI command definition.
 
-#[allow(missing_docs)]
-#[derive(Debug, Clone, Parser)]
-pub struct Cmd {
-    #[allow(missing_docs)]
-    #[clap(flatten)]
-    pub base: sc_cli::RunCmd,
-
-    #[arg(long)]
-    pub enable_dev_signer: bool,
-
+/// The ethereum-compatibility configuration used to run a node.
+#[derive(Clone, Debug, Default, clap::Parser)]
+pub struct EthConfiguration {
     /// Maximum number of logs in a query.
     #[arg(long, default_value = "10000")]
     pub max_past_logs: u32,
@@ -36,12 +29,27 @@ pub struct Cmd {
     #[arg(long, default_value = "2048")]
     pub fee_history_limit: u64,
 
+    #[arg(long)]
+    pub enable_dev_signer: bool,
+
     /// The dynamic-fee pallet target gas price set by block author
     #[arg(long, default_value = "1")]
     pub target_gas_price: u64,
+
+    /// Maximum allowed gas limit will be `block.gas_limit * execute_gas_limit_multiplier`
+    /// when using eth_call/eth_estimateGas.
+    #[arg(long, default_value = "10")]
+    pub execute_gas_limit_multiplier: u64,
+
+    /// Size in bytes of the LRU cache for block data.
+    #[arg(long, default_value = "50")]
+    pub eth_log_block_cache: usize,
+
+    /// Size in bytes of the LRU cache for transactions statuses data.
+    #[arg(long, default_value = "50")]
+    pub eth_statuses_cache: usize,
 }
 
-/// An overarching CLI command definition.
 #[derive(Debug, clap::Parser)]
 pub struct Cli {
     /// Possible subcommand with parameters.
@@ -50,7 +58,7 @@ pub struct Cli {
 
     #[allow(missing_docs)]
     #[clap(flatten)]
-    pub run: Cmd,
+    pub run: sc_cli::RunCmd,
 
     /// Disable automatic hardware benchmarks.
     ///
@@ -61,6 +69,13 @@ pub struct Cli {
     /// telemetry, if telemetry is enabled.
     #[arg(long)]
     pub no_hardware_benchmarks: bool,
+
+    #[allow(missing_docs)]
+    #[clap(flatten)]
+    pub storage_monitor: sc_storage_monitor::StorageMonitorParams,
+
+    #[command(flatten)]
+    pub eth: EthConfiguration,
 }
 
 /// Possible subcommands of the main binary.
@@ -77,6 +92,11 @@ pub enum Subcommand {
     /// The pallet benchmarking moved to the `pallet` sub-command.
     #[command(subcommand)]
     Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
+    /// Try-runtime has migrated to a standalone CLI
+    /// (<https://github.com/paritytech/try-runtime-cli>). The subcommand exists as a stub and
+    /// deprecation notice. It will be removed entirely some time after Janurary 2024.
+    TryRuntime,
 
     /// Key management cli utilities
     #[command(subcommand)]
@@ -113,5 +133,5 @@ pub enum Subcommand {
     Revert(sc_cli::RevertCmd),
 
     /// Db meta columns information.
-    FrontierDb(fc_cli::FrontierDbCmd),
+    ChainInfo(sc_cli::ChainInfoCmd),
 }

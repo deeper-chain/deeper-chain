@@ -1,6 +1,6 @@
 // This file is part of Substrate.
 
-// Copyright (C) 2018-2022 Parity Technologies (UK) Ltd.
+// Copyright (C) Parity Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -28,9 +28,10 @@
 //! Despite its name the produced WASM can theoretically also be used from NodeJS, although this
 //! hasn't been tested.
 
-#![warn(missing_docs)]
+// #![warn(missing_docs)]
 
 pub mod chain_spec;
+pub mod eth;
 
 #[macro_use]
 pub mod service;

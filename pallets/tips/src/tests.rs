@@ -23,16 +23,17 @@ use std::cell::RefCell;
 
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
     traits::{BadOrigin, BlakeTwo256, IdentityLookup},
-    Perbill, Permill,
+    BuildStorage, Perbill, Permill,
 };
 use sp_storage::Storage;
 
-use frame_support::traits::{AsEnsureOriginWithArg, ConstU32, ConstU64};
 use frame_support::{
-    assert_noop, assert_ok, pallet_prelude::GenesisBuild, parameter_types,
-    storage::StoragePrefixedMap, traits::SortedMembers, weights::Weight, PalletId,
+    assert_noop, assert_ok, parameter_types,
+    storage::StoragePrefixedMap,
+    traits::{AsEnsureOriginWithArg, ConstU32, ConstU64, SortedMembers},
+    weights::Weight,
+    PalletId,
 };
 use node_primitives::Balance;
 
@@ -41,18 +42,14 @@ use crate::{self as pallet_tips, Event as TipEvent};
 use frame_system::RawOrigin;
 use node_primitives::credit::{CreditData, CreditLevel};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config<T>, Event<T>},
         Tips: pallet_tips::{Pallet, Call, Storage, Event<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
@@ -63,7 +60,7 @@ frame_support::construct_runtime!(
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+    pub const MaximumBlockWeight: Weight = Weight::from_all(1024);
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
@@ -73,14 +70,13 @@ impl frame_system::Config for Test {
     type BlockLength = ();
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u32;
+    type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -106,6 +102,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxHolds = ConstU32<1>;
 }
 thread_local! {
     static TEN_TO_FOURTEEN: RefCell<Vec<u128>> = RefCell::new(vec![10,11,12,13,14]);
@@ -259,17 +259,20 @@ impl Config for Test {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
-    pallet_balances::GenesisConfig::<Test> {
-        // Total issuance will be 200 with treasury account initialized at ED.
-        balances: vec![(0, 100), (1, 98), (2, 1)],
+    let mut ext: sp_io::TestExternalities = RuntimeGenesisConfig {
+        system: frame_system::GenesisConfig::default(),
+        balances: pallet_balances::GenesisConfig {
+            balances: vec![(0, 100), (1, 98), (2, 1)],
+        },
+        treasury: Default::default(),
+        credit: Default::default(),
+        deeper_node: Default::default(),
     }
-    .assimilate_storage(&mut t)
-    .unwrap();
-    GenesisBuild::<Test>::assimilate_storage(&pallet_treasury::GenesisConfig, &mut t).unwrap();
-    t.into()
+    .build_storage()
+    .unwrap()
+    .into();
+    ext.execute_with(|| System::set_block_number(1));
+    ext
 }
 
 fn last_event() -> TipEvent<Test> {
@@ -459,7 +462,7 @@ fn credit_tip_new_and_check_get_level() {
 fn report_awesome_and_tip_works() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
-        assert_ok!(Balances::set_balance(RawOrigin::Root.into(), 5, 100, 0));
+        assert_ok!(Balances::force_set_balance(RawOrigin::Root.into(), 5, 100));
         TipPaymentAddress::<Test>::put(5);
 
         assert_ok!(Tips::report_awesome(
@@ -496,7 +499,7 @@ fn report_awesome_and_tip_works() {
 fn report_awesome_from_beneficiary_and_tip_works() {
     new_test_ext().execute_with(|| {
         Balances::make_free_balance_be(&Treasury::account_id(), 101);
-        assert_ok!(Balances::set_balance(RawOrigin::Root.into(), 5, 100, 0));
+        assert_ok!(Balances::force_set_balance(RawOrigin::Root.into(), 5, 100));
         TipPaymentAddress::<Test>::put(5);
         assert_ok!(Tips::report_awesome(
             RuntimeOrigin::signed(0),
@@ -794,8 +797,8 @@ fn test_last_reward_migration() {
 
 #[test]
 fn genesis_funding_works() {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
     let initial_funding = 100;
     pallet_balances::GenesisConfig::<Test> {
@@ -804,7 +807,9 @@ fn genesis_funding_works() {
     }
     .assimilate_storage(&mut t)
     .unwrap();
-    GenesisBuild::<Test>::assimilate_storage(&pallet_treasury::GenesisConfig, &mut t).unwrap();
+    pallet_treasury::GenesisConfig::<Test>::default()
+        .assimilate_storage(&mut t)
+        .unwrap();
     let mut t: sp_io::TestExternalities = t.into();
 
     t.execute_with(|| {

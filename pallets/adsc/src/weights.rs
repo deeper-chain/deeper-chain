@@ -63,50 +63,50 @@ pub trait WeightInfo {
 pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
     fn update_credit_setting() -> Weight {
-        Weight::from_ref_time(12_688_000 as u64).saturating_add(T::DbWeight::get().writes(2 as u64))
+        Weight::from_all(12_688_000 as u64).saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn add_or_update_credit_data() -> Weight {
-        Weight::from_ref_time(17_815_000 as u64)
+        Weight::from_all(17_815_000 as u64)
             .saturating_add(T::DbWeight::get().reads(2 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn burn_for_add_credit() -> Weight {
-        Weight::from_ref_time(61_294_000 as u64)
+        Weight::from_all(61_294_000 as u64)
             .saturating_add(T::DbWeight::get().reads(5 as u64))
             .saturating_add(T::DbWeight::get().writes(5 as u64))
     }
     fn force_modify_credit_history() -> Weight {
-        Weight::from_ref_time(15_923_000 as u64)
+        Weight::from_all(15_923_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn update_nft_class_credit() -> Weight {
-        Weight::from_ref_time(14_770_000 as u64)
+        Weight::from_all(14_770_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn update_sum_of_credit_nft_burn_history() -> Weight {
-        Weight::from_ref_time(14_770_000 as u64)
+        Weight::from_all(14_770_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
     fn burn_nft() -> Weight {
-        Weight::from_ref_time(57_653_000 as u64)
+        Weight::from_all(57_653_000 as u64)
             .saturating_add(T::DbWeight::get().reads(5 as u64))
             .saturating_add(T::DbWeight::get().writes(4 as u64))
     }
     fn set_switch_campaign() -> Weight {
-        Weight::from_ref_time(7_484_000 as u64)
+        Weight::from_all(7_484_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(3 as u64))
     }
     fn set_not_switch_accounts() -> Weight {
-        Weight::from_ref_time(6_173_000 as u64)
+        Weight::from_all(6_173_000 as u64)
             .saturating_add(T::DbWeight::get().reads(1 as u64))
             .saturating_add(T::DbWeight::get().writes(2 as u64))
     }
     fn set_dpr_price() -> Weight {
-        Weight::from_ref_time(16_112_000 as u64)
+        Weight::from_all(16_112_000 as u64)
             .saturating_add(T::DbWeight::get().reads(3 as u64))
             .saturating_add(T::DbWeight::get().writes(1 as u64))
     }
@@ -115,51 +115,50 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
     fn update_credit_setting() -> Weight {
-        Weight::from_ref_time(12_688_000 as u64)
-            .saturating_add(RocksDbWeight::get().writes(2 as u64))
+        Weight::from_all(12_688_000 as u64).saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn add_or_update_credit_data() -> Weight {
-        Weight::from_ref_time(17_815_000 as u64)
+        Weight::from_all(17_815_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(2 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn burn_for_add_credit() -> Weight {
-        Weight::from_ref_time(61_294_000 as u64)
+        Weight::from_all(61_294_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(5 as u64))
             .saturating_add(RocksDbWeight::get().writes(5 as u64))
     }
     fn force_modify_credit_history() -> Weight {
-        Weight::from_ref_time(15_923_000 as u64)
+        Weight::from_all(15_923_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn update_nft_class_credit() -> Weight {
-        Weight::from_ref_time(14_770_000 as u64)
+        Weight::from_all(14_770_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn update_sum_of_credit_nft_burn_history() -> Weight {
-        Weight::from_ref_time(14_770_000 as u64)
+        Weight::from_all(14_770_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }
     fn burn_nft() -> Weight {
-        Weight::from_ref_time(57_653_000 as u64)
+        Weight::from_all(57_653_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(5 as u64))
             .saturating_add(RocksDbWeight::get().writes(4 as u64))
     }
     fn set_switch_campaign() -> Weight {
-        Weight::from_ref_time(7_484_000 as u64)
+        Weight::from_all(7_484_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(3 as u64))
     }
     fn set_not_switch_accounts() -> Weight {
-        Weight::from_ref_time(6_173_000 as u64)
+        Weight::from_all(6_173_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(1 as u64))
             .saturating_add(RocksDbWeight::get().writes(2 as u64))
     }
     fn set_dpr_price() -> Weight {
-        Weight::from_ref_time(16_112_000 as u64)
+        Weight::from_all(16_112_000 as u64)
             .saturating_add(RocksDbWeight::get().reads(3 as u64))
             .saturating_add(RocksDbWeight::get().writes(1 as u64))
     }

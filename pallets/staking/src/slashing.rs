@@ -19,7 +19,8 @@
 
 use crate::{
     BalanceOf, Config, EraIndex, Error, Exposure, NegativeImbalanceOf, Pallet, Perbill,
-    SessionInterface, Store, UnappliedSlash,
+    SessionInterface, SlashingSpans as StoreSlashingSpans, SpanSlash, UnappliedSlash,
+    ValidatorSlashInEra,
 };
 use codec::{Decode, Encode};
 use frame_support::{
@@ -227,13 +228,12 @@ pub(crate) fn compute_slash<T: Config>(
     }
 
     let (prior_slash_p, _era_slash) =
-        <Pallet<T> as Store>::ValidatorSlashInEra::get(&slash_era, stash)
-            .unwrap_or((Perbill::zero(), Zero::zero()));
+        ValidatorSlashInEra::<T>::get(&slash_era, stash).unwrap_or((Perbill::zero(), Zero::zero()));
 
     // compare slash proportions rather than slash values to avoid issues due to rounding
     // error.
     if slash.deconstruct() > prior_slash_p.deconstruct() {
-        <Pallet<T> as Store>::ValidatorSlashInEra::insert(&slash_era, stash, &(slash, own_slash));
+        ValidatorSlashInEra::<T>::insert(&slash_era, stash, &(slash, own_slash));
     } else {
         // we slash based on the max in era - this new event is not the max,
         // so neither the validator or any delegators will need an update.
@@ -335,9 +335,9 @@ fn fetch_spans<'a, T: Config + 'a>(
     slash_of: &'a mut BalanceOf<T>,
     reward_proportion: Perbill,
 ) -> InspectingSpans<'a, T> {
-    let spans = <Pallet<T> as Store>::SlashingSpans::get(stash).unwrap_or_else(|| {
+    let spans = StoreSlashingSpans::<T>::get(stash).unwrap_or_else(|| {
         let spans = SlashingSpans::new(window_start);
-        <Pallet<T> as Store>::SlashingSpans::insert(stash, &spans);
+        StoreSlashingSpans::<T>::insert(stash, &spans);
         spans
     });
 
@@ -386,7 +386,7 @@ impl<'a, T: 'a + Config> InspectingSpans<'a, T> {
     ) -> Option<SpanIndex> {
         let target_span = self.era_span(slash_era)?;
         let span_slash_key = (self.stash.clone(), target_span.index);
-        let mut span_record = <Pallet<T> as Store>::SpanSlash::get(&span_slash_key);
+        let mut span_record = SpanSlash::<T>::get(&span_slash_key);
         let mut changed = false;
 
         let reward = if span_record.slashed < slash {
@@ -417,7 +417,7 @@ impl<'a, T: 'a + Config> InspectingSpans<'a, T> {
 
         if changed {
             self.dirty = true;
-            <Pallet<T> as Store>::SpanSlash::insert(&span_slash_key, &span_record);
+            SpanSlash::<T>::insert(&span_slash_key, &span_record);
         }
 
         Some(target_span.index)
@@ -433,17 +433,17 @@ impl<'a, T: 'a + Config> Drop for InspectingSpans<'a, T> {
 
         if let Some((start, end)) = self.spans.prune(self.window_start) {
             for span_index in start..end {
-                <Pallet<T> as Store>::SpanSlash::remove(&(self.stash.clone(), span_index));
+                SpanSlash::<T>::remove(&(self.stash.clone(), span_index));
             }
         }
 
-        <Pallet<T> as Store>::SlashingSpans::insert(self.stash, &self.spans);
+        StoreSlashingSpans::<T>::insert(self.stash, &self.spans);
     }
 }
 
 /// Clear slashing metadata for an obsolete era.
 pub(crate) fn clear_era_metadata<T: Config>(obsolete_era: EraIndex) {
-    let _ = <Pallet<T> as Store>::ValidatorSlashInEra::clear_prefix(&obsolete_era, u32::MAX, None);
+    let _ = ValidatorSlashInEra::<T>::clear_prefix(&obsolete_era, u32::MAX, None);
 }
 
 /// Clear slashing metadata for a dead account.
@@ -451,7 +451,7 @@ pub(crate) fn clear_stash_metadata<T: Config>(
     stash: &T::AccountId,
     num_slashing_spans: u32,
 ) -> DispatchResult {
-    let spans = match <Pallet<T> as Store>::SlashingSpans::get(stash) {
+    let spans = match StoreSlashingSpans::<T>::get(stash) {
         None => return Ok(()),
         Some(s) => s,
     };
@@ -461,7 +461,7 @@ pub(crate) fn clear_stash_metadata<T: Config>(
         Error::<T>::IncorrectSlashingSpans
     );
 
-    <Pallet<T> as Store>::SlashingSpans::remove(stash);
+    StoreSlashingSpans::<T>::remove(stash);
 
     // kill slashing-span metadata for account.
     //
@@ -469,7 +469,7 @@ pub(crate) fn clear_stash_metadata<T: Config>(
     // in that case, they may re-bond, but it would count again as span 0. Further ancient
     // slashes would slash into this new bond, since metadata has now been cleared.
     for span in spans.iter() {
-        <Pallet<T> as Store>::SpanSlash::remove(&(stash.clone(), span.index));
+        SpanSlash::<T>::remove(&(stash.clone(), span.index));
     }
 
     Ok(())

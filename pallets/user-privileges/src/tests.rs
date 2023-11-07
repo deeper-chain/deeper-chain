@@ -19,36 +19,30 @@
 #[cfg(test)]
 use sp_core::H256;
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
+    BuildStorage, Perbill,
 };
 
-use frame_support::assert_ok;
-use frame_support::traits::ConstU32;
-use frame_support::{parameter_types, weights::Weight};
+use frame_support::{assert_ok, parameter_types, traits::ConstU32, weights::Weight};
 use frame_system::EnsureRoot;
 use node_primitives::user_privileges::{Privilege, UserPrivilegeInterface};
 
 use super::*;
 use crate::{self as pallet_user_privileges};
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+
 type Block = frame_system::mocking::MockBlock<Test>;
 
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         UserPrivileges: pallet_user_privileges::{Pallet, Call, Event<T>},
     }
 );
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
-    pub const MaximumBlockWeight: Weight = Weight::from_ref_time(1024);
+    pub const MaximumBlockWeight: Weight = Weight::from_all(1024);
     pub const MaximumBlockLength: u32 = 2 * 1024;
     pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
@@ -58,14 +52,13 @@ impl frame_system::Config for Test {
     type BlockLength = ();
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u32;
+    type Block = Block;
     type RuntimeCall = RuntimeCall;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = u128; // u64 is not enough to hold bytes used to generate bounty account
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -86,8 +79,8 @@ impl pallet_user_privileges::Config for Test {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let t = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
     t.into()
 }

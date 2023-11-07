@@ -99,7 +99,7 @@ fn create_tips<T: Config>(t: u32, hash: T::Hash, value: BalanceOf<T>) -> Result<
     }
     Tips::<T>::mutate(hash, |maybe_tip| {
         if let Some(open_tip) = maybe_tip {
-            open_tip.closes = Some(T::BlockNumber::zero());
+            open_tip.closes = Some(frame_system::pallet_prelude::BlockNumberFor::<T>::zero());
         }
     });
     Ok(())
@@ -115,7 +115,7 @@ fn create_credit_tips<T: Config>(t: u32, hash: T::Hash, value: u64) -> Result<()
     }
     Tips::<T>::mutate(hash, |maybe_tip| {
         if let Some(open_tip) = maybe_tip {
-            open_tip.closes = Some(T::BlockNumber::zero());
+            open_tip.closes = Some(frame_system::pallet_prelude::BlockNumberFor::<T>::zero());
         }
     });
     Ok(())

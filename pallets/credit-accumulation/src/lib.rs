@@ -44,14 +44,13 @@ pub mod weights;
 pub mod pallet {
     use crate::weights::WeightInfo;
     use frame_support::{
-        codec::Encode, dispatch::DispatchResultWithPostInfo, pallet_prelude::*, traits::Currency,
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*, traits::Currency,
     };
     use frame_system::pallet_prelude::*;
     #[cfg(feature = "runtime-benchmarks")]
     use node_primitives::AccountCreator;
     use node_primitives::{credit::CreditInterface, VerifySignatureInterface};
-    use sp_core::crypto::UncheckedFrom;
-    use sp_core::sr25519;
+    use sp_core::{crypto::UncheckedFrom, sr25519};
     use sp_io::crypto::sr25519_verify;
     use sp_runtime::traits::TrailingZeroInput;
     use sp_std::prelude::Vec;
@@ -74,7 +73,6 @@ pub mod pallet {
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -112,6 +110,7 @@ pub mod pallet {
     // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::call_index(0)]
         #[pallet::weight(T::WeightInfo::add_credit_by_traffic())]
         pub fn add_credit_by_traffic(
             origin: OriginFor<T>,
@@ -133,6 +132,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(1)]
         #[pallet::weight(T::WeightInfo::set_atmos_pubkey())]
         pub fn set_atmos_pubkey(
             origin: OriginFor<T>,
@@ -143,6 +143,7 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::call_index(2)]
         #[pallet::weight(T::WeightInfo::set_atmos_pubkey())]
         pub fn set_atmos_tmp_pubkey(
             origin: OriginFor<T>,

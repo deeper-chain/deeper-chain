@@ -15,20 +15,17 @@
 
 use crate as pallet_micropayment;
 use crate::testing_utils::*;
-use frame_support::traits::{AsEnsureOriginWithArg, ConstU128, ConstU32};
 use frame_support::{
-    pallet_prelude::GenesisBuild,
     parameter_types,
-    traits::{OnFinalize, OnInitialize},
+    traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, OnFinalize, OnInitialize},
     PalletId,
 };
 use frame_system as system;
 use node_primitives::{AccountCreator, Balance, Moment, Signature};
 use sp_core::{crypto::AccountId32, H256};
 use sp_runtime::{
-    testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Percent, Permill,
+    BuildStorage, Percent, Permill,
 };
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -39,25 +36,21 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 use sp_runtime::MultiSigner;
 
-use sp_std::{borrow::ToOwned, vec::Vec};
+use sp_std::borrow::ToOwned;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-    pub enum Test where
-        Block = Block,
-        NodeBlock = Block,
-        UncheckedExtrinsic = UncheckedExtrinsic,
+    pub enum Test
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Event<T>, Config<T>},
         Credit: pallet_credit::{Pallet, Call, Storage, Event<T>, Config<T>},
         DeeperNode: pallet_deeper_node::{Pallet, Call, Storage, Event<T>, Config<T>},
         Micropayment: pallet_micropayment::{Pallet, Call, Storage, Event<T>},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
+        Treasury: pallet_treasury::{Pallet, Call, Storage, Config<T>, Event<T>},
         Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -76,13 +69,12 @@ impl system::Config for Test {
     type DbWeight = ();
     type RuntimeOrigin = RuntimeOrigin;
     type RuntimeCall = RuntimeCall;
-    type Index = u64;
-    type BlockNumber = u64;
+    type Nonce = u32;
+    type Block = Block;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
     type RuntimeEvent = RuntimeEvent;
     type BlockHashCount = BlockHashCount;
     type Version = ();
@@ -140,6 +132,10 @@ impl pallet_balances::Config for Test {
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
     type WeightInfo = (); //pallet_balances::weights::SubstrateWeight<Test>;
+    type FreezeIdentifier = ();
+    type MaxFreezes = ();
+    type RuntimeHoldReason = RuntimeHoldReason;
+    type MaxHolds = ConstU32<1>;
 }
 
 type BlockNumber = u64;
@@ -265,8 +261,8 @@ impl pallet_micropayment::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut storage = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
+    let mut storage = frame_system::GenesisConfig::<Test>::default()
+        .build_storage()
         .unwrap();
     let _ = pallet_balances::GenesisConfig::<Test> {
         balances: vec![
@@ -277,8 +273,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         ],
     }
     .assimilate_storage(&mut storage);
-    GenesisBuild::<Test>::assimilate_storage(&pallet_treasury::GenesisConfig, &mut storage)
-        .unwrap();
+
+    let _ = pallet_treasury::GenesisConfig::<Test>::default().assimilate_storage(&mut storage);
 
     let ext = sp_io::TestExternalities::from(storage);
     ext

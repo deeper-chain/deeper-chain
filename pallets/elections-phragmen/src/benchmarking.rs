@@ -36,8 +36,8 @@ fn endowed_account<T: Config>(name: &'static str, index: u32) -> T::AccountId {
     // the vote calculation.
     let amount = default_stake::<T>(T::MaxVoters::get()) * BalanceOf::<T>::from(BALANCE_FACTOR);
     let _ = CurrencyOf::<T>::make_free_balance_be(&account, amount);
-    // important to increase the total issuance since CurrencyOf::<T>ToVote will need it to be sane for
-    // phragmen to work.
+    // important to increase the total issuance since CurrencyOf::<T>ToVote will need it to be sane
+    // for phragmen to work.
     CurrencyOf::<T>::issue(amount);
 
     account
