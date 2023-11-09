@@ -256,6 +256,7 @@ runtime-benchmarks = [
 	"hex-literal",
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-evm/runtime-benchmarks",
+	"pallet-adsc/runtime-benchmarks",
 ]
 
 testnet = []

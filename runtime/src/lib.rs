@@ -1727,6 +1727,7 @@ mod benches {
         [pallet_scheduler, Scheduler]
         [pallet_operation, Operation]
         [pallet_user_privileges, UserPrivileges]
+        [pallet_adsc, Adsc]
     );
 }
 
