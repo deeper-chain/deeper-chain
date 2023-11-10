@@ -260,7 +260,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::call_index(0)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::add_adsc_staking_account())]
         pub fn add_adsc_staking_account(
             origin: OriginFor<T>,
             account_id: T::AccountId,
@@ -278,7 +278,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(1)]
-        #[pallet::weight(Weight::from_parts(20_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::add_adsc_staking_account())]
         #[transactional]
         pub fn add_adsc_staking_account_with_nft(
             origin: OriginFor<T>,
@@ -314,7 +314,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(2)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_reward_period())]
         pub fn set_reward_period(origin: OriginFor<T>, period: u32) -> DispatchResult {
             let who = ensure_signed(origin)?;
             ensure!(
@@ -327,7 +327,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(3)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_half_reward_target())]
         pub fn set_half_reward_target(
             origin: OriginFor<T>,
             target: AssetBalanceOf<T>,
@@ -343,7 +343,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(4)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_base_reward())]
         pub fn set_base_reward(
             origin: OriginFor<T>,
             base_reward: AssetBalanceOf<T>,
@@ -359,7 +359,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(5)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::bridge_burn_adsc())]
         pub fn bridge_burn_adsc(
             origin: OriginFor<T>,
             from: T::AccountId,
@@ -376,7 +376,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(6)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::bridge_burn_adsc())]
         pub fn bridge_mint_adsc(
             origin: OriginFor<T>,
             from: H160,
@@ -393,7 +393,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(7)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::set_exchange_rate())]
         pub fn set_exchange_rate(
             origin: OriginFor<T>,
             adsc_dpr_rate: (u32, u32),
@@ -409,7 +409,7 @@ pub mod pallet {
         }
 
         #[pallet::call_index(8)]
-        #[pallet::weight(Weight::from_parts(10_000u64, 0))]
+        #[pallet::weight(<T as pallet::Config>::WeightInfo::swap_adsc_to_dpr())]
         #[transactional]
         pub fn swap_adsc_to_dpr(origin: OriginFor<T>, amount: AssetBalanceOf<T>) -> DispatchResult {
             let who = ensure_signed(origin)?;
