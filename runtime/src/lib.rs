@@ -88,6 +88,7 @@ use pallet_evm::{
     Account as EVMAccount, EVMCurrencyAdapter, EnsureAddressMapping, FeeCalculator,
     PairedAddressMapping, Runner,
 };
+use pallet_tx_pause::RuntimeCallNameOf;
 
 mod precompiles;
 use precompiles::FrontierPrecompiles;
@@ -271,26 +272,8 @@ parameter_types! {
 
 const_assert!(NORMAL_DISPATCH_RATIO.deconstruct() >= AVERAGE_ON_INITIALIZE_RATIO.deconstruct());
 
-pub struct BaseCallFilter;
-impl Contains<RuntimeCall> for BaseCallFilter {
-    fn contains(call: &RuntimeCall) -> bool {
-        let is_core_call = matches!(
-            call,
-            RuntimeCall::Sudo(_)
-                | RuntimeCall::System(_)
-                | RuntimeCall::Timestamp(_)
-                | RuntimeCall::UserPrivileges(_)
-        );
-        if is_core_call {
-            return true;
-        }
-
-        !pallet_operation::PausedCallFilter::<Runtime>::contains(call)
-    }
-}
-
 impl frame_system::Config for Runtime {
-    type BaseCallFilter = BaseCallFilter;
+    type BaseCallFilter = TxPause;
     type BlockWeights = RuntimeBlockWeights;
     type BlockLength = RuntimeBlockLength;
     type DbWeight = RocksDbWeight;
@@ -1503,6 +1486,28 @@ impl pallet_statement::Config for Runtime {
     type MaxAllowedBytes = MaxAllowedBytes;
 }
 
+/// Calls that cannot be paused by the tx-pause pallet.
+pub struct TxPauseWhitelistedCalls;
+/// Whitelist `Balances::transfer_keep_alive`, all others are pauseable.
+impl Contains<RuntimeCallNameOf<Runtime>> for TxPauseWhitelistedCalls {
+    fn contains(full_name: &RuntimeCallNameOf<Runtime>) -> bool {
+        match full_name.0.as_slice() {
+            b"Sudo" | b"System" => true,
+            _ => false,
+        }
+    }
+}
+
+impl pallet_tx_pause::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type RuntimeCall = RuntimeCall;
+    type PauseOrigin = EnsureRoot<AccountId>;
+    type UnpauseOrigin = EnsureRoot<AccountId>;
+    type WhitelistedCalls = TxPauseWhitelistedCalls;
+    type MaxNameLen = ConstU32<256>;
+    type WeightInfo = pallet_tx_pause::weights::SubstrateWeight<Runtime>;
+}
+
 // impl pallet_asset_conversion_tx_payment::Config for Runtime {
 // 	type RuntimeEvent = RuntimeEvent;
 // 	type Fungibles = Assets;
@@ -1510,13 +1515,13 @@ impl pallet_statement::Config for Runtime {
 // 		pallet_asset_conversion_tx_payment::AssetConversionAdapter<Balances, AssetConversion>;
 // }
 
-parameter_types! {
-    pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
-    pub AllowMultiAssetPools: bool = true;
-    pub const PoolSetupFee: Balance = 1 * DOLLARS; // should be more or equal to the existential deposit
-    pub const MintMinLiquidity: Balance = 100;  // 100 is good enough when the main currency has 10-12 decimals.
-    pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);  // should be non-zero if AllowMultiAssetPools is true, otherwise can be zero.
-}
+// parameter_types! {
+//     pub const AssetConversionPalletId: PalletId = PalletId(*b"py/ascon");
+//     pub AllowMultiAssetPools: bool = true;
+//     pub const PoolSetupFee: Balance = 1 * DOLLARS; // should be more or equal to the existential deposit
+//     pub const MintMinLiquidity: Balance = 100;  // 100 is good enough when the main currency has 10-12 decimals.
+//     pub const LiquidityWithdrawalFee: Permill = Permill::from_percent(0);  // should be non-zero if AllowMultiAssetPools is true, otherwise can be zero.
+// }
 
 // impl pallet_asset_conversion::Config for Runtime {
 // 	type RuntimeEvent = RuntimeEvent;
@@ -1613,6 +1618,8 @@ construct_runtime!(
         Operation: pallet_operation::{Pallet, Call, Storage,Event<T>} = 90,
         UserPrivileges: pallet_user_privileges::{Pallet, Call, Storage,Event<T>} = 91,
         Adsc: pallet_adsc::{Pallet, Call, Storage,Event<T>} = 92,
+
+        TxPause: pallet_tx_pause::{Pallet, Call, Storage,Event<T>} = 95,
     }
 );
 

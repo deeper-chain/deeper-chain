@@ -100,6 +100,7 @@ pallet-credit-accumulation = { version = "3.0.0", default-features = false, path
 pallet-operation = { version = "3.0.0", default-features = false, path = "../pallets/operation" }
 pallet-uniques = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
 pallet-statement = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
+pallet-tx-pause = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
 
 pallet-user-privileges = { version = "4.0.0", default-features = false, path = "../pallets/user-privileges" }
 pallet-adsc = { path = "../pallets/adsc", default-features = false }
@@ -213,6 +214,7 @@ std = [
 	"pallet-evm-precompile-sha3fips/std",
 	"pallet-base-fee/std",
 	"sp-statement-store/std",
+	"pallet-tx-pause/std",
 	"pallet-statement/std",
 ]
 runtime-benchmarks = [
@@ -257,6 +259,7 @@ runtime-benchmarks = [
 	"pallet-ethereum/runtime-benchmarks",
 	"pallet-evm/runtime-benchmarks",
 	"pallet-adsc/runtime-benchmarks",
+	"pallet-tx-pause/runtime-benchmarks",
 ]
 
 testnet = []
