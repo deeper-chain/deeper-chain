@@ -567,10 +567,12 @@ enum Releases {
     V4_0_0,
     V5_0_0,
     V6_0_0,
+    V7_0_0,
 }
 
 impl Default for Releases {
     fn default() -> Self {
+        //Releases::V7_0_0
         Releases::V6_0_0
     }
 }
@@ -1016,7 +1018,9 @@ pub mod pallet {
             ForceEra::<T>::put(self.force_era);
             EraValidatorReward::<T>::put(self.era_validator_reward);
             SlashRewardFraction::<T>::put(self.slash_reward_fraction);
-            StorageVersion::<T>::put(Releases::V5_0_0);
+            StorageVersion::<T>::put(Releases::V6_0_0);
+            //StorageVersion::<T>::put(Releases::V7_0_0);
+
             for &(ref stash, ref controller, balance, ref status) in &self.stakers {
                 assert!(
                     T::Currency::free_balance(&stash) >= balance,
@@ -2190,6 +2194,16 @@ pub mod pallet {
             }
             // `on_finalize` weight is tracked in `on_initialize`
         }
+
+        // fn on_runtime_upgrade() -> Weight {
+        //     let mut weight = Weight::from_all(0);
+        //     if StorageVersion::<T>::get() == Releases::V6_0_0 {
+        //         weight += T::DbWeight::get().reads_writes(1,2);
+        //         EraValidatorReward::<T>::mutate(|x| *x = *x/(2u32.into()));
+        //         StorageVersion::<T>::put(Releases::V7_0_0);
+        //     }
+        //     weight
+        // }
     }
 
     #[pallet::event]

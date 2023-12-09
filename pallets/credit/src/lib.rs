@@ -122,6 +122,7 @@ pub mod pallet {
         V1_0_0,
         V2_0_0,
         V3_0_0,
+        V4_0_0,
     }
 
     #[pallet::pallet]
@@ -272,7 +273,7 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn NewUserCampaignId() -> u16 {
-        4
+        8
     }
 
     #[pallet::storage]
@@ -349,7 +350,7 @@ pub mod pallet {
             for uc in self.user_credit_data.clone().into_iter() {
                 <UserCredit<T>>::insert(uc.0, uc.1);
             }
-            StorageVersion::<T>::put(Releases::V3_0_0);
+            StorageVersion::<T>::put(Releases::V4_0_0);
         }
     }
 
@@ -444,6 +445,38 @@ pub mod pallet {
                             .saturating_mul(len as u64)
                     }
                 }
+            }
+            weight
+        }
+
+        fn on_runtime_upgrade() -> Weight {
+            let mut weight = T::DbWeight::get().reads(1u64);
+            if StorageVersion::<T>::get() == Some(Releases::V3_0_0) {
+                weight += T::DbWeight::get().reads_writes(1, 10);
+                //now default campaign id = 8
+                DefaultCampaignId::<T>::put(8);
+                //genesis user
+                CampaignIdSwitch::<T>::insert(0, 7);
+                CampaignIdSwitch::<T>::insert(1, 7);
+                CampaignIdSwitch::<T>::insert(6, 7);
+                // normal user
+                CampaignIdSwitch::<T>::insert(2, 8);
+                CampaignIdSwitch::<T>::insert(3, 8);
+                CampaignIdSwitch::<T>::insert(4, 8);
+                CampaignIdSwitch::<T>::insert(5, 8);
+
+                let new_normal_settings = credit_setting::half_campaign4_settings::<T>();
+                for setting in new_normal_settings {
+                    Self::_update_credit_setting(setting);
+                }
+
+                let new_genesis_settings =
+                    credit_setting::half_campaign6_settings::<T>(Percent::from_percent(10));
+                for setting in new_genesis_settings {
+                    Self::_update_credit_setting(setting);
+                }
+
+                StorageVersion::<T>::put(Releases::V4_0_0);
             }
             weight
         }
@@ -1230,7 +1263,7 @@ pub mod pallet {
 
         // both campaign id is dpr staking or usdt staking
         fn is_same_campaign_type(lhs: u16, rhs: u16) -> bool {
-            let dpr_campaign_ids = vec![0, 1, 2, 3, 4, 6];
+            let dpr_campaign_ids = vec![0, 1, 2, 3, 4, 6, 7, 8];
             let usdt_campaign_ids = vec![5];
 
             if usdt_campaign_ids.contains(&lhs) && usdt_campaign_ids.contains(&rhs) {
@@ -1292,7 +1325,7 @@ pub mod pallet {
                 0 | 1 => Self::genesis_credit_balances(),
                 2 | 4 => Self::credit_balances(),
                 5 => Self::usdt_credit_balances(),
-                6 => Self::credit_balances(),
+                6 | 7 | 8 => Self::credit_balances(),
                 _ => Vec::new(),
             }
         }
@@ -1428,7 +1461,8 @@ pub mod pallet {
             }
             let delegate_era = credit_history[0].0;
             let expiry_era = delegate_era + credit_data.reward_eras - 1;
-            if from == expiry_era || credit_data.campaign_id == 0 || credit_data.campaign_id == 1 {
+            // 0 ~ 6 belong to old campaign
+            if from == expiry_era || credit_data.campaign_id <= 6 {
                 // switcch campaign forehead
                 Self::do_switch_campaign(account_id, credit_data, cur_era);
             } else if from > expiry_era {
