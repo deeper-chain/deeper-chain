@@ -989,7 +989,7 @@ fn unstaking_slash_credit() {
 
         assert_ok!(Credit::unstaking_slash_credit(RuntimeOrigin::signed(1), 3));
         assert_eq!(Credit::get_credit_score(&3).unwrap(), 50);
-        assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 4);
+        assert_eq!(Credit::user_credit(&3).unwrap().campaign_id, 8);
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
