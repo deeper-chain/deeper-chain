@@ -955,18 +955,10 @@ pub mod pallet {
     pub type UserRefereeCount<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, u32, ValueQuery>;
 
-    #[pallet::storage]
-    #[pallet::getter(fn npow_day_minted_dpr)]
-    pub type NpowDayMintedDPR<T: Config> = StorageValue<_, (EraIndex, BalanceOf<T>), OptionQuery>;
-
     #[pallet::type_value]
     pub fn NpowMintDayLimitDefault<T: Config>() -> BalanceOf<T> {
         UniqueSaturatedFrom::unique_saturated_from(100_000 * DPR)
     }
-    #[pallet::storage]
-    #[pallet::getter(fn npow_mint_day_limit)]
-    pub type NpowMintDayLimit<T: Config> =
-        StorageValue<_, BalanceOf<T>, ValueQuery, NpowMintDayLimitDefault<T>>;
 
     #[pallet::storage]
     #[pallet::getter(fn black_list)]
@@ -2072,18 +2064,6 @@ pub mod pallet {
             Ok(())
         }
 
-        #[pallet::call_index(35)]
-        #[pallet::weight(T::WeightInfo::npow_mint())]
-        pub fn set_npow_mint_limit(
-            origin: OriginFor<T>,
-            limit: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            NpowMintDayLimit::<T>::put(limit);
-            Self::deposit_event(Event::<T>::NpowMintChanged(limit));
-            Ok(().into())
-        }
-
         #[pallet::call_index(36)]
         #[pallet::weight(T::WeightInfo::npow_mint())]
         pub fn npow_mint(
@@ -2096,8 +2076,6 @@ pub mod pallet {
                 T::UserPrivilegeInterface::has_privilege(&who, Privilege::NpowMint),
                 Error::<T>::UnauthorizedAccounts
             );
-            let limit = Self::npow_mint_day_limit();
-            ensure!(dpr <= limit, Error::<T>::NpowMintBeyoundDayLimit);
 
             let remainder_mining_reward = T::NumberToCurrency::convert(
                 Self::remainder_mining_reward().unwrap_or(T::TotalMiningReward::get()),
@@ -2106,24 +2084,6 @@ pub mod pallet {
                 dpr <= remainder_mining_reward,
                 Error::<T>::InsufficientValue
             );
-
-            let era = T::CreditInterface::get_current_era();
-            match Self::npow_day_minted_dpr() {
-                Some((saved_era, minted_dpr)) => {
-                    if saved_era != era {
-                        NpowDayMintedDPR::<T>::put((era, dpr));
-                    } else {
-                        ensure!(
-                            minted_dpr + dpr <= limit,
-                            Error::<T>::NpowMintBeyoundDayLimit
-                        );
-                        NpowDayMintedDPR::<T>::put((era, minted_dpr + dpr));
-                    }
-                }
-                None => {
-                    NpowDayMintedDPR::<T>::put((era, dpr));
-                }
-            }
 
             T::Currency::deposit_creating(&target, dpr);
             Self::deposit_event(Event::<T>::NpowMint(target, dpr));
@@ -2207,14 +2167,10 @@ pub mod pallet {
                     let delegator_payouts_per_block =
                         (Self::delegator_count() + paying_blocks_num - 1) / paying_blocks_num + 1;
 
-                    let era = T::CreditInterface::get_current_era();
-                    let default_dpr: BalanceOf<T> = Zero::zero();
-
                     DelegatorPayoutsPerBlock::<T>::put(delegator_payouts_per_block);
                     let prefix = Self::get_delegators_prefix_hash();
                     DelegatorsKeyPrefix::<T>::put(prefix.clone());
                     DelegatorsLastKey::<T>::put(prefix);
-                    NpowDayMintedDPR::<T>::put((era, default_dpr));
                     weight = weight.saturating_add(T::DbWeight::get().reads_writes(3, 4));
                 } else {
                     weight = weight.saturating_add(Self::pay_delegators());

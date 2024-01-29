@@ -3327,7 +3327,6 @@ fn staking_usdt_delegate() {
 fn npow_mint() {
     ExtBuilder::default().build_and_execute(|| {
         run_to_block(1);
-        assert_ok!(Staking::set_npow_mint_limit(RuntimeOrigin::root(), 100000));
 
         assert_ok!(UserPrivileges::set_user_privilege(
             RuntimeOrigin::root(),
@@ -3351,14 +3350,6 @@ fn npow_mint() {
         );
 
         run_to_block(3);
-        assert_err!(
-            Staking::npow_mint(RuntimeOrigin::signed(1), 2, 100_001),
-            Error::<Test>::NpowMintBeyoundDayLimit
-        );
-        assert_err!(
-            Staking::npow_mint(RuntimeOrigin::signed(1), 2, 99901),
-            Error::<Test>::NpowMintBeyoundDayLimit
-        );
 
         RemainderMiningReward::<Test>::put(10000);
         assert_err!(
@@ -3368,10 +3359,6 @@ fn npow_mint() {
 
         RemainderMiningReward::<Test>::put(1000000);
         assert_ok!(Staking::npow_mint(RuntimeOrigin::signed(1), 2, 99900));
-        assert_err!(
-            Staking::npow_mint(RuntimeOrigin::signed(1), 2, 1),
-            Error::<Test>::NpowMintBeyoundDayLimit
-        );
     });
 }
 
