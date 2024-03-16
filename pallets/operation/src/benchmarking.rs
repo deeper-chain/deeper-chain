@@ -133,5 +133,19 @@ benchmarks! {
     verify {
     }
 
+    apply_for_bridge_transfer {
+        let user1: T::AccountId = account("b", 1, USER_SEED);
+        let user2: T::AccountId = account("b", 2, USER_SEED);
+        let account_lookup: <T::Lookup as StaticLookup>::Source = T::Lookup::unlookup(user1.clone());
+        let _ = UserPrivileges::<T>::set_user_privilege(RawOrigin::Root.into(),account_lookup,Privilege::BridgeAdmin);
+        BridgeFundAddreess::<T>::put(user1.clone());
+        let existential_deposit = <T as pallet::Config>::Currency::minimum_balance();
+        let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user1, existential_deposit*2u32.into());
+        let _ = <T as pallet::Config>::Currency::make_free_balance_be(&user2, existential_deposit*2u32.into());
+
+    }: apply_for_bridge_transfer(RawOrigin::Signed(user1.clone()), "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),existential_deposit,"SOL".to_string())
+    verify {
+    }
+
     impl_benchmark_test_suite!(Operation, crate::tests::new_test_ext(), crate::tests::Test);
 }

@@ -92,8 +92,9 @@ pub mod pallet {
         BurnForEZC(T::AccountId, BalanceOf<T>, H160),
         UnstakingResult(T::AccountId, String),
         GetNpowReward(T::AccountId, H160),
-        BridgeDeeperToOther(H160, T::AccountId, BalanceOf<T>, String),
-        BridgeOtherToDeeper(T::AccountId, H160, BalanceOf<T>, String),
+        BridgeDeeperToOther(String, T::AccountId, BalanceOf<T>, String, String),
+        BridgeOtherToDeeper(T::AccountId, String, BalanceOf<T>, String, String),
+        ApplyForBridgeTransfer(T::AccountId, String, BalanceOf<T>, String),
         DPRPrice(BalanceOf<T>, H160),
         /// Paused transaction
         Paused(String, String, T::AccountId),
@@ -414,10 +415,11 @@ pub mod pallet {
         #[pallet::weight(T::OPWeightInfo::bridge_deeper_to_other())]
         pub fn bridge_deeper_to_other(
             origin: OriginFor<T>,
-            to: H160,
+            to: String,
             from: T::AccountId,
             amount: BalanceOf<T>,
-            tx: String,
+            chain: String,
+            data: String,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(
@@ -433,7 +435,9 @@ pub mod pallet {
                 amount,
                 ExistenceRequirement::KeepAlive,
             )?;
-            Self::deposit_event(Event::<T>::BridgeDeeperToOther(to, from, amount, tx));
+            Self::deposit_event(Event::<T>::BridgeDeeperToOther(
+                to, from, amount, chain, data,
+            ));
             Ok(().into())
         }
 
@@ -442,9 +446,10 @@ pub mod pallet {
         pub fn bridge_other_to_deeper(
             origin: OriginFor<T>,
             to: T::AccountId,
-            from: H160,
+            from: String,
             amount: BalanceOf<T>,
-            tx: String,
+            chain: String,
+            data: String,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(
@@ -460,7 +465,23 @@ pub mod pallet {
                 amount,
                 ExistenceRequirement::KeepAlive,
             )?;
-            Self::deposit_event(Event::<T>::BridgeOtherToDeeper(to, from, amount, tx));
+            Self::deposit_event(Event::<T>::BridgeOtherToDeeper(
+                to, from, amount, chain, data,
+            ));
+            Ok(().into())
+        }
+
+        #[pallet::call_index(9)]
+        #[pallet::weight(T::OPWeightInfo::bridge_deeper_to_other())]
+        pub fn apply_for_bridge_transfer(
+            origin: OriginFor<T>,
+            to: String,
+            amount: BalanceOf<T>,
+            chain: String,
+        ) -> DispatchResultWithPostInfo {
+            let from = ensure_signed(origin)?;
+
+            Self::deposit_event(Event::<T>::ApplyForBridgeTransfer(from, to, amount, chain));
             Ok(().into())
         }
 
