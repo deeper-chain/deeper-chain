@@ -265,12 +265,32 @@ fn bridge_test() {
 
         assert_eq!(Balances::free_balance(&3), 0);
 
+        assert_ok!(Operation::apply_for_bridge_transfer(
+            RuntimeOrigin::signed(1),
+            "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
+            200,
+            "SOL".to_string()
+        ));
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::RuntimeEvent::from(crate::Event::ApplyForBridgeTransfer(
+                1,
+                "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
+                200,
+                "SOL".to_string()
+            ))
+        );
+
         assert_ok!(Operation::bridge_other_to_deeper(
             RuntimeOrigin::signed(1),
             3,
-            H160::zero(),
+            "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
             200,
-            "test".to_string()
+            "SOL".to_string(),
+            "1".to_string()
         ));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
@@ -279,9 +299,10 @@ fn bridge_test() {
                 .event,
             crate::tests::RuntimeEvent::from(crate::Event::BridgeOtherToDeeper(
                 3,
-                H160::zero(),
+                "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
                 200,
-                "test".to_string()
+                "SOL".to_string(),
+                "1".to_string()
             ))
         );
 
@@ -289,10 +310,11 @@ fn bridge_test() {
 
         assert_ok!(Operation::bridge_deeper_to_other(
             RuntimeOrigin::signed(1),
-            H160::zero(),
+            "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
             3,
             100,
-            "test".to_string()
+            "SOL".to_string(),
+            "0".to_string()
         ));
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
@@ -300,10 +322,11 @@ fn bridge_test() {
                 .expect("should contains events")
                 .event,
             crate::tests::RuntimeEvent::from(crate::Event::BridgeDeeperToOther(
-                H160::zero(),
+                "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
                 3,
                 100,
-                "test".to_string()
+                "SOL".to_string(),
+                "0".to_string()
             ))
         );
         assert_eq!(Balances::free_balance(&3), 100);
