@@ -24,7 +24,7 @@ use sp_runtime::{
 };
 
 use frame_support::{
-    assert_noop, assert_ok, parameter_types,
+    assert_ok, parameter_types,
     traits::{ConstU32, OnFinalize, OnInitialize},
     weights::Weight,
 };
@@ -292,6 +292,7 @@ fn bridge_test() {
             "SOL".to_string(),
             "1".to_string()
         ));
+        assert_eq!(Operation::other_to_deeper_amount("SOL".to_string()), 200);
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
@@ -305,8 +306,31 @@ fn bridge_test() {
                 "1".to_string()
             ))
         );
-
         assert_eq!(Balances::free_balance(&3), 200);
+
+        assert_ok!(Operation::bridge_other_to_deeper(
+            RuntimeOrigin::signed(1),
+            3,
+            "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
+            300,
+            "SOL".to_string(),
+            "1".to_string()
+        ));
+        assert_eq!(Operation::other_to_deeper_amount("SOL".to_string()), 500);
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::RuntimeEvent::from(crate::Event::BridgeOtherToDeeper(
+                3,
+                "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
+                300,
+                "SOL".to_string(),
+                "1".to_string()
+            ))
+        );
+        assert_eq!(Balances::free_balance(&3), 500);
 
         assert_ok!(Operation::bridge_deeper_to_other(
             RuntimeOrigin::signed(1),
@@ -316,6 +340,7 @@ fn bridge_test() {
             "SOL".to_string(),
             "0".to_string()
         ));
+        assert_eq!(Operation::deeper_to_other_amount("SOL".to_string()), 100);
         assert_eq!(
             <frame_system::Pallet<Test>>::events()
                 .pop()
@@ -329,6 +354,30 @@ fn bridge_test() {
                 "0".to_string()
             ))
         );
-        assert_eq!(Balances::free_balance(&3), 100);
+        assert_eq!(Balances::free_balance(&3), 400);
+
+        assert_ok!(Operation::bridge_deeper_to_other(
+            RuntimeOrigin::signed(1),
+            "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
+            3,
+            250,
+            "SOL".to_string(),
+            "0".to_string()
+        ));
+        assert_eq!(Operation::deeper_to_other_amount("SOL".to_string()), 350);
+        assert_eq!(
+            <frame_system::Pallet<Test>>::events()
+                .pop()
+                .expect("should contains events")
+                .event,
+            crate::tests::RuntimeEvent::from(crate::Event::BridgeDeeperToOther(
+                "3NwgW4G8pVz7acktRwdMAKfTfw8pFw9h4if5H6P8k9sY".to_string(),
+                3,
+                250,
+                "SOL".to_string(),
+                "0".to_string()
+            ))
+        );
+        assert_eq!(Balances::free_balance(&3), 150);
     });
 }

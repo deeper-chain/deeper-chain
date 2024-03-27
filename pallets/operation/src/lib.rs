@@ -207,6 +207,16 @@ pub mod pallet {
     pub type AccountsReleaseInfo<T: Config> =
         StorageMap<_, Twox64Concat, T::AccountId, CurrentRelease<T>, OptionQuery>;
 
+    #[pallet::storage]
+    #[pallet::getter(fn deeper_to_other_amount)]
+    pub type DeeperToOtherAmount<T: Config> =
+        StorageMap<_, Twox64Concat, String, BalanceOf<T>, ValueQuery>;
+
+    #[pallet::storage]
+    #[pallet::getter(fn other_to_deeper_amount)]
+    pub type OtherToDeeperAmount<T: Config> =
+        StorageMap<_, Twox64Concat, String, BalanceOf<T>, ValueQuery>;
+
     /// delegators last key
     #[pallet::storage]
     #[pallet::getter(fn account_release_last_key)]
@@ -435,6 +445,9 @@ pub mod pallet {
                 amount,
                 ExistenceRequirement::KeepAlive,
             )?;
+            DeeperToOtherAmount::<T>::mutate(&chain, |balance| {
+                *balance = balance.saturating_add(amount);
+            });
             Self::deposit_event(Event::<T>::BridgeDeeperToOther(
                 to, from, amount, chain, data,
             ));
@@ -465,6 +478,9 @@ pub mod pallet {
                 amount,
                 ExistenceRequirement::KeepAlive,
             )?;
+            OtherToDeeperAmount::<T>::mutate(&chain, |balance| {
+                *balance = balance.saturating_add(amount);
+            });
             Self::deposit_event(Event::<T>::BridgeOtherToDeeper(
                 to, from, amount, chain, data,
             ));
