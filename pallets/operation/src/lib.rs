@@ -539,6 +539,24 @@ pub mod pallet {
             Self::deposit_event(Event::Locked(sender, value));
             Ok(().into())
         }
+
+        #[pallet::call_index(13)]
+        #[pallet::weight(T::OPWeightInfo::force_reserve_by_member())]
+        pub fn force_reserve_by_member_test_1(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                Self::is_locker_member(&sender),
+                Error::<T>::UnauthorizedAccounts
+            );
+            let who = T::Lookup::lookup(who)?;
+            <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
+            Self::deposit_event(Event::Locked(sender, value));
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
