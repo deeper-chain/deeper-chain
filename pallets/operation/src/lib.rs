@@ -293,24 +293,6 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::call_index(1)]
-        #[pallet::weight(T::OPWeightInfo::force_reserve_by_member())]
-        pub fn force_reserve_by_member_2(
-            origin: OriginFor<T>,
-            who: <T::Lookup as StaticLookup>::Source,
-            #[pallet::compact] value: BalanceOf<T>,
-        ) -> DispatchResultWithPostInfo {
-            let sender = ensure_signed(origin)?;
-            ensure!(
-                Self::is_locker_member(&sender),
-                Error::<T>::UnauthorizedAccounts
-            );
-            let who = T::Lookup::lookup(who)?;
-            <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
-            Self::deposit_event(Event::Locked(sender, value));
-            Ok(().into())
-        }
-
         #[pallet::call_index(2)]
         #[pallet::weight(T::OPWeightInfo::set_release_limit_parameter())]
         pub fn set_release_limit_parameter(
@@ -537,6 +519,24 @@ pub mod pallet {
             T::Currency::transfer(&from, &to, amount, ExistenceRequirement::AllowDeath)?;
 
             Self::deposit_event(Event::UnLocked(from));
+            Ok(().into())
+        }
+
+        #[pallet::call_index(12)]
+        #[pallet::weight(T::OPWeightInfo::force_reserve_by_member())]
+        pub fn force_reserve_by_member_test(
+            origin: OriginFor<T>,
+            who: <T::Lookup as StaticLookup>::Source,
+            #[pallet::compact] value: BalanceOf<T>,
+        ) -> DispatchResultWithPostInfo {
+            let sender = ensure_signed(origin)?;
+            ensure!(
+                Self::is_locker_member(&sender),
+                Error::<T>::UnauthorizedAccounts
+            );
+            let who = T::Lookup::lookup(who)?;
+            <T::Currency as ReservableCurrency<_>>::reserve(&who, value)?;
+            Self::deposit_event(Event::Locked(sender, value));
             Ok(().into())
         }
     }
