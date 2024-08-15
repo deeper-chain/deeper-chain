@@ -126,12 +126,12 @@ This will start a development node on your local machine. For running a node in 
 
 ## 5. Update weights.rs in pallet
 ### 5.1 Build deeper-chain with `--features runtime-benchmarks`
-```
+```bash
 cd cli/
 cargo build --release --features runtime-benchmarks
 ```
 ### 5.2 Run shell command to update weights.rs
-```
+```bash
 ./target/release/deeper-chain benchmark pallet \
 --chain=dev \
 --steps=50 \
