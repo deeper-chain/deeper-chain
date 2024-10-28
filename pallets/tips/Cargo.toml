@@ -13,34 +13,34 @@ readme = "README.md"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
+codec = { workspace = true, features = [
 	"derive",
 	"max-encoded-len",
 ] }
-log = { version = "0.4.14", default-features = false }
-scale-info = { version = "2.5.0", default-features = false, features = [
+log = { workspace = true }
+scale-info = { workspace = true, features = [
 	"derive",
 ] }
-serde = { version = "1.0.188", optional = true }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-io = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-treasury = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-credit = { version = "3.0.0", default-features = false, path = "../credit" }
-pallet-uniques = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false, optional = true }
+serde = { workspace = true, default-features = true, optional = true }
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+pallet-treasury = { workspace = true }
+pallet-credit = { workspace = true }
+pallet-uniques = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
 
-pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-node-primitives = { version = '2.0.0', default-features = false, path = "../../primitives" }
-pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../deeper-node" }
+pallet-timestamp = { workspace = true }
+node-primitives = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-deeper-node = { workspace = true }
 
 [dev-dependencies]
-sp-storage = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sp-storage = { default-features = true,workspace = true }
+pallet-balances = { default-features = true, workspace = true}
 
 [features]
 default = ["std"]
