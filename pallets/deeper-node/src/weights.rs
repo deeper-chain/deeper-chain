@@ -34,7 +34,7 @@ use core::marker::PhantomData;
 
 /// Weight functions needed for `pallet_deeper_node`.
 pub trait WeightInfo {
-	fn register_device() -> Weight;
+	fn register_device_deprecated() -> Weight;
 	fn unregister_device() -> Weight;
 	fn register_server() -> Weight;
 	fn update_server() -> Weight;
@@ -56,7 +56,7 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	/// Proof: `DeeperNode::DeviceInfo` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `System::Account` (r:1 w:1)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	fn register_device() -> Weight {
+	fn register_device_deprecated() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `1234`
 		//  Estimated: `4699`
@@ -196,7 +196,7 @@ impl WeightInfo for () {
 	/// Proof: `DeeperNode::DeviceInfo` (`max_values`: None, `max_size`: None, mode: `Measured`)
 	/// Storage: `System::Account` (r:1 w:1)
 	/// Proof: `System::Account` (`max_values`: None, `max_size`: Some(128), added: 2603, mode: `MaxEncodedLen`)
-	fn register_device() -> Weight {
+	fn register_device_deprecated() -> Weight {
 		// Proof Size summary in bytes:
 		//  Measured:  `1234`
 		//  Estimated: `4699`

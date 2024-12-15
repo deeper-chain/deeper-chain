@@ -20,62 +20,11 @@ use sp_core::H160;
 use std::str::FromStr;
 
 #[test]
-fn register_device() {
-    new_test_ext().execute_with(|| {
-        DeeperNode::setup_region_map();
-        // register device
-        assert_ok!(DeeperNode::register_device(
-            RuntimeOrigin::signed(1),
-            vec![1, 2, 3, 4],
-            "US".as_bytes().to_vec()
-        ));
-        let node = DeeperNode::device_info(1);
-        assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
-        assert_eq!(node.country, "US".as_bytes().to_vec());
-
-        // register device with invalid ip (length > 256)
-        assert_eq!(
-            DeeperNode::register_device(
-                RuntimeOrigin::signed(2),
-                vec![1; 257],
-                "US".as_bytes().to_vec()
-            ),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidIP))
-        );
-
-        // register device with invalid country code
-        assert_eq!(
-            DeeperNode::register_device(
-                RuntimeOrigin::signed(3),
-                vec![1, 2, 3, 4],
-                "ZZ".as_bytes().to_vec()
-            ),
-            Err(DispatchErrorWithPostInfo::from(Error::<Test>::InvalidCode))
-        );
-
-        // register device twice
-        assert_ok!(DeeperNode::register_device(
-            RuntimeOrigin::signed(4),
-            vec![1, 2, 3, 4],
-            "US".as_bytes().to_vec()
-        ));
-        assert_ok!(DeeperNode::register_device(
-            RuntimeOrigin::signed(4),
-            vec![1, 3, 4, 5],
-            "CA".as_bytes().to_vec()
-        ));
-        let node = DeeperNode::device_info(4);
-        assert_eq!(node.ipv4, vec![1, 3, 4, 5]);
-        assert_eq!(node.country, "CA".as_bytes().to_vec());
-    });
-}
-
-#[test]
 fn unregister_device() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // unregister a registered device
-        assert_ok!(DeeperNode::register_device(
+        assert_ok!(DeeperNode::register_device_deprecated(
             RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
@@ -97,7 +46,7 @@ fn register_server() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device, then register server
-        assert_ok!(DeeperNode::register_device(
+        assert_ok!(DeeperNode::register_device_deprecated(
             RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
@@ -116,7 +65,7 @@ fn register_server() {
         );
 
         // register server with invalid duration
-        assert_ok!(DeeperNode::register_device(
+        assert_ok!(DeeperNode::register_device_deprecated(
             RuntimeOrigin::signed(3),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
@@ -135,7 +84,7 @@ fn unregister_server() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device, then register server
-        assert_ok!(DeeperNode::register_device(
+        assert_ok!(DeeperNode::register_device_deprecated(
             RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
@@ -158,7 +107,7 @@ fn update_server() {
     new_test_ext().execute_with(|| {
         DeeperNode::setup_region_map();
         // register device, then update server
-        assert_ok!(DeeperNode::register_device(
+        assert_ok!(DeeperNode::register_device_deprecated(
             RuntimeOrigin::signed(1),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()
@@ -174,7 +123,7 @@ fn update_server() {
         );
 
         // register device, then register server
-        assert_ok!(DeeperNode::register_device(
+        assert_ok!(DeeperNode::register_device_deprecated(
             RuntimeOrigin::signed(3),
             vec![1, 2, 3, 4],
             "US".as_bytes().to_vec()

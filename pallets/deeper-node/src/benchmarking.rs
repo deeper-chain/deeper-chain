@@ -44,7 +44,7 @@ pub fn create_funded_user<T: Config>(
 
 benchmarks! {
     where_clause { where T: Config, T: pallet_credit_accumulation::Config }
-    register_device {
+    register_device_deprecated {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
     }: _(RawOrigin::Signed(user.clone()), vec![1, 2, 3, 4], "US".as_bytes().to_vec())
@@ -57,7 +57,7 @@ benchmarks! {
     unregister_device {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
-        DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
+        DeeperNode::<T>::register_device_deprecated(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
         let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
@@ -68,7 +68,7 @@ benchmarks! {
     register_server {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
-        DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
+        DeeperNode::<T>::register_device_deprecated(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
         let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
@@ -82,7 +82,7 @@ benchmarks! {
     update_server {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
-        DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
+        DeeperNode::<T>::register_device_deprecated(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
         let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
@@ -93,7 +93,7 @@ benchmarks! {
     unregister_server {
         DeeperNode::<T>::setup_region_map();
         let user = create_funded_user::<T>("user",USER_SEED, 100);
-        DeeperNode::<T>::register_device(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
+        DeeperNode::<T>::register_device_deprecated(RawOrigin::Signed(user.clone()).into(), vec![1, 2, 3, 4], "US".as_bytes().to_vec())?;
         let node = DeeperNode::<T>::device_info(user.clone());
         assert_eq!(node.ipv4, vec![1, 2, 3, 4]);
         assert_eq!(node.country, "US".as_bytes().to_vec());
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_benchmarks() {
         new_test_ext().execute_with(|| {
-            assert_ok!(Pallet::<Test>::test_benchmark_register_device());
+            assert_ok!(Pallet::<Test>::test_benchmark_register_device_deprecated());
             assert_ok!(Pallet::<Test>::test_benchmark_unregister_device());
             assert_ok!(Pallet::<Test>::test_benchmark_register_server());
             assert_ok!(Pallet::<Test>::test_benchmark_update_server());
