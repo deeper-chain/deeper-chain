@@ -1,0 +1,43 @@
+name: build-and-release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: [self-hosted, linux]
+    env:
+      CARGO_PROFILE_RELEASE_LTO: "true"
+      RUSTFLAGS: -C codegen-units=1
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+    steps:
+      - name: Checkout Chain Repository
+        uses: actions/checkout@v4
+
+      - name: Setup rust toolchain
+        run: rustup show
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v1
+
+      - name: Test
+        run: cargo test --workspace --exclude node-cli
+
+      - name: build deeper-chain
+        run: cargo build --release
+
+      - name: build node runtime
+        run: cargo build --release -p node-runtime
+
+      - name: Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            target/release/deeper-chain
+            target/release/wbuild/node-runtime/node_runtime.compact.wasm
+            target/release/wbuild/node-runtime/node_runtime.compact.compressed.wasm
