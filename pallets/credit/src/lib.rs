@@ -125,6 +125,7 @@ pub mod pallet {
         V2_0_0,
         V3_0_0,
         V4_0_0,
+        V5_0_0,
     }
 
     #[pallet::pallet]
@@ -342,7 +343,7 @@ pub mod pallet {
             for uc in self.user_credit_data.clone().into_iter() {
                 <UserCredit<T>>::insert(uc.0, uc.1);
             }
-            StorageVersion::<T>::put(Releases::V4_0_0);
+            StorageVersion::<T>::put(Releases::V5_0_0);
         }
     }
 
@@ -444,32 +445,28 @@ pub mod pallet {
 
         fn on_runtime_upgrade() -> Weight {
             let mut weight = Weight::from_all(0);
-            if StorageVersion::<T>::get() == Some(Releases::V3_0_0) {
+            const SIX_MOUNTH: u32 = 180;
+            if StorageVersion::<T>::get() == Some(Releases::V4_0_0) {
                 weight += T::DbWeight::get().reads_writes(1, 10);
                 //now default campaign id = 8
-                DefaultCampaignId::<T>::put(8);
-                //genesis user
-                CampaignIdSwitch::<T>::insert(0, 7);
-                CampaignIdSwitch::<T>::insert(1, 7);
-                CampaignIdSwitch::<T>::insert(6, 7);
-                // normal user
-                CampaignIdSwitch::<T>::insert(2, 8);
-                CampaignIdSwitch::<T>::insert(3, 8);
-                CampaignIdSwitch::<T>::insert(4, 8);
-                CampaignIdSwitch::<T>::insert(5, 8);
-
-                let new_normal_settings = credit_setting::half_campaign4_settings::<T>();
+                let new_normal_settings = credit_setting::half_campaign8_settings::<T>();
                 for setting in new_normal_settings {
                     Self::_update_credit_setting(setting);
                 }
 
-                let new_genesis_settings =
-                    credit_setting::half_campaign6_settings::<T>(Percent::from_percent(10));
+                // Genesis user sub 1% apy every 180 day,first era = 728 when apy = +10%
+                let change_era = GenesisChangeRewardEra::<T>::get();
+                let elapsed_era = Self::get_current_era().saturating_sub(change_era);
+                let times = elapsed_era / SIX_MOUNTH;
+
+                let new_genesis_settings = credit_setting::half_campaign7_settings::<T>(
+                    Percent::from_percent(10.saturating_sub(times as u8)),
+                );
                 for setting in new_genesis_settings {
                     Self::_update_credit_setting(setting);
                 }
 
-                StorageVersion::<T>::put(Releases::V4_0_0);
+                StorageVersion::<T>::put(Releases::V5_0_0);
             }
             weight
         }

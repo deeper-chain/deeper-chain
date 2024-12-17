@@ -14,121 +14,114 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
-	"derive",
-	"max-encoded-len",
-] }
-scale-info = { version = "2.5.0", default-features = false, features = [
-	"derive",
-] }
-serde = { version = "1.0.188", optional = true }
-static_assertions = "1.1.0"
-hex-literal = { version = "0.3.1", optional = true }
-log = { version = "0.4.14", default-features = false }
+codec = { workspace = true, features = ["derive","max-encoded-len"] }
+scale-info = { workspace = true, features = ["derive"] }
+serde = { workspace = true, optional = true }
+static_assertions = { workspace = true }
+hex-literal = { workspace = true, optional = true }
+log = { workspace = true }
 
 # primitives
-sp-authority-discovery = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-consensus-babe = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-inherents = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-node-primitives = { version = "2.0.0", path = "../primitives", default-features = false }
-sp-offchain = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-std = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-api = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-staking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-keyring = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", optional = true }
-sp-session = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-version = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-sp-io = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sp-authority-discovery = { workspace = true }
+sp-consensus-babe = { workspace = true }
+sp-block-builder = { workspace = true }
+sp-inherents = { workspace = true }
+node-primitives = { workspace = true }
+sp-offchain = { workspace = true }
+sp-core = { workspace = true }
+sp-std = { workspace = true }
+sp-api = { workspace = true }
+sp-runtime = { workspace = true }
+sp-staking = { workspace = true }
+sp-keyring = { workspace = true, optional = true }
+sp-session = { workspace = true }
+sp-version = { workspace = true }
+sp-io = {  workspace = true }
 
 # frontier primitives
-fp-rpc = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0"}
-fp-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0",features = ["serde"]}
-fp-self-contained = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0",features = ["serde"] }
+fp-rpc = { workspace = true }
+fp-evm = { workspace = true }
+fp-self-contained = { workspace = true }
 
 # frame dependencies
-frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false, optional = true }
-frame-support = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-frame-system = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-frame-system-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false, optional = true }
-frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-authority-discovery = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-authorship = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-babe = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-bounties = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-child-bounties = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-collective = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-contracts = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-contracts-primitives = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-democracy = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-elections-phragmen = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-im-online = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-indices = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-identity = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-lottery = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-membership = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-multisig = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-offences = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-preimage = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-proxy = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-recovery = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-session = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", features = [
-	"historical",
-], default-features = false }
-pallet-staking = { path = "../pallets/staking", version = "3.0.0", default-features = false }
-pallet-scheduler = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-society = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-tips = { version = "4.0.0-dev", path = "../pallets/tips", default-features = false }
-pallet-treasury = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-utility = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-vesting = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-micropayment = { version = "3.0.0", default-features = false, path = "../pallets/micropayment" }
-pallet-credit = { version = "3.0.0", default-features = false, path = "../pallets/credit" }
-pallet-deeper-node = { version = "3.0.0", default-features = false, path = "../pallets/deeper-node" }
-pallet-credit-accumulation = { version = "3.0.0", default-features = false, path = "../pallets/credit-accumulation" }
-pallet-operation = { version = "3.0.0", default-features = false, path = "../pallets/operation" }
-pallet-uniques = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-statement = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
-pallet-tx-pause = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", default-features = false }
+frame-executive = { workspace = true }
+frame-benchmarking = { workspace = true, optional = true }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+frame-system-benchmarking = { workspace = true, optional = true }
+frame-system-rpc-runtime-api = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-authority-discovery = { workspace = true }
+pallet-authorship = { workspace = true }
+pallet-babe = { workspace = true }
+pallet-balances = { workspace = true }
+pallet-bounties = { workspace = true }
+pallet-child-bounties = { workspace = true }
+pallet-collective = { workspace = true }
+pallet-contracts = { workspace = true }
+pallet-contracts-primitives = { workspace = true }
+pallet-democracy = { workspace = true }
+pallet-elections-phragmen = { workspace = true }
+pallet-grandpa = { workspace = true }
+pallet-im-online = { workspace = true }
+pallet-indices = { workspace = true }
+pallet-identity = { workspace = true }
+pallet-lottery = { workspace = true }
+pallet-membership = { workspace = true }
+pallet-multisig = { workspace = true }
+pallet-offences = { workspace = true }
+pallet-preimage = { workspace = true }
+pallet-proxy = { workspace = true }
+pallet-insecure-randomness-collective-flip = { workspace = true }
+pallet-recovery = { workspace = true }
+pallet-session = { workspace = true, features = ["historical"] }
+pallet-staking = { workspace = true }
+pallet-scheduler = { workspace = true }
+pallet-society = { workspace = true }
+pallet-sudo = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-tips = { workspace = true }
+pallet-treasury = { workspace = true }
+pallet-utility = { workspace = true }
+pallet-transaction-payment = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+pallet-vesting = { workspace = true }
+pallet-micropayment = { workspace = true }
+pallet-credit = { workspace = true }
+pallet-deeper-node = { workspace = true }
+pallet-credit-accumulation = { workspace = true }
+pallet-operation = { workspace = true }
+pallet-uniques = { workspace = true }
+pallet-statement = { workspace = true }
+pallet-tx-pause = { workspace = true }
 
-pallet-user-privileges = { version = "4.0.0", default-features = false, path = "../pallets/user-privileges" }
-pallet-adsc = { path = "../pallets/adsc", default-features = false }
+pallet-user-privileges = { workspace = true }
+pallet-adsc = { workspace = true }
 
 # frontier frame dependencies
-libsecp256k1 = { version = "0.6", default-features = false, optional = true }
-pallet-ethereum = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-dynamic-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-simple = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-sha3fips = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-modexp = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-blake2 = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-bn128 = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-dispatch = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-curve25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-ed25519 = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-base-fee = { default-features = false, git = "https://github.com/deeper-chain/frontier", branch = "dev/polkadot-v1.1.0" }
-pallet-evm-precompile-credit = { default-features = false, path = "../pallets/precompile-credit" }
-sp-mmr-primitives = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false , tag = "polkadot-v1.1.0" }
-sp-statement-store = { git = "https://github.com/paritytech/polkadot-sdk", default-features = false , tag = "polkadot-v1.1.0" }
-sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk",tag = "polkadot-v1.1.0", default-features = false }
+libsecp256k1 = { workspace = true, optional = true }
+pallet-ethereum = {  workspace = true }
+pallet-evm = {  workspace = true }
+pallet-dynamic-fee = {  workspace = true }
+pallet-evm-precompile-simple = {  workspace = true }
+pallet-evm-precompile-sha3fips = {  workspace = true }
+pallet-evm-precompile-modexp = {  workspace = true }
+pallet-evm-precompile-blake2 = {  workspace = true }
+pallet-evm-precompile-bn128 = {  workspace = true }
+pallet-evm-precompile-dispatch = {  workspace = true }
+pallet-evm-precompile-curve25519 = {  workspace = true }
+pallet-evm-precompile-ed25519 = {  workspace = true }
+pallet-base-fee = {  workspace = true }
+pallet-evm-precompile-credit = {  workspace = true }
+sp-mmr-primitives = { workspace = true }
+sp-statement-store = { workspace = true }
+sp-transaction-pool = { workspace = true }
 
 [build-dependencies]
-substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+substrate-wasm-builder = { workspace = true, default-features = true }
 
 [dev-dependencies]
-sp-io = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+sp-io = { workspace = true, default-features = true }
 
 [features]
 default = ["std"]
@@ -216,6 +209,7 @@ std = [
 	"sp-statement-store/std",
 	"pallet-tx-pause/std",
 	"pallet-statement/std",
+	"libsecp256k1/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
