@@ -9,26 +9,26 @@ version = '4.0.0'
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-enumflags2 = { version = "0.7.4" }
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
+enumflags2 = { workspace = true }
+codec = { workspace = true, features = [
     "derive",
     "max-encoded-len",
 ] }
-scale-info = { version = "2.5.0", default-features = false, features = [
+scale-info = { workspace = true, features = [
     "derive",
 ] }
-frame-support = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-frame-system = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-sp-io = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-sp-runtime = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-sp-std = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-sp-core = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
-node-primitives = { default-features = false, path = "../../primitives" }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+sp-core = { workspace = true }
+node-primitives = { workspace = true }
 # Optional imports for benchmarking
-frame-benchmarking = { default-features = false, git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0", optional = true }
+frame-benchmarking = { workspace = true, optional = true }
 
 [dev-dependencies]
-frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk", tag = "polkadot-v1.1.0" }
+frame-benchmarking = { workspace = true, default-features = true }
 
 [features]
 default = ['std']
