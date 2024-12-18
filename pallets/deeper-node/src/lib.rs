@@ -30,19 +30,19 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 
+pub mod migration;
 pub mod weights;
 use sp_std::prelude::*;
 pub use weights::WeightInfo;
 
-pub type IpV4 = Vec<u8>;
 pub type CountryRegion = Vec<u8>;
 pub type DurationEras = u8;
+pub(crate) type IpV4 = Vec<u8>;
 
 // struct to store the registered Device Information
 #[derive(Decode, Encode, TypeInfo)]
 pub struct Node<AccountId, BlockNumber> {
     pub account_id: AccountId,
-    ipv4: IpV4, // IP will not be exposed in future version
     country: CountryRegion,
     expire: BlockNumber,
 }
@@ -52,7 +52,6 @@ impl<AccountId: Decode, BlockNumber: Default> Default for Node<AccountId, BlockN
         Self {
             account_id: AccountId::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
                 .expect("nodes should have a valid account id"),
-            ipv4: Default::default(),
             country: Default::default(),
             expire: Default::default(),
         }
@@ -92,7 +91,11 @@ pub mod pallet {
     type BalanceOf<T> =
         <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+    /// The current storage version.
+    const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
+
     #[pallet::pallet]
+    #[pallet::storage_version(STORAGE_VERSION)]
     #[pallet::without_storage_info]
     pub struct Pallet<T>(_);
 
@@ -106,7 +109,7 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, CountryRegion, CountryRegion, ValueQuery>;
 
     #[pallet::storage]
-    type DeviceInfo<T: Config> = StorageMap<
+    pub(super) type DeviceInfo<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         T::AccountId,
@@ -183,8 +186,8 @@ pub mod pallet {
     //#[pallet::metadata(T::AccountId = "AccountId", BlockNumberFor<T> = "BlockNumber")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        // register node: AccountId, ipv4, country
-        RegisterNode(T::AccountId, IpV4, CountryRegion),
+        // register node: AccountId, country
+        RegisterNode(T::AccountId, CountryRegion),
         UnregisterNode(T::AccountId),
 
         // add account into a country's server list
@@ -249,7 +252,7 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::register_device_deprecated())]
         pub fn register_device_deprecated(
             origin: OriginFor<T>,
-            ip: IpV4,
+            _ip: IpV4,
             country: CountryRegion,
         ) -> DispatchResultWithPostInfo {
             let sender = ensure_signed(origin)?;
@@ -258,12 +261,10 @@ pub mod pallet {
                 <RegionMap<T>>::contains_key(&country),
                 Error::<T>::InvalidCode
             );
-            ensure!(ip.len() <= T::MaxIpLength::get(), Error::<T>::InvalidIP);
 
             if !<DeviceInfo<T>>::contains_key(&sender) {
                 let node = Node {
                     account_id: sender.clone(),
-                    ipv4: ip.clone(),
                     country: country.clone(),
                     expire: <frame_system::Pallet<T>>::block_number(),
                 };
@@ -275,11 +276,10 @@ pub mod pallet {
                         let _ = Self::try_remove_server(&sender);
                         node.country = country.clone();
                     }
-                    node.ipv4 = ip.clone();
                     node.expire = <frame_system::Pallet<T>>::block_number();
                 });
             }
-            Self::deposit_event(Event::RegisterNode(sender, ip, country));
+            Self::deposit_event(Event::RegisterNode(sender, country));
             Ok(().into())
         }
 

@@ -1690,12 +1690,16 @@ pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, RuntimeCall, Si
 // pub type GenericUncheckedExtrinsic =
 // 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
+
+pub type Migrations = (pallet_deeper_node::migration::v1::MigrateToV1<Runtime>,);
+
 pub type Executive = frame_executive::Executive<
     Runtime,
     Block,
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPalletsWithSystem,
+    Migrations,
 >;
 
 #[cfg(feature = "runtime-benchmarks")]
