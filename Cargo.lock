@@ -6301,6 +6301,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal 0.3.4",
+ "log",
  "node-primitives",
  "pallet-balances",
  "pallet-credit-accumulation",
